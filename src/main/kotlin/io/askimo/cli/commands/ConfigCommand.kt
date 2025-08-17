@@ -22,7 +22,7 @@ class ConfigCommand(
 
         println("🔧 Current configuration:")
         println("  Provider:    $provider")
-        println("  Model:       ${if (session.hasChatService()) session.chatService.id else "(not set)"}")
+        println("  Model:       ${if (session.hasChatService()) session.params.model else "(not set)"}")
         println("  Settings:")
 
         settings.describe().forEach {

@@ -1,43 +1,45 @@
 package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.ollama.OllamaStreamingChatModel
+import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.samplingFor
+import io.askimo.core.providers.tokensFor
 
 class OllamaModelFactory : ChatModelFactory {
     override val provider: ModelProvider = ModelProvider.OLLAMA
 
-    override fun availableModels(settings: ProviderSettings): List<String> =
-        try {
-            val process =
-                ProcessBuilder("ollama", "list")
-                    .redirectErrorStream(true)
-                    .start()
+    override fun availableModels(settings: ProviderSettings): List<String> = try {
+        val process =
+            ProcessBuilder("ollama", "list")
+                .redirectErrorStream(true)
+                .start()
 
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
 
-            // Parse lines like:
-            // llama2 7B   4.3 GB
-            // mistral 7B 4.1 GB
-            output
-                .lines()
-                .drop(1) // skip header
-                .mapNotNull { line ->
-                    line.trim().split("\\s+".toRegex()).firstOrNull()
-                }.filter { it.isNotBlank() }
-                .distinct()
-        } catch (e: Exception) {
-            println("⚠️ Failed to fetch models from Ollama: ${e.message}")
-            emptyList()
-        }
+        // Parse lines like:
+        // llama2 7B   4.3 GB
+        // mistral 7B 4.1 GB
+        output
+            .lines()
+            .drop(1) // skip header
+            .mapNotNull { line ->
+                line.trim().split("\\s+".toRegex()).firstOrNull()
+            }.filter { it.isNotBlank() }
+            .distinct()
+    } catch (e: Exception) {
+        println("⚠️ Failed to fetch models from Ollama: ${e.message}")
+        emptyList()
+    }
 
-    override fun defaultSettings(): ProviderSettings =
-        OllamaSettings(
-            baseUrl = "http://localhost:11434", // default Ollama endpoint
-        )
+    override fun defaultSettings(): ProviderSettings = OllamaSettings(
+        baseUrl = "http://localhost:11434", // default Ollama endpoint
+    )
 
     override fun create(
         model: String,
@@ -48,6 +50,22 @@ class OllamaModelFactory : ChatModelFactory {
             "Invalid settings type for Ollama: ${settings::class.simpleName}"
         }
 
-        return OllamaChatService(model, settings, memory, null)
+        val chatModel =
+            OllamaStreamingChatModel
+                .builder()
+                .baseUrl(settings.baseUrl)
+                .modelName(model)
+                .apply {
+                    val s = samplingFor(settings.presets.style)
+                    temperature(s.temperature).topP(s.topP)
+
+                    val cap = tokensFor(settings.presets.verbosity)
+                    numPredict(cap)
+                }.build()
+        return AiServices
+            .builder(ChatService::class.java)
+            .streamingChatModel(chatModel)
+            .chatMemory(memory)
+            .build()
     }
 }

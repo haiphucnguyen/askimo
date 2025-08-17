@@ -1,16 +1,42 @@
 package io.askimo.core.providers
 
+import dev.langchain4j.model.chat.response.ChatResponse
+import dev.langchain4j.service.TokenStream
+import dev.langchain4j.service.tool.ToolExecution
+import java.util.function.Consumer
+
 /**
- * A Noop implementation of the ChatModel interface.
- * This is used as a placeholder when no chat model is configured.
- * It provides a helpful message to guide users on how to set up a model.
+ * A no-operation implementation of the ChatService interface.
+ * 
+ * This implementation is used as a fallback when no chat model is configured.
+ * When the stream is started, it throws a RuntimeException informing the user
+ * that they need to configure a chat model using the ':setprovider' command.
  */
 object NoopChatService : ChatService {
-    override val id: String = "none"
-    override val provider: ModelProvider = ModelProvider.UNKNOWN
+    override fun stream(prompt: String): TokenStream {
+        return object : TokenStream {
+            private var errorConsumer: Consumer<Throwable>? = null
 
-    override fun chat(
-        prompt: String,
-        onToken: (String) -> Unit,
-    ): String = "⚠️ No chat model is configured. Use ':setparam provider' and ':setparam model' to set up a model."
+            override fun onPartialResponse(consumer: Consumer<String>): TokenStream = this
+
+            override fun onCompleteResponse(completeResponseHandler: Consumer<ChatResponse>): TokenStream = this
+
+            override fun onError(consumer: Consumer<Throwable>): TokenStream {
+                errorConsumer = consumer
+                return this
+            }
+
+            override fun onToolExecuted(toolExecuteHandler: Consumer<ToolExecution>): TokenStream = this
+
+            override fun ignoreErrors(): TokenStream = this
+
+            override fun onRetrieved(contentHandler: Consumer<List<dev.langchain4j.rag.content.Content?>?>?): TokenStream = this
+
+            override fun start() {
+                errorConsumer?.accept(
+                    RuntimeException("No chat model configured. Please configure a chat model using the 'set provider' command."),
+                )
+            }
+        }
+    }
 }

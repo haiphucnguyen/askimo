@@ -1,11 +1,15 @@
 package io.askimo.core.providers.openai
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel
+import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.util.json
+import io.askimo.core.providers.samplingFor
+import io.askimo.core.providers.tokensFor
+import io.askimo.core.util.appJson
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -29,7 +33,7 @@ class OpenAiModelFactory : ChatModelFactory {
             connection.setRequestProperty("Content-Type", "application/json")
 
             connection.inputStream.bufferedReader().use { reader ->
-                val jsonElement = json.parseToJsonElement(reader.readText())
+                val jsonElement = appJson.parseToJsonElement(reader.readText())
 
                 val data = jsonElement.jsonObject["data"]?.jsonArray.orEmpty()
 
@@ -58,6 +62,35 @@ class OpenAiModelFactory : ChatModelFactory {
             "Invalid settings type for OpenAI: ${settings::class.simpleName}"
         }
 
-        return OpenAiChatService(model, settings, memory)
+        val chatModel =
+            OpenAiStreamingChatModel
+                .builder()
+                .apiKey(settings.apiKey)
+                .modelName(model)
+                .apply {
+                    val cap = tokensFor(settings.presets.verbosity)
+                    if (usesCompletionCap(model)) maxCompletionTokens(cap) else maxTokens(cap)
+                    if (supportsSampling(model)) {
+                        val s = samplingFor(settings.presets.style)
+                        temperature(s.temperature).topP(s.topP)
+                    }
+                }.build()
+
+        return AiServices
+            .builder(ChatService::class.java)
+            .streamingChatModel(chatModel)
+            .chatMemory(memory)
+//            .systemMessage(settings.persona ?: "You are Askimo. Be concise, accurate, and prefer Markdown.")
+            .build()
+    }
+
+    private fun supportsSampling(model: String): Boolean {
+        val m = model.lowercase()
+        return !(m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
+    }
+
+    private fun usesCompletionCap(name: String): Boolean {
+        val m = name.lowercase()
+        return (m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
     }
 }

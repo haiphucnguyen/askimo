@@ -1,45 +1,78 @@
-import { apiBase, apiHeaders, readSettings } from "../app.js";
+document.addEventListener("alpine:init", () => {
+  Alpine.data("chatView", () => ({
+    messages: [],
+    input: "",
+    loading: false,
+    ctrl: null, // AbortController
 
-window.chatPage = function () {
-    return {
-        messages: [],
-        prompt: "",
+    async sendStreaming() {
+      const q = this.input.trim();
+      if (!q || this.loading) return;
 
-        async send() {
-            const q = this.prompt.trim();
-            if (!q) return;
-            this.messages.push({ role: "user", text: q });
-            this.prompt = "";
-            this.scroll();
+      this.messages.push({ role: "user", content: q });
+      const assistant = { role: "assistant", content: "" };
+      this.messages.push(assistant);
+      // Ensure assistant bubble is rendered immediately
+      this.messages = [...this.messages];
+      this.input = "";
+      this.scroll();
 
-            try {
-                const res = await fetch(`${apiBase()}/api/chat`, {
-                    method: "POST",
-                    headers: apiHeaders(),
-                    body: JSON.stringify({ prompt: q })
-                });
-                const json = await res.json();
-                this.messages.push({ role: "assistant", text: json.message ?? String(json) });
-            } catch (e) {
-                this.messages.push({ role: "assistant", text: "[Error] " + (e?.message || e) });
-            } finally {
-                this.scroll();
-            }
-        },
+      this.ctrl = new AbortController();
+      this.loading = true;
 
-        scroll() {
-            this.$nextTick(() => {
-                const box = this.$refs.chatBox;
-                if (readSettings().autoScroll !== false) {
-                    box.scrollTop = box.scrollHeight;
-                }
-            });
-        },
+      try {
+        const res = await fetch("/api/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: q }),
+          signal: this.ctrl.signal,
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        if (!res.body) throw new Error("No body (stream not available)");
 
-        init() {
-            const draft = JSON.parse(localStorage.getItem("askimo.chatDraft") || "null");
-            if (draft?.prompt) { this.prompt = draft.prompt; localStorage.removeItem("askimo.chatDraft"); }
-            document.addEventListener("askimo:settings-updated", () => {});
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let total = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunkText = dec.decode(value, { stream: true });
+          console.debug("[chat][stream] chunk:", chunkText);
+          total += chunkText;
+          assistant.content += chunkText;
+          // Replace the last message object to force Alpine to re-render the item
+          this.messages[this.messages.length - 1] = { ...assistant };
+          // Force Alpine to notice nested object change inside the array
+          this.messages = [...this.messages];
+          this.scroll();
         }
-    };
-};
+      } catch (e) {
+        console.error("[chat] stream error:", e);
+        assistant.content +=
+          (assistant.content ? "\n" : "") + "⚠️ " + (e?.message || e);
+        // Replace last message to force Alpine update
+        this.messages[this.messages.length - 1] = { ...assistant };
+        this.messages = [...this.messages];
+      } finally {
+        this.loading = false;
+        this.ctrl = null;
+        // Ensure final state is reflected in UI
+        this.messages[this.messages.length - 1] = { ...assistant };
+        this.messages = [...this.messages];
+        this.scroll();
+      }
+    },
+
+    stop() {
+      if (this.ctrl) this.ctrl.abort();
+    },
+
+    scroll() {
+      this.$nextTick(() => {
+        const box = this.$refs.messages;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+  }));
+});

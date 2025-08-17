@@ -1,7 +1,7 @@
 package io.askimo.core.session
 
 import io.askimo.cli.Logger.log
-import io.askimo.core.util.json
+import io.askimo.core.util.appJson
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -22,20 +22,19 @@ object SessionConfigManager {
      *
      * @return The loaded session parameters, or default parameters if the file doesn't exist or can't be parsed
      */
-    fun load(): SessionParams =
-        if (Files.exists(configPath)) {
-            try {
-                Files.newBufferedReader(configPath).use {
-                    json.decodeFromString<SessionParams>(it.readText())
-                }
-            } catch (e: Exception) {
-                println("⚠️ Failed to parse config file at $configPath. Using default configuration.")
-                SessionParams.noOp()
+    fun load(): SessionParams = if (Files.exists(configPath)) {
+        try {
+            Files.newBufferedReader(configPath).use {
+                appJson.decodeFromString<SessionParams>(it.readText())
             }
-        } else {
-            println("⚠️ Config file not found at $configPath. Using default configuration.")
+        } catch (e: Exception) {
+            println("⚠️ Failed to parse config file at $configPath. Using default configuration.")
             SessionParams.noOp()
         }
+    } else {
+        println("⚠️ Config file not found at $configPath. Using default configuration.")
+        SessionParams.noOp()
+    }
 
     /**
      * Saves session parameters to the configuration file.
@@ -52,7 +51,7 @@ object SessionConfigManager {
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
                 ).use {
-                    it.write(json.encodeToString(params))
+                    it.write(appJson.encodeToString(params))
                 }
             log { "Saving config to: $configPath successfully." }
         } catch (e: Exception) {

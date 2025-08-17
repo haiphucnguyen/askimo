@@ -20,56 +20,53 @@ object ProviderValidator {
     fun validate(
         provider: ModelProvider,
         settings: ProviderSettings,
-    ): Boolean =
-        when (provider) {
-            ModelProvider.OPEN_AI ->
-                (settings as? OpenAiSettings)?.apiKey?.isNotBlank() == true
+    ): Boolean = when (provider) {
+        ModelProvider.OPEN_AI ->
+            (settings as? OpenAiSettings)?.apiKey?.isNotBlank() == true
 
-            ModelProvider.OLLAMA ->
-                (settings as? OllamaSettings)?.let { s ->
-                    s.baseUrl.isNotBlank() && isHttpReachable(s.baseUrl)
-                } == true
+        ModelProvider.OLLAMA ->
+            (settings as? OllamaSettings)?.let { s ->
+                s.baseUrl.isNotBlank() && isHttpReachable(s.baseUrl)
+            } == true
 
-            else -> true
-        }
+        else -> true
+    }
 
     /**
      * Returns help instructions for how to set up the given provider.
      */
-    fun getHelpText(provider: ModelProvider): String =
-        when (provider) {
-            ModelProvider.OLLAMA ->
-                """
+    fun getHelpText(provider: ModelProvider): String = when (provider) {
+        ModelProvider.OLLAMA ->
+            """
                 💡 Ollama server not reachable at your configured baseUrl.
                 1) Install Ollama: https://ollama.com/download
                 2) Start it (default listens on http://localhost:11434)
                 3) Verify your baseUrl, e.g.: :setparam ollama.baseUrl http://localhost:11434
-                """.trimIndent()
+            """.trimIndent()
 
-            ModelProvider.OPEN_AI ->
-                """
+        ModelProvider.OPEN_AI ->
+            """
                 💡💡 To use OpenAI, you need to provide an API key.
                 1. Get your API key from: https://platform.openai.com/account/api-keys
                 2. Then set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
 
-                """.trimIndent()
+            """.trimIndent()
 
-            else -> "💡 This provider requires custom configuration. Please refer to its documentation."
-        }
+        else -> "💡 This provider requires custom configuration. Please refer to its documentation."
+    }
 
     private fun isHttpReachable(
         baseUrl: String,
         timeoutMs: Int = 1500,
-    ): Boolean =
-        runCatching {
-            val uri = URI(baseUrl.trim())
-            val url = if (uri.path.isNullOrBlank()) URI("$baseUrl/").toURL() else uri.toURL()
-            (url.openConnection() as HttpURLConnection).run {
-                connectTimeout = timeoutMs
-                readTimeout = timeoutMs
-                requestMethod = "GET"
-                val code = runCatching { responseCode }.getOrDefault(0)
-                code in 200..499
-            }
-        }.getOrElse { false }
+    ): Boolean = runCatching {
+        val uri = URI(baseUrl.trim())
+        val url = if (uri.path.isNullOrBlank()) URI("$baseUrl/").toURL() else uri.toURL()
+        (url.openConnection() as HttpURLConnection).run {
+            connectTimeout = timeoutMs
+            readTimeout = timeoutMs
+            requestMethod = "GET"
+            val code = runCatching { responseCode }.getOrDefault(0)
+            code in 200..499
+        }
+    }.getOrElse { false }
 }

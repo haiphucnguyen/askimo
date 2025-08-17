@@ -1,78 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Askimo Web</title>
-
-    <!-- Tailwind CDN (no build step) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Your JS modules BEFORE Alpine so x-data functions exist -->
+    <!-- App + views BEFORE Alpine -->
     <script type="module" src="/js/app.js"></script>
     <script type="module" src="/js/views/chat.view.js"></script>
 
     <!-- Alpine last -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script
+      defer
+      src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+  </head>
+  <body class="h-dvh bg-slate-50" x-data="shell()" x-ref="shell">
+    <div class="flex h-full">
+      <!-- Sidebar -->
+      <aside class="w-72 bg-slate-800 text-white p-4">
+        <a
+          href="#chat"
+          @click.prevent="go('chat')"
+          :class="page==='chat' ? 'font-semibold' : ''"
+          class="block py-2"
+          >💬 Chat</a
+        >
+      </aside>
 
-    <script>
-        /* Tailwind config (optional brand colors) */
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { brand: { 600: '#2563eb', 700: '#1d4ed8' } }
-                }
-            }
-        }
-    </script>
-</head>
-
-<body class="h-dvh bg-slate-50" x-data="shell()" x-ref="shell">
-<!-- Top bar (mobile) -->
-<header class="flex md:hidden items-center justify-between px-4 py-3 bg-slate-800 text-white">
-    <button class="p-2 -ml-2" @click="sidebarOpen = true" aria-label="Open menu">
-        <!-- hamburger -->
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
-                                       d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
-    <div class="font-semibold">Askimo</div>
-    <div class="w-6 h-6"></div>
-</header>
-
-<div class="h-full flex">
-    <!-- Off-canvas overlay (mobile) -->
-    <div class="fixed inset-0 z-40 bg-black/40 md:hidden"
-         x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen=false"></div>
-
-    <!-- Sidebar -->
-    <aside class="fixed md:static z-50 inset-y-0 left-0 w-72 bg-slate-800 text-white
-                   transform md:transform-none transition-transform duration-200
-                   -translate-x-full md:translate-x-0"
-           :class="{'translate-x-0': sidebarOpen}">
-        <div class="flex items-center justify-between px-4 py-4 border-b border-slate-700">
-            <div class="text-lg font-semibold">Askimo</div>
-            <button class="md:hidden p-2" @click="sidebarOpen=false" aria-label="Close menu">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
-                     viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
-                                               d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-
-        <nav class="py-2">
-            <a href="#chat" @click.prevent="go('chat'); sidebarOpen=false"
-               class="block px-4 py-3 hover:bg-slate-700"
-               :class="page==='chat' ? 'bg-slate-700 font-semibold' : ''">💬 Chat</a>
-            <a href="#settings" @click.prevent="go('settings'); sidebarOpen=false"
-               class="block px-4 py-3 hover:bg-slate-700"
-               :class="page==='settings' ? 'bg-slate-700 font-semibold' : ''">⚙️ Settings</a>
-        </nav>
-    </aside>
-
-    <!-- Main content -->
-    <main class="flex-1 md:ml-72 p-4 md:p-6">
+      <!-- Main -->
+      <main class="flex-1 p-4">
         <div x-ref="outlet" class="h-full"></div>
-    </main>
-</div>
-</body>
+      </main>
+    </div>
+  </body>
 </html>

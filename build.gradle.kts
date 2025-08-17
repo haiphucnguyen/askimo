@@ -27,6 +27,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0")
     implementation("io.ktor:ktor-server-cio:3.2.3")
     implementation("io.ktor:ktor-server-core:3.2.3")
+    implementation("io.ktor:ktor-server-content-negotiation:3.2.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.2.3")
     implementation(kotlin("stdlib"))
     runtimeOnly("org.slf4j:slf4j-nop:2.0.17")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
@@ -120,15 +122,14 @@ graalvmNative {
 
 spotless {
     kotlin {
-        ktlint()
         trimTrailingWhitespace()
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         endWithNewline()
     }
     kotlinGradle {
         ktlint()
         trimTrailingWhitespace()
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         endWithNewline()
     }
     format("json") {

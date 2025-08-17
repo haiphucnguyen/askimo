@@ -11,9 +11,8 @@ data class OllamaSettings(
     var baseUrl: String = "http://localhost:11434",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings {
-    override fun describe(): List<String> =
-        listOf(
-            "baseUrl:     $baseUrl",
-            "presets: $presets",
-        )
+    override fun describe(): List<String> = listOf(
+        "baseUrl:     $baseUrl",
+        "presets: $presets",
+    )
 }

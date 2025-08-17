@@ -12,12 +12,13 @@ import io.askimo.cli.commands.ModelsCommandHandler
 import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
-import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.VersionInfo
 import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
+import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.providers.chat
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.VersionInfo
 import io.askimo.web.WebServer
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -244,22 +245,21 @@ private fun readStdinIfAny(
 private fun buildPrompt(
     userPrompt: String,
     stdinText: String,
-): String =
-    if (stdinText.isBlank()) {
-        userPrompt.ifBlank { "Analyze the following input (no stdin provided)." }
-    } else {
-        // Attach the piped input as context
-        buildString {
-            appendLine(userPrompt.ifBlank { "Analyze the following input:" })
-            appendLine()
-            appendLine("--- Begin input ---")
-            append(stdinText)
-            appendLine()
-            appendLine("--- End input ---")
-            appendLine()
-            appendLine("Return concise, actionable findings.")
-        }
+): String = if (stdinText.isBlank()) {
+    userPrompt.ifBlank { "Analyze the following input (no stdin provided)." }
+} else {
+    // Attach the piped input as context
+    buildString {
+        appendLine(userPrompt.ifBlank { "Analyze the following input:" })
+        appendLine()
+        appendLine("--- Begin input ---")
+        append(stdinText)
+        appendLine()
+        appendLine("--- End input ---")
+        appendLine()
+        appendLine("Return concise, actionable findings.")
     }
+}
 
 private fun printFullVersionInfo() {
     val a = VersionInfo

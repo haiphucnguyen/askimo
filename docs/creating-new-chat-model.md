@@ -68,52 +68,7 @@ data class YourProviderSettings(
 }
 ```
 
-### 4. Implement the Chat Service
-
-Create a class that implements the `ChatService` interface. This class will handle the actual communication with your provider's API:
-
-```kotlin
-// File: io.askimo.core.providers.yourprovider.YourProviderChatService.kt
-
-class YourProviderChatService(
-    private val modelName: String,
-    private val settings: YourProviderSettings,
-    private val memory: ChatMemory,
-    private val systemPrompt: String?,
-) : ChatService {
-    override val id: String = modelName
-    override val provider: ModelProvider = ModelProvider.YOUR_PROVIDER
-    
-    // Initialize your model client using LangChain4j
-    private val chatModel by lazy {
-        // Use the LangChain4j implementation for your provider
-        // This example assumes a streaming chat model similar to OpenAI or Ollama
-        val builder = YourProviderStreamingChatModel.builder()
-            .apiKey(settings.apiKey)
-            .modelName(modelName)
-            
-        // Apply sampling parameters (temperature, top-p)
-        val sampling = samplingFor(settings.presets.style)
-        builder.temperature(sampling.temperature).topP(sampling.topP)
-        
-        // Apply token limits based on verbosity
-        val tokenLimit = tokensFor(settings.presets.verbosity)
-        builder.maxTokens(tokenLimit)
-        
-        // Build and return the model
-        builder.build()
-    }
-    
-    override fun chat(
-        prompt: String,
-        onToken: (String) -> Unit,
-    ): String {
-        ...
-    }
-}
-```
-
-### 5. Implement the Model Factory
+### 4. Implement the Model Factory
 
 Create a factory class that implements `ChatModelFactory`. This class will be responsible for creating instances of your model:
 
@@ -153,12 +108,17 @@ class YourProviderModelFactory : ChatModelFactory {
             "Invalid settings type for YourProvider: ${settings::class.simpleName}"
         }
         
-        return YourProviderChatService(model, settings, memory, null)
+        // create the chat model
+        return AiServices
+            .builder(ChatService::class.java)
+            .streamingChatModel(chatModel)
+            .chatMemory(memory)
+            .build()
     }
 }
 ```
 
-### 6. Register Your Factory
+### 5. Register Your Factory
 
 Register your factory in the `ProviderRegistry`. The best place to do this is by modifying the `init` block in `Provideregistry.kt`:
 
@@ -184,13 +144,11 @@ For reference, here are the key components of existing implementations:
 ### OpenAI Implementation
 
 - **Settings**: `OpenAiSettings` - Contains API key and presets
-- **Chat Service**: `OpenAiChatService` - Implements chat functionality using OpenAI's API
 - **Factory**: `OpenAiModelFactory` - Creates OpenAI models and fetches available models
 
 ### Ollama Implementation
 
 - **Settings**: `OllamaSettings` - Contains base URL and presets
-- **Chat Service**: `OllamaChatService` - Implements chat functionality using Ollama's API
 - **Factory**: `OllamaModelFactory` - Creates Ollama models and fetches available models
 
 ## Testing Your Implementation
