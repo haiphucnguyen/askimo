@@ -27,5 +27,3 @@ interface ProviderSettings {
      */
     fun describe(): List<String>
 }
-
-fun ProviderSettings.presetsOrDefault(): Presets = this.presets

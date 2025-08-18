@@ -1,5 +1,7 @@
 package io.askimo.core.providers
 
+import io.askimo.core.providers.ModelProvider.OLLAMA
+import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import java.net.HttpURLConnection
@@ -21,10 +23,10 @@ object ProviderValidator {
         provider: ModelProvider,
         settings: ProviderSettings,
     ): Boolean = when (provider) {
-        ModelProvider.OPEN_AI ->
+        OPEN_AI ->
             (settings as? OpenAiSettings)?.apiKey?.isNotBlank() == true
 
-        ModelProvider.OLLAMA ->
+        OLLAMA ->
             (settings as? OllamaSettings)?.let { s ->
                 s.baseUrl.isNotBlank() && isHttpReachable(s.baseUrl)
             } == true
@@ -36,7 +38,7 @@ object ProviderValidator {
      * Returns help instructions for how to set up the given provider.
      */
     fun getHelpText(provider: ModelProvider): String = when (provider) {
-        ModelProvider.OLLAMA ->
+        OLLAMA ->
             """
                 💡 Ollama server not reachable at your configured baseUrl.
                 1) Install Ollama: https://ollama.com/download
@@ -44,7 +46,7 @@ object ProviderValidator {
                 3) Verify your baseUrl, e.g.: :setparam ollama.baseUrl http://localhost:11434
             """.trimIndent()
 
-        ModelProvider.OPEN_AI ->
+        OPEN_AI ->
             """
                 💡💡 To use OpenAI, you need to provide an API key.
                 1. Get your API key from: https://platform.openai.com/account/api-keys
