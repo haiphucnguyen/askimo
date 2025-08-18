@@ -2,23 +2,100 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("chatView", () => ({
     messages: [],
     input: "",
+    composing: false, // IME state
     loading: false,
-    ctrl: null, // AbortController
+    ctrl: null,
+    now: performance.now(),
+    _tickId: null,
+    _renderTimer: null,
+
+    // ✅ Unified key handler for Enter behavior
+    handleEditorKeydown(e) {
+      if (this.composing) return; // don't act during IME composition
+      if (e.key !== "Enter") return;
+
+      // Cmd/Ctrl+Enter → send
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        this.sendStreaming();
+        return;
+      }
+
+      // Shift+Enter → newline (let it pass)
+      if (e.shiftKey) return;
+
+      // Bare Enter → send
+      e.preventDefault();
+      this.sendStreaming();
+    },
+
+    _startClock() {
+      if (this._tickId) return;
+      this._tickId = setInterval(() => {
+        this.now = performance.now();
+      }, 100);
+    },
+    _stopClock() {
+      if (this._tickId) clearInterval(this._tickId);
+      this._tickId = null;
+    },
+
+    // Heuristic if server header isn't available
+    _looksLikeMarkdown(text) {
+      return /(^|\n)\s{0,3}#{1,6}\s|\n```|^\s*[-*+]\s|\[[^\]]+\]\([^)]+\)|\|.+\|/m.test(
+        text
+      );
+    },
+
+    _renderMarkdown(assistant) {
+      // Close an unfinished code fence for preview
+      const ticks = (assistant.raw.match(/```/g) || []).length;
+      const needsClose = ticks % 2 === 1;
+      const preview = needsClose ? assistant.raw + "\n```" : assistant.raw;
+
+      const html = DOMPurify.sanitize(marked.parse(preview));
+      assistant.html = needsClose
+        ? html.replace(/<pre><code[^>]*>[\s\S]*$/, (m) => m)
+        : html;
+
+      // Sync Alpine
+      this.messages[this.messages.length - 1] = { ...assistant };
+      this.messages = [...this.messages];
+    },
+
+    _scheduleRender(assistant, ms = 120) {
+      if (this._renderTimer) clearTimeout(this._renderTimer);
+      this._renderTimer = setTimeout(() => this._renderMarkdown(assistant), ms);
+    },
 
     async sendStreaming() {
       const q = this.input.trim();
       if (!q || this.loading) return;
 
+      // user bubble
       this.messages.push({ role: "user", content: q });
-      const assistant = { role: "assistant", content: "" };
+
+      // assistant bubble (raw + html + meta)
+      const assistant = {
+        role: "assistant",
+        content: "", // keep for plain text fallback
+        raw: "",
+        html: "",
+        meta: {
+          startAt: performance.now(),
+          firstByteAt: null,
+          finishAt: null,
+          format: "text",
+        },
+      };
       this.messages.push(assistant);
-      // Ensure assistant bubble is rendered immediately
       this.messages = [...this.messages];
       this.input = "";
       this.scroll();
 
       this.ctrl = new AbortController();
       this.loading = true;
+      this._startClock();
 
       try {
         const res = await fetch("/api/chat/stream", {
@@ -30,36 +107,73 @@ document.addEventListener("alpine:init", () => {
         if (!res.ok) throw new Error("HTTP " + res.status);
         if (!res.body) throw new Error("No body (stream not available)");
 
+        // Decide format from headers (preferred) or heuristic
+        const ct = res.headers.get("content-type") || "";
+        const fmtHeader = res.headers.get("x-askimo-format") || "";
+        if (ct.includes("markdown") || fmtHeader.toLowerCase() === "markdown") {
+          assistant.meta.format = "markdown";
+        }
+
         const reader = res.body.getReader();
         const dec = new TextDecoder();
-        let total = "";
+        let sawFirst = false;
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
+
           const chunkText = dec.decode(value, { stream: true });
-          console.debug("[chat][stream] chunk:", chunkText);
-          total += chunkText;
-          assistant.content += chunkText;
-          // Replace the last message object to force Alpine to re-render the item
-          this.messages[this.messages.length - 1] = { ...assistant };
-          // Force Alpine to notice nested object change inside the array
-          this.messages = [...this.messages];
+          if (!sawFirst && chunkText.length) {
+            assistant.meta.firstByteAt = performance.now();
+            sawFirst = true;
+          }
+
+          assistant.raw += chunkText;
+
+          // If server didn't label it, use heuristic after some content arrives
+          if (
+            assistant.meta.format === "text" &&
+            this._looksLikeMarkdown(assistant.raw)
+          ) {
+            assistant.meta.format = "markdown";
+          }
+
+          if (assistant.meta.format === "markdown") {
+            this._scheduleRender(assistant); // debounced re-render
+          } else {
+            // plain text fallback
+            assistant.content = assistant.raw;
+            this.messages[this.messages.length - 1] = { ...assistant };
+            this.messages = [...this.messages];
+          }
+
           this.scroll();
         }
       } catch (e) {
-        console.error("[chat] stream error:", e);
-        assistant.content +=
-          (assistant.content ? "\n" : "") + "⚠️ " + (e?.message || e);
-        // Replace last message to force Alpine update
-        this.messages[this.messages.length - 1] = { ...assistant };
-        this.messages = [...this.messages];
+        assistant.raw +=
+          (assistant.raw ? "\n" : "") + "⚠️ " + (e?.message || e);
+        if (assistant.meta.format === "markdown")
+          this._renderMarkdown(assistant);
+        else {
+          assistant.content = assistant.raw;
+          this.messages[this.messages.length - 1] = { ...assistant };
+          this.messages = [...this.messages];
+        }
       } finally {
+        assistant.meta.finishAt = performance.now();
+
+        // Final render
+        if (assistant.meta.format === "markdown")
+          this._renderMarkdown(assistant);
+        else {
+          assistant.content = assistant.raw;
+          this.messages[this.messages.length - 1] = { ...assistant };
+          this.messages = [...this.messages];
+        }
+
         this.loading = false;
         this.ctrl = null;
-        // Ensure final state is reflected in UI
-        this.messages[this.messages.length - 1] = { ...assistant };
-        this.messages = [...this.messages];
+        this._stopClock();
         this.scroll();
       }
     },

@@ -7,7 +7,7 @@ import java.util.function.Consumer
 
 /**
  * A no-operation implementation of the ChatService interface.
- * 
+ *
  * This implementation is used as a fallback when no chat model is configured.
  * When the stream is started, it throws a RuntimeException informing the user
  * that they need to configure a chat model using the ':setprovider' command.

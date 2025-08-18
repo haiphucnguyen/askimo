@@ -6,32 +6,83 @@
     class="flex-1 min-h-[240px] border border-slate-200 rounded bg-white p-3 overflow-y-auto"
   >
     <template x-for="(m, i) in messages" :key="i">
-      <div
-        class="max-w-[80%] my-1 px-3 py-2 rounded whitespace-pre-wrap"
-        :class="m.role==='user' ? 'ml-auto bg-blue-100' : 'mr-auto bg-slate-100'"
-        x-text="m.content"
-      ></div>
-      <!-- render .content -->
+      <div class="my-1">
+        <template x-if="m.role==='user'">
+          <div
+            class="max-w-[80%] my-1 px-3 py-2 rounded whitespace-pre-wrap ml-auto bg-blue-100"
+            x-text="m.content"
+          ></div>
+        </template>
+
+        <template x-if="m.role==='assistant'">
+          <div
+            class="max-w-[80%] my-1 px-3 py-2 rounded mr-auto bg-slate-100 prose prose-slate max-w-none"
+            x-html="m.html || m.content"
+          ></div>
+        </template>
+
+        <!-- Timing footer, only for assistant messages that have meta -->
+        <template x-if="m.role==='assistant' && m.meta">
+          <div
+            class="text-xs text-slate-500 mt-1"
+            :class="m.role==='assistant' ? 'mr-auto' : 'ml-auto'"
+          >
+            <template x-if="m.meta.firstByteAt">
+              <span
+                >TTFB:
+                <span
+                  x-text="((m.meta.firstByteAt - m.meta.startAt)/1000).toFixed(2)"
+                ></span
+                >s</span
+              >
+            </template>
+            <span class="mx-1">•</span>
+            <template x-if="m.meta.finishAt">
+              <span
+                >Total:
+                <span
+                  x-text="((m.meta.finishAt - m.meta.startAt)/1000).toFixed(2)"
+                ></span
+                >s</span
+              >
+            </template>
+            <template x-if="!m.meta.finishAt">
+              <span
+                >Streaming…
+                <span x-text="((now - m.meta.startAt)/1000).toFixed(1)"></span
+                >s</span
+              >
+            </template>
+          </div>
+        </template>
+      </div>
     </template>
   </div>
 
   <div class="flex gap-2">
-    <input
+    <textarea
       x-model="input"
-      @keydown.enter="sendStreaming"
-      class="flex-1 border border-slate-300 rounded px-3 py-2"
-      placeholder="Type and press Enter…"
-    />
+      x-ref="editor"
+      rows="3"
+      class="flex-1 border border-slate-300 rounded px-3 py-2 resize-y"
+      placeholder="Type message…  ⏎ to send, Shift+⏎ for newline"
+      aria-label="Chat message editor"
+      @compositionstart="composing = true"
+      @compositionend="composing = false"
+      @keydown="handleEditorKeydown($event)"
+    ></textarea>
+
     <button
       @click="sendStreaming"
-      class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
-      :disabled="loading"
+      class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50 self-start"
+      :disabled="loading || !input.trim()"
     >
-      Stream
+      Send
     </button>
+
     <button
       @click="stop"
-      class="px-4 py-2 rounded border border-slate-300 disabled:opacity-50"
+      class="px-4 py-2 rounded border border-slate-300 disabled:opacity-50 self-start"
       :disabled="!loading"
     >
       Stop

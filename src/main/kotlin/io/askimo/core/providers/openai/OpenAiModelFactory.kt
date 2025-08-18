@@ -8,7 +8,8 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
-import io.askimo.core.providers.tokensFor
+import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.core.util.appJson
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -68,8 +69,6 @@ class OpenAiModelFactory : ChatModelFactory {
                 .apiKey(settings.apiKey)
                 .modelName(model)
                 .apply {
-                    val cap = tokensFor(settings.presets.verbosity)
-                    if (usesCompletionCap(model)) maxCompletionTokens(cap) else maxTokens(cap)
                     if (supportsSampling(model)) {
                         val s = samplingFor(settings.presets.style)
                         temperature(s.temperature).topP(s.topP)
@@ -80,17 +79,12 @@ class OpenAiModelFactory : ChatModelFactory {
             .builder(ChatService::class.java)
             .streamingChatModel(chatModel)
             .chatMemory(memory)
-//            .systemMessage(settings.persona ?: "You are Askimo. Be concise, accurate, and prefer Markdown.")
+            .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
             .build()
     }
 
     private fun supportsSampling(model: String): Boolean {
         val m = model.lowercase()
         return !(m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
-    }
-
-    private fun usesCompletionCap(name: String): Boolean {
-        val m = name.lowercase()
-        return (m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
     }
 }

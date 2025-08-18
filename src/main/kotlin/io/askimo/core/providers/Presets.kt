@@ -24,11 +24,12 @@ data class Presets(
     val verbosity: Verbosity,
 )
 
-fun tokensFor(v: Verbosity) = when (v) {
-    Verbosity.SHORT -> 256
-    Verbosity.NORMAL -> 512
-    Verbosity.LONG -> 1024
-}
+fun verbosityInstruction(v: Verbosity) =
+    when (v) {
+        Verbosity.SHORT -> "You are a concise assistant. Respond in 1–2 sentences."
+        Verbosity.NORMAL -> "You are a helpful assistant. Respond with a moderate amount of detail."
+        Verbosity.LONG -> "You are a detailed assistant. Respond with extended explanations."
+    }
 
 /**
  * Configuration class for language model generation parameters.
@@ -45,8 +46,9 @@ data class Sampling(
     val topP: Double,
 )
 
-fun samplingFor(s: Style) = when (s) {
-    Style.PRECISE -> Sampling(0.2, 1.0)
-    Style.BALANCED -> Sampling(0.7, 1.0)
-    Style.CREATIVE -> Sampling(1.1, 1.0)
-}
+fun samplingFor(s: Style) =
+    when (s) {
+        Style.PRECISE -> Sampling(0.2, 1.0)
+        Style.BALANCED -> Sampling(0.7, 1.0)
+        Style.CREATIVE -> Sampling(1.1, 1.0)
+    }

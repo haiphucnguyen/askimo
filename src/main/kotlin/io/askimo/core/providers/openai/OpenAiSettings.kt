@@ -11,10 +11,11 @@ data class OpenAiSettings(
     var apiKey: String = "",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings {
-    override fun describe(): List<String> = listOf(
-        "apiKey:      ${apiKey.take(5)}***",
-        "presets: $presets",
-    )
+    override fun describe(): List<String> =
+        listOf(
+            "apiKey:      ${apiKey.take(5)}***",
+            "presets: $presets",
+        )
 
     override fun toString(): String = "OpenAiSettings(apiKey=****, presets=$presets)"
 }

@@ -1,3 +1,1 @@
-[
-  { "interfaces": ["io.askimo.core.providers.ChatService"] }
-]
+[{ "interfaces": ["io.askimo.core.providers.ChatService"] }]

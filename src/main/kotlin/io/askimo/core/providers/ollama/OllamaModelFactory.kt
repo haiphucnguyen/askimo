@@ -8,38 +8,41 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
-import io.askimo.core.providers.tokensFor
+import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.SystemPrompts.systemMessage
 
 class OllamaModelFactory : ChatModelFactory {
     override val provider: ModelProvider = ModelProvider.OLLAMA
 
-    override fun availableModels(settings: ProviderSettings): List<String> = try {
-        val process =
-            ProcessBuilder("ollama", "list")
-                .redirectErrorStream(true)
-                .start()
+    override fun availableModels(settings: ProviderSettings): List<String> =
+        try {
+            val process =
+                ProcessBuilder("ollama", "list")
+                    .redirectErrorStream(true)
+                    .start()
 
-        val output = process.inputStream.bufferedReader().readText()
-        process.waitFor()
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor()
 
-        // Parse lines like:
-        // llama2 7B   4.3 GB
-        // mistral 7B 4.1 GB
-        output
-            .lines()
-            .drop(1) // skip header
-            .mapNotNull { line ->
-                line.trim().split("\\s+".toRegex()).firstOrNull()
-            }.filter { it.isNotBlank() }
-            .distinct()
-    } catch (e: Exception) {
-        println("⚠️ Failed to fetch models from Ollama: ${e.message}")
-        emptyList()
-    }
+            // Parse lines like:
+            // llama2 7B   4.3 GB
+            // mistral 7B 4.1 GB
+            output
+                .lines()
+                .drop(1) // skip header
+                .mapNotNull { line ->
+                    line.trim().split("\\s+".toRegex()).firstOrNull()
+                }.filter { it.isNotBlank() }
+                .distinct()
+        } catch (e: Exception) {
+            println("⚠️ Failed to fetch models from Ollama: ${e.message}")
+            emptyList()
+        }
 
-    override fun defaultSettings(): ProviderSettings = OllamaSettings(
-        baseUrl = "http://localhost:11434", // default Ollama endpoint
-    )
+    override fun defaultSettings(): ProviderSettings =
+        OllamaSettings(
+            baseUrl = "http://localhost:11434", // default Ollama endpoint
+        )
 
     override fun create(
         model: String,
@@ -58,14 +61,13 @@ class OllamaModelFactory : ChatModelFactory {
                 .apply {
                     val s = samplingFor(settings.presets.style)
                     temperature(s.temperature).topP(s.topP)
-
-                    val cap = tokensFor(settings.presets.verbosity)
-                    numPredict(cap)
                 }.build()
+
         return AiServices
             .builder(ChatService::class.java)
             .streamingChatModel(chatModel)
             .chatMemory(memory)
+            .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
             .build()
     }
 }

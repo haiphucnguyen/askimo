@@ -96,9 +96,10 @@ class Session(
     /**
      * Gets the current provider's settings.
      */
-    fun getCurrentProviderSettings(): ProviderSettings = params.providerSettings[params.currentProvider]
-        ?: getModelFactory()?.defaultSettings()
-        ?: NoopProviderSettings
+    fun getCurrentProviderSettings(): ProviderSettings =
+        params.providerSettings[params.currentProvider]
+            ?: getModelFactory()?.defaultSettings()
+            ?: NoopProviderSettings
 
     /**
      * Sets the provider-specific settings into the map.
@@ -123,9 +124,10 @@ class Session(
     /**
      * Gets the provider-specific settings map, or creates defaults if missing.
      */
-    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings = params.providerSettings.getOrPut(provider) {
-        getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
-    }
+    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings =
+        params.providerSettings.getOrPut(provider) {
+            getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
+        }
 
     /**
      * Retrieves an existing chat memory for the given provider and model combination,
@@ -191,5 +193,6 @@ class Session(
      * @param memoryPolicy Controls whether the existing memory bucket for this
      * (provider, model) is reused or reset when building for the first time.
      */
-    fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService = if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
+    fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService =
+        if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
 }

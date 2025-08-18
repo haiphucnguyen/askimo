@@ -122,6 +122,7 @@ graalvmNative {
 
 spotless {
     kotlin {
+        ktlint()
         trimTrailingWhitespace()
         leadingTabsToSpaces(4)
         endWithNewline()

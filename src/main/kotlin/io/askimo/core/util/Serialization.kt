@@ -15,16 +15,17 @@ val coreProvidersModule =
         }
     }
 
-fun buildJson(vararg extraModules: SerializersModule): Json = Json {
-    prettyPrint = true
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-    classDiscriminator = "__type" // -> "ollama"/"openai" in saved JSON
-    serializersModule =
-        SerializersModule {
-            include(coreProvidersModule)
-            extraModules.forEach { include(it) }
-        }
-}
+fun buildJson(vararg extraModules: SerializersModule): Json =
+    Json {
+        prettyPrint = true
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+        classDiscriminator = "__type" // -> "ollama"/"openai" in saved JSON
+        serializersModule =
+            SerializersModule {
+                include(coreProvidersModule)
+                extraModules.forEach { include(it) }
+            }
+    }
 
 val appJson = buildJson()

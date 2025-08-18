@@ -1,6 +1,5 @@
 package io.askimo.cli
 
-import io.askimo.cli.Logger.log
 import io.askimo.cli.autocompleter.SetParamCompleter
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
@@ -13,12 +12,8 @@ import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.core.VersionInfo
-import io.askimo.core.providers.NoopChatService
-import io.askimo.core.providers.NoopProviderSettings
-import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.chat
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionConfigManager
+import io.askimo.core.session.SessionFactory
 import io.askimo.web.WebServer
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -36,11 +31,11 @@ fun main(args: Array<String>) {
         val host = System.getenv("ASKIMO_WEB_HOST") ?: "127.0.0.1"
         val port = System.getenv("ASKIMO_WEB_PORT")?.toIntOrNull() ?: 8080
 
-        val server = WebServer(host = host, port = port)
+        val server = WebServer(host = host, startPort = port)
         Runtime.getRuntime().addShutdownHook(Thread { server.stop() })
         server.start(wait = true) // block until Ctrl+C
     } else {
-        val session = createSession()
+        val session = SessionFactory.createSession()
         try {
             if (args.isEmpty()) {
                 val terminal =
@@ -167,36 +162,6 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun createSession(): Session {
-    val sessionParams = SessionConfigManager.load()
-    log { "Current provider: $sessionParams" }
-
-    val session = Session(sessionParams)
-
-    val provider = session.params.currentProvider
-    val modelName = session.params.getModel(provider)
-
-    val settings =
-        session.params.providerSettings[provider]
-            ?: ProviderRegistry.getFactory(provider)?.defaultSettings()
-            ?: NoopProviderSettings
-
-    val memory = session.getOrCreateMemory(provider, modelName, settings)
-
-    val factory = ProviderRegistry.getFactory(provider)
-    val chatService =
-        factory
-            ?.create(
-                modelName,
-                settings,
-                memory,
-            )
-            ?: NoopChatService
-
-    session.setChatService(chatService)
-    return session
-}
-
 private fun readStdinIfAny(
     maxBytes: Int,
     tailLines: Int,
@@ -245,21 +210,22 @@ private fun readStdinIfAny(
 private fun buildPrompt(
     userPrompt: String,
     stdinText: String,
-): String = if (stdinText.isBlank()) {
-    userPrompt.ifBlank { "Analyze the following input (no stdin provided)." }
-} else {
-    // Attach the piped input as context
-    buildString {
-        appendLine(userPrompt.ifBlank { "Analyze the following input:" })
-        appendLine()
-        appendLine("--- Begin input ---")
-        append(stdinText)
-        appendLine()
-        appendLine("--- End input ---")
-        appendLine()
-        appendLine("Return concise, actionable findings.")
+): String =
+    if (stdinText.isBlank()) {
+        userPrompt.ifBlank { "Analyze the following input (no stdin provided)." }
+    } else {
+        // Attach the piped input as context
+        buildString {
+            appendLine(userPrompt.ifBlank { "Analyze the following input:" })
+            appendLine()
+            appendLine("--- Begin input ---")
+            append(stdinText)
+            appendLine()
+            appendLine("--- End input ---")
+            appendLine()
+            appendLine("Return concise, actionable findings.")
+        }
     }
-}
 
 private fun printFullVersionInfo() {
     val a = VersionInfo

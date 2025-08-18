@@ -6,6 +6,13 @@
     <title>Askimo Web</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+    <script>
+      // basic marked config (can be customized later)
+      marked.setOptions({ breaks: true, gfm: true });
+    </script>
+
     <!-- App + views BEFORE Alpine -->
     <script type="module" src="/js/app.js"></script>
     <script type="module" src="/js/views/chat.view.js"></script>
