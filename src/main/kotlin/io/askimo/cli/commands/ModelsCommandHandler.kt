@@ -1,6 +1,7 @@
 package io.askimo.cli.commands
 
-import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.OLLAMA
+import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
@@ -37,7 +38,7 @@ class ModelsCommandHandler(
             println("⚠️ No models available for provider: ${provider.name.lowercase()}")
 
             when (provider) {
-                ModelProvider.OLLAMA -> {
+                OLLAMA -> {
                     println(
                         """
                         💡 You may not have any models installed yet.
@@ -50,7 +51,7 @@ class ModelsCommandHandler(
                         """.trimIndent(),
                     )
                 }
-                ModelProvider.OPEN_AI -> {
+                OPEN_AI -> {
                     println(
                         """
                         💡 One possible reason is that you haven't provided your OpenAI API key yet.

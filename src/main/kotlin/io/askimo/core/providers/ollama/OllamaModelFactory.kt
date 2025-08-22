@@ -6,13 +6,15 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.tools.LocalFsTools
 
 class OllamaModelFactory : ChatModelFactory {
-    override val provider: ModelProvider = ModelProvider.OLLAMA
+    override val provider: ModelProvider = OLLAMA
 
     override fun availableModels(settings: ProviderSettings): List<String> =
         try {
@@ -67,6 +69,7 @@ class OllamaModelFactory : ChatModelFactory {
             .builder(ChatService::class.java)
             .streamingChatModel(chatModel)
             .chatMemory(memory)
+            .tools(LocalFsTools())
             .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
             .build()
     }

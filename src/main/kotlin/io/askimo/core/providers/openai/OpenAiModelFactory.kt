@@ -6,11 +6,13 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.core.util.appJson
+import io.askimo.tools.LocalFsTools
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -19,7 +21,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 
 class OpenAiModelFactory : ChatModelFactory {
-    override val provider = ModelProvider.OPEN_AI
+    override val provider = OPEN_AI
 
     override fun availableModels(settings: ProviderSettings): List<String> {
         val apiKey =
@@ -79,6 +81,7 @@ class OpenAiModelFactory : ChatModelFactory {
             .builder(ChatService::class.java)
             .streamingChatModel(chatModel)
             .chatMemory(memory)
+            .tools(LocalFsTools())
             .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
             .build()
     }
