@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.cli
 
 import io.askimo.cli.autocompleter.SetParamCompleter

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.providers.ollama
 
 import io.askimo.core.providers.HasBaseUrl

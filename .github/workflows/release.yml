@@ -1,4 +1,4 @@
-name: Build Native Images
+name: Build
 
 on:
   push:

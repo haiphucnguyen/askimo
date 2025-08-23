@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) ${YEAR} Hai Nguyen
+ */
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -121,9 +125,16 @@ graalvmNative {
     }
 }
 
+extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true
+
 spotless {
+    ratchetFrom("origin/main")
     kotlin {
         ktlint()
+        licenseHeaderFile(
+            rootProject.file("LICENSE-HEADER-SRC"),
+            "(package|import|@file:)",
+        )
         trimTrailingWhitespace()
         leadingTabsToSpaces(4)
         endWithNewline()

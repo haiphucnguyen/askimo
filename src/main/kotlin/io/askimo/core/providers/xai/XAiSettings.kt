@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.providers.xai
 
 import io.askimo.core.providers.HasApiKey

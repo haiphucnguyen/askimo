@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.providers.openai
 
 import dev.langchain4j.memory.ChatMemory
@@ -5,18 +9,12 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
-import io.askimo.core.util.appJson
 import io.askimo.tools.fs.LocalFsTools
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import java.net.HttpURLConnection
-import java.net.URI
 
 class OpenAiModelFactory : ChatModelFactory {
     override fun availableModels(settings: ProviderSettings): List<String> {
@@ -24,28 +22,11 @@ class OpenAiModelFactory : ChatModelFactory {
             (settings as? OpenAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
                 ?: return emptyList()
 
-        return try {
-            val url = URI("https://api.openai.com/v1/models").toURL()
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            connection.setRequestProperty("Content-Type", "application/json")
-
-            connection.inputStream.bufferedReader().use { reader ->
-                val jsonElement = appJson.parseToJsonElement(reader.readText())
-
-                val data = jsonElement.jsonObject["data"]?.jsonArray.orEmpty()
-
-                data
-                    .mapNotNull { element ->
-                        element.jsonObject["id"]?.jsonPrimitive?.contentOrNull
-                    }.distinct()
-                    .sorted()
-            }
-        } catch (e: Exception) {
-            println("⚠️ Failed to fetch models from OpenAI: ${e.message}")
-            emptyList()
-        }
+        return fetchModels(
+            apiKey = apiKey,
+            url = "https://api.openai.com/v1/models",
+            providerName = "OpenAI",
+        )
     }
 
     override fun defaultSettings(): ProviderSettings = OpenAiSettings()

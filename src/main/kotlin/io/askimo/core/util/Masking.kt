@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.util
 
 enum class LengthDisclosure { HIDE, APPROX, EXACT }
