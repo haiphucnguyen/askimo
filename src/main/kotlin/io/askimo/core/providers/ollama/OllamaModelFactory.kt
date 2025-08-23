@@ -11,7 +11,7 @@ import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
-import io.askimo.tools.LocalFsTools
+import io.askimo.tools.fs.LocalFsTools
 
 class OllamaModelFactory : ChatModelFactory {
     override val provider: ModelProvider = OLLAMA

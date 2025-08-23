@@ -5,14 +5,13 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.core.util.appJson
-import io.askimo.tools.LocalFsTools
+import io.askimo.tools.fs.LocalFsTools
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject

@@ -478,9 +478,14 @@
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
-    {
-      "name": "io.askimo.tools.LocalFsTools",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true
-    }
+  {
+    "name": "io.askimo.tools.LocalFsTools",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.ollama.ToolCall",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  }
 ]

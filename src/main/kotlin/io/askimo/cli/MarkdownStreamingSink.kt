@@ -4,17 +4,17 @@ import org.jline.terminal.Terminal
 
 class MarkdownStreamingSink(
     private val terminal: Terminal,
-    private val renderer: MarkdownJLineRenderer
+    private val renderer: MarkdownJLineRenderer,
 ) {
     private val buf = StringBuilder()
 
     // scanning state
-    private var renderedUpTo = 0         // absolute index in buf rendered so far
+    private var renderedUpTo = 0 // absolute index in buf rendered so far
     private var fenceOpen = false
-    private var fenceStart = -1          // absolute index of opening fence start
-    private var fenceStartLineEnd = -1   // absolute index of opening fence newline
-    private var fenceTicks = ""          // "```" or "~~~"
-    private var fenceInfo = ""           // e.g. "java"
+    private var fenceStart = -1 // absolute index of opening fence start
+    private var fenceStartLineEnd = -1 // absolute index of opening fence newline
+    private var fenceTicks = "" // "```" or "~~~"
+    private var fenceInfo = "" // e.g. "java"
 
     // Accepts 3+ ` or ~, any indentation, optional info string
     private val fenceOpenRegex = Regex("""^(\s*)(`{3,}|~{3,})([^\r\n]*)\r?\n?$""")
@@ -40,7 +40,7 @@ class MarkdownStreamingSink(
                     fenceOpen = true
                     fenceStart = lineStart
                     fenceStartLineEnd = nl + 1
-                    fenceTicks = m.groupValues[2]      // ``` or ~~~ (len >= 3)
+                    fenceTicks = m.groupValues[2] // ``` or ~~~ (len >= 3)
                     fenceInfo = m.groupValues[3].trim() // e.g. "java"
                     // render any plain text before fence
                     if (fenceStart > renderedUpTo) {
@@ -57,12 +57,13 @@ class MarkdownStreamingSink(
                 val m = fenceCloseRegex.find(line)
                 if (m != null && m.groupValues[2][0] == fenceTicks[0]) {
                     // we have a complete fenced block: [fenceStart .. nl+1]
-                    val normalized = normalizeFenceBlock(
-                        full = buf.substring(fenceStart, nl + 1),
-                        openLine = buf.substring(fenceStart, fenceStartLineEnd),
-                        inner = buf.substring(fenceStartLineEnd, lineStart),
-                        closeLine = line
-                    )
+                    val normalized =
+                        normalizeFenceBlock(
+                            full = buf.substring(fenceStart, nl + 1),
+                            openLine = buf.substring(fenceStart, fenceStartLineEnd),
+                            inner = buf.substring(fenceStartLineEnd, lineStart),
+                            closeLine = line,
+                        )
                     // render normalized block
                     terminal.writer().print(renderer.markdownToAnsi(normalized))
                     terminal.writer().flush()
@@ -90,7 +91,12 @@ class MarkdownStreamingSink(
         }
     }
 
-    private fun normalizeFenceBlock(full: String, openLine: String, inner: String, closeLine: String): String {
+    private fun normalizeFenceBlock(
+        full: String,
+        openLine: String,
+        inner: String,
+        closeLine: String,
+    ): String {
         // 1) compute minimal leading spaces across inner lines (ignore empty)
         val lines = inner.split('\n')
         val nonEmpty = lines.filter { it.isNotEmpty() }
@@ -98,19 +104,24 @@ class MarkdownStreamingSink(
         // 2) strip that indent (but not below 0), and reassemble a canonical fenced block
         val lang = fenceInfo
         val open = "```" + if (lang.isNotEmpty()) " $lang" else ""
-        val body = lines.joinToString("\n") { l ->
-            if (minIndent == 0) l else l.drop(minIndent.coerceAtMost(countLeadingSpaces(l)))
-        }
-        val normalized = buildString {
-            append(open).append("\n")
-            append(body)
-            if (!body.endsWith("\n")) append("\n")
-            append("```").append("\n")
-        }
+        val body =
+            lines.joinToString("\n") { l ->
+                if (minIndent == 0) l else l.drop(minIndent.coerceAtMost(countLeadingSpaces(l)))
+            }
+        val normalized =
+            buildString {
+                append(open).append("\n")
+                append(body)
+                if (!body.endsWith("\n")) append("\n")
+                append("```").append("\n")
+            }
         return normalized
     }
 
-    private fun renderSlice(start: Int, endExclusive: Int) {
+    private fun renderSlice(
+        start: Int,
+        endExclusive: Int,
+    ) {
         if (endExclusive <= start) return
         terminal.writer().print(renderer.markdownToAnsi(buf.substring(start, endExclusive)))
         terminal.writer().flush()
@@ -128,11 +139,11 @@ class MarkdownStreamingSink(
         return i
     }
 
-    private fun StringBuilder.indexOf(ch: Char, from: Int): Int {
+    private fun StringBuilder.indexOf(
+        ch: Char,
+        from: Int,
+    ): Int {
         for (i in from.coerceAtLeast(0) until this.length) if (this[i] == ch) return i
         return -1
     }
 }
-
-
-
