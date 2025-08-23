@@ -38,6 +38,7 @@ class MarkdownJLineRenderer {
         private val sb: AttributedStringBuilder,
     ) : AbstractVisitor() {
         private var indent = 0
+        private var suppressParagraphIndent = false
         private val counters = ArrayDeque<Int>() // stack for ordered list levels
 
         private fun styleBase() = AttributedStyle.DEFAULT
@@ -68,8 +69,11 @@ class MarkdownJLineRenderer {
         }
 
         override fun visit(paragraph: Paragraph) {
-            indentSpaces()
-            visitChildrenInline(paragraph) // render inline children with base style
+            val inList = paragraph.parent is ListItem
+            if (!inList && !suppressParagraphIndent) {
+                indentSpaces()
+            }
+            visitChildrenInline(paragraph)
             newline()
         }
 
@@ -85,9 +89,8 @@ class MarkdownJLineRenderer {
         }
 
         override fun visit(orderedList: OrderedList) {
-            // Push starting number onto stack
             counters.addLast(orderedList.markerStartNumber)
-            // Visit children
+            // visit children manually (don’t call super)
             var n = orderedList.firstChild
             while (n != null) {
                 n.accept(this)
@@ -97,31 +100,27 @@ class MarkdownJLineRenderer {
         }
 
         override fun visit(listItem: ListItem) {
+            // Marker
             indentSpaces()
-            when (val parent = listItem.parent) {
-                is BulletList -> {
-                    sb.append("• ")
-                    indent += 2
-                    visitChildrenInlineOrBlocks(listItem)
-                    indent -= 2
-                    newline()
+            val marker =
+                when (listItem.parent) {
+                    is BulletList -> "•"
+                    is OrderedList -> {
+                        val idx = counters.removeLast()
+                        counters.addLast(idx + 1)
+                        "$idx."
+                    }
+                    else -> "-" // fallback
                 }
-                is OrderedList -> {
-                    // Pop + increment counter
-                    val idx = counters.removeLast()
-                    sb.append("$idx. ")
-                    counters.addLast(idx + 1)
+            sb.append(marker).append(' ') // exactly one space after the marker
 
-                    indent += (idx.toString().length + 2)
-                    visitChildrenInlineOrBlocks(listItem)
-                    indent -= (idx.toString().length + 2)
-                    newline()
-                }
-                else -> {
-                    visitChildrenInlineOrBlocks(listItem)
-                    newline()
-                }
-            }
+            // Render children WITHOUT extra indent at the start of the first paragraph
+            val prev = suppressParagraphIndent
+            suppressParagraphIndent = true
+            visitChildrenInlineOrBlocks(listItem)
+            suppressParagraphIndent = prev
+
+            newline()
         }
 
         override fun visit(blockQuote: BlockQuote) {

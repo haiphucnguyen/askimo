@@ -479,7 +479,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "io.askimo.tools.LocalFsTools",
+    "name": "io.askimo.tools.fs.LocalFsTools",
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true
   },
