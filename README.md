@@ -7,7 +7,7 @@
 [![Build](https://github.com/haiphucnguyen/askimo/actions/workflows/release.yml/badge.svg)](https://github.com/haiphucnguyen/askimo/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/haiphucnguyen/askimo)](https://github.com/haiphucnguyen/askimo/releases)
-[![DCO](https://github.com/haiphucnguyen/askimo/actions/workflows/dco.yml/badge.svg)](https://github.com/haiphucnguyen/askimo/blob/main/CONTRIBUTING.md)
+[![DCO](https://img.shields.io/badge/DCO-Signed--off-green.svg)](./CONTRIBUTING.md#-enforcing-dco)
 
 
 `Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, Ollama, XAI, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.

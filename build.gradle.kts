@@ -132,7 +132,7 @@ spotless {
     kotlin {
         ktlint()
         licenseHeaderFile(
-            rootProject.file("LICENSE-HEADER-SRC"),
+            rootProject.file("HEADER-SRC"),
             "(package|import|@file:)",
         )
         trimTrailingWhitespace()
