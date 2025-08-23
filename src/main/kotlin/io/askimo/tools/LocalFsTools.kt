@@ -1,7 +1,10 @@
 package io.askimo.tools
 
 import dev.langchain4j.agent.tool.Tool
-import java.nio.file.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.util.Locale
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
@@ -89,5 +92,92 @@ class LocalFsTools(
             "files" to page,
             "nextCursor" to next
         )
+    }
+
+    @Tool(
+        "Compute total byte size of files filtered by type. " +
+                "Use either 'extensions' (e.g., ['pdf']) or 'category' (video|image|audio|doc|archive). " +
+                "If both are provided, EXTENSIONS TAKE PRECEDENCE. " +
+                "Params: path, extensions?, category?, recursive?(false). " +
+                "Returns: {count, bytes, human, matchedExtensions, directory}"
+    )
+    fun totalSizeByType(
+        path: String,
+        extensions: List<String>? = null,
+        category: String? = null,
+        recursive: Boolean? = false
+    ): Map<String, Any> {
+        val dir = safeDir(path)
+
+        // EXTENSIONS FIRST (fix)
+        val extSet: Set<String> = when {
+            !extensions.isNullOrEmpty() -> extensions
+                .map { it.trim().lowercase(Locale.ROOT).removePrefix(".") }
+                .filter { it.isNotBlank() }
+                .toSet()
+            !category.isNullOrBlank() -> categoryExts[category.lowercase(Locale.ROOT)]
+                ?: error("Unknown category: $category")
+            else -> error("Provide either 'extensions' or 'category'")
+        }
+
+        var count = 0L
+        var bytes = 0L
+
+        val stream = if (recursive == true) Files.walk(dir) else Files.list(dir)
+        stream.use { s ->
+            s.filter { it.isRegularFile() }.forEach { p ->
+                val name = p.fileName.toString()
+                val ext = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+                if (ext in extSet) {
+                    count++
+                    try { bytes += Files.size(p) } catch (_: Exception) { /* skip unreadable */ }
+                }
+            }
+        }
+
+        return mapOf(
+            "directory" to dir.toString(),
+            "count" to count,
+            "bytes" to bytes,
+            "human" to humanReadable(bytes),
+            "matchedExtensions" to extSet
+        )
+    }
+
+
+    private fun humanReadable(bytes: Long): String {
+        val units = arrayOf("B", "KB", "MB", "GB", "TB", "PB", "EB")
+        var b = bytes.toDouble()
+        var i = 0
+        while (b >= 1024 && i < units.lastIndex) {
+            b /= 1024.0
+            i++
+        }
+        val fmt = if (i == 0) "%.0f %s" else "%.2f %s"
+        return String.format(java.util.Locale.US, fmt, b, units[i])
+    }
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val fs = LocalFsTools()
+
+            // quick tests — adjust as you like:
+            println("== filesByType PDFs in ~/Downloads (recursive, first 20) ==")
+            val list = fs.filesByType(
+                path = "~/Downloads",
+                extensions = listOf("pdf"),
+                recursive = true,
+                limit = 20
+            )
+            println(list)
+
+            println("\n== totalSizeByType PDFs in ~/Downloads (non-recursive) ==")
+            val size = fs.totalSizeByType(
+                path = "~/Downloads",
+                extensions = listOf("pdf"),
+                recursive = false
+            )
+            println(size)
+        }
     }
 }

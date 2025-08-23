@@ -116,21 +116,24 @@ fun main(args: Array<String>) {
 
                         val firstTokenSeen = AtomicBoolean(false)
 
+                        val mdRenderer = MarkdownJLineRenderer()
+                        val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
+
                         val output =
                             session.getChatService().chat(prompt) { token ->
                                 if (firstTokenSeen.compareAndSet(false, true)) {
                                     indicator.stopWithElapsed()
                                     reader.terminal.flush()
                                 }
-                                val w = reader.terminal.writer()
-                                w.print(token)
-                                w.flush()
+                                mdSink.append(token)
                             }
                         if (!firstTokenSeen.get()) {
                             indicator.stopWithElapsed()
                             reader.terminal.writer().println()
                             reader.terminal.flush()
                         }
+                        mdSink.finish()
+
                         session.lastResponse = output
                         reader.terminal.writer().println()
                         reader.terminal.writer().flush()

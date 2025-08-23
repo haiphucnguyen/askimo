@@ -24,6 +24,7 @@ dependencies {
     implementation("dev.langchain4j:langchain4j:1.3.0")
     implementation("dev.langchain4j:langchain4j-open-ai:1.3.0")
     implementation("dev.langchain4j:langchain4j-ollama:1.3.0")
+    implementation("org.commonmark:commonmark:0.25.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0")
     implementation("io.ktor:ktor-server-cio:3.2.3")
     implementation("io.ktor:ktor-server-core:3.2.3")

@@ -477,5 +477,10 @@
     "name": "io.ktor.network.selector.InterestSuspensionsMap",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
-  }
+  },
+    {
+      "name": "io.askimo.tools.LocalFsTools",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true
+    }
 ]
