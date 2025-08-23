@@ -1,7 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0
- *
- * Copyright (c) ${YEAR} Hai Nguyen
- */
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -16,7 +12,7 @@ plugins {
 }
 
 group = "io.askimo"
-version = "0.0.1"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
@@ -44,6 +40,12 @@ tasks.test {
     useJUnitPlatform()
 }
 
+kotlin {
+    compilerOptions {
+        javaParameters.set(true)
+    }
+}
+
 application {
     mainClass.set("io.askimo.cli.ChatCliKt")
 }
@@ -66,7 +68,7 @@ sourceSets {
 }
 
 val author = "Hai Nguyen"
-val licenseId = "MIT"
+val licenseId = "Apache 2"
 val homepage = "https://github.com/haiphucnguyen/askimo"
 
 val aboutDir = layout.buildDirectory.dir("generated-resources/about")

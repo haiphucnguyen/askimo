@@ -487,5 +487,15 @@
     "name": "dev.langchain4j.model.ollama.ToolCall",
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.ollama.FunctionCall",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.ollama.Message",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
   }
 ]
