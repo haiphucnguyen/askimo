@@ -10,7 +10,7 @@
 [![DCO](https://img.shields.io/badge/DCO-Signed--off-green.svg)](./CONTRIBUTING.md#-enforcing-dco)
 
 
-`Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, Ollama, XAI, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.
+`Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, Ollama, X AI, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.
 
 > Ask anything, switch models, and customize your AI experience — all from your terminal.
 
@@ -142,7 +142,8 @@ Stay tuned for updates!
 Includes detailed usage, options, and examples for each command.
 
 
-> 💡 Note: If you want to use the OpenAI provider, you will need an OpenAI API key. You can create one from your [OpenAI account dashboard](https://platform.openai.com/api-keys)
+> 💡 Note: Some providers (such as OpenAI, X AI, etc.) require an API key.  
+> Make sure you create and configure the appropriate key from your provider’s account dashboard before using them.
 
 ## Extending Askimo
 
