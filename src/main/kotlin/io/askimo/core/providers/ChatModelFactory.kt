@@ -9,18 +9,6 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory
  */
 interface ChatModelFactory {
     /**
-     * The AI provider this factory creates models for.
-     */
-    val provider: ModelProvider
-
-    /**
-     * Returns the default model identifier for this provider.
-     *
-     * @return The identifier of the default model, or null if no default is specified
-     */
-    fun defaultModel(): String? = null
-
-    /**
      * Returns a list of available model names for this provider.
      *
      * @param settings Provider-specific settings that may be needed to retrieve available models

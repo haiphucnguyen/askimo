@@ -1,7 +1,11 @@
 package io.askimo.core.providers
 
+import io.askimo.core.providers.ModelProvider.OLLAMA
+import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.X_AI
 import io.askimo.core.providers.ollama.OllamaModelFactory
 import io.askimo.core.providers.openai.OpenAiModelFactory
+import io.askimo.core.providers.xai.XAiModelFactory
 
 /**
  * Central registry for managing chat model factories across different AI providers.
@@ -19,23 +23,12 @@ object ProviderRegistry {
     /**
      * Internal registry mapping model providers to their respective factory implementations.
      */
-    private val factories = mutableMapOf<ModelProvider, ChatModelFactory>()
-
-    init {
-        register(OpenAiModelFactory())
-        register(OllamaModelFactory())
-    }
-
-    /**
-     * Registers a new chat model factory in the registry.
-     *
-     * If a factory for the same provider already exists, it will be replaced.
-     *
-     * @param factory The chat model factory to register
-     */
-    fun register(factory: ChatModelFactory) {
-        factories[factory.provider] = factory
-    }
+    private val factories =
+        mapOf(
+            OPEN_AI to OpenAiModelFactory(),
+            X_AI to XAiModelFactory(),
+            OLLAMA to OllamaModelFactory(),
+        )
 
     /**
      * Retrieves the chat model factory for the specified provider.

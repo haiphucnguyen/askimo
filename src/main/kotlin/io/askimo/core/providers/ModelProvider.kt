@@ -18,6 +18,12 @@ enum class ModelProvider {
     OPEN_AI,
 
     /**
+     * Represents XAI's models like grok-3, grok3-mini, etc.
+     */
+    @SerialName("X_AI")
+    X_AI,
+
+    /**
      * Represents Ollama's locally-hosted models.
      */
     @SerialName("OLLAMA")

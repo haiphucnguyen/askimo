@@ -2,8 +2,10 @@ package io.askimo.core.providers
 
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.X_AI
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.xai.XAiSettings
 import java.net.HttpURLConnection
 import java.net.URI
 
@@ -26,6 +28,9 @@ object ProviderValidator {
         when (provider) {
             OPEN_AI ->
                 (settings as? OpenAiSettings)?.apiKey?.isNotBlank() == true
+
+            X_AI ->
+                (settings as? XAiSettings)?.apiKey?.isNotBlank() == true
 
             OLLAMA ->
                 (settings as? OllamaSettings)?.let { s ->
@@ -55,6 +60,12 @@ object ProviderValidator {
                 2. Then set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
 
                 """.trimIndent()
+            X_AI ->
+                """
+                💡💡 To use XAI, you need to provide an API key.
+                1. Get your API key from: https://console.x.ai/
+                2. Then set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
+                """.trimIndent().trimIndent()
 
             else -> "💡 This provider requires custom configuration. Please refer to its documentation."
         }

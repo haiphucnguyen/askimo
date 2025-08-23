@@ -61,7 +61,7 @@ class SetProviderCommandHandler(
         var model = session.params.getModel(provider)
         if (model.isBlank()) {
             // Use default model if available, else the first discovered
-            model = factory.defaultModel()
+            model = providerSettings.defaultModel
                 ?: factory.availableModels(providerSettings).firstOrNull().orEmpty()
         }
         session.params.model = model

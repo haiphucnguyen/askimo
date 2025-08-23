@@ -8,10 +8,11 @@
 `Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, Ollama, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.
 
 > Ask anything, switch models, and customize your AI experience — all from your terminal.
+> ⭐ **If you find Askimo useful, please consider giving us a star. It motivates us a lot and helps the project grow!
 
 ## Features
 
-* Talk to multiple AI models – Use OpenAI, Ollama, and more without switching tools.
+* Talk to many LLMs in one place — Use OpenAI, X AI, Ollama, and more without switching tools. The pluggable design makes it easy to add future providers as they appear.
 
 * Switch models instantly – Change providers or models on the fly with a single command.
 
@@ -31,11 +32,9 @@
 
 * Runs anywhere – Fully cross-platform on macOS, Linux, and Windows.
 
-* Automate with custom commands – Create new CLI commands to integrate Askimo into your workflows.
+* File system integration – Read and process local files directly from Askimo, turning their contents into AI prompts.
 
 ### Coming soon
-
-* File system integration – Read and process local files directly from Askimo, turning their contents into AI prompts.
 
 * Custom prompt shortcuts – Define reusable commands like :release_notes <commits_file> to instantly generate release notes from a list of commits.
 

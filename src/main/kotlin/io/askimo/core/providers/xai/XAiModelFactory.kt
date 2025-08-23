@@ -1,4 +1,4 @@
-package io.askimo.core.providers.openai
+package io.askimo.core.providers.xai
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
@@ -17,15 +17,17 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
 import java.net.URI
+import kotlin.collections.mapNotNull
+import kotlin.collections.orEmpty
 
-class OpenAiModelFactory : ChatModelFactory {
+class XAiModelFactory : ChatModelFactory {
     override fun availableModels(settings: ProviderSettings): List<String> {
         val apiKey =
-            (settings as? OpenAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
+            (settings as? XAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
                 ?: return emptyList()
 
         return try {
-            val url = URI("https://api.openai.com/v1/models").toURL()
+            val url = URI("${settings.baseUrl.trimEnd('/')}/models").toURL()
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
@@ -43,26 +45,27 @@ class OpenAiModelFactory : ChatModelFactory {
                     .sorted()
             }
         } catch (e: Exception) {
-            println("⚠️ Failed to fetch models from OpenAI: ${e.message}")
+            println("⚠️ Failed to fetch models from X_AI: ${e.message}")
             emptyList()
         }
     }
 
-    override fun defaultSettings(): ProviderSettings = OpenAiSettings()
+    override fun defaultSettings(): ProviderSettings = XAiSettings()
 
     override fun create(
         model: String,
         settings: ProviderSettings,
         memory: ChatMemory,
     ): ChatService {
-        require(settings is OpenAiSettings) {
-            "Invalid settings type for OpenAI: ${settings::class.simpleName}"
+        require(settings is XAiSettings) {
+            "Invalid settings type for X_AI: ${settings::class.simpleName}"
         }
 
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
                 .apiKey(settings.apiKey)
+                .baseUrl(settings.baseUrl)
                 .modelName(model)
                 .apply {
                     if (supportsSampling(model)) {

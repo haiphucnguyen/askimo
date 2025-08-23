@@ -1,7 +1,9 @@
 package io.askimo.cli.commands
 
+import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.ParamKey
 import io.askimo.core.session.Session
+import io.askimo.core.util.Masking
 import org.jline.reader.ParsedLine
 
 /**
@@ -15,7 +17,7 @@ class ParamsCommandHandler(
     private val session: Session,
 ) : CommandHandler {
     override val keyword = ":params"
-    override val description = "Show current model parameters or list available param keys"
+    override val description = "Show current provider, model, and configurable parameters"
 
     override fun handle(line: ParsedLine) {
         if (line.words().contains("--list")) {
@@ -27,34 +29,74 @@ class ParamsCommandHandler(
 
     private fun showParams() {
         val provider = session.getActiveProvider()
-        val model = session.params.getModel(provider)
+        val settings = session.getCurrentProviderSettings()
+        val model = resolveCurrentModel(settings)
 
-        println("Provider: ${provider.name.lowercase()}")
-        println("Current model: $model")
+        println("Provider : ${provider.name.lowercase()}")
+        println("Model    : $model")
         println()
 
-        val paramKeys = ParamKey.forProvider(provider)
-        if (paramKeys.isEmpty()) {
-            println("No configurable parameters for this model.")
+        val keys = ParamKey.supportedFor(settings)
+        if (keys.isEmpty()) {
+            println("No configurable parameters for this provider.")
             return
         }
 
-        println("Model parameters:")
-        paramKeys.forEach { key ->
-            println("  ${key.key} (${key.type}) – ${key.description}")
+        println("Parameters (current values):")
+        keys.forEach { key ->
+            val raw = safeGetValue(key, settings)
+            val shown =
+                if (key.secure) {
+                    Masking.maskSecret(raw)
+                } else {
+                    (raw ?: "").toString()
+                }
+            val sugg =
+                if (key.suggestions.isNotEmpty()) {
+                    "  (suggestions: ${key.suggestions.joinToString(", ")})"
+                } else {
+                    ""
+                }
+
+            println("  ${key.key} = $shown  (${key.type}) – ${key.description}$sugg")
         }
 
         println()
         println("Use :setparam <key> <value> to change parameters.")
-        println("Use :params --list to see available keys.")
+        println("Use :params --list to see available keys without values.")
     }
 
     private fun listKeys() {
         val provider = session.getActiveProvider()
-        val model = session.params.getModel(provider)
+        val settings = session.getCurrentProviderSettings()
+        val model = resolveCurrentModel(settings)
+
         println("Available parameter keys for $model ($provider):")
-        ParamKey.forProvider(provider).forEach {
-            println("  ${it.key} (${it.type}) – ${it.description}")
+        ParamKey.supportedFor(settings).forEach { key ->
+            val secureBadge = if (key.secure) " 🔒" else ""
+            val sugg =
+                if (key.suggestions.isNotEmpty()) {
+                    "  (suggestions: ${key.suggestions.joinToString(", ")})"
+                } else {
+                    ""
+                }
+
+            println("  ${key.key}$secureBadge (${key.type}) – ${key.description}$sugg")
         }
     }
+
+    private fun resolveCurrentModel(settings: ProviderSettings): String {
+        val m = session.params.model
+        return m.ifBlank { settings.defaultModel }
+    }
+
+    private fun safeGetValue(
+        key: ParamKey,
+        settings: ProviderSettings,
+    ): Any? =
+        try {
+            key.getValue(session.params, settings)
+        } catch (_: Exception) {
+            "<?>"
+        }
 }

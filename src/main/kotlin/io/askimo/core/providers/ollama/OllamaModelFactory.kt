@@ -5,8 +5,6 @@ import dev.langchain4j.model.ollama.OllamaStreamingChatModel
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -14,8 +12,6 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
 class OllamaModelFactory : ChatModelFactory {
-    override val provider: ModelProvider = OLLAMA
-
     override fun availableModels(settings: ProviderSettings): List<String> =
         try {
             val process =

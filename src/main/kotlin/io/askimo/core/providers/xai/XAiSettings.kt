@@ -1,6 +1,6 @@
-package io.askimo.core.providers.ollama
+package io.askimo.core.providers.xai
 
-import io.askimo.core.providers.HasBaseUrl
+import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.Style
@@ -8,15 +8,17 @@ import io.askimo.core.providers.Verbosity
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class OllamaSettings(
-    override var baseUrl: String = "http://localhost:11434",
-    override val defaultModel: String = "",
+data class XAiSettings(
+    val baseUrl: String = "https://api.x.ai/v1",
+    override var apiKey: String = "",
+    override val defaultModel: String = "grok-4",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings,
-    HasBaseUrl {
+    HasApiKey {
     override fun describe(): List<String> =
         listOf(
-            "baseUrl:     $baseUrl",
+            "apiKey:      ${apiKey.take(5)}***",
+            "baseUrl: $baseUrl",
             "presets: $presets",
         )
 }

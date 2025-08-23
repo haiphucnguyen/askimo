@@ -8,8 +8,9 @@ package io.askimo.core.providers
  * (like OpenAI, Ollama, etc.). Each implementation contains the specific
  * parameters required by its respective provider.
  */
-
 interface ProviderSettings {
+    val defaultModel: String
+
     /**
      * Provider-wide presets that control style and verbosity.
      */
@@ -26,4 +27,12 @@ interface ProviderSettings {
      * @return A list of strings describing the current configuration settings
      */
     fun describe(): List<String>
+}
+
+interface HasApiKey {
+    var apiKey: String
+}
+
+interface HasBaseUrl {
+    var baseUrl: String
 }

@@ -3,6 +3,7 @@ package io.askimo.core.util
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.xai.XAiSettings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -12,6 +13,7 @@ val coreProvidersModule =
         polymorphic(ProviderSettings::class) {
             subclass(OpenAiSettings::class, OpenAiSettings.serializer())
             subclass(OllamaSettings::class, OllamaSettings.serializer())
+            subclass(XAiSettings::class, XAiSettings.serializer())
         }
     }
 

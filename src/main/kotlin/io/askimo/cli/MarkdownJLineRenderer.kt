@@ -67,7 +67,6 @@ class MarkdownJLineRenderer {
             sb.style(styleBase())
         }
 
-
         override fun visit(paragraph: Paragraph) {
             indentSpaces()
             visitChildrenInline(paragraph) // render inline children with base style
