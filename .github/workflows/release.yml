@@ -318,4 +318,57 @@ jobs:
           # Optional: keep tap history as a single commit by force-updating main
           CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           git push --force origin "$CURRENT_BRANCH"
-  
+  docker:
+    name: Build & Push Docker (multi-arch)
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ release ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (emulation for cross-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags and platforms
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/askimo"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            V="${GITHUB_REF_NAME}"
+            TAGS="$REPO:latest,$REPO:${V},$REPO:${V#v}"
+            PLATFORMS="linux/amd64,linux/arm64"
+          else
+            SHA="${GITHUB_SHA::7}"
+            TAGS="$REPO:edge,$REPO:sha-$SHA"
+            PLATFORMS="linux/amd64"
+          fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: ${{ steps.meta.outputs.platforms }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
