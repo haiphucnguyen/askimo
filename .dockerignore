@@ -1,0 +1,9 @@
+.git
+.github
+.gradle
+build/          
+dist/
+**/*.iml
+**/.idea
+**/.vscode
+*.log

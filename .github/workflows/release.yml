@@ -19,50 +19,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Set up GraalVM + native-image on each OS
       - name: Set up GraalVM (JDK 21)
         uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
-          distribution: 'graalvm-community'   # or 'graalvm' for Oracle distribution
+          distribution: 'graalvm-community'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      # ⚠️ Windows-only: keep TEMP/TMP and Gradle cache on D: (same root as workspace)
+
       - name: Align temp and Gradle dirs on D drive (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # RUNNER_TEMP is already on D:\a\_temp on Hosted Windows
           echo "TMP=$env:RUNNER_TEMP"        >> $env:GITHUB_ENV
           echo "TEMP=$env:RUNNER_TEMP"       >> $env:GITHUB_ENV
           echo "GRADLE_USER_HOME=$env:RUNNER_TEMP\gradle" >> $env:GITHUB_ENV
-      # Cache Gradle and run with the official action (cross-platform)
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          # mirrors your previous cache policy: PR/branches = read-only; main/tags = RW
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
-      # Run Gradle (Linux/macOS)
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
 
-      # Run Gradle (Windows) – keep tmp on D: to avoid "other has different root"
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true nativeCompile
 
-      # Figure out the artifact file name(s)
       - name: Locate native binary path
         id: paths
         shell: bash
         run: |
-          # GraalVM Build Tools default output directory:
-          #   build/native/nativeCompile/
           OUT_DIR="build/native/nativeCompile"
-          # Your application name is the project name by default; adjust if you changed it.
-          # On Windows, the binary ends with .exe
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             BIN="$(ls "$OUT_DIR"/*.exe)"
           else
@@ -80,10 +70,47 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # Optional: create a GitHub Release and attach artifacts when building a tag (e.g., v1.2.3)
+  # NEW: native arm64 build on hosted ARM runner
+  native-arm:
+    name: native-ubuntu-24.04-arm
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up GraalVM (JDK 21)
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build native image (arm64)
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
+
+      - name: Locate native binary path
+        id: arm_paths
+        shell: bash
+        run: |
+          OUT_DIR="build/native/nativeCompile"
+          BIN="$(ls "$OUT_DIR"/* | head -n 1)"
+          echo "bin=$BIN" >> $GITHUB_OUTPUT
+          echo "Found: $BIN"
+
+      - name: Upload arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-ubuntu-24.04-arm
+          path: ${{ steps.arm_paths.outputs.bin }}
+          if-no-files-found: error
+          retention-days: 14
+
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ native ]
+    needs: [ native, native-arm ]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -97,7 +124,6 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/}"
-
           files=()
 
           # macOS
@@ -105,42 +131,31 @@ jobs:
           if [[ -n "${MAC_DIR:-}" ]]; then
             BIN=$(ls "$MAC_DIR"/* | head -n1)
             chmod +x "$BIN"
-
-            TMPDIR="$(mktemp -d)"
-            mkdir -p "$TMPDIR/bin"
-            cp "$BIN" "$TMPDIR/bin/askimo"
-
-            # (optional) include shell completions if you have them
-            # mkdir -p "$TMPDIR/completions"
-            # cp scripts/completions/askimo.bash "$TMPDIR/completions/" 2>/dev/null || true
-            # cp scripts/completions/_askimo      "$TMPDIR/completions/" 2>/dev/null || true
-            # cp scripts/completions/askimo.fish  "$TMPDIR/completions/" 2>/dev/null || true
-
-          tar -C "$TMPDIR" -czf "askimo-${VERSION}-darwin-arm64.tar.gz" bin
-          files+=("askimo-${VERSION}-darwin-arm64.tar.gz")
+            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
+            tar -C "$TMPDIR" -czf "askimo-${VERSION}-darwin-arm64.tar.gz" bin
+            files+=("askimo-${VERSION}-darwin-arm64.tar.gz")
           fi
 
-          # Linux
-          LIN_DIR=$(compgen -G 'dist/*ubuntu*' || true)
-          if [[ -n "${LIN_DIR:-}" ]]; then
-            BIN=$(ls "$LIN_DIR"/* | head -n1)
+          # Linux amd64
+          LIN_AMD_DIR=$(compgen -G 'dist/*ubuntu-latest*' || true)
+          if [[ -n "${LIN_AMD_DIR:-}" ]]; then
+            BIN=$(ls "$LIN_AMD_DIR"/* | head -n1)
             chmod +x "$BIN"
-          
-            TMPDIR="$(mktemp -d)"
-            mkdir -p "$TMPDIR/bin"
-            cp "$BIN" "$TMPDIR/bin/askimo"
-          
-            # (optional) include completions if you have them:
-            # mkdir -p "$TMPDIR/completions"
-            # cp scripts/completions/askimo.bash "$TMPDIR/completions/" 2>/dev/null || true
-            # cp scripts/completions/_askimo      "$TMPDIR/completions/" 2>/dev/null || true
-            # cp scripts/completions/askimo.fish  "$TMPDIR/completions/" 2>/dev/null || true
-          
+            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
             tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-x64.tar.gz" bin
             files+=("askimo-${VERSION}-linux-x64.tar.gz")
           fi
-  
-  
+
+          # Linux arm64 (from native-arm)
+          LIN_ARM_DIR=$(compgen -G 'dist/*ubuntu-24.04-arm*' || true)
+          if [[ -n "${LIN_ARM_DIR:-}" ]]; then
+            BIN=$(ls "$LIN_ARM_DIR"/* | head -n1)
+            chmod +x "$BIN"
+            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
+            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-arm64.tar.gz" bin
+            files+=("askimo-${VERSION}-linux-arm64.tar.gz")
+          fi
+
           # Windows
           WIN_DIR=$(compgen -G 'dist/*windows*' || true)
           if [[ -n "${WIN_DIR:-}" ]]; then
@@ -149,13 +164,11 @@ jobs:
             files+=("askimo-${VERSION}-windows-x64.zip")
           fi
 
-          # Checksums (only for files that exist)
           if ((${#files[@]})); then
             shasum -a 256 "${files[@]}" > SHA256SUMS.txt
             files+=("SHA256SUMS.txt")
           fi
 
-          # Emit a MULTILINE output variable called "files"
           {
             echo "files<<EOF"
             printf '%s\n' "${files[@]}"
@@ -165,65 +178,57 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.pkg.outputs.files }}   # one path per line
+          files: ${{ steps.pkg.outputs.files }}
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   homebrew:
     name: Publish Homebrew tap (separate repo)
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ release ]                 # wait until your release has uploaded assets
+    needs: [ release ]
     runs-on: ubuntu-latest
     permissions:
-      contents: read                   # current repo only
-
+      contents: read
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Collect release assets & checksums
         id: meta
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"           # e.g. v0.0.4
+          TAG="${GITHUB_REF_NAME}"
           VERSION_PLAIN="${TAG#v}"
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
           JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
-
-          # Your release job names (keep these in sync with your packaging step)
           ARM_NAME="askimo-${TAG}-darwin-arm64.tar.gz"
           AMD_NAME="askimo-${TAG}-darwin-amd64.tar.gz"
-
           BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
           AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
-
           SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
           if [ -z "$SHA_URL" ] || [ -z "$ARM_URL" ]; then
             echo "Release missing SHA256SUMS.txt or macOS arm64 tarball." >&2
-            echo "Assets:" >&2
             echo "$JSON" | jq -r '.assets[]?.name' >&2
             exit 1
           fi
-
           curl -sSL -o SHA256SUMS.txt "$SHA_URL"
           ARM_SHA="$(grep "  $ARM_NAME" SHA256SUMS.txt | awk '{print $1}')"
           AMD_SHA=""
           if [ -n "$AMD_URL" ]; then
             AMD_SHA="$(grep "  $AMD_NAME" SHA256SUMS.txt | awk '{print $1}')"
           fi
-
           echo "tag=$TAG"                     >> $GITHUB_OUTPUT
           echo "version_plain=$VERSION_PLAIN" >> $GITHUB_OUTPUT
           echo "arm_url=$ARM_URL"             >> $GITHUB_OUTPUT
           echo "arm_sha=$ARM_SHA"             >> $GITHUB_OUTPUT
           echo "amd_url=$AMD_URL"             >> $GITHUB_OUTPUT
           echo "amd_sha=$AMD_SHA"             >> $GITHUB_OUTPUT
-
       - name: Checkout tap repo
         uses: actions/checkout@v4
         with:
@@ -231,77 +236,47 @@ jobs:
           token: ${{ secrets.TAP_PUSH_TOKEN }}
           path: tap
           fetch-depth: 0
-
       - name: Write formula into tap
         run: |
           set -euo pipefail
           mkdir -p tap/Formula
-
-          # Begin formula
           cat > tap/Formula/askimo.rb <<'RUBY'
             class Askimo < Formula
             desc "AI-powered terminal assistant for multiple LLM providers"
             homepage "https://github.com/haiphucnguyen/askimo"
             version "VERSION_PLACEHOLDER"
             license "Apache-2.0"
-            
+          
             on_macos do
               on_arm do
                 url "ARM_URL_PLACEHOLDER"
                 sha256 "ARM_SHA_PLACEHOLDER"
               end
-          RUBY
-  
-          # Optional Intel block
-          if [ -n "${{ steps.meta.outputs.amd_url }}" ] && [ -n "${{ steps.meta.outputs.amd_sha }}" ]; then
-            cat >> tap/Formula/askimo.rb <<'RUBY'
-              on_intel do
-                url "AMD_URL_PLACEHOLDER"
-                sha256 "AMD_SHA_PLACEHOLDER"
-              end
-          RUBY
-          fi
-          
-          # Close formula
-          cat >> tap/Formula/askimo.rb <<'RUBY'
             end
-            
+          
             def install
-              # Be tolerant to various archive layouts
               candidates = [
                 "bin/askimo",
                 "./bin/askimo",
-                Dir["*/bin/askimo"].first,  # e.g., askimo-vX.Y.Z-.../bin/askimo
+                Dir["*/bin/askimo"].first,
                 "askimo",
                 Dir["*/askimo"].first
               ].compact
-          
               path = candidates.find { |p| p && File.exist?(p) }
               odie "askimo binary not found; archive contained: #{Dir['**/*'][0,30].join(', ')}" unless path
-
               bin.install path => "askimo"
             end
-            
+          
             test do
               output = shell_output("#{bin}/askimo --version")
               assert_match "askimo", output.downcase
             end
-          end
           RUBY
-          
-          # Replace placeholders
           sed -i "s|VERSION_PLACEHOLDER|${{ steps.meta.outputs.version_plain }}|g" tap/Formula/askimo.rb
           sed -i "s|ARM_URL_PLACEHOLDER|${{ steps.meta.outputs.arm_url }}|g" tap/Formula/askimo.rb
           sed -i "s|ARM_SHA_PLACEHOLDER|${{ steps.meta.outputs.arm_sha }}|g" tap/Formula/askimo.rb
-          
-          if [ -n "${{ steps.meta.outputs.amd_url }}" ] && [ -n "${{ steps.meta.outputs.amd_sha }}" ]; then
-            sed -i "s|AMD_URL_PLACEHOLDER|${{ steps.meta.outputs.amd_url }}|g" tap/Formula/askimo.rb
-            sed -i "s|AMD_SHA_PLACEHOLDER|${{ steps.meta.outputs.amd_sha }}|g" tap/Formula/askimo.rb
-          fi
-          
           echo "==== tap/Formula/askimo.rb ===="
           cat tap/Formula/askimo.rb
-
       - name: Commit & push to tap repo (single-commit history)
         working-directory: tap
         env:
@@ -311,11 +286,111 @@ jobs:
           GIT_COMMITTER_EMAIL: actions@users.noreply.github.com
         run: |
           set -euo pipefail
-          # Keep the tap repo tidy: single commit with current formula
           git rm -r --cached . >/dev/null 2>&1 || true
           git add Formula/askimo.rb
           git commit -m "askimo ${GITHUB_REF_NAME}" || echo "No changes"
-          # Optional: keep tap history as a single commit by force-updating main
           CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           git push --force origin "$CURRENT_BRANCH"
-  
+
+  docker:
+    name: Build & Push Docker (native, multi-arch)
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ release, native, native-arm ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Download Linux amd64 artifact from the matrix 'native' job
+      - name: Download amd64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-ubuntu-latest
+          path: dist-amd64
+
+      - name: Normalize amd64 binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          AMD="$(ls dist-amd64/* | head -n1)"
+          chmod +x "$AMD"
+          mkdir -p out
+          cp "$AMD" out/askimo-amd64
+
+      # Download Linux arm64 artifact from 'native-arm' job
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-ubuntu-24.04-arm
+          path: dist-arm64
+
+      - name: Normalize arm64 binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARM="$(ls dist-arm64/* | head -n1)"
+          chmod +x "$ARM"
+          mkdir -p out
+          cp "$ARM" out/askimo-arm64
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/askimo"
+          V="${GITHUB_REF_NAME}"   # e.g. v1.2.3
+          echo "base=$REPO"                                   >> $GITHUB_OUTPUT
+          echo "tags=$REPO:latest,$REPO:${V},$REPO:${V#v}"    >> $GITHUB_OUTPUT
+
+      # Build & push per-arch images (no QEMU; runtime-only copy)
+      - name: Build amd64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-amd64
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.base }}:amd64-temp
+          provenance: false
+          sbom: false
+
+      - name: Build arm64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-arm64
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.base }}:arm64-temp
+          provenance: false
+          sbom: false
+
+      - name: Create & push multi-arch manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          I="${{ steps.meta.outputs.base }}"
+          IFS=',' read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
+          for T in "${TAGS[@]}"; do
+            docker manifest create "$T" \
+              --amend "$I:amd64-temp" \
+              --amend "$I:arm64-temp"
+            docker manifest push "$T"
+          done
+          docker rmi "$I:amd64-temp" "$I:arm64-temp" || true

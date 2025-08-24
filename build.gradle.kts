@@ -117,6 +117,7 @@ graalvmNative {
             )
             buildArgs.addAll(
                 listOf(
+                    "-J-Xmx8g",
                     "--enable-url-protocols=https",
                     "--report-unsupported-elements-at-runtime",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
