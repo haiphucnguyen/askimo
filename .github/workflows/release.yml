@@ -318,4 +318,127 @@ jobs:
           # Optional: keep tap history as a single commit by force-updating main
           CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           git push --force origin "$CURRENT_BRANCH"
+  # 1) Build native Linux binaries per-arch (tag-only)
+  native-amd64:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build native (amd64)
+        run: ./gradlew --no-daemon -x test -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -Popt=2 nativeCompile
+      - name: Upload amd64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: askimo-linux-amd64
+          path: build/native/nativeCompile/**
+
+  native-arm64:
+    if: startsWith(github.ref, 'refs/tags/')
+    # Use GitHub's ARM runner if available to you; otherwise, a self-hosted arm64 runner.
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build native (arm64)
+        run: ./gradlew --no-daemon -x test -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -Popt=2 nativeCompile
+      - name: Upload arm64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: askimo-linux-arm64
+          path: build/native/nativeCompile/**
+  # 2) Build, push per-arch images, then publish the multi-arch manifest (tag-only)
+  docker:
+    name: Build & Push Docker (multi-arch)
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ release, native-amd64, native-arm64 ]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Normalize binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          AMD="$(ls dist/askimo-linux-amd64/* | head -n1)"
+          ARM="$(ls dist/askimo-linux-arm64/* | head -n1)"
+          chmod +x "$AMD" "$ARM"
+          mkdir -p out
+          cp "$AMD" out/askimo-amd64
+          cp "$ARM" out/askimo-arm64
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/askimo"
+          V="${GITHUB_REF_NAME}"   # e.g. v1.2.3
+          echo "base=$REPO"                                   >> $GITHUB_OUTPUT
+          echo "tags=$REPO:latest,$REPO:${V},$REPO:${V#v}"    >> $GITHUB_OUTPUT
+
+      # Build and push arch-specific images (fast; no QEMU, no GraalVM here)
+      - name: Build amd64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-amd64
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.base }}:amd64-temp
+          provenance: false
+          sbom: false
+
+      - name: Build arm64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-arm64
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.base }}:arm64-temp
+          provenance: false
+          sbom: false
+
+      - name: Create & push multi-arch manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          I="${{ steps.meta.outputs.base }}"
+          IFS=',' read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
+          for T in "${TAGS[@]}"; do
+            docker manifest create "$T" \
+              --amend "$I:amd64-temp" \
+              --amend "$I:arm64-temp"
+            docker manifest push "$T"
+          done
+          docker rmi "$I:amd64-temp" "$I:arm64-temp" || true
   

@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/cc-debian12:nonroot
+WORKDIR /work
+ARG BIN=askimo
+COPY --chown=nonroot:nonroot ${BIN} /usr/local/bin/askimo
+ENTRYPOINT ["/usr/local/bin/askimo"]
