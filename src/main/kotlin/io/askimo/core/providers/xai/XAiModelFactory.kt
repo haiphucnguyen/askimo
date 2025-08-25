@@ -9,7 +9,8 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ProviderModelUtils
+import io.askimo.core.providers.ModelProvider.X_AI
+import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -25,10 +26,10 @@ class XAiModelFactory : ChatModelFactory {
         val baseUrl = (settings as? XAiSettings)?.baseUrl ?: return emptyList()
         val url = "${baseUrl.trimEnd('/')}/models"
 
-        return ProviderModelUtils.fetchModels(
+        return fetchModels(
             apiKey = apiKey,
             url = url,
-            providerName = "X_AI",
+            providerName = X_AI,
         )
     }
 

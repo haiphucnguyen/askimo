@@ -20,7 +20,7 @@ data class OpenAiSettings(
     HasApiKey {
     override fun describe(): List<String> =
         listOf(
-            "apiKey:      ${apiKey.take(5)}***",
+            "apiKey:  ${apiKey.take(5)}***",
             "presets: $presets",
         )
 

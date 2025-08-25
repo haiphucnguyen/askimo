@@ -16,7 +16,7 @@ object ProviderModelUtils {
     fun fetchModels(
         apiKey: String,
         url: String,
-        providerName: String,
+        providerName: ModelProvider,
     ): List<String> =
         try {
             val uri = URI(url).toURL()

@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "io.askimo"
-version = "0.1.0"
+version = "0.1.2"
 
 repositories {
     mavenCentral()
@@ -24,6 +24,7 @@ dependencies {
     implementation("dev.langchain4j:langchain4j:1.3.0")
     implementation("dev.langchain4j:langchain4j-open-ai:1.3.0")
     implementation("dev.langchain4j:langchain4j-ollama:1.3.0")
+    implementation("dev.langchain4j:langchain4j-google-ai-gemini:1.3.0")
     implementation("org.commonmark:commonmark:0.25.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0")
     implementation("io.ktor:ktor-server-cio:3.2.3")
@@ -107,8 +108,45 @@ tasks.named<ProcessResources>("processResources") {
     from(aboutDir)
 }
 
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 graalvmNative {
     binaries {
+        agent {
+            enabled.set(true)
+            // valid values: "standard", "conditional", "direct"
+            defaultMode.set("standard")
+
+            modes {
+                standard {
+                    // usually nothing to add
+                }
+                conditional {
+                    // optional filters if you use conditional mode
+                    // userCodeFilterPath = "path/to/user-code-filter.json"
+                    // extraFilterPath = "path/to/extra-filter.json"
+                }
+                direct {
+                    // where to dump the configs
+                    options.add("config-output-dir=${project.layout.buildDirectory.get().asFile}/native/agent")
+                    // optionally:
+                    // options.add("experimental-configuration-with-origins")
+                }
+            }
+
+            // Optional: automatically copy collected metadata into your sources
+            metadataCopy {
+                // run the `run` task under the agent and copy results here:
+                inputTaskNames.add("run")
+                outputDirectories.add("src/main/resources/META-INF/native-image/")
+                mergeWithExisting = true
+            }
+
+            // (Optional) instrument more tasks than just `run`/`test`
+            // tasksToInstrumentPredicate = { true }
+        }
         named("main") {
             javaLauncher.set(
                 javaToolchains.launcherFor {

@@ -1,0 +1,60 @@
+[
+  {
+    "name": "io.askimo.cli.ChatCliKt",
+    "methods": [{ "name": "main", "parameterTypes": ["java.lang.String[]"] }]
+  },
+  {
+    "name": "java.lang.Boolean",
+    "methods": [
+      { "name": "getBoolean", "parameterTypes": ["java.lang.String"] }
+    ]
+  },
+  {
+    "name": "java.lang.ProcessBuilder$RedirectPipeImpl",
+    "fields": [{ "name": "fd" }],
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.String",
+    "methods": [
+      { "name": "lastIndexOf", "parameterTypes": ["int"] },
+      { "name": "substring", "parameterTypes": ["int"] }
+    ]
+  },
+  {
+    "name": "java.lang.System",
+    "methods": [
+      { "name": "getProperty", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "setProperty",
+        "parameterTypes": ["java.lang.String", "java.lang.String"]
+      }
+    ]
+  },
+  {
+    "name": "org.fusesource.jansi.internal.CLibrary",
+    "fields": [
+      { "name": "HAVE_ISATTY" },
+      { "name": "HAVE_TTYNAME" },
+      { "name": "TCSADRAIN" },
+      { "name": "TCSAFLUSH" },
+      { "name": "TCSANOW" },
+      { "name": "TIOCGETA" },
+      { "name": "TIOCGETD" },
+      { "name": "TIOCGWINSZ" },
+      { "name": "TIOCSETA" },
+      { "name": "TIOCSETD" },
+      { "name": "TIOCSWINSZ" }
+    ]
+  },
+  {
+    "name": "org.jline.nativ.CLibrary",
+    "fields": [
+      { "name": "TCSADRAIN" },
+      { "name": "TCSAFLUSH" },
+      { "name": "TCSANOW" },
+      { "name": "TIOCGWINSZ" },
+      { "name": "TIOCSWINSZ" }
+    ]
+  }
+]

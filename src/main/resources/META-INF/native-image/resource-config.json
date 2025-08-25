@@ -1,0 +1,106 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\QMETA-INF/maven/org.jline/jline-native/pom.properties\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/com.fasterxml.jackson.databind.Module\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.http.client.HttpClientBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.service.guardrail.spi.GuardrailServiceBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.classloading.ClassMetadataProviderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.InputGuardrailExecutorBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.OutputGuardrailExecutorBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.config.InputGuardrailsConfigBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.config.OutputGuardrailsConfigBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.json.JsonCodecFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.prompt.PromptTemplateFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.services.AiServicesFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.services.TokenStreamAdapter\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.lang.System$LoggerFinder\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.net.spi.InetAddressResolverProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.net.spi.URLStreamHandlerProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.nio.channels.spi.SelectorProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.nio.charset.spi.CharsetProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org/jline/terminal/provider/exec\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org/jline/terminal/provider/ffm\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org/jline/terminal/provider/jansi\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org/jline/terminal/provider/jna\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org/jline/terminal/provider/jni\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/internal/native/Mac/arm64/libjansi.jnilib\\E"
+      },
+      {
+        "pattern": "\\Qorg/fusesource/jansi/jansi.properties\\E"
+      },
+      {
+        "pattern": "\\Qorg/jline/nativ/Mac/arm64/libjlinenative.jnilib\\E"
+      },
+      {
+        "pattern": "\\Qorg/jline/utils/capabilities.txt\\E"
+      },
+      {
+        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/nfc.nrm\\E"
+      },
+      {
+        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/nfkc.nrm\\E"
+      },
+      {
+        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/uprops.icu\\E"
+      },
+      {
+        "pattern": "java.base:\\Qsun/net/idn/uidna.spp\\E"
+      }
+    ]
+  },
+  "bundles": []
+}

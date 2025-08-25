@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.providers.xai
+package io.askimo.core.providers.gemini
 
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.Presets
@@ -12,10 +12,10 @@ import io.askimo.core.providers.Verbosity
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class XAiSettings(
-    val baseUrl: String = "https://api.x.ai/v1",
+data class GeminiSettings(
+    val baseUrl: String = "https://generativelanguage.googleapis.com/v1beta/openai",
     override var apiKey: String = "",
-    override val defaultModel: String = "grok-4",
+    override val defaultModel: String = "gemini-2.5-flash",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings,
     HasApiKey {

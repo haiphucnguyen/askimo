@@ -28,6 +28,12 @@ enum class ModelProvider {
     X_AI,
 
     /**
+     * Represents Gemini's models like gemini-2.5-flash, gemini-2.5-pro, etc.
+     */
+    @SerialName("GEMINI")
+    GEMINI,
+
+    /**
      * Represents Ollama's locally-hosted models.
      */
     @SerialName("OLLAMA")

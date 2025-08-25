@@ -5,7 +5,6 @@
 package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.model.ollama.OllamaStreamingChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
@@ -64,8 +63,7 @@ class OllamaModelFactory : ChatModelFactory {
                 .apply {
                     val s = samplingFor(settings.presets.style)
                     temperature(s.temperature).topP(s.topP)
-                }
-                .build()
+                }.build()
 
         return AiServices
             .builder(ChatService::class.java)

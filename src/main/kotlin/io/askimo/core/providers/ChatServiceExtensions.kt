@@ -30,6 +30,7 @@ fun ChatService.chat(
         }.onCompleteResponse {
             done.countDown()
         }.onError { e ->
+            e.printStackTrace()
             onToken("\n[error] ${e.message ?: "unknown error"}\n")
             done.countDown()
         }.start()

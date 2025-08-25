@@ -129,15 +129,14 @@ class LocalFsTools(
     }
 
     @Tool(
-        """List or count files in a directory by type. Use either 'category' (video|image|audio|doc|archive) OR 'extensions' (e.g., ['pdf','png']).
-                Parameters: path, category?, extensions?, recursive?(false), limit?(200), cursor?
-                Returns: {count, files, nextCursor, directory}
-                """,
+        """List or count files in a directory by type. Use either 'category' (video|image|audio|doc|archive) OR 'extensions' (e.g., ["pdf","png"] or "pdf,png").
+       Parameters: path, category?, extensions?, recursive?(false), limit?(200), cursor?
+       Returns: {count, files, nextCursor, directory}""",
     )
     fun filesByType(
         path: String,
         category: String? = null,
-        extensions: List<String>? = null,
+        extensions: String? = null,
         recursive: Boolean? = false,
         limit: Int? = 200,
         cursor: String? = null,
@@ -145,12 +144,12 @@ class LocalFsTools(
         val dir = safeDir(path)
         val extSet: Set<String> =
             when {
+                extensions != null -> normalizeExtensions(extensions)
                 !category.isNullOrBlank() ->
-                    categoryExts[category.lowercase()]
-                        ?: error("Unknown category: $category")
-                !extensions.isNullOrEmpty() -> extensions.map { it.lowercase().removePrefix(".") }.toSet()
+                    categoryExts[category.lowercase()] ?: error("Unknown category: $category")
                 else -> error("Provide either 'category' or 'extensions'")
             }
+
         val max = limit?.coerceIn(1, 5_000) ?: 200
         val start = parseCursor(cursor)
 
@@ -178,25 +177,21 @@ class LocalFsTools(
 
     @Tool(
         "Compute total byte size of files filtered by type. " +
-            "Use either 'extensions' (e.g., ['pdf']) or 'category' (video|image|audio|doc|archive). " +
+            "Use either 'extensions' (e.g., [\"pdf\"] or \"pdf\") or 'category' (video|image|audio|doc|archive). " +
             "If both are provided, EXTENSIONS TAKE PRECEDENCE. " +
             "Params: path, extensions?, category?, recursive?(false). " +
             "Returns: {count, bytes, human, matchedExtensions, directory}",
     )
     fun totalSizeByType(
         path: String,
-        extensions: List<String>? = null,
+        extensions: String? = null,
         category: String? = null,
         recursive: Boolean? = false,
     ): Map<String, Any> {
         val dir = safeDir(path)
         val extSet: Set<String> =
             when {
-                !extensions.isNullOrEmpty() ->
-                    extensions
-                        .map { it.trim().lowercase(Locale.ROOT).removePrefix(".") }
-                        .filter { it.isNotBlank() }
-                        .toSet()
+                extensions != null -> normalizeExtensions(extensions)
                 !category.isNullOrBlank() ->
                     categoryExts[category.lowercase(Locale.ROOT)]
                         ?: error("Unknown category: $category")
@@ -263,5 +258,30 @@ class LocalFsTools(
         }
         val fmt = if (i == 0) "%.0f %s" else "%.2f %s"
         return String.format(Locale.US, fmt, b, units[i])
+    }
+
+    private fun normalizeExtensions(raw: String?): Set<String> {
+        if (raw.isNullOrBlank()) return emptySet()
+        var s = raw.trim()
+
+        // Strip one layer of surrounding quotes if present
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith('\'') && s.endsWith('\''))) {
+            s = s.substring(1, s.length - 1).trim()
+        }
+        // If bracketed like [pdf, "png"] or ['pdf'] or [pdf], strip the brackets
+        if (s.startsWith("[") && s.endsWith("]")) {
+            s = s.substring(1, s.length - 1).trim()
+        }
+
+        // Replace single quotes, then split by comma or whitespace
+        s = s.replace('\'', '"')
+
+        val tokens =
+            s
+                .split(Regex("[,\\s]+"))
+                .map { it.trim().trim('"') }
+                .filter { it.isNotBlank() }
+
+        return tokens.map { it.lowercase().removePrefix(".") }.toSet()
     }
 }

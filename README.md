@@ -10,39 +10,28 @@
 [![DCO](https://img.shields.io/badge/DCO-Signed--off-green.svg)](./CONTRIBUTING.md#-enforcing-dco)
 
 
-`Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, Ollama, X AI, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.
+`Askimo` is a powerful, pluggable command-line chat assistant that lets you talk to AI models like OpenAI, X AI, Gemini, Ollama, and more — right from your terminal. It’s built for convenience with session-based configuration that’s saved locally, and it’s easy to extend with a simple plugin-style system.
 
 > Ask anything, switch models, and customize your AI experience — all from your terminal.
 
 ## Features
 
-* Talk to many LLMs in one place — Use OpenAI, X AI, Ollama, and more without switching tools. The pluggable design makes it easy to add future providers as they appear.
+* Chat with many AI models in one place – Use OpenAI, X AI, Gemini, Ollama, and others without juggling different apps. New providers can be added easily as they emerge.
 
-* Switch models instantly – Change providers or models on the fly with a single command.
+* No setup every time – Your favorite models, API keys, and preferences are saved automatically and ready when you come back.
 
-* Get answers in real time – Responses stream as they’re generated, so you don’t have to wait.
+* Make it your own – Adjust creativity, response length, and other settings so the AI replies just the way you want.
 
-* Stay configured between sessions – Your models, providers, and API keys are saved locally and auto-loaded next time.
+* Feels like home for developers – A friendly REPL (interactive terminal) with simple commands for setup, copying, and managing your chats.
 
-* Customize your experience – Tune temperature, top_p, max_tokens, and other parameters per provider.
+* Supercharge your shell commands – Pipe any command output into Askimo (e.g., git log | askimo) and instantly get summaries, explanations, or rewrites.
 
-* Pluggable architecture – Extend Askimo with your own [models](docs/creating-new-chat-model.md) and [commands](docs/creating-new-command.md).
-
-* Work in a familiar REPL – Interactive terminal environment with built-in commands for setup, copying, and more.
-
-* Command piping – Send output from other shell commands into Askimo (git log | askimo) and get AI-generated summaries or transformations.
-
-* Portable and fast – Compiled as a native binary with GraalVM for instant startup.
-
-* Runs anywhere – Fully cross-platform on macOS, Linux, and Windows.
-
-* File system integration – Read and process local files directly from Askimo, turning their contents into AI prompts.
+* Works everywhere – Run it on macOS, Linux, or Windows with the same smooth experience.
 
 ### Coming soon
 
 * Custom prompt shortcuts – Define reusable commands like :release_notes <commits_file> to instantly generate release notes from a list of commits.
-
-* Scripting mode – Run Askimo in non-interactive mode inside scripts or CI/CD pipelines.
+* Talk to your files – Open and process local files directly in Askimo, turning documents, logs, or code into useful AI conversations.
 
 
 ## Demo
@@ -76,7 +65,7 @@ The web UI supports real-time streaming responses and Markdown rendering.
 
 ## Installation
 
-You can install Askimo in five ways today:
+You can install Askimo in four ways today:
 
 ### 1. Homebrew (macOS/Linux)
 
@@ -138,24 +127,7 @@ Example (Linux/macOS):
 mv askimo /usr/local/bin/
 ```
 
-### 4. Build from Source
-
-If you prefer to build locally:
-```
-git clone git@github.com:haiphucnguyen/askimo.git
-cd askimo
-./gradlew nativeCompile
-```
-
-The binary will be located at `build/native/nativeCompile/askimo`
-
-Run it directly:
-
-```terminaloutput
-./build/native/nativeCompile/askimo
-```
-
-### 5. Docker (macOS/Linux/Windows)
+### 4. Docker (macOS/Linux/Windows)
 Run Askimo in a container while reading files from your host and persisting settings locally
 
 **Quick start (REPL)**
