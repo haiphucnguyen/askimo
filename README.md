@@ -23,8 +23,8 @@
 
 # Askimo
 
-Askimo is a command-line assistant that talks with LLMs — from online providers like OpenAI, X AI, Gemini to local models like Ollama.
-> Askimo — AI for your workflows, with the freedom to choose any provider.
+Askimo is a command-line assistant that talks with LLMs - from online providers like OpenAI, X AI, Gemini to local models like Ollama.
+> Askimo - AI for your workflows, with the freedom to choose any provider.
 
 ## Why Askimo?
 
@@ -82,6 +82,10 @@ scoop install askimo
 askimo
 ```
 Other ways to install → [Installation Guide](docs/installation.md)
+
+👉 Once installed, you can connect Askimo to providers like Ollama, OpenAI, Gemini, or X AI and start chatting.
+
+📖 See [Getting started](docs/getting-started.md) for tutorials on setting up Ollama, adding API keys (OpenAI, Gemini, X AI), switching providers, and running real workflow examples.
 
 ## Available Commands
 
