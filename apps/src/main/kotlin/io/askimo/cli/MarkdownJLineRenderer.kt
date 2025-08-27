@@ -179,7 +179,7 @@ class MarkdownJLineRenderer {
         }
 
         override fun visit(thematicBreak: ThematicBreak) {
-            styled(styleDim()) { sb.append("—".repeat(32)) }
+            styled(styleDim()) { sb.append("-".repeat(32)) }
             newline()
         }
 

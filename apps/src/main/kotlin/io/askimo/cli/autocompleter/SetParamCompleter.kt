@@ -39,7 +39,7 @@ class SetParamCompleter : Completer {
                 }
             }
             3 -> {
-                // User typed ":setparam param <value>" — maybe suggest bool values
+                // User typed ":setparam param <value>" - maybe suggest bool values
                 val param = ParamKey.fromInput(words[1])
                 param?.suggestions?.forEach {
                     candidates.add(Candidate(it))

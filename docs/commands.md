@@ -33,7 +33,7 @@ Available commands:
 
 **Description:**  
 Clear the chat history for the current session.  
-This does not reset provider, model, or session parameters — only the conversation context is removed.
+This does not reset provider, model, or session parameters - only the conversation context is removed.
 
 **Syntax:**
 :clear
@@ -85,8 +85,8 @@ Available parameters depend on the provider and can be viewed using `:params`.
 :setparam \<name\> \<value\>
 
 **Parameters:**
-- `<name>` — Name of the parameter (e.g., `model`, `syle`).
-- `<value>` — New value to assign to the parameter.
+- `<name>` - Name of the parameter (e.g., `model`, `syle`).
+- `<value>` - New value to assign to the parameter.
 
 **Example:**
 
