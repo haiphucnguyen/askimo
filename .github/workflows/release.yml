@@ -41,18 +41,18 @@ jobs:
 
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :apps:nativeCompile
 
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true nativeCompile
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true :apps:nativeCompile
 
       - name: Locate native binary path
         id: paths
         shell: bash
         run: |
-          OUT_DIR="build/native/nativeCompile"
+          OUT_DIR="apps/build/native/nativeCompile"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             BIN="$(ls "$OUT_DIR"/*.exe)"
           else
@@ -89,13 +89,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build native image (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :apps:nativeCompile
 
       - name: Locate native binary path
         id: arm_paths
         shell: bash
         run: |
-          OUT_DIR="build/native/nativeCompile"
+          OUT_DIR="apps/build/native/nativeCompile"
           BIN="$(ls "$OUT_DIR"/* | head -n 1)"
           echo "bin=$BIN" >> $GITHUB_OUTPUT
           echo "Found: $BIN"
