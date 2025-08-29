@@ -4,15 +4,10 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     application
-    id("org.graalvm.buildtools.native") version "0.11.0"
+    id("org.graalvm.buildtools.native")
     id("com.gradleup.shadow") version "9.0.1"
-}
-
-group = "io.askimo"
-version = "0.1.2"
-
-repositories {
-    mavenCentral()
+    kotlin("jvm")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 dependencies {
@@ -36,12 +31,6 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-kotlin {
-    compilerOptions {
-        javaParameters.set(true)
-    }
 }
 
 application {
@@ -129,9 +118,6 @@ graalvmNative {
                 outputDirectories.add("src/main/resources/META-INF/native-image/")
                 mergeWithExisting = true
             }
-
-            // (Optional) instrument more tasks than just `run`/`test`
-            // tasksToInstrumentPredicate = { true }
         }
         named("main") {
             javaLauncher.set(

@@ -2,9 +2,13 @@ plugins {
     id("com.diffplug.spotless") version "7.2.1"
     kotlin("jvm") version "2.2.10" apply false
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10" apply false
+    id("org.graalvm.buildtools.native") version libs.versions.graalvm.plugin apply false
 }
 
 allprojects {
+    group = "io.askimo"
+    version = "0.1.2"
+
     repositories {
         mavenCentral()
     }
@@ -63,6 +67,14 @@ allprojects {
             prettier().config(mapOf("parser" to "css"))
             trimTrailingWhitespace()
             endWithNewline()
+        }
+    }
+
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+            compilerOptions {
+                javaParameters.set(true)
+            }
         }
     }
 }
