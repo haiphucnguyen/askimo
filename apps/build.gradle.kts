@@ -35,6 +35,7 @@ tasks.test {
 
 application {
     mainClass.set("io.askimo.cli.ChatCliKt")
+    applicationName = "askimo"
 }
 
 tasks.jar {
@@ -120,6 +121,7 @@ graalvmNative {
             }
         }
         named("main") {
+            imageName.set("askimo")
             javaLauncher.set(
                 javaToolchains.launcherFor {
                     languageVersion.set(JavaLanguageVersion.of(21))

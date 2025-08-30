@@ -16,16 +16,16 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.testcontainers:postgresql:1.21.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
 }
 
 tasks.test {
     useJUnitPlatform()
 }
 
-
-
 application {
-    mainClass.set("io.askimo.mcp.db.DbTool")
+    mainClass.set("io.askimo.mcp.db.DbToolKt")
     applicationName = "askimo-mcp-db"
 }
 

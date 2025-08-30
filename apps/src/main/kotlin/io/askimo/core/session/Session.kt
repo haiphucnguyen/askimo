@@ -6,6 +6,10 @@ package io.askimo.core.session
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import io.askimo.core.db.ConnectionStore
+import io.askimo.core.db.DbConnection
+import io.askimo.core.db.DbLauncher
+import io.askimo.core.db.DbRuntime
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
@@ -64,6 +68,7 @@ enum class MemoryPolicy {
  */
 class Session(
     val params: SessionParams,
+    val db: DbSessionState = DbSessionState.disabled(),
 ) {
     private val memoryMap = mutableMapOf<String, ChatMemory>()
 
@@ -199,4 +204,47 @@ class Session(
      */
     fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService =
         if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
+
+    suspend fun attachDb(id: String): Boolean {
+        val conn = db.store.get(id) ?: return false
+        db.active?.let { runCatching { it.close() } }
+        db.active = db.launcher.launch(conn)
+        return true
+    }
+
+    suspend fun detachDb() {
+        db.active?.let { runCatching { it.close() } }
+        db.active = null
+    }
+}
+
+data class DbSessionState(
+    var active: DbRuntime? = null,
+    val store: ConnectionStore,
+    val launcher: DbLauncher,
+) {
+    companion object {
+        fun disabled(): DbSessionState =
+            DbSessionState(
+                active = null,
+                store = EmptyStore,
+                launcher = DisabledLauncher,
+            )
+    }
+}
+
+object EmptyStore : ConnectionStore {
+    override fun get(id: String) = null
+
+    override fun list(): List<DbConnection> = emptyList()
+
+    override fun put(conn: DbConnection) { }
+
+    override fun remove(id: String) = false
+
+    override fun save() { }
+}
+
+object DisabledLauncher : DbLauncher {
+    override suspend fun launch(conn: DbConnection): DbRuntime = throw IllegalStateException("DB is not configured for this session")
 }
