@@ -19,6 +19,7 @@ import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.chat
 import io.askimo.core.session.SessionFactory
+import io.askimo.core.util.Prompts
 import io.askimo.web.WebServer
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -79,6 +80,9 @@ fun main(args: Array<String>) {
                         .parser(parser)
                         .completer(completer)
                         .build()
+
+                // 🔑 Init Prompts here so some commands (such as :db add) can use ask/askSecret/askBool/askInt
+                Prompts.init(reader)
 
                 terminal.writer().println("askimo> Ask anything. Type :help for commands.")
                 terminal.flush()

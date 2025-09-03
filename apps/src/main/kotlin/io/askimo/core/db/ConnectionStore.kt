@@ -4,6 +4,10 @@
  */
 package io.askimo.core.db
 
+import io.askimo.core.secrets.SecretRef
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class DbConnection(
     val id: String,
     val engine: DbEngine,

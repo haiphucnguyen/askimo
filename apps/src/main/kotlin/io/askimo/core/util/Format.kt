@@ -4,7 +4,8 @@
  */
 package io.askimo.core.util
 
-import io.askimo.core.db.SecretRef
+import io.askimo.core.secrets.SecretRef
+
 
 fun SecretRef.summary(): String =
     when (this) {

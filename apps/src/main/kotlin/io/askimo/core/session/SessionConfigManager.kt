@@ -19,7 +19,7 @@ import java.nio.file.StandardOpenOption
  */
 object SessionConfigManager {
     /** Path to the configuration file in the user's home directory */
-    private val configPath: Path = Paths.get(System.getProperty("user.home"), ".askimo.json")
+    private val configPath: Path = Paths.get(System.getProperty("user.home"), ".askimo", "session")
 
     /**
      * Loads session parameters from the configuration file.

@@ -4,10 +4,14 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.db.DbConnection
+import io.askimo.core.db.DbEngine
 import io.askimo.core.db.DbHelp
 import io.askimo.core.db.DbRuntime
 import io.askimo.core.db.redactJdbcCredentials
+import io.askimo.core.secrets.SecretRef
 import io.askimo.core.session.Session
+import io.askimo.core.util.Prompts
 import io.askimo.core.util.summary
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
@@ -147,9 +151,9 @@ class DbUseCommandHandler(
 
         println("id        : ${c.id}")
         println("engine    : ${c.engine}")
-        println("url       : ${c.url.redactJdbcCredentials()}") // mask password if present
+        println("url       : ${c.url.redactJdbcCredentials()}")
         println("user      : ${c.user}")
-        println("secret    : ${c.secret.summary()}") // describe where the secret lives
+        println("secret    : ${c.secret.summary()}")
         println("readOnly  : ${c.readOnly}")
         println("maxRows   : ${c.maxRows}")
         println("timeoutSec: ${c.timeoutSec}")
@@ -178,14 +182,111 @@ class DbUseCommandHandler(
         }
     }
 
-    // Stubs — you can wire your existing config manager here:
     private fun add(args: List<String>) {
         if (args.size != 1) {
             println(DbHelp.longFor("add"))
             return
         }
-        println("Use guided wizard here (or flags).")
+        val id = args[0]
+
+        val existing = session.db.store.get(id)
+        if (existing != null) {
+            val overwrite = Prompts.askBool(
+                "Connection '$id' already exists. Overwrite?",
+                default = false
+            )
+            if (!overwrite) {
+                println("Canceled.")
+                return
+            }
+        }
+
+        // Ask for engine using enum
+        val engineInput = Prompts.ask(
+            "Engine (${DbEngine.entries.joinToString("/") { it.name.lowercase() }})",
+            "postgres"
+        ).uppercase()
+        val engine = try {
+            DbEngine.valueOf(engineInput)
+        } catch (_: Exception) {
+            println("❌ Unknown engine '$engineInput'. Valid options: ${DbEngine.entries.joinToString(", ")}")
+            return
+        }
+
+        // JDBC URL defaults per engine
+        val defaultUrl = when (engine) {
+            DbEngine.POSTGRES -> "jdbc:postgresql://localhost:5432/postgres"
+            DbEngine.MYSQL -> "jdbc:mysql://localhost:3306/mysql"
+            DbEngine.SQLSERVER -> "jdbc:sqlserver://localhost:1433;databaseName=master"
+            DbEngine.SQLITE -> "jdbc:sqlite:./database.db"
+        }
+        val url = Prompts.ask("JDBC URL", defaultUrl)
+
+        val user = when (engine) {
+            DbEngine.SQLITE -> ""
+            else -> Prompts.ask("User")
+        }
+        val storage = Prompts.ask("Secret storage (inline/env/file/keychain)", "inline").lowercase()
+
+        val secretRef: SecretRef = when (storage) {
+            "env" -> {
+                val name = Prompts.ask("Env var name (e.g., DB_PASSWORD)")
+                SecretRef.EnvVar(name)
+            }
+            "file" -> {
+                val path = Prompts.ask("File path containing the secret (permissions 600 recommended)")
+                SecretRef.FilePath(path)
+            }
+            "keychain" -> {
+                val service = Prompts.ask("Keychain service (e.g., askimo-db)")
+                val account = Prompts.ask("Keychain account (e.g., prod-user)")
+                SecretRef.Keychain(service, account)
+            }
+            else -> { // "inline"
+                val pw = Prompts.askSecret("Password")  // masked input via JLine
+                SecretRef.Inline(pw)
+            }
+        }
+
+        val readOnly = Prompts.askBool("Read-only connection?", true)
+        val maxRows = Prompts.askInt("Max rows per query", 1000)
+        val timeoutSec = Prompts.askInt("Query timeout (sec)", 30)
+
+        val conn = DbConnection(
+            id = id,
+            engine = engine,
+            url = url,
+            user = user,
+            secret = secretRef,
+            readOnly = readOnly,
+            maxRows = maxRows,
+            timeoutSec = timeoutSec
+        )
+
+        session.db.store.put(conn)
+
+        try {
+            session.db.active?.closeSilently()
+            session.db.active = null
+
+            val runtime =
+                runBlocking {
+                    withTimeout(10_000) { session.db.launcher.launch(conn) }
+                }
+            session.db.active = runtime
+
+            println(
+                "✅ Saved and attached DB '$id' (${engine.name}) " +
+                        "(ro=${conn.readOnly}, rows=${conn.maxRows}, t=${conn.timeoutSec}s)"
+            )
+        } catch (t: TimeoutCancellationException) {
+            println("✅ Saved '$id', but attach timed out (10s). Try ':db use $id' later.")
+        } catch (e: Exception) {
+            println("✅ Saved '$id', but failed to attach: ${e.message ?: "unknown error"}")
+        }
     }
+
+
 
     private fun remove(args: List<String>) {
         if (args.size != 1) {
