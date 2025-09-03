@@ -1,3 +1,8 @@
+---
+title: 📜 Askimo Command Reference
+nav_order: 4
+---
+
 # 📜 Askimo Command Reference
 
 This document lists all available Askimo commands, their purpose, parameters, and usage examples.  

@@ -1,3 +1,8 @@
+---
+title: Getting Started with Askimo
+nav_order: 2
+---
+
 # Getting Started with Askimo
 
 After installing Askimo, choose a provider and a model, then start chatting.

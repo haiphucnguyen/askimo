@@ -1,3 +1,8 @@
+---
+title: Creating a New Command in Askimo
+nav_order: 5
+---
+
 # Creating a New Command in Askimo
 
 This guide explains how to implement a new command in the Askimo CLI. By following these steps, you can add custom functionality to the command-line interface.

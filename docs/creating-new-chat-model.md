@@ -1,3 +1,7 @@
+---
+title: Creating a New Chat Model in Askimo
+nav_order: 6
+---
 # Creating a New Chat Model in Askimo
 
 This guide explains how to implement a new chat model provider in Askimo. By following these steps, you can integrate any chat model API with the Askimo CLI.

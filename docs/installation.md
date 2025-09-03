@@ -1,3 +1,8 @@
+---
+title: Installation Guide
+nav_order: 3
+---
+
 # Installation Guide
 
 Askimo can be installed in several ways depending on your operating system and preference.

@@ -1,3 +1,9 @@
+---
+layout: home
+title: Askimo CLI
+nav_order: 1
+---
+
 # Askimo CLI
 
 Askimo is an open-source, cross-platform CLI for interacting with AI models like OpenAI, Ollama, Gemini, and more.
