@@ -96,19 +96,8 @@ graalvmNative {
             defaultMode.set("standard")
 
             modes {
-                standard {
-                    // usually nothing to add
-                }
-                conditional {
-                    // optional filters if you use conditional mode
-                    // userCodeFilterPath = "path/to/user-code-filter.json"
-                    // extraFilterPath = "path/to/extra-filter.json"
-                }
                 direct {
-                    // where to dump the configs
                     options.add("config-output-dir=${project.layout.buildDirectory.get().asFile}/native/agent")
-                    // optionally:
-                    // options.add("experimental-configuration-with-origins")
                 }
             }
 

@@ -41,3 +41,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 .kotlin
+docs/_site
+Gemfile.lock

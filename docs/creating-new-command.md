@@ -1,6 +1,7 @@
 ---
 title: Creating a New Command in Askimo
 nav_order: 5
+description: Learn how to extend Askimo by building your own custom CLI command.
 ---
 
 # Creating a New Command in Askimo

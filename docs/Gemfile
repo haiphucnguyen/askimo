@@ -1,0 +1,8 @@
+# docs/Gemfile
+source "https://rubygems.org"
+
+# This bundle matches GitHub Pages' build (Jekyll + whitelisted plugins)
+gem "github-pages", group: :jekyll_plugins
+
+# Nice to have for local dev (live reload)
+gem "jekyll-watch"

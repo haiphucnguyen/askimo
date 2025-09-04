@@ -1,6 +1,7 @@
 ---
 title: Installation Guide
 nav_order: 3
+description: Installation instructions for Askimo across macOS, Linux, Windows, and Docker.
 ---
 
 # Installation Guide

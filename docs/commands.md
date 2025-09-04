@@ -1,6 +1,7 @@
 ---
-title: 📜 Askimo Command Reference
+title: Askimo Command Reference
 nav_order: 4
+description: Complete reference for all Askimo CLI commands with usage examples and options.
 ---
 
 # 📜 Askimo Command Reference

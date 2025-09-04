@@ -3,8 +3,34 @@ description: Cross-platform AI CLI for OpenAI, Ollama, Gemini, and more.
 remote_theme: just-the-docs/just-the-docs
 color_scheme: light
 
-logo: /public/askimo-logo.svg
+#logo: /assets/images/askimo-logo-64.png
+favicon_ico: /assets/images/askimo-favicon.ico
 search_enabled: true
 aux_links:
   "GitHub Repo":
     - "https://github.com/haiphucnguyen/askimo"
+
+# Jekyll always supports _posts; this makes them public with nice URLs
+collections:
+  posts:
+    output: true
+permalink: pretty
+
+# Blog post URLs like /blog/2025/09/03/inside-askimo/
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      nav_exclude: true
+      permalink: /blog/:year/:month/:day/:title/
+
+# Optional: RSS + SEO (both are GitHub Pages–whitelisted)
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Feed config (optional)
+feed:
+  path: feed.xml

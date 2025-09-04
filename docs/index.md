@@ -2,6 +2,7 @@
 layout: home
 title: Askimo CLI
 nav_order: 1
+description: Askimo is an open-source, cross-platform AI CLI that lets you chat with OpenAI, Ollama, Gemini, and more—without vendor lock-in.
 ---
 
 # Askimo CLI

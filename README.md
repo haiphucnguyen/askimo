@@ -89,18 +89,18 @@ Other ways to install → [Installation Guide](docs/installation.md)
 
 ## Available Commands
 
-| Command        | Description                                    | Example Usage               |
-|----------------|------------------------------------------------|-----------------------------|
-| `:help`        | Show all available commands                    | `:help`                     |
-| `:setparam`    | Set a parameter for the current provider       | `:setparam temperature 0.8` |
-| `:params`      | View current session parameters                | `:params`                   |
-| `:config`      | Edit Askimo configuration file                 | `:config`                   |
-| `:providers`   | List all supported AI providers                | `:providers`                |
-| `:setprovider` | Switch to a different AI provider              | `:setprovider ollama`       |
-| `:models`      | List available models for the current provider | `:models`                   |
-| `:copy`        | Copy the last response to the clipboard        | `:copy`                     |
-| `:clear`       | Clear the chat history for the current session | `:clear`                    |
-| `:exit`        | Exit the Askimo REPL                           | `:exit`                     |
+| Command        | Description                                    | Example Usage              |
+|----------------|------------------------------------------------|----------------------------|
+| `:help`        | Show all available commands                    | `:help`                    |
+| `:setparam`    | Set a parameter for the current provider       | `:setparam style creative` |
+| `:params`      | View current session parameters                | `:params`                  |
+| `:config`      | Edit Askimo configuration file                 | `:config`                  |
+| `:providers`   | List all supported AI providers                | `:providers`               |
+| `:setprovider` | Switch to a different AI provider              | `:setprovider ollama`      |
+| `:models`      | List available models for the current provider | `:models`                  |
+| `:copy`        | Copy the last response to the clipboard        | `:copy`                    |
+| `:clear`       | Clear the chat history for the current session | `:clear`                   |
+| `:exit`        | Exit the Askimo REPL                           | `:exit`                    |
 
 
 ➡ **[View the full command reference »](docs/commands.md)**  

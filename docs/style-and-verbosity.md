@@ -1,6 +1,7 @@
 ---
-title: 🎨 Adjusting Style & Verbosity in Askimo
+title: Adjusting Style & Verbosity in Askimo
 nav_order: 7
+description: Customize Askimo’s response style and verbosity to fit your workflow and preferences.
 ---
 
 # 🎨 Adjusting Style & Verbosity in Askimo

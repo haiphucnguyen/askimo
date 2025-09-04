@@ -1,6 +1,7 @@
 ---
 title: Getting Started with Askimo
 nav_order: 2
+description: Learn how to install Askimo on macOS, Linux, and Windows, and run your first AI CLI command.
 ---
 
 # Getting Started with Askimo
