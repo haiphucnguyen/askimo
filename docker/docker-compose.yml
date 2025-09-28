@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  db:
+    image: ankane/pgvector:latest   # Postgres with pgvector preinstalled
+    container_name: askimo-pg
+    environment:
+      POSTGRES_USER: askimo
+      POSTGRES_PASSWORD: askimo
+      POSTGRES_DB: askimo
+    ports:
+      - "5432:5432"
+    volumes:
+      - askimo_pg:/var/lib/postgresql/data
+volumes:
+  askimo_pg:

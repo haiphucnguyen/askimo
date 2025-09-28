@@ -9,7 +9,6 @@ import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommand
 import io.askimo.cli.commands.CopyCommandHandler
-import io.askimo.cli.commands.DbUseCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
@@ -63,7 +62,6 @@ fun main(args: Array<String>) {
                         ModelsCommandHandler(session),
                         CopyCommandHandler(session),
                         ClearMemoryCommandHandler(session),
-                        DbUseCommandHandler(session),
                     )
 
                 // Setup parser and completer
