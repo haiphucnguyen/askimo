@@ -4,10 +4,10 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
-import io.askimo.core.project.buildRetrievalAugmentor
+import io.askimo.core.project.ProjectEntry
+import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
@@ -28,6 +28,12 @@ class CreateProjectCommandHandler(
                 println("Usage: :create-project -n <project-name> -d <project-folder>")
                 return
             }
+
+        // 🔎 check if this project already exists in ~/.askimo/projects.json
+        if (ProjectStore.get(name) != null) {
+            println("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
+            return
+        }
 
         val projectPath = Paths.get(dir).toAbsolutePath().normalize()
         if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
@@ -51,6 +57,7 @@ class CreateProjectCommandHandler(
                 pgUrl = pg.jdbcUrl,
                 pgUser = pg.username,
                 pgPass = pg.password,
+                projectId = name,
             )
 
         // 3) Index the folder
@@ -58,13 +65,18 @@ class CreateProjectCommandHandler(
         try {
             val count = indexer.indexProject(projectPath)
             println("✅ Indexed $count documents into pgvector (project '$name').")
-            println("💡 Next: persist this project into ~/.askimo/config.json (we’ll add later).")
         } catch (e: Exception) {
             println("❌ Index failed: ${e.message}")
             e.printStackTrace()
         }
 
+        // ✅ Persist project
+        ProjectStore.upsert(ProjectEntry(name = name, dir = projectPath.toString()))
+        println("🗂️  Saved project '$name' → $projectPath")
+
+        session.setScope(ProjectEntry(name, projectPath.toString()))
         session.enableRagWith(indexer)
+        println("🧠 RAG enabled for project '$name' (scope set).")
     }
 
     private fun parseArgs(args: List<String>): Pair<String, String>? {

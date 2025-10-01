@@ -34,6 +34,9 @@ interface ChatModelFactory {
      * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
      * @param memory Chat memory to use for conversation history
+     * @param retrievalAugmentor Optional retrieval-augmented generation (RAG) component.
+     * If provided, the created chat service will use it to fetch and inject relevant context
+     * into prompts during generation. Pass null to disable retrieval augmentation.
      * @return A configured ChatModel instance
      */
     fun create(

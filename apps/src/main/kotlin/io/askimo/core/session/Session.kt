@@ -8,6 +8,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
+import io.askimo.core.project.ProjectEntry
 import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
@@ -15,6 +16,8 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Controls what happens to the *chat memory* when the active [ChatService] is re-created
@@ -47,6 +50,11 @@ enum class MemoryPolicy {
      */
     RESET_FOR_THIS_COMBO,
 }
+
+data class Scope(
+    val projectName: String,
+    val projectDir: Path,
+)
 
 /**
  * Manages a chat session with language models, handling model creation, provider settings, and conversation memory.
@@ -99,6 +107,28 @@ class Session(
      * Gets the currently active model provider for this session.
      */
     fun getActiveProvider(): ModelProvider = params.currentProvider
+
+    /**
+     * Current project scope for this session, if any.
+     *
+     * When set via setScope(ProjectEntry), it records the human-readable project name
+     * and the normalized absolute path to the project's root directory. A null value
+     * means the session is not bound to any project (and project-specific RAG features
+     * may be disabled).
+     *
+     * This property is read-only to callers; use setScope(...) to activate a project
+     * and clearScope() to remove the association.
+     */
+    var scope: Scope? = null
+        private set
+
+    fun setScope(project: ProjectEntry) {
+        scope = Scope(project.name, Paths.get(project.dir).toAbsolutePath().normalize())
+    }
+
+    fun clearScope() {
+        scope = null
+    }
 
     /**
      * Gets the current provider's settings.
@@ -203,6 +233,24 @@ class Session(
     fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService =
         if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
 
+    /**
+     * Enables Retrieval-Augmented Generation (RAG) for the current session using
+     * the provided PgVectorIndexer.
+     *
+     * This method wires the indexer into a PgVectorContentRetriever and builds a
+     * retrieval augmentor, then recreates the active ChatService with the same
+     * provider, model, settings, and memory bucket, but augmented with retrieval.
+     *
+     * Notes:
+     * - Memory is preserved; the conversation context for the current (provider, model)
+     *   is reused.
+     * - Requires that a model factory is registered for the current provider; otherwise
+     *   an IllegalStateException is thrown.
+     * - Typically called after setScope(...) when switching to a project that has
+     *   indexed content.
+     *
+     * @param indexer The PgVector-backed indexer to use for retrieving relevant context.
+     */
     fun enableRagWith(indexer: PgVectorIndexer) {
         val retriever = PgVectorContentRetriever(indexer)
         val rag = buildRetrievalAugmentor(retriever)
@@ -216,12 +264,13 @@ class Session(
             getModelFactory(provider)
                 ?: error("No model factory registered for $provider")
 
-        val upgraded = factory.create(
-            model = model,
-            settings = settings,
-            memory = memory,
-            retrievalAugmentor = rag
-        )
+        val upgraded =
+            factory.create(
+                model = model,
+                settings = settings,
+                memory = memory,
+                retrievalAugmentor = rag,
+            )
         setChatService(upgraded)
     }
 }

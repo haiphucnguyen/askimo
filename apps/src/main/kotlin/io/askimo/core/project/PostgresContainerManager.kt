@@ -4,44 +4,44 @@
  */
 package io.askimo.core.project
 
+import com.github.dockerjava.api.model.Bind
 import org.testcontainers.containers.PostgreSQLContainer
-import java.sql.DriverManager
+import org.testcontainers.utility.DockerImageName
 
 object PostgresContainerManager {
-    // Keep a single container per JVM
     @Volatile private var container: PostgreSQLContainer<*>? = null
 
-    fun startIfNeeded(): PostgreSQLContainer<*> {
+    fun startIfNeeded(): PostgreSQLContainer<*> =
         synchronized(this) {
-            if (container?.isRunning == true) return container!!
+            container?.takeIf { it.isRunning }?.let { return it }
+
+            // pick your image; pgvector already includes the extension
+            val image = DockerImageName.parse("pgvector/pgvector:0.8.1-pg18-trixie")
+
+            // clean up any old same-named container to avoid 409 conflicts
+            runCatching { Runtime.getRuntime().exec(arrayOf("docker", "rm", "-f", "askimo-pg")).waitFor() }
 
             val c =
-                PostgreSQLContainer("pgvector/pgvector:0.8.1-pg18-trixie")
+                PostgreSQLContainer(image)
                     .withDatabaseName("askimo")
                     .withUsername("askimo")
                     .withPassword("askimo")
+                    // use a named Docker volume -> /var/lib/postgresql/data
+                    .withCreateContainerCmdModifier { cmd ->
+                        val hostConfig = cmd.hostConfig
+                        hostConfig?.withBinds(Bind.parse("askimo-pgdata:/var/lib/postgresql/data"))
+                        cmd.withHostConfig(hostConfig).withName("askimo-pg")
+                    }.apply { start() }
 
-            c.start()
-            // Ensure pgvector extension is available
             ensurePgVector(c)
-
-            // Log connection details
-            println("PostgreSQL Container Started:")
-            println("Host: ${c.host}")
-            println("Port: ${c.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)}")
-
-            // Stop cleanly on JVM shutdown
             Runtime.getRuntime().addShutdownHook(Thread { runCatching { c.stop() } })
             container = c
-            return c
+            c
         }
-    }
 
     private fun ensurePgVector(c: PostgreSQLContainer<*>) {
-        DriverManager.getConnection(c.jdbcUrl, c.username, c.password).use { conn ->
-            conn.createStatement().use { st ->
-                st.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-            }
+        java.sql.DriverManager.getConnection(c.jdbcUrl, c.username, c.password).use { conn ->
+            conn.createStatement().use { st -> st.execute("CREATE EXTENSION IF NOT EXISTS vector;") }
         }
     }
 }

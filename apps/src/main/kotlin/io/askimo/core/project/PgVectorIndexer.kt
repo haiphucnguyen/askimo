@@ -18,13 +18,27 @@ import kotlin.io.path.name
 import kotlin.io.path.readText
 import kotlin.streams.asSequence
 
+/**
+ * Indexes project files into a pgvector-backed store and exposes basic embedding and
+ * similarity search utilities.
+ *
+ * Responsibility:
+ * - Scan a project directory, select indexable files, and compute text embeddings
+ * - Persist embeddings and lightweight metadata to a per-project table in Postgres
+ * - Provide helpers to embed ad hoc text and run vector similarity searches for retrieval
+ */
 class PgVectorIndexer(
     private val pgUrl: String = System.getenv("ASKIMO_PG_URL") ?: "jdbc:postgresql://localhost:5432/askimo",
     private val pgUser: String = System.getenv("ASKIMO_PG_USER") ?: "askimo",
     private val pgPass: String = System.getenv("ASKIMO_PG_PASS") ?: "askimo",
     private val table: String = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings",
-    private val embedDim: Int = 1536, // OpenAI text-embedding-3-small,
+    private val projectId: String,
+    private val preferredDim: Int? = null,
 ) {
+    private val projectTable: String = "${table}__${slug(projectId)}"
+
+    private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
+
     private val supportedExtensions =
         setOf(
             "java",
@@ -213,29 +227,36 @@ class PgVectorIndexer(
             ".history/",
         )
 
+    private fun buildEmbeddingModel(): EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
+
+    // capture the actual dimension ONCE from the real model unless user overrode it
+    private val dimension: Int by lazy {
+        preferredDim ?: buildEmbeddingModel().dimension()
+    }
+
+    private fun newStore(): EmbeddingStore<TextSegment> =
+        PgVectorEmbeddingStore
+            .builder()
+            .host(extractHost(pgUrl))
+            .port(extractPort(pgUrl))
+            .database(extractDatabase(pgUrl))
+            .user(pgUser)
+            .password(pgPass)
+            .table(projectTable) // <-- use per-project table
+            .dimension(dimension) // <-- consistent dimension
+            .build()
+
     fun indexProject(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
 
-        // Detect project types
         val detectedTypes = detectProjectTypes(root)
         println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        val embeddingModel: EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
-        val embeddingStore: EmbeddingStore<TextSegment> =
-            PgVectorEmbeddingStore
-                .builder()
-                .host(extractHost(pgUrl))
-                .port(extractPort(pgUrl))
-                .database(extractDatabase(pgUrl))
-                .user(pgUser)
-                .password(pgPass)
-                .table(table)
-                .dimension(embeddingModel.dimension())
-                .build()
+        val embeddingModel = buildEmbeddingModel()
+        val embeddingStore = newStore() // <-- per-project store
 
         var indexedCount = 0
 
-        // Walk through all files recursively
         Files
             .walk(root)
             .asSequence()
@@ -247,12 +268,12 @@ class PgVectorIndexer(
                     if (content.isNotBlank()) {
                         val relativePath = root.relativize(filePath).toString()
 
-                        // Create text segment with metadata
                         val segment =
                             TextSegment.from(
                                 content,
                                 Metadata(
                                     mapOf(
+                                        "project_id" to projectId,
                                         "file_path" to relativePath,
                                         "file_name" to filePath.fileName.toString(),
                                         "extension" to filePath.extension,
@@ -260,17 +281,15 @@ class PgVectorIndexer(
                                 ),
                             )
 
-                        // Generate embedding and store
                         val embedding = embeddingModel.embed(segment)
                         embeddingStore.add(embedding.content(), segment)
 
                         indexedCount++
                         if (indexedCount % 10 == 0) {
-                            println("  Indexed $indexedCount files...")
+                            println("  Indexed $indexedCount files into $projectTable …")
                         }
                     }
                 } catch (e: Exception) {
-                    // Skip files that can't be read (binary, permission issues, etc.)
                     println("  ⚠️  Skipped ${filePath.fileName}: ${e.message}")
                 }
             }
@@ -400,30 +419,18 @@ class PgVectorIndexer(
         return parts.lastOrNull()?.split("?")?.firstOrNull() ?: "askimo"
     }
 
-    fun embed(text: String): List<Float> {
-        val embeddingModel: EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
-        return embeddingModel
+    fun embed(text: String): List<Float> =
+        buildEmbeddingModel()
             .embed(text)
             .content()
             .vector()
             .toList()
-    }
 
     fun similaritySearch(
         embedding: List<Float>,
         topK: Int,
     ): List<String> {
-        val embeddingStore: EmbeddingStore<TextSegment> =
-            PgVectorEmbeddingStore
-                .builder()
-                .host(extractHost(pgUrl))
-                .port(extractPort(pgUrl))
-                .database(extractDatabase(pgUrl))
-                .user(pgUser)
-                .password(pgPass)
-                .table(table)
-                .dimension(embedDim)
-                .build()
+        val embeddingStore = newStore()
 
         val queryEmbedding =
             dev.langchain4j.data.embedding.Embedding

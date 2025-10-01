@@ -10,12 +10,15 @@ import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommand
 import io.askimo.cli.commands.CopyCommandHandler
 import io.askimo.cli.commands.CreateProjectCommandHandler
+import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
+import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
 import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
+import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.chat
 import io.askimo.core.session.SessionFactory
@@ -64,6 +67,9 @@ fun main(args: Array<String>) {
                         CopyCommandHandler(session),
                         ClearMemoryCommandHandler(session),
                         CreateProjectCommandHandler(session),
+                        ListProjectsCommandHandler(),
+                        UseProjectCommandHandler(session),
+                        DeleteProjectCommandHandler(),
                     )
 
                 // Setup parser and completer
