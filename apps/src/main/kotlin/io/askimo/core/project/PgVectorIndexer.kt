@@ -367,7 +367,8 @@ class PgVectorIndexer(
                 }
                 // Exact match
                 else -> {
-                    if (fileName == pattern || relativePath.contains("/$pattern/") ||
+                    if (fileName == pattern ||
+                        relativePath.contains("/$pattern/") ||
                         relativePath.endsWith("/$pattern")
                     ) {
                         return true
@@ -395,8 +396,47 @@ class PgVectorIndexer(
     }
 
     private fun extractDatabase(jdbcUrl: String): String {
-        // jdbc:postgresql://localhost:5432/askimo
         val parts = jdbcUrl.split("/")
         return parts.lastOrNull()?.split("?")?.firstOrNull() ?: "askimo"
+    }
+
+    fun embed(text: String): List<Float> {
+        val embeddingModel: EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
+        return embeddingModel
+            .embed(text)
+            .content()
+            .vector()
+            .toList()
+    }
+
+    fun similaritySearch(
+        embedding: List<Float>,
+        topK: Int,
+    ): List<String> {
+        val embeddingStore: EmbeddingStore<TextSegment> =
+            PgVectorEmbeddingStore
+                .builder()
+                .host(extractHost(pgUrl))
+                .port(extractPort(pgUrl))
+                .database(extractDatabase(pgUrl))
+                .user(pgUser)
+                .password(pgPass)
+                .table(table)
+                .dimension(embedDim)
+                .build()
+
+        val queryEmbedding =
+            dev.langchain4j.data.embedding.Embedding
+                .from(embedding.toFloatArray())
+        val results =
+            embeddingStore.search(
+                dev.langchain4j.store.embedding.EmbeddingSearchRequest
+                    .builder()
+                    .queryEmbedding(queryEmbedding)
+                    .maxResults(topK)
+                    .build(),
+            )
+
+        return results.matches().map { it.embedded().text() }
     }
 }

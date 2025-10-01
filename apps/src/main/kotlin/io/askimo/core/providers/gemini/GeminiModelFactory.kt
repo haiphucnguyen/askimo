@@ -6,6 +6,7 @@ package io.askimo.core.providers.gemini
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
+import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
@@ -39,6 +40,7 @@ class GeminiModelFactory : ChatModelFactory {
         model: String,
         settings: ProviderSettings,
         memory: ChatMemory,
+        retrievalAugmentor: RetrievalAugmentor?,
     ): ChatService {
         require(settings is GeminiSettings) {
             "Invalid settings type for Gemini: ${settings::class.simpleName}"
@@ -56,31 +58,37 @@ class GeminiModelFactory : ChatModelFactory {
                     }
                 }.build()
 
-        return AiServices
-            .builder(ChatService::class.java)
-            .streamingChatModel(chatModel)
-            .chatMemory(memory)
-            .tools(LocalFsTools())
-            .systemMessageProvider {
-                systemMessage(
-                    """
-                    You are a helpful assistant.
+        val builder =
+            AiServices
+                .builder(ChatService::class.java)
+                .streamingChatModel(chatModel)
+                .chatMemory(memory)
+                .tools(LocalFsTools())
+                .systemMessageProvider {
+                    systemMessage(
+                        """
+                        You are a helpful assistant.
 
-                    Tool-use rules:
-                    • For general knowledge questions, answer directly. Do not mention tools.
-                    • Use LocalFsTools **only** when the request clearly involves the local file system
-                      (paths like ~, /, \\, or mentions such as "folder", "directory", "file", ".pdf", ".txt", etc.).
-                    • Never refuse general questions by claiming you can only use tools.
-                    • When using tools, call the most specific LocalFsTools function that matches the request.
+                        Tool-use rules:
+                        • For general knowledge questions, answer directly. Do not mention tools.
+                        • Use LocalFsTools **only** when the request clearly involves the local file system
+                          (paths like ~, /, \\, or mentions such as "folder", "directory", "file", ".pdf", ".txt", etc.).
+                        • Never refuse general questions by claiming you can only use tools.
+                        • When using tools, call the most specific LocalFsTools function that matches the request.
 
-                    Fallback policy:
-                    • If the user asks about local resources but no matching tool is available (e.g. "delete pdf files"),
-                      do not reject the request. Instead, provide safe, generic guidance on how they could do it
-                      manually (for example, using the command line or a file manager).
-                    """.trimIndent(),
-                    verbosityInstruction(settings.presets.verbosity),
-                )
-            }.build()
+                        Fallback policy:
+                        • If the user asks about local resources but no matching tool is available (e.g. "delete pdf files"),
+                          do not reject the request. Instead, provide safe, generic guidance on how they could do it
+                          manually (for example, using the command line or a file manager).
+                        """.trimIndent(),
+                        verbosityInstruction(settings.presets.verbosity),
+                    )
+                }
+        if (retrievalAugmentor != null) {
+            builder.retrievalAugmentor(retrievalAugmentor)
+        }
+
+        return builder.build()
     }
 
     private fun supportsSampling(model: String): Boolean = true

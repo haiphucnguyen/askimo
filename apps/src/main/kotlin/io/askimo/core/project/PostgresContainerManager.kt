@@ -24,6 +24,12 @@ object PostgresContainerManager {
             c.start()
             // Ensure pgvector extension is available
             ensurePgVector(c)
+
+            // Log connection details
+            println("PostgreSQL Container Started:")
+            println("Host: ${c.host}")
+            println("Port: ${c.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)}")
+
             // Stop cleanly on JVM shutdown
             Runtime.getRuntime().addShutdownHook(Thread { runCatching { c.stop() } })
             container = c

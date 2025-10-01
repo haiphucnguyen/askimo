@@ -6,6 +6,7 @@ package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
+import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
@@ -50,6 +51,7 @@ class OllamaModelFactory : ChatModelFactory {
         model: String,
         settings: ProviderSettings,
         memory: ChatMemory,
+        retrievalAugmentor: RetrievalAugmentor?,
     ): ChatService {
         require(settings is OllamaSettings) {
             "Invalid settings type for Ollama: ${settings::class.simpleName}"
@@ -65,12 +67,16 @@ class OllamaModelFactory : ChatModelFactory {
                     temperature(s.temperature).topP(s.topP)
                 }.build()
 
-        return AiServices
-            .builder(ChatService::class.java)
-            .streamingChatModel(chatModel)
-            .chatMemory(memory)
-            .tools(LocalFsTools())
-            .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
-            .build()
+        val builder =
+            AiServices
+                .builder(ChatService::class.java)
+                .streamingChatModel(chatModel)
+                .chatMemory(memory)
+                .tools(LocalFsTools())
+                .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
+        if (retrievalAugmentor != null) {
+            builder.retrievalAugmentor(retrievalAugmentor)
+        }
+        return builder.build()
     }
 }

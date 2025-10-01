@@ -6,6 +6,9 @@ package io.askimo.core.session
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import io.askimo.core.project.PgVectorContentRetriever
+import io.askimo.core.project.PgVectorIndexer
+import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
@@ -199,4 +202,26 @@ class Session(
      */
     fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService =
         if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
+
+    fun enableRagWith(indexer: PgVectorIndexer) {
+        val retriever = PgVectorContentRetriever(indexer)
+        val rag = buildRetrievalAugmentor(retriever)
+
+        val provider = params.currentProvider
+        val model = params.model
+        val settings = getCurrentProviderSettings()
+        val memory = getOrCreateMemory(provider, model, settings)
+
+        val factory =
+            getModelFactory(provider)
+                ?: error("No model factory registered for $provider")
+
+        val upgraded = factory.create(
+            model = model,
+            settings = settings,
+            memory = memory,
+            retrievalAugmentor = rag
+        )
+        setChatService(upgraded)
+    }
 }

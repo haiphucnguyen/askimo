@@ -4,8 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
+import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
@@ -61,6 +63,8 @@ class CreateProjectCommandHandler(
             println("❌ Index failed: ${e.message}")
             e.printStackTrace()
         }
+
+        session.enableRagWith(indexer)
     }
 
     private fun parseArgs(args: List<String>): Pair<String, String>? {

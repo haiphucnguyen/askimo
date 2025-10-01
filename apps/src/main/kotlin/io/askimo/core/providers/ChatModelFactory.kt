@@ -6,6 +6,7 @@ package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import dev.langchain4j.rag.RetrievalAugmentor
 
 /**
  * Factory interface for creating chat model instances for a specific AI provider.
@@ -39,6 +40,7 @@ interface ChatModelFactory {
         model: String,
         settings: ProviderSettings,
         memory: ChatMemory,
+        retrievalAugmentor: RetrievalAugmentor? = null,
     ): ChatService
 
     /**
