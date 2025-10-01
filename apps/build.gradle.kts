@@ -23,9 +23,10 @@ dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
-    implementation("org.postgresql:postgresql:42.7.7")
-    implementation("dev.langchain4j:langchain4j-pgvector:1.5.0-beta11")
-    implementation("org.testcontainers:postgresql:1.21.3")
+    implementation(libs.postgresql)
+    implementation(libs.langchain4j.pgvector)
+    implementation(libs.langchain4j.embeddings.all.minilm.l6.v2)
+    implementation(libs.testcontainers.postgresql)
     implementation(kotlin("stdlib"))
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
@@ -94,7 +95,7 @@ tasks.named<JavaExec>("run") {
 graalvmNative {
     binaries {
         agent {
-            enabled.set(true)
+            enabled.set(false)
             // valid values: "standard", "conditional", "direct"
             defaultMode.set("standard")
 

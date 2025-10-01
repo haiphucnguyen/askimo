@@ -50,6 +50,7 @@ object SessionConfigManager {
      */
     fun save(params: SessionParams) {
         try {
+            Files.createDirectories(configPath.parent)
             Files
                 .newBufferedWriter(
                     configPath,
@@ -60,6 +61,7 @@ object SessionConfigManager {
                 }
             log { "Saving config to: $configPath successfully." }
         } catch (e: Exception) {
+            e.printStackTrace()
             System.err.println("❌ Failed to save session config to $configPath: ${e.message}")
         }
     }

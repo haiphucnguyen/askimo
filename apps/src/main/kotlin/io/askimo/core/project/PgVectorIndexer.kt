@@ -1,69 +1,402 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.project
 
-import dev.langchain4j.data.document.Document
-import dev.langchain4j.data.document.loader.FileSystemDocumentLoader
-import dev.langchain4j.data.document.splitter.DocumentSplitters
+import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel
+import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
-import dev.langchain4j.store.embedding.EmbeddingStoreIngestor
-import dev.langchain4j.store.embedding.pgvector.MetadataStorageConfig
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.sql.DataSource
-
-
-
+import kotlin.io.path.extension
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+import kotlin.io.path.readText
+import kotlin.streams.asSequence
 
 class PgVectorIndexer(
     private val pgUrl: String = System.getenv("ASKIMO_PG_URL") ?: "jdbc:postgresql://localhost:5432/askimo",
     private val pgUser: String = System.getenv("ASKIMO_PG_USER") ?: "askimo",
     private val pgPass: String = System.getenv("ASKIMO_PG_PASS") ?: "askimo",
     private val table: String = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings",
-    private val embedDim: Int = 1536, // OpenAI text-embedding-3-small
-    private val openAiKey: String = requireNotNull(System.getenv("OPENAI_API_KEY")) { "OPENAI_API_KEY missing" }
+    private val embedDim: Int = 1536, // OpenAI text-embedding-3-small,
 ) {
+    private val supportedExtensions =
+        setOf(
+            "java",
+            "kt",
+            "kts",
+            "py",
+            "js",
+            "ts",
+            "jsx",
+            "tsx",
+            "go",
+            "rs",
+            "c",
+            "cpp",
+            "h",
+            "hpp",
+            "cs",
+            "rb",
+            "php",
+            "swift",
+            "scala",
+            "groovy",
+            "sh",
+            "bash",
+            "yaml",
+            "yml",
+            "json",
+            "xml",
+            "md",
+            "txt",
+            "gradle",
+            "properties",
+            "toml",
+        )
+
+    // Project type markers
+    private data class ProjectType(
+        val name: String,
+        val markers: Set<String>,
+        val excludePaths: Set<String>,
+    )
+
+    private val projectTypes =
+        listOf(
+            // Java/Kotlin projects
+            ProjectType(
+                name = "Gradle",
+                markers = setOf("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradlew"),
+                excludePaths =
+                    setOf(
+                        "build/",
+                        ".gradle/",
+                        "out/",
+                        "bin/",
+                        ".kotlintest/",
+                        ".kotlin/",
+                    ),
+            ),
+            ProjectType(
+                name = "Maven",
+                markers = setOf("pom.xml", "mvnw"),
+                excludePaths =
+                    setOf(
+                        "target/",
+                        ".mvn/",
+                        "out/",
+                        "bin/",
+                    ),
+            ),
+            // JavaScript/TypeScript projects
+            ProjectType(
+                name = "Node.js",
+                markers = setOf("package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"),
+                excludePaths =
+                    setOf(
+                        "node_modules/",
+                        "dist/",
+                        "build/",
+                        ".next/",
+                        ".nuxt/",
+                        "out/",
+                        "coverage/",
+                        ".cache/",
+                        ".parcel-cache/",
+                        ".turbo/",
+                        ".vite/",
+                    ),
+            ),
+            // Python projects
+            ProjectType(
+                name = "Python",
+                markers = setOf("requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"),
+                excludePaths =
+                    setOf(
+                        "__pycache__/",
+                        "*.pyc",
+                        "*.pyo",
+                        "*.pyd",
+                        ".pytest_cache/",
+                        ".mypy_cache/",
+                        ".tox/",
+                        "venv/",
+                        "env/",
+                        ".venv/",
+                        ".env/",
+                        "dist/",
+                        "build/",
+                        "*.egg-info/",
+                        ".eggs/",
+                    ),
+            ),
+            // Go projects
+            ProjectType(
+                name = "Go",
+                markers = setOf("go.mod", "go.sum"),
+                excludePaths =
+                    setOf(
+                        "vendor/",
+                        "bin/",
+                        "pkg/",
+                    ),
+            ),
+            // Rust projects
+            ProjectType(
+                name = "Rust",
+                markers = setOf("Cargo.toml", "Cargo.lock"),
+                excludePaths =
+                    setOf(
+                        "target/",
+                        "Cargo.lock",
+                    ),
+            ),
+            // Ruby projects
+            ProjectType(
+                name = "Ruby",
+                markers = setOf("Gemfile", "Gemfile.lock", "Rakefile"),
+                excludePaths =
+                    setOf(
+                        "vendor/",
+                        ".bundle/",
+                        "tmp/",
+                        "log/",
+                    ),
+            ),
+            // PHP projects
+            ProjectType(
+                name = "PHP/Composer",
+                markers = setOf("composer.json", "composer.lock"),
+                excludePaths =
+                    setOf(
+                        "vendor/",
+                        "var/cache/",
+                        "var/log/",
+                    ),
+            ),
+            // .NET projects
+            ProjectType(
+                name = ".NET",
+                markers = setOf("*.csproj", "*.sln", "*.fsproj", "*.vbproj"),
+                excludePaths =
+                    setOf(
+                        "bin/",
+                        "obj/",
+                        "packages/",
+                        ".vs/",
+                        "Debug/",
+                        "Release/",
+                    ),
+            ),
+        )
+
+    // Common excludes for all project types
+    private val commonExcludes =
+        setOf(
+            ".git/",
+            ".svn/",
+            ".hg/",
+            ".idea/",
+            ".vscode/",
+            ".DS_Store",
+            "*.log",
+            "*.tmp",
+            "*.temp",
+            "*.swp",
+            "*.bak",
+            ".history/",
+        )
 
     fun indexProject(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
 
-        val embeddingModel: EmbeddingModel = OpenAiEmbeddingModel.builder()
-            .apiKey(openAiKey)
-            .modelName("text-embedding-3-small")
-            .build()
+        // Detect project types
+        val detectedTypes = detectProjectTypes(root)
+        println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        // ✅ Use the builder with `.datasource(...)` (lowercase s)
-        // and metadata config via static helpers
-        val store: EmbeddingStore<TextSegment> = PgVectorEmbeddingStore.builder()
-            .datasource(ds())                           // <— this is the correct method name
-            .table(table)
-            .dimension(embedDim)
-            .createTable(true)                          // auto-create if missing
-            // optional performance/index settings (IVFFlat)
-            .useIndex(true)
-            .indexListSize(100)
-            // store text & metadata columns (JSONB variant)
-            .metadataStorageConfig(MetadataStorageConfig.combinedJsonb())
-            .build()
+        val embeddingModel: EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
+        val embeddingStore: EmbeddingStore<TextSegment> =
+            PgVectorEmbeddingStore
+                .builder()
+                .host(extractHost(pgUrl))
+                .port(extractPort(pgUrl))
+                .database(extractDatabase(pgUrl))
+                .user(pgUser)
+                .password(pgPass)
+                .table(table)
+                .dimension(embeddingModel.dimension())
+                .build()
 
-        val docs: List<Document> = FileSystemDocumentLoader.loadDocuments(root)
-        if (docs.isEmpty()) return 0
+        var indexedCount = 0
 
-        val splitter = DocumentSplitters.recursive(800, 100)
+        // Walk through all files recursively
+        Files
+            .walk(root)
+            .asSequence()
+            .filter { it.isRegularFile() }
+            .filter { isIndexableFile(it, root, detectedTypes) }
+            .forEach { filePath ->
+                try {
+                    val content = filePath.readText()
+                    if (content.isNotBlank()) {
+                        val relativePath = root.relativize(filePath).toString()
 
-        // Some recent builds don’t expose batchSize()/maxRetries(); defaults are fine
-        val ingestor = EmbeddingStoreIngestor.builder()
-            .documentSplitter(splitter)
-            .embeddingModel(embeddingModel)
-            .embeddingStore(store)
-            .build()
+                        // Create text segment with metadata
+                        val segment =
+                            TextSegment.from(
+                                content,
+                                Metadata(
+                                    mapOf(
+                                        "file_path" to relativePath,
+                                        "file_name" to filePath.fileName.toString(),
+                                        "extension" to filePath.extension,
+                                    ),
+                                ),
+                            )
 
-        ingestor.ingest(docs)
-        return docs.size
+                        // Generate embedding and store
+                        val embedding = embeddingModel.embed(segment)
+                        embeddingStore.add(embedding.content(), segment)
+
+                        indexedCount++
+                        if (indexedCount % 10 == 0) {
+                            println("  Indexed $indexedCount files...")
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Skip files that can't be read (binary, permission issues, etc.)
+                    println("  ⚠️  Skipped ${filePath.fileName}: ${e.message}")
+                }
+            }
+
+        return indexedCount
+    }
+
+    private fun detectProjectTypes(root: Path): List<ProjectType> {
+        val detected = mutableListOf<ProjectType>()
+
+        // Check for project type markers in the root directory
+        Files.list(root).use { stream ->
+            val rootFiles =
+                stream
+                    .map { it.name }
+                    .toList()
+                    .toSet()
+
+            for (projectType in projectTypes) {
+                // Check if any marker file exists
+                val hasMarker =
+                    projectType.markers.any { marker ->
+                        if (marker.contains("*")) {
+                            // Handle wildcards (e.g., "*.csproj")
+                            val pattern = marker.replace("*", ".*").toRegex()
+                            rootFiles.any { pattern.matches(it) }
+                        } else {
+                            rootFiles.contains(marker)
+                        }
+                    }
+
+                if (hasMarker) {
+                    detected.add(projectType)
+                }
+            }
+        }
+
+        return detected
+    }
+
+    private fun isIndexableFile(
+        path: Path,
+        root: Path,
+        detectedTypes: List<ProjectType>,
+    ): Boolean {
+        val fileName = path.fileName.toString()
+        val relativePath = root.relativize(path).toString().replace('\\', '/')
+
+        // Skip hidden files
+        if (fileName.startsWith(".")) return false
+
+        // Check against common excludes
+        if (shouldExclude(relativePath, fileName, commonExcludes)) {
+            return false
+        }
+
+        // Check against project-specific excludes
+        for (projectType in detectedTypes) {
+            if (shouldExclude(relativePath, fileName, projectType.excludePaths)) {
+                return false
+            }
+        }
+
+        // Check file extension
+        return path.extension.lowercase() in supportedExtensions
+    }
+
+    private fun shouldExclude(
+        relativePath: String,
+        fileName: String,
+        excludePatterns: Set<String>,
+    ): Boolean {
+        for (pattern in excludePatterns) {
+            when {
+                // Directory pattern (ends with /)
+                pattern.endsWith("/") -> {
+                    val dirPattern = pattern.removeSuffix("/")
+                    if (relativePath.contains("/$dirPattern/") ||
+                        relativePath.startsWith("$dirPattern/")
+                    ) {
+                        return true
+                    }
+                }
+                // Wildcard pattern (contains *)
+                pattern.contains("*") -> {
+                    val regex =
+                        pattern
+                            .replace(".", "\\.")
+                            .replace("*", ".*")
+                            .toRegex()
+                    if (regex.matches(fileName) || regex.matches(relativePath)) {
+                        return true
+                    }
+                }
+                // Exact match
+                else -> {
+                    if (fileName == pattern || relativePath.contains("/$pattern/") ||
+                        relativePath.endsWith("/$pattern")
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private fun extractHost(jdbcUrl: String): String {
+        // jdbc:postgresql://localhost:5432/askimo
+        val regex = """://([^:/@]+)""".toRegex()
+        return regex.find(jdbcUrl)?.groupValues?.get(1) ?: "localhost"
+    }
+
+    private fun extractPort(jdbcUrl: String): Int {
+        // jdbc:postgresql://localhost:5432/askimo
+        val regex = """:(\d+)/""".toRegex()
+        return regex
+            .find(jdbcUrl)
+            ?.groupValues
+            ?.get(1)
+            ?.toInt() ?: 5432
+    }
+
+    private fun extractDatabase(jdbcUrl: String): String {
+        // jdbc:postgresql://localhost:5432/askimo
+        val parts = jdbcUrl.split("/")
+        return parts.lastOrNull()?.split("?")?.firstOrNull() ?: "askimo"
     }
 }
-
-
-

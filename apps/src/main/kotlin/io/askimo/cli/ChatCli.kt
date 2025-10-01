@@ -9,6 +9,7 @@ import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommand
 import io.askimo.cli.commands.CopyCommandHandler
+import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
@@ -62,6 +63,7 @@ fun main(args: Array<String>) {
                         ModelsCommandHandler(session),
                         CopyCommandHandler(session),
                         ClearMemoryCommandHandler(session),
+                        CreateProjectCommandHandler(session),
                     )
 
                 // Setup parser and completer
