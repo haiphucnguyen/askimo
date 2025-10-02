@@ -25,7 +25,6 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.postgresql)
     implementation(libs.langchain4j.pgvector)
-    implementation(libs.langchain4j.embeddings.all.minilm.l6.v2)
     implementation(libs.testcontainers.postgresql)
     implementation(kotlin("stdlib"))
     runtimeOnly(libs.slf4j.nop)
@@ -92,10 +91,12 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
+val agentEnabled = providers.gradleProperty("agent").map { it.toBoolean() }.orElse(false)
+
 graalvmNative {
     binaries {
         agent {
-            enabled.set(false)
+//            enabled.set(agentEnabled)
             // valid values: "standard", "conditional", "direct"
             defaultMode.set("standard")
 

@@ -7,9 +7,9 @@ package io.askimo.core.project
 import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
+import io.askimo.core.session.Session
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -34,6 +34,7 @@ class PgVectorIndexer(
     private val table: String = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings",
     private val projectId: String,
     private val preferredDim: Int? = null,
+    private val session: Session,
 ) {
     private val projectTable: String = "${table}__${slug(projectId)}"
 
@@ -227,7 +228,7 @@ class PgVectorIndexer(
             ".history/",
         )
 
-    private fun buildEmbeddingModel(): EmbeddingModel = AllMiniLmL6V2EmbeddingModel()
+    private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session.getActiveProvider())
 
     // capture the actual dimension ONCE from the real model unless user overrode it
     private val dimension: Int by lazy {
@@ -242,8 +243,8 @@ class PgVectorIndexer(
             .database(extractDatabase(pgUrl))
             .user(pgUser)
             .password(pgPass)
-            .table(projectTable) // <-- use per-project table
-            .dimension(dimension) // <-- consistent dimension
+            .table(projectTable)
+            .dimension(dimension)
             .build()
 
     fun indexProject(root: Path): Int {
@@ -253,7 +254,7 @@ class PgVectorIndexer(
         println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
         val embeddingModel = buildEmbeddingModel()
-        val embeddingStore = newStore() // <-- per-project store
+        val embeddingStore = newStore()
 
         var indexedCount = 0
 

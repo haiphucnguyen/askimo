@@ -11,7 +11,6 @@ hikariCP = "7.0.2"
 mcp = "0.6.0"
 postgresql = "42.7.7"
 langchain4jPgvector = "1.6.0-beta12"
-langchain4jEmbeddingsAllMinilmL6V2 = "1.6.0-beta12"
 testcontainersPostgresql = "1.21.3"
 
 [libraries]
@@ -25,7 +24,6 @@ langchain4j-open-ai = { group = "dev.langchain4j", name = "langchain4j-open-ai",
 langchain4j-ollama = { group = "dev.langchain4j", name = "langchain4j-ollama", version.ref = "langchain4j" }
 langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-pgvector = { group = "dev.langchain4j", name = "langchain4j-pgvector", version.ref = "langchain4jPgvector" }
-langchain4j-embeddings-all-minilm-l6-v2 = { group = "dev.langchain4j", name = "langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4jEmbeddingsAllMinilmL6V2" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }

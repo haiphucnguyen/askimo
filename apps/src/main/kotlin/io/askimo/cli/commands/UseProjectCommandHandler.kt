@@ -64,6 +64,7 @@ class UseProjectCommandHandler(
                 pgUser = pg.username,
                 pgPass = pg.password,
                 projectId = entry.name,
+                session = session,
             )
 
         session.setScope(entry)

@@ -58,6 +58,7 @@ class CreateProjectCommandHandler(
                 pgUser = pg.username,
                 pgPass = pg.password,
                 projectId = name,
+                session = session,
             )
 
         // 3) Index the folder
