@@ -1,7 +1,7 @@
 [versions]
 graalvm-plugin = "0.11.0"
 jline = "3.30.5"
-langchain4j = "1.5.0"
+langchain4j = "1.7.1"
 commonmark = "0.25.1"
 kotlinxSerializationJson = "1.9.0"
 ktor = "3.2.3"
@@ -10,7 +10,7 @@ junitBom = "5.10.0"
 hikariCP = "7.0.2"
 mcp = "0.6.0"
 postgresql = "42.7.7"
-langchain4jPgvector = "1.6.0-beta12"
+langchain4jPgvector = "1.7.1-beta14"
 testcontainersPostgresql = "1.21.3"
 
 [libraries]

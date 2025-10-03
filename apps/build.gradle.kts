@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.langchain4j.pgvector)
     implementation(libs.testcontainers.postgresql)
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.19.2")
     implementation(kotlin("stdlib"))
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
