@@ -1,0 +1,57 @@
+name: gitCommit
+version: 3
+description: "Generate a Conventional Commit message from staged changes"
+
+allowedTools:
+  - stagedDiff
+  - status
+  - branch
+  - commit
+  - writeFile
+
+vars:
+  diff:
+    tool: stagedDiff
+    args: ["--no-color", "--unified=0"]
+  status:
+    tool: status
+  branch:
+    tool: branch
+
+system: |
+  You are a senior engineer writing Conventional Commit messages.
+  Follow these rules:
+  - Header: type(scope): summary (≤ {{max_header|72}} chars, imperative mood)
+  - Use docs:, test:, refactor:, style:, chore:, ci:, build: appropriately.
+  - Include bullet points when helpful (≤ 6).
+  - Add a BREAKING CHANGE: trailer if a public API is modified.
+  - Never paste the diff back.
+
+userTemplate: |
+  Write the commit message based on these details:
+
+  Current branch: {{branch}}
+  Repo status:
+  {{status}}
+
+  Staged diff (for context only):
+  ```diff
+  {{diff}}
+  ```
+
+postActions:
+  - when_: "{{dry_run|false}} == false"
+    call:
+      tool: commit
+      args:
+        message: "{{output}}"
+        signoff: "{{signoff|false}}"
+        noVerify: "{{no_verify|false}}"
+        writeEditmsg: "true"
+
+defaults:
+  max_header: "72"
+  dry_run: "false"
+  signoff: "false"
+  no_verify: "false"
+  format: "plain"

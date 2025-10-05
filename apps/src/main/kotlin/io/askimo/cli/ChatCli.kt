@@ -12,17 +12,25 @@ import io.askimo.cli.commands.CopyCommandHandler
 import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
+import io.askimo.cli.commands.ListCommandsHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
 import io.askimo.cli.commands.ParamsCommandHandler
+import io.askimo.cli.commands.RegisterCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
+import io.askimo.commands.CommandExecutor
+import io.askimo.commands.CommandRegistry
+import io.askimo.commands.ToolRegistry
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.chat
+import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Prompts
+import io.askimo.tools.git.GitTools
+import io.askimo.tools.git.IoTools
 import io.askimo.web.WebServer
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -46,6 +54,13 @@ fun main(args: Array<String>) {
     } else {
         val session = SessionFactory.createSession()
         try {
+            val cliCommandName = args.getFlagValue("-c", "--command")
+            if (cliCommandName != null) {
+                val overrides = args.extractOverrides("--set")
+                runYamlCommand(session, cliCommandName, overrides)
+                return
+            }
+
             if (args.isEmpty()) {
                 val terminal =
                     TerminalBuilder
@@ -69,6 +84,9 @@ fun main(args: Array<String>) {
                         CreateProjectCommandHandler(session),
                         ListProjectsCommandHandler(),
                         UseProjectCommandHandler(session),
+                        DeleteProjectCommandHandler(),
+                        RegisterCommandHandler(),
+                        ListCommandsHandler(),
                         DeleteProjectCommandHandler(),
                     )
 
@@ -258,5 +276,61 @@ private fun printFullVersionInfo() {
         Build JDK: ${a.buildJdk}
         Runtime: ${a.runtimeVm} (${a.runtimeVersion})
         """.trimIndent(),
+    )
+}
+
+private fun Array<String>.getFlagValue(vararg flags: String): String? {
+    for (i in indices) {
+        if (this[i] in flags && i + 1 < size) return this[i + 1]
+    }
+    return null
+}
+
+private fun Array<String>.extractOverrides(flag: String): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    var i = 0
+    while (i < size) {
+        if (this[i] == flag && i + 1 < size) {
+            val kv = this[i + 1]
+            val idx = kv.indexOf('=')
+            if (idx > 0) {
+                map[kv.take(idx)] = kv.substring(idx + 1)
+            }
+            i += 2
+            continue
+        }
+        i++
+    }
+    return map
+}
+
+private fun runYamlCommand(
+    session: Session,
+    name: String,
+    overrides: Map<String, String>,
+) {
+    println("🚀 Running command '$name'…")
+
+    val toolRegistry =
+        ToolRegistry(
+            instances =
+                listOf(
+                    GitTools(),
+                    IoTools,
+                ),
+        )
+
+    val registry = CommandRegistry()
+
+    val executor =
+        CommandExecutor(
+            session = session,
+            registry = registry,
+            tools = toolRegistry,
+        )
+
+    executor.run(
+        name = name,
+        opts = CommandExecutor.RunOpts(overrides = overrides),
     )
 }
