@@ -40,6 +40,12 @@ enum class ModelProvider {
     OLLAMA,
 
     /**
+     * Represents Anthropic's models
+     */
+    @SerialName("ANTHROPIC")
+    ANTHROPIC,
+
+    /**
      * Represents an unidentified or unsupported model provider.
      */
     @SerialName("UNKNOWN")

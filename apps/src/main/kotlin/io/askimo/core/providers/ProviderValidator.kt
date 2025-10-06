@@ -4,9 +4,13 @@
  */
 package io.askimo.core.providers
 
+import io.askimo.core.providers.ModelProvider.ANTHROPIC
+import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ModelProvider.X_AI
+import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
@@ -32,9 +36,13 @@ object ProviderValidator {
         when (provider) {
             OPEN_AI ->
                 (settings as? OpenAiSettings)?.apiKey?.isNotBlank() == true
-
             X_AI ->
                 (settings as? XAiSettings)?.apiKey?.isNotBlank() == true
+            GEMINI ->
+                (settings as? GeminiSettings)?.apiKey?.isNotBlank() == true
+            ANTHROPIC ->
+                (settings as? AnthropicSettings)?.apiKey?.isNotBlank() == true ||
+                    (settings as? AnthropicSettings)?.apiKey.equals("default")
 
             OLLAMA ->
                 (settings as? OllamaSettings)?.let { s ->
@@ -69,6 +77,23 @@ object ProviderValidator {
                 💡💡 To use XAI, you need to provide an API key.
                 1. Get your API key from: https://console.x.ai/
                 2. Then set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
+                """.trimIndent().trimIndent()
+
+            GEMINI ->
+                """
+                💡 To use Google Gemini, you need a valid API key.
+                1) Create or retrieve your key from Google AI Studio: https://makersuite.google.com/
+                2) Set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
+
+                """.trimIndent().trimIndent()
+
+            ANTHROPIC ->
+                """
+                💡 To use Anthropic (Claude models), you need an API key.
+                1) Get your API key from: https://console.anthropic.com/account/keys
+                2) Then set it in the CLI using: :setparam api_key YOUR_API_KEY_HERE
+                3) Example model: claude-3-5-sonnet-latest
+
                 """.trimIndent().trimIndent()
 
             else -> "💡 This provider requires custom configuration. Please refer to its documentation."

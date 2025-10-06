@@ -4,8 +4,11 @@
  */
 package io.askimo.commands
 
+import io.askimo.cli.LoadingIndicator
 import io.askimo.core.providers.chat
 import io.askimo.core.session.Session
+import org.jline.terminal.Terminal
+import java.util.concurrent.atomic.AtomicBoolean
 
 object MiniTpl {
     private val re = Regex("\\{\\{([^}|]+)(?:\\|([^}]+))?}}")
@@ -27,6 +30,9 @@ class CommandExecutor(
 ) {
     data class RunOpts(
         val overrides: Map<String, String> = emptyMap(),
+        val terminal: Terminal? = null,
+        val spinnerMessage: String = "Thinking…",
+        val spinnerDoneLabel: String = "Done",
     )
 
     fun run(
@@ -46,32 +52,48 @@ class CommandExecutor(
 
         // 3) prompts — since ChatService only takes a @UserMessage string,
         // we inline the system content at the top of the user prompt.
-        val system = MiniTpl.render(def.system, vars)
-        val user = MiniTpl.render(def.userTemplate, vars)
+        val systemRendered = MiniTpl.render(def.system, vars)
+        val userRendered = MiniTpl.render(def.userTemplate, vars)
 
         var prompt =
             buildString {
                 appendLine("SYSTEM:")
-                appendLine(system.trim())
+                appendLine(systemRendered.trim())
                 appendLine()
                 appendLine("USER:")
-                appendLine(user.trim())
+                appendLine(userRendered.trim())
             }.trim()
 
-        val leftover = detectTemplateVar(prompt)
-        if (leftover != null) {
-            // 4) neutralize them so LC4J won't parse as variables
+        detectTemplateVar(prompt)?.let {
             prompt = neutralizeForLc4j(prompt)
         }
 
-
         // 4) stream the model output and capture it
+        // === spinner + streaming ===
+        val indicator = opts.terminal?.let { LoadingIndicator(it, opts.spinnerMessage, opts.spinnerDoneLabel) }
+        indicator?.start()
 
-        val chat = session.getChatService()
-        val buf = StringBuilder()
-        val output = chat.chat(prompt) { token -> buf.append(token) }
-        val finalText = if (output.isNullOrBlank()) buf.toString().trim() else output.trim()
-        require(finalText.isNotBlank()) { "Model returned empty output" }
+        val firstTokenSeen = AtomicBoolean(false)
+
+        val output =
+            session
+                .getChatService()
+                .chat(prompt) { _ ->
+                    if (firstTokenSeen.compareAndSet(false, true)) {
+                        indicator?.stopWithElapsed()
+                        opts.terminal?.flush()
+                    }
+                }.trim()
+
+        // If no tokens ever arrived, still print a nice “done” line
+        if (!firstTokenSeen.get()) {
+            indicator?.stopWithElapsed()
+            opts.terminal?.writer()?.println()
+            opts.terminal?.flush()
+        }
+
+        require(output.isNotBlank()) { "Model returned empty output" }
+
         val formatted = formatOutput(output, vars["format"] ?: "plain")
 
         // 5) post-actions (generic). We expose {{output}} to templates.
@@ -148,6 +170,5 @@ class CommandExecutor(
     }
 
     // neutralize *all* occurrences so LC4J will not treat them as PromptTemplate vars
-    private fun neutralizeForLc4j(s: String): String =
-        s.replace("{{", "{\u200B{").replace("}}", "}\u200B}")
+    private fun neutralizeForLc4j(s: String): String = s.replace("{{", "{\u200B{").replace("}}", "}\u200B}")
 }

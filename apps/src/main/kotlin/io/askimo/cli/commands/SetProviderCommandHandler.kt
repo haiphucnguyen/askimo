@@ -7,7 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderValidator
-import io.askimo.core.session.MemoryPolicy
+import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
 import org.jline.reader.ParsedLine
@@ -71,7 +71,7 @@ class SetProviderCommandHandler(
         session.params.model = model
 
         SessionConfigManager.save(session.params)
-        session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+        session.rebuildActiveChatService(KEEP_PER_PROVIDER_MODEL)
 
         println("✅ Model provider set to: ${provider.name.lowercase()}")
         println("💡 Use `:models` to list all available models for this provider.")

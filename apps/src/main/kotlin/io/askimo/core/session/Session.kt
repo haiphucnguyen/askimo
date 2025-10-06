@@ -16,6 +16,8 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
+import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -203,7 +205,7 @@ class Session(
      * @return A newly created [ChatService] instance that becomes the active model for this session.
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
-    fun rebuildActiveChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService {
+    fun rebuildActiveChatService(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatService {
         val provider = params.currentProvider
         val factory =
             getModelFactory(provider)
@@ -212,7 +214,7 @@ class Session(
         val settings = getOrCreateProviderSettings(provider)
         val modelName = params.model
 
-        if (memoryPolicy == MemoryPolicy.RESET_FOR_THIS_COMBO) {
+        if (memoryPolicy == RESET_FOR_THIS_COMBO) {
             val key = "${provider.name}/$modelName"
             memoryMap.remove(key)
         }
@@ -230,7 +232,7 @@ class Session(
      * @param memoryPolicy Controls whether the existing memory bucket for this
      * (provider, model) is reused or reset when building for the first time.
      */
-    fun getChatService(memoryPolicy: MemoryPolicy = MemoryPolicy.KEEP_PER_PROVIDER_MODEL): ChatService =
+    fun getChatService(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatService =
         if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
 
     /**

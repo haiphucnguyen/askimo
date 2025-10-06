@@ -17,6 +17,7 @@ dependencies {
     implementation(libs.langchain4j.open.ai)
     implementation(libs.langchain4j.ollama)
     implementation(libs.langchain4j.google.ai.gemini)
+    implementation("dev.langchain4j:langchain4j-anthropic:1.7.1")
     implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json.jvm)
     implementation(libs.ktor.server.cio)
@@ -93,36 +94,43 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
-val agentEnabled = providers.gradleProperty("agent").map { it.toBoolean() }.orElse(false)
+// ⚙️ Accepts -Pagent=true|false|standard|direct|conditional
+val agentProp = providers.gradleProperty("agent")
+val agentEnabled = agentProp.map { true }.orElse(false) // any presence enables
+val agentMode = agentProp.map { v ->
+    when (v.lowercase()) {
+        "true", "false", "" -> "standard"     // boolean → default to standard
+        "standard", "direct", "conditional" -> v
+        else -> "standard"                    // unknown → safe default
+    }
+}.orElse("standard")
 
 graalvmNative {
     binaries {
         agent {
-//            enabled.set(agentEnabled)
-            // valid values: "standard", "conditional", "direct"
-            defaultMode.set("standard")
+            enabled.set(agentEnabled)
+            defaultMode.set(agentMode)
 
             modes {
+                // direct mode writes raw JSON here
                 direct {
-                    options.add("config-output-dir=${project.layout.buildDirectory.get().asFile}/native/agent")
+                    options.add("config-output-dir=${layout.buildDirectory.get().asFile}/native/agent")
                 }
             }
 
-            // Optional: automatically copy collected metadata into your sources
             metadataCopy {
-                // run the `run` task under the agent and copy results here:
-                inputTaskNames.add("run")
+                // since you run :apps:run in a multi-module build, fully-qualify it:
+                inputTaskNames.add(":apps:run")
                 outputDirectories.add("src/main/resources/META-INF/native-image/")
                 mergeWithExisting = true
             }
         }
+
         named("main") {
             imageName.set("askimo")
-            javaLauncher.set(
-                javaToolchains.launcherFor {
-                    languageVersion.set(JavaLanguageVersion.of(21))
-                },
-            )
+            javaLauncher.set(javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            })
             buildArgs.addAll(
                 listOf(
                     "-J-Xmx8g",
@@ -135,3 +143,4 @@ graalvmNative {
         }
     }
 }
+
