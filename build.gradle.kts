@@ -4,11 +4,11 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     application
-    id("org.jetbrains.kotlin.jvm") version "2.2.20"
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
-    id("org.graalvm.buildtools.native") version "0.11.1"
-    id("com.diffplug.spotless") version "7.2.1"
-    id("com.gradleup.shadow") version "9.0.1"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.graalvm.native)
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.shadow)
 }
 
 group = "io.askimo"
@@ -21,7 +21,7 @@ dependencies {
     implementation(libs.langchain4j.open.ai)
     implementation(libs.langchain4j.ollama)
     implementation(libs.langchain4j.google.ai.gemini)
-    implementation("dev.langchain4j:langchain4j-anthropic:1.7.1")
+    implementation(libs.langchain4j.anthropic)
     implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json.jvm)
     implementation(libs.ktor.server.cio)
@@ -31,16 +31,22 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.langchain4j.pgvector)
     implementation(libs.testcontainers.postgresql)
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.19.2")
+    implementation(libs.jackson.module.kotlin)
+    implementation(libs.jackson.dataformat.yaml)
     implementation(kotlin("stdlib"))
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlin.test)
 }
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs =
+        listOf(
+            "-XX:+EnableDynamicAgentLoading",
+        )
 }
 
 kotlin {
@@ -117,27 +123,18 @@ tasks.named<JavaExec>("run") {
 graalvmNative {
     binaries {
         agent {
-            enabled.set(true)
             // valid values: "standard", "conditional", "direct"
             defaultMode.set("standard")
 
             modes {
-                direct {
-                    // where to dump the configs
-                    options.add("config-output-dir=${project.layout.buildDirectory.get().asFile}/native/agent")
-                    // optionally:
-                    // options.add("experimental-configuration-with-origins")
+                standard {
                     metadataCopy {
                         // run the `run` task under the agent and copy results here:
                         outputDirectories.add("src/main/resources/META-INF/native-image/")
                         mergeWithExisting = true
                     }
                 }
-                // Optional: automatically copy collected metadata into your sources
             }
-
-            // (Optional) instrument more tasks than just `run`/`test`
-            // tasksToInstrumentPredicate = { true }
         }
         named("main") {
             javaLauncher.set(
@@ -154,6 +151,9 @@ graalvmNative {
                 ),
             )
             resources.autodetect()
+        }
+        metadataRepository {
+            enabled = true
         }
     }
 }

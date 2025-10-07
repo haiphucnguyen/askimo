@@ -24,7 +24,7 @@ class GeminiModelFactory : ChatModelFactory {
             (settings as? GeminiSettings)?.apiKey?.takeIf { it.isNotBlank() }
                 ?: return emptyList()
 
-        val baseUrl = (settings as? GeminiSettings)?.baseUrl ?: return emptyList()
+        val baseUrl = settings.baseUrl
         val url = "${baseUrl.trimEnd('/')}/models"
 
         return fetchModels(

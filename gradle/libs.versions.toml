@@ -1,5 +1,5 @@
 [versions]
-graalvm-plugin = "0.11.0"
+graalvm-plugin = "0.11.1"
 jline = "3.30.5"
 langchain4j = "1.7.1"
 commonmark = "0.25.1"
@@ -7,11 +7,14 @@ kotlinxSerializationJson = "1.9.0"
 ktor = "3.2.3"
 slf4j = "2.0.17"
 junitBom = "5.10.0"
-hikariCP = "7.0.2"
-mcp = "0.6.0"
 postgresql = "42.7.7"
 langchain4jPgvector = "1.7.1-beta14"
 testcontainersPostgresql = "1.21.3"
+mockitoKotlin = "6.1.0"
+kotlin = "2.2.20"
+jackson = "2.19.2"
+spotless = "7.2.1"
+shadow = "9.0.1"
 
 [libraries]
 # JLine
@@ -23,10 +26,15 @@ langchain4j = { group = "dev.langchain4j", name = "langchain4j", version.ref = "
 langchain4j-open-ai = { group = "dev.langchain4j", name = "langchain4j-open-ai", version.ref = "langchain4j" }
 langchain4j-ollama = { group = "dev.langchain4j", name = "langchain4j-ollama", version.ref = "langchain4j" }
 langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
+langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
 langchain4j-pgvector = { group = "dev.langchain4j", name = "langchain4j-pgvector", version.ref = "langchain4jPgvector" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
+
+# Jackson
+jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
+jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
 
 # Kotlinx Serialization
 kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
@@ -41,12 +49,18 @@ ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serializatio
 slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
 
 # Database and MCP SDK
-hikariCP = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikariCP" }
-mcp = { group = "io.modelcontextprotocol", name = "kotlin-sdk", version.ref = "mcp" }
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
-
 testcontainers-postgresql = { group = "org.testcontainers", name = "postgresql", version.ref = "testcontainersPostgresql" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-plugin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
