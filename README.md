@@ -89,18 +89,25 @@ Other ways to install → [Installation Guide](docs/installation.md)
 
 ## Available Commands
 
-| Command        | Description                                    | Example Usage              |
-|----------------|------------------------------------------------|----------------------------|
-| `:help`        | Show all available commands                    | `:help`                    |
-| `:set-param`    | Set a parameter for the current provider       | `:set-param style creative` |
-| `:params`      | View current session parameters                | `:params`                  |
-| `:config`      | Edit Askimo configuration file                 | `:config`                  |
-| `:providers`   | List all supported AI providers                | `:providers`               |
-| `:set-provider` | Switch to a different AI provider              | `:set-provider ollama`      |
-| `:models`      | List available models for the current provider | `:models`                  |
-| `:copy`        | Copy the last response to the clipboard        | `:copy`                    |
-| `:clear`       | Clear the chat history for the current session | `:clear`                   |
-| `:exit`        | Exit the Askimo REPL                           | `:exit`                    |
+| Command           | Description                                                                                                 | Example Usage                                      |
+|-------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
+| `:help`           | Show all available commands                                                                                 | `:help`                                           |
+| `:set-param`      | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
+| `:params`         | View current session parameters                                                                             | `:params`                                         |
+| `:config`         | Show the current provider, model, and settings                                                              | `:config`                                         |
+| `:providers`      | List all supported AI providers                                                                             | `:providers`                                      |
+| `:set-provider`   | Switch to a different AI provider                                                                           | `:set-provider ollama`                            |
+| `:models`         | List available models for the current provider                                                              | `:models`                                         |
+| `:copy`           | Copy the last response to the clipboard                                                                     | `:copy`                                           |
+| `:clear`          | Clear the chat history for the current session                                                              | `:clear`                                          |
+| `:create-project` | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
+| `:projects`       | List all saved Askimo projects                                                                              | `:projects`                                       |
+| `:project`        | Activate a saved project (sets scope and enables RAG)                                                       | `:project myapp`                                  |
+| `:delete-project` | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table      | `:delete-project myapp`                           |
+| `:create-recipe`  | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe -template recipe.yml`    |
+| `:recipes`        | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes`                                        |
+| `:delete-recipe`  | Delete a registered recipe from ~/.askimo/recipes                                                           | `:delete-recipe myrecipe`                         |
+| `:exit`           | Exit the Askimo REPL                                                                                        | `:exit`                                           |
 
 
 ➡ **[View the full command reference »](docs/commands.md)**  
