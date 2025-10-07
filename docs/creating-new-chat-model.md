@@ -163,11 +163,11 @@ After implementing your provider, you can test it by:
 1. Building and running the Askimo CLI
 2. Setting your provider as the active provider:
    ```
-   askmio> :setprovider YOUR_PROVIDER
+   askmio> :set-provider YOUR_PROVIDER
    ```
 3. Setting any required parameters:
    ```
-   askimo> :setparam api_key your-api-key
+   askimo> :set-param api_key your-api-key
    ```
 4. Listing available models:
    ```
@@ -175,7 +175,7 @@ After implementing your provider, you can test it by:
    ```
 5. Chatting with a specific model:
    ```
-   askimo> :setparam model your-model-name
+   askimo> :set-param model your-model-name
    askimo> What is the capital of Viet Nam?
    ```
 

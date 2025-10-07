@@ -31,8 +31,8 @@ Available commands:
   :models        - List available models for the current provider
   :params        - Show current model parameters or list available param keys
   :providers     - List all supported model providers
-  :setparam      - Set a model parameter (use :params --list for available keys)
-  :setprovider   - Set the current model provider (e.g., :setprovider openai)
+  :set-param      - Set a model parameter (use :params --list for available keys)
+  :set-provider   - Set the current model provider (e.g., :set-provider openai)
 ```
 
 ## :clear
@@ -60,7 +60,7 @@ This is useful for quickly pasting the output into another application without m
 Display the current session parameters, including:
 - Active provider
 - Selected model
-- All configurable parameters available for `:setparam`
+- All configurable parameters available for `:set-param`
 
 **Syntax:**
 
@@ -77,10 +77,10 @@ Available parameter keys for gpt-4o (OPEN_AI):
 ```
 
 **Notes:**
-- The list under "Available parameters" shows what can be changed with `:setparam`.
+- The list under "Available parameters" shows what can be changed with `:set-param`.
 - Parameter names and defaults may vary depending on the active provider.
 
-## :setparam
+## :set-param
 
 **Description:**  
 Set a parameter for the current AI provider.  
@@ -88,7 +88,7 @@ Available parameters depend on the provider and can be viewed using `:params`.
 
 **Syntax:**
 
-:setparam \<name\> \<value\>
+:set-param \<name\> \<value\>
 
 **Parameters:**
 - `<name>` - Name of the parameter (e.g., `model`, `syle`).
@@ -97,7 +97,7 @@ Available parameters depend on the provider and can be viewed using `:params`.
 **Example:**
 
 ```bash
-:setparam model gpt-4o
+:set-param model gpt-4o
 ```
 
 ## :config
@@ -129,16 +129,16 @@ List all AI providers supported by Askimo.
 
 **Notes:**
 - The list may vary depending on your installation and configuration.
-- Use `:setprovider <name>` to switch to one of the available providers.
+- Use `:set-provider <name>` to switch to one of the available providers.
 
-## :setprovider
+## :set-provider
 
 **Description:**  
 Switch to a different AI provider for the current session.  
 
 **Syntax:**
 
-:setprovider \<provider_name\>
+:set-provider \<provider_name\>
 
 **Notes:**
 - Switching providers may change the available parameters and models.
@@ -156,4 +156,4 @@ The list is retrieved dynamically based on the active provider’s settings.
 
 **Notes:**
 - The available models depend on the provider and your local/remote configuration.
-- Use `:setparam model <model_name>` to change the active model for the session.
+- Use `:set-param model <model_name>` to change the active model for the session.

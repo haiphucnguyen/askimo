@@ -92,11 +92,11 @@ Other ways to install → [Installation Guide](docs/installation.md)
 | Command        | Description                                    | Example Usage              |
 |----------------|------------------------------------------------|----------------------------|
 | `:help`        | Show all available commands                    | `:help`                    |
-| `:setparam`    | Set a parameter for the current provider       | `:setparam style creative` |
+| `:set-param`    | Set a parameter for the current provider       | `:set-param style creative` |
 | `:params`      | View current session parameters                | `:params`                  |
 | `:config`      | Edit Askimo configuration file                 | `:config`                  |
 | `:providers`   | List all supported AI providers                | `:providers`               |
-| `:setprovider` | Switch to a different AI provider              | `:setprovider ollama`      |
+| `:set-provider` | Switch to a different AI provider              | `:set-provider ollama`      |
 | `:models`      | List available models for the current provider | `:models`                  |
 | `:copy`        | Copy the last response to the clipboard        | `:copy`                    |
 | `:clear`       | Clear the chat history for the current session | `:clear`                   |

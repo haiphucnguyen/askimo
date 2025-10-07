@@ -50,8 +50,8 @@ Remember: higher verbosity may increase cost and response time.
 ## 💻 Setting Parameters in Askimo CLI
 
 ```bash
-askmimo> :setparam style precise
-askmimo> :setparam verbosity short
+askmimo> :set-param style precise
+askmimo> :set-param verbosity short
 ```
 
 Check current values:
@@ -66,6 +66,6 @@ Parameters (current values):
   verbosity = long  (Enum(short|normal|long)) – Controls response length/cost  (suggestions: short, normal, long)
   api_key = sk-••••••ucAA  (String) – API key for the current provider
 
-Use :setparam <key> <value> to change parameters.
+Use :set-param <key> <value> to change parameters.
 Use :params --list to see available keys without values.
 ```

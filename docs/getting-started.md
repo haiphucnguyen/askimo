@@ -14,9 +14,9 @@ Askimo saves your settings locally, so you won’t need to repeat these steps ne
 ## Quick start (works the same for any provider)
 
 ```bash
-askimo> :setprovider <ollama|openai|gemini|xai>
+askimo> :set-provider <ollama|openai|gemini|xai>
 askimo> :models            # see models available for that provider
-askimo> :setparam model <model-id> # optional if a default exists
+askimo> :set-param model <model-id> # optional if a default exists
 askimo> "Hello! Summarize this text."
 ```
 ---
@@ -30,9 +30,9 @@ ollama pull gpt-oss:20b
 ```
 3. In askimo
 ```bash
-askimo> :setprovider ollama
+askimo> :set-provider ollama
 askimo> :models          # shows local models (e.g., llama3)
-askimo> :setparam model gpt-oss:20b
+askimo> :set-param model gpt-oss:20b
 askimo> "Explain Redis caching in simple terms."
 ```
 
@@ -43,8 +43,8 @@ If `:models` is empty, pull one with `ollama pull <name>` and try again.
 1. Get an API key → https://platform.openai.com/api-keys
 2. Configure Askimo and chat:
 ```bash
-askimo> :setprovider open_ai
-askimo> :setparam api_key sk-...
+askimo> :set-provider open_ai
+askimo> :set-param api_key sk-...
 askimo> :models          # e.g., gpt-4o, gpt-4o-mini
 askimo> "Explain Redis caching in simple terms."
 ```
@@ -56,7 +56,7 @@ askimo> "Explain Redis caching in simple terms."
 2. Configure and chat:
 ```bash
 askimo> :provider gemini
-askimo> :setparam api_key <your-gemini-key>
+askimo> :set-param api_key <your-gemini-key>
 askimo> :models                         # e.g., gemini-1.5-pro, gemini-1.5-flash
 askimo> "Give me five CLI productivity tips."
 ```
@@ -67,10 +67,10 @@ askimo> "Give me five CLI productivity tips."
 1. Get an API key → https://x.ai
 2. Configure and chat:
 ```bash
-askimo> :setprovider x_ai
-askimo> :setparam api_key <your-xai-key>
+askimo> :set-provider x_ai
+askimo> :set-param api_key <your-xai-key>
 askimo> :models                         # e.g., grok-2, grok-2-mini (examples)
-askimo> :setparam model grok-3-mini
+askimo> :set-param model grok-3-mini
 askimo> "What's new in Java 21?"
 ```
 📌 Default model: grok-4
@@ -79,7 +79,7 @@ askimo> "What's new in Java 21?"
 ## Switch any time
 You can switch providers/models on the fly; Askimo remembers your last choices.
 ```bash
-askimo> :setprovider ollama
-askimo> :setparam model mistral 
-askimo> :setprovider openai                # defaults to gpt-4o
+askimo> :set-provider ollama
+askimo> :set-param model mistral 
+askimo> :set-provider openai                # defaults to gpt-4o
 ```
