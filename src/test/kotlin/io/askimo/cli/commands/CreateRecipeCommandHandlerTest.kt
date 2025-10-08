@@ -4,25 +4,16 @@
  */
 package io.askimo.cli.commands
 
-import org.jline.reader.ParsedLine
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class CreateRecipeCommandHandlerTest {
+class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
     private lateinit var handler: CreateRecipeCommandHandler
-    private lateinit var originalOut: PrintStream
-    private lateinit var testOut: ByteArrayOutputStream
 
     @TempDir
     lateinit var tempDir: Path
@@ -34,18 +25,8 @@ class CreateRecipeCommandHandlerTest {
     fun setUp() {
         handler = CreateRecipeCommandHandler()
 
-        // Capture console output
-        originalOut = System.out
-        testOut = ByteArrayOutputStream()
-        System.setOut(PrintStream(testOut))
-
         // Set temporary home directory for testing
         System.setProperty("user.home", tempHome.toString())
-    }
-
-    @AfterEach
-    fun tearDown() {
-        System.setOut(originalOut)
     }
 
     @Test
@@ -68,7 +49,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("✅ Registered recipe 'my-recipe'"))
 
         // Verify recipe file was created
@@ -83,7 +64,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("Usage: :create-recipe"))
     }
 
@@ -93,7 +74,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("❌ Template not found"))
     }
 
@@ -106,7 +87,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("❌ Invalid YAML"))
     }
 
@@ -128,7 +109,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         // Missing required 'name' field causes YAML parsing to fail
         assertTrue(output.contains("❌ Invalid YAML"))
     }
@@ -152,7 +133,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         // Empty name (valid YAML but blank string) triggers the name missing check
         assertTrue(output.contains("❌ Recipe name missing"))
     }
@@ -180,7 +161,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("⚠️ Recipe 'existing-recipe' already exists"))
     }
 
@@ -202,7 +183,7 @@ class CreateRecipeCommandHandlerTest {
 
         handler.handle(parsedLine)
 
-        val output = testOut.toString()
+        val output = getOutput()
         assertTrue(output.contains("✅ Registered recipe"))
     }
 
@@ -215,12 +196,5 @@ class CreateRecipeCommandHandlerTest {
     fun `description is not empty`() {
         assertTrue(handler.description.isNotBlank())
         assertTrue(handler.description.contains("Usage:"))
-    }
-
-    // Helper function to create mock ParsedLine
-    private fun mockParsedLine(vararg words: String): ParsedLine {
-        val parsedLine = mock<ParsedLine>()
-        whenever(parsedLine.words()) doReturn words.toList()
-        return parsedLine
     }
 }
