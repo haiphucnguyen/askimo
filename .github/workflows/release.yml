@@ -40,8 +40,14 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
       # Generate metadata first, then compile (arm runner)
-      - name: Generate Graal metadata (arm64)
+      - name: Generate Graal metadata (Linux/macOS)
+        if: runner.os != 'Windows'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -PtraceAgent=true clean test
+
+      - name: Generate Graal metadata (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true -PtraceAgent=true clean test
 
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
