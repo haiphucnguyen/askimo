@@ -15,6 +15,7 @@ group = "io.askimo"
 version = "0.1.2"
 
 dependencies {
+    compileOnly("org.graalvm.nativeimage:svm:25.0.0")
     implementation(libs.jline)
     implementation(libs.jline.terminal.jansi)
     implementation(libs.langchain4j)
@@ -42,7 +43,10 @@ dependencies {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("native")
+    }
+
     jvmArgs =
         listOf(
             "-XX:+EnableDynamicAgentLoading",
@@ -120,42 +124,65 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
-graalvmNative {
-    binaries {
-        agent {
-            // valid values: "standard", "conditional", "direct"
-            defaultMode.set("standard")
+val traceAgent = (findProperty("traceAgent") as String?) == "true"
 
-            modes {
-                standard {
-                    metadataCopy {
-                        // run the `run` task under the agent and copy results here:
-                        outputDirectories.add("src/main/resources/META-INF/native-image/")
-                        mergeWithExisting = true
-                    }
-                }
-            }
+tasks.register<Sync>("syncGraalMetadata") {
+    from("$buildDir/graal-agent")
+    include("**/*-config.json") // only metadata
+    exclude("**/agent-extracted-predefined-classes/**", "**/predefined-classes-*.json")
+    into("src/main/resources/META-INF/native-image")
+}
+
+tasks.test {
+    useJUnitPlatform()
+
+    if (traceAgent) {
+        val mergeDir = "$projectDir/src/main/resources/META-INF/native-image"
+        val accessFilter = "$projectDir/src/main/resources/graal-access-filter.json"
+        val callerFilter = "$projectDir/src/main/resources/graal-caller-filter.json"
+        val outDir = "$buildDir/graal-agent"
+
+        jvmArgs(
+            "-agentlib:native-image-agent=" +
+                "config-output-dir=$outDir," +
+                "access-filter-file=$accessFilter," + // drop framework internals
+                "caller-filter-file=$callerFilter",
+        )
+
+        doFirst {
+            println("🔎 Graal tracing agent ON")
+            println("   Merge -> $mergeDir")
+            println("   Filters: access=$accessFilter ; caller=$callerFilter")
         }
+        finalizedBy("syncGraalMetadata")
+    }
+}
+
+graalvmNative {
+    metadataRepository {
+        enabled.set(true)
+    }
+
+    binaries {
         named("main") {
-            javaLauncher.set(
-                javaToolchains.launcherFor {
-                    languageVersion.set(JavaLanguageVersion.of(21))
-                },
-            )
+            javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+
             buildArgs.addAll(
                 listOf(
                     "-J-Xmx8g",
                     "--enable-url-protocols=https",
                     "--report-unsupported-elements-at-runtime",
+                    "--features=io.askimo.core.graal.AskimoFeature",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
                 ),
             )
             resources.autodetect()
         }
-        metadataRepository {
-            enabled = true
-        }
     }
+}
+
+tasks.named("nativeCompile") {
+    dependsOn("test")
 }
 
 extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true

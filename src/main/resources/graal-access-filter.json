@@ -1,0 +1,9 @@
+{
+  "rules": [
+    { "excludeClasses": "org.mockito.**" },
+    { "excludeClasses": "net.bytebuddy.**" },
+    { "excludeClasses": "org.junit.**" },
+    { "excludeClasses": "org.gradle.**" },
+    { "excludeClasses": "org.testcontainers.**" }
+  ]
+}

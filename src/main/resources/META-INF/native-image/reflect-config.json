@@ -1,8 +1,5 @@
 [
   {
-    "name": "[B"
-  },
-  {
     "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
   },
   {
@@ -18,154 +15,302 @@
     "name": "[Ljava.lang.Object;"
   },
   {
-    "name": "[Ljava.lang.String;"
+    "name": "[Ljava.lang.constant.ClassDesc;"
   },
   {
-    "name": "[Lsun.security.pkcs.SignerInfo;"
+    "name": "[Ljava.lang.constant.ConstantDesc;"
   },
   {
-    "name": "apple.security.AppleProvider",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.fasterxml.jackson.databind.PropertyNamingStrategies$SnakeCaseStrategy",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "name": "[Lnet.bytebuddy.description.enumeration.EnumerationDescription;"
   },
   {
     "name": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "com.sun.crypto.provider.AESCipher$General",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "name": "com.sun.tools.attach.VirtualMachine"
   },
   {
-    "name": "com.sun.crypto.provider.ARCFOURCipher",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.DESCipher",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.DESedeCipher",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.DHParameters",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.HmacCore$HmacSHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.TlsMasterSecretGenerator",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicContent",
+    "name": "io.askimo.cli.commands.ClearMemoryCommandHandlerTest",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicCreateMessageRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "getCustomParameters", "parameterTypes": [] },
-      { "name": "getMaxTokens", "parameterTypes": [] },
-      { "name": "getMessages", "parameterTypes": [] },
-      { "name": "getMetadata", "parameterTypes": [] },
-      { "name": "getModel", "parameterTypes": [] },
-      { "name": "getStopSequences", "parameterTypes": [] },
-      { "name": "getSystem", "parameterTypes": [] },
-      { "name": "getTemperature", "parameterTypes": [] },
-      { "name": "getThinking", "parameterTypes": [] },
-      { "name": "getToolChoice", "parameterTypes": [] },
-      { "name": "getTools", "parameterTypes": [] },
-      { "name": "getTopK", "parameterTypes": [] },
-      { "name": "getTopP", "parameterTypes": [] },
-      { "name": "isStream", "parameterTypes": [] }
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "description is not empty and mentions clearing memory",
+        "parameterTypes": []
+      },
+      {
+        "name": "description mentions provider and model",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle clears memory for Anthropic provider",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle clears memory for Gemini provider",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle clears memory for Ollama provider",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle clears memory for active provider and model",
+        "parameterTypes": []
+      },
+      { "name": "keyword returns correct value", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicDelta",
+    "name": "io.askimo.cli.commands.CommandHandlerTestBase",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "methods": [
+      { "name": "setUpBase", "parameterTypes": [] },
+      { "name": "tearDownBase", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.cli.commands.CopyCommandHandlerTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "description is not empty and mentions copying",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with blank response shows warning",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with empty response shows warning",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with markdown formatted response processes correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with multiline response processes correctly",
+        "parameterTypes": []
+      },
+      { "name": "handle with no response shows warning", "parameterTypes": [] },
+      {
+        "name": "handle with special characters in response processes correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with unicode characters in response processes correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with valid response on macOS attempts copy",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with very long response processes correctly",
+        "parameterTypes": []
+      },
+      { "name": "keyword returns correct value", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
+    ]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessage",
+    "name": "io.askimo.cli.commands.CreateRecipeCommandHandlerTest",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessageContent",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicResponseMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "description is not empty", "parameterTypes": [] },
+      { "name": "handle expands tilde in template path", "parameterTypes": [] },
+      {
+        "name": "handle with empty name in YAML and no arg shows error",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with existing recipe shows warning",
+        "parameterTypes": []
+      },
+      { "name": "handle with invalid YAML shows error", "parameterTypes": [] },
+      {
+        "name": "handle with missing name field in YAML shows invalid YAML error",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with missing template flag shows usage",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with non-existent template shows error",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with real gitcommit template preserves vars",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with valid name and template creates recipe",
+        "parameterTypes": []
+      },
+      { "name": "keyword returns correct value", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
+    ]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicRole",
+    "name": "io.askimo.cli.commands.ListRecipesCommandHandlerTest",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "methods": [{ "name": "serialize", "parameterTypes": [] }]
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicStreamingData",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "description is not empty and mentions recipes",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle count matches actual number of yml files",
+        "parameterTypes": []
+      },
+      { "name": "handle ignores non-yml files", "parameterTypes": [] },
+      { "name": "handle lists recipes in sorted order", "parameterTypes": [] },
+      { "name": "handle shows separator line", "parameterTypes": [] },
+      {
+        "name": "handle strips yml extension from displayed names",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with empty recipes directory shows info message",
+        "parameterTypes": []
+      },
+      { "name": "handle with empty yml files", "parameterTypes": [] },
+      { "name": "handle with large number of recipes", "parameterTypes": [] },
+      {
+        "name": "handle with multiple recipes lists them all",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with no recipes directory shows info message",
+        "parameterTypes": []
+      },
+      { "name": "handle with numeric recipe names", "parameterTypes": [] },
+      {
+        "name": "handle with recipe names containing spaces",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with recipe names containing special characters",
+        "parameterTypes": []
+      },
+      { "name": "handle with single recipe lists it", "parameterTypes": [] },
+      {
+        "name": "handle with subdirectories in recipes folder",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with yml extension in different cases",
+        "parameterTypes": []
+      },
+      { "name": "keyword returns correct value", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] }
+    ]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTextContent",
+    "name": "io.askimo.cli.commands.ModelsCommandHandlerTest",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicToolSchema",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicUsage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "io.askimo.core.providers.ChatService",
-    "queryAllPublicMethods": true
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "description is not empty and mentions models",
+        "parameterTypes": []
+      },
+      { "name": "handle always shows usage hint", "parameterTypes": [] },
+      {
+        "name": "handle formats model list with dashes when models available",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle shows appropriate guidance based on provider",
+        "parameterTypes": []
+      },
+      { "name": "handle shows emoji in output", "parameterTypes": [] },
+      {
+        "name": "handle shows provider name in lowercase",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with Anthropic provider shows models or helpful message",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with Gemini provider shows models or helpful message",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with Ollama and no models shows helpful message",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with Ollama provider shows models or helpful message",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with OpenAI and no API key shows helpful guidance",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with OpenAI provider shows models or helpful message",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with custom provider settings uses them",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with different providers shows correct provider names",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with empty provider settings map uses defaults",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with null provider settings does not crash",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with unknown provider shows error",
+        "parameterTypes": []
+      },
+      {
+        "name": "handle with xAI provider shows models or helpful message",
+        "parameterTypes": []
+      },
+      { "name": "keyword returns correct value", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.recipes.PostAction",
@@ -185,7 +330,9 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getCall", "parameterTypes": [] },
+      { "name": "getWhen_", "parameterTypes": [] }
     ]
   },
   {
@@ -223,6 +370,42 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
+      },
+      { "name": "getAllowedTools", "parameterTypes": [] },
+      { "name": "getDefaults", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getPostActions", "parameterTypes": [] },
+      { "name": "getSystem", "parameterTypes": [] },
+      { "name": "getUserTemplate", "parameterTypes": [] },
+      { "name": "getVars", "parameterTypes": [] },
+      { "name": "getVersion", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.recipes.ToolRegistryTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "allow filter restricts available tools",
+        "parameterTypes": []
+      },
+      {
+        "name": "defaults include git and io tools with expected keys",
+        "parameterTypes": []
+      },
+      {
+        "name": "invoke on missing tool throws error with available list",
+        "parameterTypes": []
+      },
+      {
+        "name": "invoke works for IoTools writeFile using array args",
+        "parameterTypes": []
       }
     ]
   },
@@ -244,91 +427,447 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
+      },
+      { "name": "getArgs", "parameterTypes": [] },
+      { "name": "getTool", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.session.Session",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["io.askimo.core.session.SessionParams"]
+      },
+      { "name": "getActiveProvider", "parameterTypes": [] },
+      { "name": "getLastResponse", "parameterTypes": [] },
+      { "name": "getParams", "parameterTypes": [] },
+      {
+        "name": "removeMemory",
+        "parameterTypes": [
+          "io.askimo.core.providers.ModelProvider",
+          "java.lang.String"
+        ]
       }
     ]
   },
   {
-    "name": "io.askimo.tools.fs.LocalFsTools",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.tools.git.GitTools",
-    "queryAllPublicMethods": true,
+    "name": "io.askimo.core.session.SessionParams",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "branch", "parameterTypes": [] },
       {
-        "name": "commit",
-        "parameterTypes": ["java.lang.String", "boolean", "boolean", "boolean"]
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.util.Map",
+          "io.askimo.core.providers.ModelProvider",
+          "java.util.Map",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
       },
-      { "name": "stagedDiff", "parameterTypes": ["java.util.List"] },
-      { "name": "status", "parameterTypes": [] }
+      { "name": "getCurrentProvider", "parameterTypes": [] },
+      {
+        "name": "getModel",
+        "parameterTypes": ["io.askimo.core.providers.ModelProvider"]
+      },
+      { "name": "getProviderSettings", "parameterTypes": [] }
     ]
   },
   {
+    "name": "io.askimo.tools.git.GitTools",
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "io.askimo.tools.git.IoTools",
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true,
+    "methods": [
+      {
+        "name": "writeFile",
+        "parameterTypes": ["java.lang.String", "java.lang.String"]
+      }
+    ]
   },
   {
     "name": "java.io.Serializable",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.Class",
+    "methods": [
+      { "name": "getAnnotatedInterfaces", "parameterTypes": [] },
+      { "name": "getAnnotatedSuperclass", "parameterTypes": [] },
+      {
+        "name": "getDeclaredMethod",
+        "parameterTypes": ["java.lang.String", "java.lang.Class[]"]
+      },
+      {
+        "name": "getMethod",
+        "parameterTypes": ["java.lang.String", "java.lang.Class[]"]
+      },
+      { "name": "getModule", "parameterTypes": [] },
+      { "name": "getNestHost", "parameterTypes": [] },
+      { "name": "getNestMembers", "parameterTypes": [] },
+      { "name": "getPackageName", "parameterTypes": [] },
+      { "name": "getPermittedSubclasses", "parameterTypes": [] },
+      { "name": "getRecordComponents", "parameterTypes": [] },
+      { "name": "isNestmateOf", "parameterTypes": ["java.lang.Class"] },
+      { "name": "isRecord", "parameterTypes": [] },
+      { "name": "isSealed", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.ClassLoader",
+    "methods": [
+      { "name": "getDefinedPackage", "parameterTypes": ["java.lang.String"] },
+      { "name": "getUnnamedModule", "parameterTypes": [] },
+      { "name": "registerAsParallelCapable", "parameterTypes": [] }
+    ]
   },
   {
     "name": "java.lang.ClassValue"
   },
   {
-    "name": "java.lang.Comparable",
-    "queryAllDeclaredMethods": true
+    "name": "java.lang.Enum"
   },
   {
-    "name": "java.lang.Double",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "name": "java.lang.FunctionalInterface"
   },
   {
     "name": "java.lang.Integer"
   },
   {
     "name": "java.lang.Iterable",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.lang.Number",
     "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.lang.Object"
+    "name": "java.lang.Module",
+    "methods": [
+      {
+        "name": "addExports",
+        "parameterTypes": ["java.lang.String", "java.lang.Module"]
+      },
+      {
+        "name": "addOpens",
+        "parameterTypes": ["java.lang.String", "java.lang.Module"]
+      },
+      { "name": "addReads", "parameterTypes": ["java.lang.Module"] },
+      { "name": "canRead", "parameterTypes": ["java.lang.Module"] },
+      { "name": "getClassLoader", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getPackages", "parameterTypes": [] },
+      { "name": "getResourceAsStream", "parameterTypes": ["java.lang.String"] },
+      { "name": "isExported", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "isExported",
+        "parameterTypes": ["java.lang.String", "java.lang.Module"]
+      },
+      { "name": "isNamed", "parameterTypes": [] },
+      { "name": "isOpen", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "isOpen",
+        "parameterTypes": ["java.lang.String", "java.lang.Module"]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.Object",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "clone", "parameterTypes": [] },
+      { "name": "getClass", "parameterTypes": [] },
+      { "name": "toString", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.ProcessHandle",
+    "methods": [
+      { "name": "current", "parameterTypes": [] },
+      { "name": "pid", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.Runtime",
+    "methods": [{ "name": "version", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.Runtime$Version",
+    "methods": [{ "name": "feature", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.StackWalker",
+    "methods": [
+      {
+        "name": "getInstance",
+        "parameterTypes": ["java.lang.StackWalker$Option"]
+      },
+      { "name": "walk", "parameterTypes": ["java.util.function.Function"] }
+    ]
+  },
+  {
+    "name": "java.lang.StackWalker$Option"
+  },
+  {
+    "name": "java.lang.StackWalker$StackFrame",
+    "methods": [{ "name": "getDeclaringClass", "parameterTypes": [] }]
   },
   {
     "name": "java.lang.String"
+  },
+  {
+    "name": "java.lang.System",
+    "methods": [{ "name": "getSecurityManager", "parameterTypes": [] }]
   },
   {
     "name": "java.lang.Thread",
     "fields": [{ "name": "threadLocalRandomProbe" }]
   },
   {
-    "name": "java.lang.constant.Constable",
+    "name": "java.lang.WeakPairMap"
+  },
+  {
+    "name": "java.lang.WeakPairMap$Pair"
+  },
+  {
+    "name": "java.lang.WeakPairMap$Pair$Weak"
+  },
+  {
+    "name": "java.lang.annotation.Documented",
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.lang.constant.ConstantDesc",
-    "queryAllDeclaredMethods": true
+    "name": "java.lang.annotation.Retention",
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "value", "parameterTypes": [] }]
   },
   {
-    "name": "java.security.AlgorithmParametersSpi"
+    "name": "java.lang.annotation.Target",
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "value", "parameterTypes": [] }]
   },
   {
-    "name": "java.security.KeyStoreSpi"
+    "name": "java.lang.constant.ClassDesc",
+    "methods": [
+      { "name": "descriptorString", "parameterTypes": [] },
+      { "name": "ofDescriptor", "parameterTypes": ["java.lang.String"] }
+    ]
+  },
+  {
+    "name": "java.lang.constant.ConstantDesc"
+  },
+  {
+    "name": "java.lang.constant.DirectMethodHandleDesc",
+    "methods": [
+      { "name": "lookupDescriptor", "parameterTypes": [] },
+      { "name": "methodName", "parameterTypes": [] },
+      { "name": "owner", "parameterTypes": [] },
+      { "name": "refKind", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.constant.DirectMethodHandleDesc$Kind",
+    "methods": [{ "name": "valueOf", "parameterTypes": ["int", "boolean"] }]
+  },
+  {
+    "name": "java.lang.constant.DynamicConstantDesc",
+    "methods": [
+      { "name": "bootstrapArgs", "parameterTypes": [] },
+      { "name": "bootstrapMethod", "parameterTypes": [] },
+      { "name": "constantName", "parameterTypes": [] },
+      { "name": "constantType", "parameterTypes": [] },
+      {
+        "name": "ofCanonical",
+        "parameterTypes": [
+          "java.lang.constant.DirectMethodHandleDesc",
+          "java.lang.String",
+          "java.lang.constant.ClassDesc",
+          "java.lang.constant.ConstantDesc[]"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.constant.MethodHandleDesc",
+    "methods": [
+      { "name": "invocationType", "parameterTypes": [] },
+      {
+        "name": "of",
+        "parameterTypes": [
+          "java.lang.constant.DirectMethodHandleDesc$Kind",
+          "java.lang.constant.ClassDesc",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.constant.MethodTypeDesc",
+    "methods": [
+      {
+        "name": "of",
+        "parameterTypes": [
+          "java.lang.constant.ClassDesc",
+          "java.lang.constant.ClassDesc[]"
+        ]
+      },
+      { "name": "ofDescriptor", "parameterTypes": ["java.lang.String"] },
+      { "name": "parameterArray", "parameterTypes": [] },
+      { "name": "returnType", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.instrument.Instrumentation",
+    "methods": [
+      {
+        "name": "redefineModule",
+        "parameterTypes": [
+          "java.lang.Module",
+          "java.util.Set",
+          "java.util.Map",
+          "java.util.Map",
+          "java.util.Set",
+          "java.util.Map"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.invoke.MethodHandle",
+    "methods": [
+      { "name": "bindTo", "parameterTypes": ["java.lang.Object"] },
+      {
+        "name": "invokeWithArguments",
+        "parameterTypes": ["java.lang.Object[]"]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.invoke.MethodHandles",
+    "methods": [
+      { "name": "lookup", "parameterTypes": [] },
+      {
+        "name": "privateLookupIn",
+        "parameterTypes": [
+          "java.lang.Class",
+          "java.lang.invoke.MethodHandles$Lookup"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.invoke.MethodHandles$Lookup",
+    "methods": [
+      { "name": "defineClass", "parameterTypes": ["byte[]"] },
+      {
+        "name": "findVirtual",
+        "parameterTypes": [
+          "java.lang.Class",
+          "java.lang.String",
+          "java.lang.invoke.MethodType"
+        ]
+      },
+      { "name": "lookupClass", "parameterTypes": [] },
+      { "name": "lookupModes", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.invoke.MethodType",
+    "methods": [
+      {
+        "name": "methodType",
+        "parameterTypes": ["java.lang.Class", "java.lang.Class[]"]
+      }
+    ]
+  },
+  {
+    "name": "java.lang.management.ManagementFactory",
+    "methods": [{ "name": "getRuntimeMXBean", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.management.RuntimeMXBean",
+    "methods": [{ "name": "getInputArguments", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.reflect.AccessibleObject",
+    "methods": [{ "name": "setAccessible", "parameterTypes": ["boolean"] }]
+  },
+  {
+    "name": "java.lang.reflect.AnnotatedArrayType",
+    "methods": [
+      { "name": "getAnnotatedGenericComponentType", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.reflect.AnnotatedParameterizedType",
+    "methods": [
+      { "name": "getAnnotatedActualTypeArguments", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.reflect.AnnotatedType",
+    "methods": [{ "name": "getType", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.reflect.AnnotatedWildcardType",
+    "methods": [{ "name": "getAnnotatedUpperBounds", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.reflect.Executable",
+    "methods": [
+      { "name": "getAnnotatedExceptionTypes", "parameterTypes": [] },
+      { "name": "getAnnotatedParameterTypes", "parameterTypes": [] },
+      { "name": "getAnnotatedReceiverType", "parameterTypes": [] },
+      { "name": "getParameterCount", "parameterTypes": [] },
+      { "name": "getParameters", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.lang.reflect.Field",
+    "methods": [{ "name": "getAnnotatedType", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.reflect.Method",
+    "methods": [{ "name": "getAnnotatedReturnType", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.lang.reflect.Parameter",
+    "methods": [
+      { "name": "getModifiers", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "isNamePresent", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.security.AccessController",
+    "methods": [
+      {
+        "name": "doPrivileged",
+        "parameterTypes": ["java.security.PrivilegedAction"]
+      },
+      {
+        "name": "doPrivileged",
+        "parameterTypes": ["java.security.PrivilegedExceptionAction"]
+      }
+    ]
   },
   {
     "name": "java.security.SecureRandomParameters"
-  },
-  {
-    "name": "java.security.interfaces.ECPrivateKey"
-  },
-  {
-    "name": "java.security.interfaces.ECPublicKey"
   },
   {
     "name": "java.sql.Date"
@@ -337,59 +876,55 @@
     "name": "java.sql.Timestamp"
   },
   {
-    "name": "java.util.AbstractCollection",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.util.Collection",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.Collections$UnmodifiableCollection",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
+    "name": "java.util.Comparator"
   },
   {
-    "name": "java.util.Collections$UnmodifiableList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
+    "name": "java.util.HashSet"
   },
   {
-    "name": "java.util.Collections$UnmodifiableRandomAccessList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "name": "java.util.Iterator"
   },
   {
-    "name": "java.util.Date"
-  },
-  {
-    "name": "java.util.ImmutableCollections$AbstractImmutableCollection",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.util.ImmutableCollections$AbstractImmutableList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.util.ImmutableCollections$ListN",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "name": "java.util.LinkedHashSet"
   },
   {
     "name": "java.util.List",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.Map"
+    "name": "java.util.Map",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.util.RandomAccess",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.SequencedCollection",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.Set"
+  },
+  {
+    "name": "java.util.Spliterator"
+  },
+  {
+    "name": "java.util.concurrent.ArrayBlockingQueue"
   },
   {
     "name": "java.util.concurrent.ForkJoinTask",
@@ -408,11 +943,46 @@
     "fields": [{ "name": "base" }, { "name": "cellsBusy" }]
   },
   {
-    "name": "javax.security.auth.x500.X500Principal",
-    "fields": [{ "name": "thisX500Name" }],
-    "methods": [
-      { "name": "<init>", "parameterTypes": ["sun.security.x509.X500Name"] }
-    ]
+    "name": "java.util.concurrent.locks.AbstractOwnableSynchronizer"
+  },
+  {
+    "name": "java.util.concurrent.locks.AbstractQueuedSynchronizer"
+  },
+  {
+    "name": "java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject"
+  },
+  {
+    "name": "java.util.concurrent.locks.ReentrantLock"
+  },
+  {
+    "name": "java.util.concurrent.locks.ReentrantLock$NonfairSync"
+  },
+  {
+    "name": "java.util.concurrent.locks.ReentrantLock$Sync"
+  },
+  {
+    "name": "java.util.function.BiConsumer"
+  },
+  {
+    "name": "java.util.function.BiFunction"
+  },
+  {
+    "name": "java.util.function.Consumer"
+  },
+  {
+    "name": "java.util.function.Function"
+  },
+  {
+    "name": "java.util.function.IntFunction"
+  },
+  {
+    "name": "java.util.function.Predicate"
+  },
+  {
+    "name": "java.util.function.UnaryOperator"
+  },
+  {
+    "name": "java.util.stream.Stream"
   },
   {
     "name": "jdk.internal.misc.Unsafe"
@@ -421,14 +991,21 @@
     "name": "kotlin.Any"
   },
   {
+    "name": "kotlin.Array"
+  },
+  {
     "name": "kotlin.Boolean"
   },
   {
     "name": "kotlin.Int"
   },
   {
+    "name": "kotlin.Long"
+  },
+  {
     "name": "kotlin.Metadata",
     "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
     "methods": [
       { "name": "bv", "parameterTypes": [] },
       { "name": "d1", "parameterTypes": [] },
@@ -441,20 +1018,122 @@
     ]
   },
   {
+    "name": "kotlin.Nothing"
+  },
+  {
     "name": "kotlin.SafePublicationLazyImpl",
     "fields": [{ "name": "_value" }]
+  },
+  {
+    "name": "kotlin.SinceKotlin"
   },
   {
     "name": "kotlin.String"
   },
   {
+    "name": "kotlin.Unit"
+  },
+  {
+    "name": "kotlin.annotation.MustBeDocumented",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlin.annotation.Retention",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlin.annotation.Target",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlin.collections.Collection"
+  },
+  {
+    "name": "kotlin.collections.EmptyList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getSize", "parameterTypes": [] },
+      { "name": "isEmpty", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "kotlin.collections.EmptyMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getEntries", "parameterTypes": [] },
+      { "name": "getKeys", "parameterTypes": [] },
+      { "name": "getSize", "parameterTypes": [] },
+      { "name": "getValues", "parameterTypes": [] },
+      { "name": "isEmpty", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "kotlin.collections.Iterable"
+  },
+  {
+    "name": "kotlin.collections.Iterator"
+  },
+  {
     "name": "kotlin.collections.List"
+  },
+  {
+    "name": "kotlin.collections.ListIterator"
   },
   {
     "name": "kotlin.collections.Map"
   },
   {
+    "name": "kotlin.collections.Map.Entry"
+  },
+  {
+    "name": "kotlin.collections.MutableCollection"
+  },
+  {
+    "name": "kotlin.collections.MutableIterable"
+  },
+  {
+    "name": "kotlin.collections.MutableIterator"
+  },
+  {
+    "name": "kotlin.collections.MutableList"
+  },
+  {
+    "name": "kotlin.collections.MutableListIterator"
+  },
+  {
+    "name": "kotlin.collections.MutableMap"
+  },
+  {
+    "name": "kotlin.collections.MutableMap.MutableEntry"
+  },
+  {
+    "name": "kotlin.collections.MutableSet"
+  },
+  {
+    "name": "kotlin.collections.RandomAccess"
+  },
+  {
+    "name": "kotlin.collections.Set"
+  },
+  {
+    "name": "kotlin.internal.PlatformDependent"
+  },
+  {
+    "name": "kotlin.io.Serializable"
+  },
+  {
+    "name": "kotlin.jvm.JvmInline"
+  },
+  {
     "name": "kotlin.jvm.internal.DefaultConstructorMarker"
+  },
+  {
+    "name": "kotlin.jvm.internal.markers.KMappedMarker",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
@@ -465,27 +1144,24 @@
     "allPublicFields": true
   },
   {
-    "name": "sun.security.pkcs12.PKCS12KeyStore",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "name": "org.jline.reader.ParsedLine",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "cursor", "parameterTypes": [] },
+      { "name": "line", "parameterTypes": [] },
+      { "name": "word", "parameterTypes": [] },
+      { "name": "wordCursor", "parameterTypes": [] },
+      { "name": "wordIndex", "parameterTypes": [] },
+      { "name": "words", "parameterTypes": [] }
+    ]
   },
   {
-    "name": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.DSA$SHA224withDSA",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.DSA$SHA256withDSA",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.JavaKeyStore$DualFormatJKS",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.JavaKeyStore$JKS",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$XZLEwc9m",
+    "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -501,162 +1177,5 @@
   {
     "name": "sun.security.provider.SHA",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.SHA2$SHA224",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.SHA2$SHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.SHA5$SHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.SHA5$SHA512",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.X509Factory",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.certpath.PKIXCertPathValidator",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.rsa.PSSParameters",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.rsa.RSAKeyFactory$Legacy",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.rsa.RSAPSSSignature",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.rsa.RSASignature$SHA224withRSA",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.ssl.KeyManagerFactoryImpl$SunX509",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.util.ObjectIdentifier"
-  },
-  {
-    "name": "sun.security.x509.AuthorityInfoAccessExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.AuthorityKeyIdentifierExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.BasicConstraintsExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.CRLDistributionPointsExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.CertificateExtensions"
-  },
-  {
-    "name": "sun.security.x509.CertificatePoliciesExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.ExtendedKeyUsageExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.KeyUsageExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.NetscapeCertTypeExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.PrivateKeyUsageExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.SubjectAlternativeNameExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.x509.SubjectKeyIdentifierExtension",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
-      }
-    ]
   }
 ]

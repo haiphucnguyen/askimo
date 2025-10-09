@@ -197,4 +197,45 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
         assertTrue(handler.description.isNotBlank())
         assertTrue(handler.description.contains("Usage:"))
     }
+
+    @Test
+    fun `handle with real gitcommit template preserves vars`() {
+        // Use the real template shipped with the repo
+        val templatePath =
+            java.nio.file.Paths
+                .get(System.getProperty("user.dir"), "templates", "gitcommit.yml")
+        assertTrue(
+            java.nio.file.Files
+                .exists(templatePath),
+        )
+
+        val parsedLine =
+            mockParsedLine(
+                ":create-recipe",
+                "gitcommit-test",
+                "-template",
+                templatePath.toString(),
+            )
+
+        handler.handle(parsedLine)
+
+        val output = getOutput()
+        assertTrue(output.contains("✅ Registered recipe 'gitcommit-test'"))
+
+        // Verify recipe file was created and contains vars from the template
+        val recipesDir = tempHome.resolve(".askimo/recipes")
+        val recipeFile = recipesDir.resolve("gitcommit-test.yml")
+        assertTrue(Files.exists(recipeFile))
+
+        // Parse back to ensure vars made it through
+        val def =
+            io.askimo.core.util.Yaml.yamlMapper.readValue(
+                java.nio.file.Files
+                    .readString(recipeFile),
+                io.askimo.core.recipes.RecipeDef::class.java,
+            )
+        assertTrue(def.vars.containsKey("diff"))
+        assertTrue(def.vars.containsKey("status"))
+        assertTrue(def.vars.containsKey("branch"))
+    }
 }

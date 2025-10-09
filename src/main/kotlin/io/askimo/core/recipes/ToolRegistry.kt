@@ -5,118 +5,119 @@
 package io.askimo.core.recipes
 
 import dev.langchain4j.agent.tool.Tool
-import dev.langchain4j.agent.tool.ToolSpecification
-import dev.langchain4j.agent.tool.ToolSpecifications
-import java.lang.reflect.Method
-import kotlin.reflect.jvm.kotlinFunction
+import io.askimo.tools.git.GitTools
+import io.askimo.tools.git.IoTools
 
-class ToolRegistry(
-    val instances: List<Any>,
+class ToolRegistry private constructor(
+    private val annotated: Map<String, Pair<Any, java.lang.reflect.Method>>,
 ) {
-    private val annotated: Map<String, Pair<Any, Method>> =
-        buildMap {
-            for (inst in instances) {
-                for (m in inst::class.java.methods) {
-                    if (m.isAnnotationPresent(Tool::class.java)) {
-                        put(m.name, inst to m) // key = method name
-                    }
-                }
-            }
-        }
-
-    fun specifications(allowed: List<String>): List<ToolSpecification> {
-        val all = instances.flatMap { ToolSpecifications.toolSpecificationsFrom(it) }
-        return if (allowed.isEmpty()) all else all.filter { it.name() in allowed }
-    }
-
-    /**
-     * Invoke a tool by method name, supporting:
-     *  - 0 params: call()
-     *  - 1 param:  call(args) where args can be String/List/Map (coerced)
-     *  - N params: call(arg1,...,argN) where args must be a Map<String,Any?> keyed by param names
-     */
     fun invoke(
         name: String,
         args: Any?,
     ): Any? {
-        val (target, method) =
+        val (target, m) =
             annotated[name]
-                ?: error("Tool not found or not allowed: $name")
+                ?: error("Tool not found or not allowed: $name. Available: ${annotated.keys.sorted()}")
+        m.isAccessible = true
 
-        val javaParams = method.parameters
-        val paramCount = javaParams.size
-
-        if (paramCount == 0) {
-            return method.invoke(target)
-        }
-
-        if (paramCount == 1 && args !is Map<*, *>) {
-            val coerced = coerce(args, javaParams[0].type)
-            return method.invoke(target, coerced)
-        }
-
-        // Multi-arg path: expect a Map of paramName -> value
-        require(args is Map<*, *>) {
-            "Tool '$name' requires $paramCount parameters; provide args as a map of paramName -> value"
-        }
-
-        // Get parameter names reliably via Kotlin reflection (preferred),
-        // falling back to Java reflection names if kotlinFunction is null.
-        val kfun = method.kotlinFunction
-        val paramNames: List<String> =
-            kfun
-                ?.parameters
-                ?.drop(1)
-                ?.map { it.name ?: error("Missing parameter name for tool '$name'") }
-                ?: javaParams.map { it.name }
-
-        val argArray = Array<Any?>(paramCount) { null }
-        for (i in 0 until paramCount) {
-            val pName = paramNames[i]
-            val pType = javaParams[i].type
-            val raw = args[pName]
-            argArray[i] = coerce(raw, pType)
-        }
-
-        return method.invoke(target, *argArray)
-    }
-
-    private fun coerce(
-        value: Any?,
-        targetType: Class<*>,
-    ): Any? {
-        if (value == null) return null
-
-        // If already assignable (List/Map/String/etc.), let it through
-        if (targetType.isInstance(value)) return value
-
-        val s = value.toString()
-
-        return when (targetType) {
-            String::class.java -> s
-
-            Boolean::class.java, java.lang.Boolean.TYPE ->
-                s.equals("true", true) || s == "1"
-
-            Integer::class.java, java.lang.Integer.TYPE ->
-                s.toIntOrNull() ?: error("Cannot coerce '$value' to Int")
-
-            Long::class.java, java.lang.Long.TYPE ->
-                s.toLongOrNull() ?: error("Cannot coerce '$value' to Long")
-
-            Double::class.java, java.lang.Double.TYPE ->
-                s.toDoubleOrNull() ?: error("Cannot coerce '$value' to Double")
-
-            Float::class.java, java.lang.Float.TYPE ->
-                s.toFloatOrNull() ?: error("Cannot coerce '$value' to Float")
-
-            else -> {
-                // If target is a List or Map and value is compatible, return as-is
-                if (List::class.java.isAssignableFrom(targetType) && value is List<*>) return value
-                if (Map::class.java.isAssignableFrom(targetType) && value is Map<*, *>) return value
-                // Last resort: return as string
-                s
+        fun coerce(
+            value: Any?,
+            targetType: Class<*>,
+        ): Any? {
+            if (value == null) {
+                return when (targetType) {
+                    java.lang.Boolean.TYPE -> false
+                    java.lang.Integer.TYPE -> 0
+                    java.lang.Long.TYPE -> 0L
+                    java.lang.Double.TYPE -> 0.0
+                    java.lang.Float.TYPE -> 0.0f
+                    else -> null
+                }
+            }
+            return when (targetType) {
+                String::class.java -> value.toString()
+                java.lang.Boolean.TYPE, java.lang.Boolean::class.java ->
+                    when (value) {
+                        is Boolean -> value
+                        is String -> value.equals("true", ignoreCase = true)
+                        else -> false
+                    }
+                java.lang.Integer.TYPE, java.lang.Integer::class.java ->
+                    when (value) {
+                        is Number -> value.toInt()
+                        is String -> value.toIntOrNull() ?: 0
+                        else -> 0
+                    }
+                java.lang.Long.TYPE, java.lang.Long::class.java ->
+                    when (value) {
+                        is Number -> value.toLong()
+                        is String -> value.toLongOrNull() ?: 0L
+                        else -> 0L
+                    }
+                java.lang.Double.TYPE, java.lang.Double::class.java ->
+                    when (value) {
+                        is Number -> value.toDouble()
+                        is String -> value.toDoubleOrNull() ?: 0.0
+                        else -> 0.0
+                    }
+                java.lang.Float.TYPE, java.lang.Float::class.java ->
+                    when (value) {
+                        is Number -> value.toFloat()
+                        is String -> value.toFloatOrNull() ?: 0.0f
+                        else -> 0.0f
+                    }
+                else -> value
             }
         }
+
+        return when (args) {
+            null -> m.invoke(target)
+            is Array<*> -> m.invoke(target, *args)
+            is Map<*, *> -> {
+                val map = args as Map<*, *>
+                val params = m.parameters
+                val callArgs = Array<Any?>(params.size) { null }
+                for (i in params.indices) {
+                    val p = params[i]
+                    val raw = map[p.name]
+                    callArgs[i] = coerce(raw, p.type)
+                }
+                m.invoke(target, *callArgs)
+            }
+            else -> m.invoke(target, args)
+        }
+    }
+
+    fun keys(): Set<String> = annotated.keys
+
+    companion object {
+        fun from(
+            providers: List<Any>,
+            allow: Set<String>? = null,
+        ): ToolRegistry {
+            val map = mutableMapOf<String, Pair<Any, java.lang.reflect.Method>>()
+            providers.forEach { p ->
+                p.javaClass.declaredMethods.forEach { m ->
+                    val ann = m.getAnnotation(Tool::class.java) ?: return@forEach
+                    // Use explicit name if provided; otherwise fall back to method name
+                    val toolName = ann.name.ifBlank { m.name }
+                    if (allow == null || toolName in allow) map[toolName] = p to m
+                }
+            }
+            return ToolRegistry(map)
+        }
+
+        /**
+         * Create a registry with built-in providers used by Askimo (GitTools, IoTools).
+         */
+        fun defaults(allow: Set<String>? = null): ToolRegistry =
+            from(
+                providers =
+                    listOf(
+                        GitTools(),
+                        IoTools,
+                    ),
+                allow = allow,
+            )
     }
 }

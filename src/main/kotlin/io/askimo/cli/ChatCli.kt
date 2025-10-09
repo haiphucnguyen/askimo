@@ -30,8 +30,6 @@ import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Prompts
-import io.askimo.tools.git.GitTools
-import io.askimo.tools.git.IoTools
 import io.askimo.web.WebServer
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.DefaultParser
@@ -313,14 +311,7 @@ private fun runYamlCommand(
 ) {
     println("🚀 Running recipe '$name'…")
 
-    val toolRegistry =
-        ToolRegistry(
-            instances =
-                listOf(
-                    GitTools(),
-                    IoTools,
-                ),
-        )
+    val toolRegistry = ToolRegistry.defaults()
 
     val registry = RecipeRegistry()
 
