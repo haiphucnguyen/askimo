@@ -15,7 +15,7 @@ group = "io.askimo"
 version = "0.1.2"
 
 dependencies {
-    compileOnly("org.graalvm.nativeimage:svm:25.0.0")
+    compileOnly(libs.graalvm.nativeimage.svm)
     implementation(libs.jline)
     implementation(libs.jline.terminal.jansi)
     implementation(libs.langchain4j)
@@ -40,6 +40,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.testcontainers.ollama)
+    testImplementation(libs.testcontainers.junit.jupiter)
 }
 
 tasks.test {
@@ -145,7 +147,7 @@ tasks.test {
         jvmArgs(
             "-agentlib:native-image-agent=" +
                 "config-output-dir=$outDir," +
-                "access-filter-file=$accessFilter," + // drop framework internals
+                "access-filter-file=$accessFilter," +
                 "caller-filter-file=$callerFilter",
         )
 

@@ -313,6 +313,20 @@
     ]
   },
   {
+    "name": "io.askimo.core.providers.ollama.OllamaModelFactoryTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "io.askimo.core.providers.ollama.OllamaModelFactoryTest$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.recipes.PostAction",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1160,7 +1174,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$XZLEwc9m",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$aCJStfie",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

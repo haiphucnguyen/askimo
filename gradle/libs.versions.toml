@@ -9,17 +9,21 @@ slf4j = "2.0.17"
 junitBom = "5.14.0"
 postgresql = "42.7.7"
 langchain4jPgvector = "1.7.1-beta14"
-testcontainersPostgresql = "1.21.3"
+testcontainers = "1.21.3"
 mockitoKotlin = "6.1.0"
 kotlin = "2.2.20"
 jackson = "2.19.2"
 spotless = "7.2.1"
 shadow = "9.0.1"
+graalvmSvm = "25.0.0"
 
 [libraries]
 # JLine
 jline = { group = "org.jline", name = "jline", version.ref = "jline" }
 jline-terminal-jansi = { group = "org.jline", name = "jline-terminal-jansi", version.ref = "jline" }
+
+# GraalVM Native Image (SVM)
+graalvm-nativeimage-svm = { group = "org.graalvm.nativeimage", name = "svm", version.ref = "graalvmSvm" }
 
 # LangChain4j
 langchain4j = { group = "dev.langchain4j", name = "langchain4j", version.ref = "langchain4j" }
@@ -54,7 +58,10 @@ postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "pos
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
-testcontainers-postgresql = { group = "org.testcontainers", name = "postgresql", version.ref = "testcontainersPostgresql" }
+testcontainers-postgresql = { group = "org.testcontainers", name = "postgresql", version.ref = "testcontainers" }
+# Ollama Testcontainers
+testcontainers-ollama = { group = "org.testcontainers", name = "ollama", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 
