@@ -114,6 +114,8 @@ class CreateRecipeCommandHandler : CommandHandler {
 
     private fun expandHome(raw: String): Path {
         val home = System.getProperty("user.home")
-        return Paths.get(raw.replaceFirst(Regex("^~(?=/|$)"), home)).toAbsolutePath().normalize()
+        // Replace leading ~ safely across OSes; handle both '/' and '\\' after tilde.
+        val expanded = Regex("^~(?=[/\\\\]|$)").replace(raw) { home }
+        return Paths.get(expanded).toAbsolutePath().normalize()
     }
 }
