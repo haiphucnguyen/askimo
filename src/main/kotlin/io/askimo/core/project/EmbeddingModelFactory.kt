@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 // Defaults (can be overridden by env)
 private const val DEFAULT_OLLAMA_URL = "http://localhost:11434"
-private const val DEFAULT_OLLAMA_EMBED_MODEL = "mxbai-embed-large"
+private const val DEFAULT_OLLAMA_EMBED_MODEL = "nomic-embed-text"
 private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
 
 // One-time warning flag so we don't spam the console
@@ -46,8 +46,8 @@ fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
     }
 
 private fun buildOllamaEmbeddingModel(): EmbeddingModel {
-    val url = System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-    val model = System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
+    val url = System.getProperty("OLLAMA_URL") ?: System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
+    val model = System.getProperty("OLLAMA_EMBED_MODEL") ?: System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
 
     ensureOllamaAvailable(url, model)
 
