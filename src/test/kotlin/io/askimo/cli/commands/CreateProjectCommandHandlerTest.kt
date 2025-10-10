@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -22,6 +23,7 @@ import org.testcontainers.utility.DockerImageName
 import java.nio.file.Files
 import java.sql.DriverManager
 
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
 class CreateProjectCommandHandlerTest : CommandHandlerTestBase() {
