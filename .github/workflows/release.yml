@@ -49,6 +49,13 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true -PtraceAgent=true clean test
 
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
