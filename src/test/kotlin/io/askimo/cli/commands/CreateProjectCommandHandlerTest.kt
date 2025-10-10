@@ -28,7 +28,7 @@ class CreateProjectCommandHandlerTest : CommandHandlerTestBase() {
     @Container
     @JvmField
     val ollama: OllamaContainer =
-        OllamaContainer(DockerImageName.parse("ollama/ollama:latest")).withReuse(true)
+        OllamaContainer(DockerImageName.parse("ollama/ollama:latest"))
 
     companion object {
         @JvmStatic
