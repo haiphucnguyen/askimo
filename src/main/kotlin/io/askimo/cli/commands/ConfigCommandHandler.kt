@@ -14,7 +14,7 @@ import org.jline.reader.ParsedLine
  * provider, model, and all configured settings. It helps users understand the current state
  * of their chat environment.
  */
-class ConfigCommand(
+class ConfigCommandHandler(
     private val session: Session,
 ) : CommandHandler {
     override val keyword: String = ":config"

@@ -7,13 +7,14 @@ package io.askimo.cli
 import io.askimo.cli.autocompleter.SetParamCompleter
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
-import io.askimo.cli.commands.ConfigCommand
+import io.askimo.cli.commands.ConfigCommandHandler
 import io.askimo.cli.commands.CopyCommandHandler
 import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
+import io.askimo.cli.commands.HistoryCommandHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ListRecipesCommandHandler
@@ -38,8 +39,10 @@ import org.jline.reader.Reference
 import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
+import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.TerminalBuilder
 import java.io.IOException
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 
 fun main(args: Array<String>) {
@@ -55,6 +58,7 @@ fun main(args: Array<String>) {
         Runtime.getRuntime().addShutdownHook(Thread { server.stop() })
         server.start(wait = true) // block until Ctrl+C
     } else {
+        val historyFile = Paths.get(System.getProperty("user.home"), ".askimo", "history").toAbsolutePath()
         val session = SessionFactory.createSession()
         try {
             val cliCommandName = args.getFlagValue("-r", "--recipe")
@@ -73,27 +77,6 @@ fun main(args: Array<String>) {
                         .system(true)
                         .build()
 
-                val commandHandlers: List<CommandHandler> =
-                    listOf(
-                        HelpCommandHandler(),
-                        ConfigCommand(session),
-                        ParamsCommandHandler(session),
-                        SetParamCommandHandler(session),
-                        ListProvidersCommandHandler(),
-                        SetProviderCommandHandler(session),
-                        ModelsCommandHandler(session),
-                        CopyCommandHandler(session),
-                        ClearMemoryCommandHandler(session),
-                        CreateProjectCommandHandler(session),
-                        ListProjectsCommandHandler(),
-                        UseProjectCommandHandler(session),
-                        DeleteProjectCommandHandler(),
-                        CreateRecipeCommandHandler(),
-                        DeleteRecipeCommandHandler(),
-                        ListRecipesCommandHandler(),
-                        DeleteProjectCommandHandler(),
-                    )
-
                 // Setup parser and completer
                 val parser = DefaultParser()
 
@@ -107,8 +90,13 @@ fun main(args: Array<String>) {
                         .builder()
                         .terminal(terminal)
                         .parser(parser)
+                        .variable(LineReader.HISTORY_FILE, historyFile)
+                        .variable(LineReader.HISTORY_SIZE, 100)
                         .completer(completer)
                         .build()
+                val history = DefaultHistory(reader)
+                Runtime.getRuntime().addShutdownHook(Thread { runCatching { history.save() } })
+
                 reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
                 // --- Custom widget that inserts a literal newline into the buffer ---
                 reader.widgets["insert-newline"] =
@@ -136,12 +124,38 @@ fun main(args: Array<String>) {
                 // 3) Always map Ctrl+J (LF) as a portable fallback for newline
                 mainMap.bind(Reference("insert-newline"), "\n")
 
+                mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
+                mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
+
                 // 🔑 Init Prompts here so some commands (such as :db add) can use ask/askSecret/askBool/askInt
                 Prompts.init(reader)
 
                 terminal.writer().println("askimo> Ask anything. Type :help for commands.")
-                terminal.writer().println("💡 Tip: Press Ctrl+J for a new line, Enter to send. (Shift+Enter may also work)")
+                terminal.writer().println("💡 Tip 1: Press Ctrl+J for a new line, Enter to send. (Shift+Enter may also work)")
+                terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
                 terminal.flush()
+
+                val commandHandlers: List<CommandHandler> =
+                    listOf(
+                        HelpCommandHandler(),
+                        ConfigCommandHandler(session),
+                        ParamsCommandHandler(session),
+                        SetParamCommandHandler(session),
+                        ListProvidersCommandHandler(),
+                        SetProviderCommandHandler(session),
+                        ModelsCommandHandler(session),
+                        CopyCommandHandler(session),
+                        ClearMemoryCommandHandler(session),
+                        CreateProjectCommandHandler(session),
+                        ListProjectsCommandHandler(),
+                        UseProjectCommandHandler(session),
+                        DeleteProjectCommandHandler(),
+                        CreateRecipeCommandHandler(),
+                        DeleteRecipeCommandHandler(),
+                        ListRecipesCommandHandler(),
+                        DeleteProjectCommandHandler(),
+                        HistoryCommandHandler(reader, terminal, historyFile),
+                    )
 
                 (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
 
