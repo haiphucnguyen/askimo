@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.ProjectStore
 import org.jline.reader.ParsedLine
 
@@ -18,14 +19,49 @@ class ListProjectsCommandHandler : CommandHandler {
     override val description: String = "List all saved Askimo projects"
 
     override fun handle(line: ParsedLine) {
-        val projects = ProjectStore.list()
-        if (projects.isEmpty()) {
+        val metas = ProjectStore.list()
+        if (metas.isEmpty()) {
             println("ℹ️  No projects saved yet. Use :create-project to add one.")
             return
         }
+
+        val activeId = ProjectStore.getActive()?.first?.id
+        val home = System.getProperty("user.home")
+
+        // Sort by lastUsedAt desc (fallback to createdAt)
+        val projects =
+            metas.sortedWith(
+                compareByDescending<ProjectMeta> { it.lastUsedAt }
+                    .thenBy { it.name.lowercase() },
+            )
+
         println("📚 Projects:")
         projects.forEachIndexed { i, p ->
-            println("  ${i + 1}. ${p.name}  →  ${p.dir}")
+            val isActive = (p.id == activeId)
+            val rootDisp = p.root.replaceFirst(home, "~")
+            val exists =
+                try {
+                    java.nio.file.Files
+                        .isDirectory(
+                            java.nio.file.Paths
+                                .get(p.root),
+                        )
+                } catch (_: Exception) {
+                    false
+                }
+            val missing = if (exists) "" else "  (missing)"
+            val star = if (isActive) "⭐ " else "   "
+
+            println(
+                "%s%2d. %-20s  id=%s\n      ↳ %s%s".format(
+                    star,
+                    i + 1,
+                    p.name,
+                    p.id,
+                    rootDisp,
+                    missing,
+                ),
+            )
         }
     }
 }

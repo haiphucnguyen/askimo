@@ -6,7 +6,6 @@ package io.askimo.cli.commands
 
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
-import io.askimo.core.project.ProjectEntry
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
@@ -29,15 +28,14 @@ class CreateProjectCommandHandler(
                 return
             }
 
-        // 🔎 check if this project already exists in ~/.askimo/projects.json
-        if (ProjectStore.get(name) != null) {
-            println("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
-            return
-        }
-
         val projectPath = Paths.get(dir).toAbsolutePath().normalize()
         if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
             println("❌ Folder does not exist or is not a directory: $projectPath")
+            return
+        }
+
+        if (ProjectStore.getByName(name) != null) {
+            println("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
             return
         }
 
@@ -61,7 +59,6 @@ class CreateProjectCommandHandler(
                 session = session,
             )
 
-        // 3) Index the folder
         println("🔎 Indexing project '$name' at $projectPath …")
         try {
             val count = indexer.indexProject(projectPath)
@@ -71,13 +68,21 @@ class CreateProjectCommandHandler(
             e.printStackTrace()
         }
 
-        // ✅ Persist project
-        ProjectStore.upsert(ProjectEntry(name = name, dir = projectPath.toString()))
-        println("🗂️  Saved project '$name' → $projectPath")
+        val meta =
+            try {
+                ProjectStore.create(name, projectPath.toString())
+            } catch (e: IllegalStateException) {
+                println("⚠️ ${e.message}")
+                ProjectStore.getByName(name) ?: return
+            }
 
-        session.setScope(ProjectEntry(name, projectPath.toString()))
+        println("🗂️  Saved project '${meta.name}' as ${meta.id} → ${meta.root}")
+        println("⭐ Active project set to '${meta.name}'")
+
+        // Keep existing session wiring (compat shim for old type if needed)
+        session.setScope(meta)
         session.enableRagWith(indexer)
-        println("🧠 RAG enabled for project '$name' (scope set).")
+        println("🧠 RAG enabled for project '${meta.name}' (scope set).")
     }
 
     private fun parseArgs(args: List<String>): Pair<String, String>? {

@@ -12,7 +12,7 @@ import org.jline.reader.ParsedLine
 class DeleteProjectCommandHandler : CommandHandler {
     override val keyword: String = ":delete-project"
     override val description: String =
-        "Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table.\n" +
+        "Delete a saved project (soft delete its metadata file under ~/.askimo/projects) and drop its pgvector embeddings.\n" +
             "Usage: :delete-project <project-name>"
 
     override fun handle(line: ParsedLine) {
@@ -23,39 +23,40 @@ class DeleteProjectCommandHandler : CommandHandler {
         }
 
         val name = args.first()
-        val entry = ProjectStore.get(name)
-        if (entry == null) {
+
+        // Lookup by name in the new per-project store
+        val meta = ProjectStore.getByName(name)
+        if (meta == null) {
             println("❌ Project '$name' not found. Use :projects to list.")
             return
         }
 
-        // Remove from project store
-        val removed = ProjectStore.delete(name)
+        // 1) Soft-delete the per-project file (moves to ~/.askimo/trash)
+        val removed = ProjectStore.softDelete(meta.id)
         if (!removed) {
-            println("ℹ️  Project '$name' was not removed (already missing).")
+            println("ℹ️  Project '${meta.name}' was not removed (already missing).")
             return
         }
+        println("🗂️  Removed project '${meta.name}' (id=${meta.id}) from registry.")
 
-        println("🗂️  Removed project '$name' from registry.")
-
-        // Drop pgvector table for this project
+        // 2) Drop pgvector table for this project (still keyed by project *name* in MVP)
         println("🐘 Ensuring Postgres+pgvector is running…")
         val pg =
             try {
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
-                println("❌ Failed to start Postgres container: ${e.message}")
+                println("⚠️ Soft-deleted metadata, but could not connect to Postgres to drop embeddings: ${e.message}")
                 e.printStackTrace()
                 return
             }
 
         try {
             val base = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings"
-            val table = PgVectorAdmin.projectTableName(base, name)
-            PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, name)
-            println("🧹 Dropped embeddings table \"$table\" for project '$name'.")
+            val table = PgVectorAdmin.projectTableName(base, meta.name) // MVP: table keyed by name
+            PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, meta.name)
+            println("🧹 Dropped embeddings table \"$table\" for project '${meta.name}'.")
         } catch (e: Exception) {
-            println("❌ Failed to drop embeddings table for '$name': ${e.message}")
+            println("⚠️ Metadata removed, but failed to drop embeddings for '${meta.name}': ${e.message}")
             e.printStackTrace()
         }
     }

@@ -97,32 +97,26 @@ fun main(args: Array<String>) {
                 val history = DefaultHistory(reader)
                 Runtime.getRuntime().addShutdownHook(Thread { runCatching { history.save() } })
 
+                // --- Secondary prompt style ---
                 reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
-                // --- Custom widget that inserts a literal newline into the buffer ---
+
+                // --- Widget for newline ---
                 reader.widgets["insert-newline"] =
                     Widget {
                         reader.buffer.write("\n")
-                        // Refresh the line so the new row shows immediately
                         reader.callWidget(LineReader.REDRAW_LINE)
                         reader.callWidget(LineReader.REDISPLAY)
                         true
                     }
-
                 // --- Key bindings ---
                 // Get the main keymap
                 @Suppress("UNCHECKED_CAST")
                 val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
 
-                // Keep Enter as "send"
-                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // Enter/Return (CR)
+                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // CR (Ctrl-M / many terms)
+                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\n") // LF (some terms)
 
-                // Map Shift+Enter (varies by terminal) to our insert-newline widget
-                // 1) CSI-u “modified keys” (WezTerm/kitty/xterm/Windows Terminal when enabled)
-                mainMap.bind(Reference("insert-newline"), "\u001B[13;2u") // Shift+Enter
-                // 2) Some terminals emit ESC + CR for modified Enter
-                mainMap.bind(Reference("insert-newline"), "\u001B\r")
-                // 3) Always map Ctrl+J (LF) as a portable fallback for newline
-                mainMap.bind(Reference("insert-newline"), "\n")
+                mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J'))
 
                 mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
                 mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
@@ -131,7 +125,7 @@ fun main(args: Array<String>) {
                 Prompts.init(reader)
 
                 terminal.writer().println("askimo> Ask anything. Type :help for commands.")
-                terminal.writer().println("💡 Tip 1: Press Ctrl+J for a new line, Enter to send. (Shift+Enter may also work)")
+                terminal.writer().println("💡 Tip 1: Press Ctrl+J for a new line, Enter to send.")
                 terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
                 terminal.flush()
 

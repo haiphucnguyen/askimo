@@ -26,26 +26,39 @@ class UseProjectCommandHandler(
 ) : CommandHandler {
     override val keyword: String = ":project"
     override val description: String =
-        "Activate a saved project (sets scope and enables RAG).\nUsage: :project <project-name>"
+        "Activate a saved project (sets active pointer, session scope, and enables RAG).\n" +
+            "Usage: :project <project-name|project-id>"
 
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
-        val name = args.firstOrNull()
-        if (name.isNullOrBlank()) {
-            println("Usage: :project <project-name>")
+        val key = args.firstOrNull()
+        if (key.isNullOrBlank()) {
+            println("Usage: :project <project-name|project-id>")
             return
         }
 
-        val entry = ProjectStore.get(name)
-        if (entry == null) {
-            println("❌ Project '$name' not found. Use :projects to list.")
+        // Resolve by id first, then by name (case-insensitive)
+        val meta = ProjectStore.getById(key) ?: ProjectStore.getByName(key)
+        if (meta == null) {
+            println("❌ Project '$key' not found. Use :projects to list.")
             return
         }
 
-        val projectPath = Paths.get(entry.dir)
-        if (!Files.isDirectory(projectPath)) {
-            println("⚠️  Saved path does not exist anymore: $projectPath")
+        val projectPath =
+            java.nio.file.Paths
+                .get(meta.root)
+        if (!java.nio.file.Files
+                .isDirectory(projectPath)
+        ) {
+            println("⚠️ Saved path does not exist anymore: ${meta.root}")
             return
+        }
+
+        // Set active pointer right away
+        try {
+            ProjectStore.setActive(meta.id)
+        } catch (e: Exception) {
+            println("⚠️ Could not set active project pointer: ${e.message}")
         }
 
         println("🐘 Ensuring Postgres+pgvector is running…")
@@ -58,18 +71,23 @@ class UseProjectCommandHandler(
                 return
             }
 
+        // NOTE: MVP still keys embeddings by project *name*.
+        // When you switch indexer to use meta.id, update projectId below.
         val indexer =
             PgVectorIndexer(
                 pgUrl = pg.jdbcUrl,
                 pgUser = pg.username,
                 pgPass = pg.password,
-                projectId = entry.name,
+                projectId = meta.name, // MVP: keep name; later: meta.id
                 session = session,
             )
 
-        session.setScope(entry)
+        // Session now uses ProjectMeta directly (per your change)
+        session.setScope(meta)
         session.enableRagWith(indexer)
-        println("✅ Active project: '${entry.name}'  →  ${entry.dir}")
-        println("🧠 RAG enabled for '${entry.name}'.")
+
+        println("✅ Active project: '${meta.name}'  (id=${meta.id})")
+        println("   ↳ ${meta.root}")
+        println("🧠 RAG enabled for '${meta.name}'.")
     }
 }

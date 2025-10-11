@@ -8,7 +8,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
-import io.askimo.core.project.ProjectEntry
+import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
@@ -124,8 +124,8 @@ class Session(
     var scope: Scope? = null
         private set
 
-    fun setScope(project: ProjectEntry) {
-        scope = Scope(project.name, Paths.get(project.dir).toAbsolutePath().normalize())
+    fun setScope(project: ProjectMeta) {
+        scope = Scope(project.name, Paths.get(project.root).toAbsolutePath().normalize())
     }
 
     fun clearScope() {

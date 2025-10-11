@@ -1,5 +1,5 @@
 name: gitCommit
-version: 3
+version: 5
 description: "Generate a Conventional Commit message from staged changes"
 
 allowedTools:
@@ -20,24 +20,38 @@ vars:
 
 system: |
   You are a senior engineer writing Conventional Commit messages.
-  Follow these rules:
-  - Header: type(scope): summary (≤ {{max_header|72}} chars, imperative mood)
-  - Use docs:, test:, refactor:, style:, chore:, ci:, build: appropriately.
-  - Include bullet points when helpful (≤ 6).
-  - Add a BREAKING CHANGE: trailer if a public API is modified.
-  - Never paste the diff back.
+
+  ## Output format (MUST FOLLOW EXACTLY):
+  - Output MUST be plain text only suitable for `git commit -F -`.
+  - DO NOT return JSON, YAML, markdown, code fences, quotes, or extra commentary.
+  - Shape:
+      1) One header line: `type(optional-scope): summary`
+         - `type` ∈ {feat, fix, docs, test, refactor, style, chore, ci, build}
+         - `scope` is kebab-case if present; omit parentheses if no scope.
+         - Summary: imperative mood, ≤ {{max_header|72}} chars.
+      2) (optional) blank line + up to 6 bullet points, each starting with `- `
+         - Focus on WHAT and WHY (not the diff).
+      3) (optional) trailers, each on its own line, e.g.:
+         - `BREAKING CHANGE: <impact and migration>`
+         - `Refs: #123`, `Co-authored-by: ...`, etc.
+
+  ## Rules:
+  - Choose the most appropriate type (docs:, test:, refactor:, style:, chore:, ci:, build: when relevant).
+  - Include a BREAKING CHANGE trailer if a public API changes.
+  - Never paste code back.
+  - If your draft contains `{`, `}`, or ``` by mistake, rewrite it to the required plain-text format.
 
 userTemplate: |
-  Write the commit message based on these details:
+  Generate the commit message in the exact plaintext format described above.
 
   Current branch: {{branch}}
   Repo status:
   {{status}}
 
-  Staged diff (for context only):
-  ```diff
+  Staged diff (context only — DO NOT include code in the output):
+  ====BEGIN_DIFF====
   {{diff}}
-  ```
+  ====END_DIFF====
 
 postActions:
   - when_: "{{dry_run|false}} == false"
@@ -54,4 +68,3 @@ defaults:
   dry_run: "false"
   signoff: "false"
   no_verify: "false"
-  format: "plain"

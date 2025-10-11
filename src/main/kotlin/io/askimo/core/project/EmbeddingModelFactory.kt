@@ -9,15 +9,13 @@ import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBui
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import io.askimo.core.providers.ModelProvider
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
 
-// Defaults (can be overridden by env)
 private const val DEFAULT_OLLAMA_URL = "http://localhost:11434"
-private const val DEFAULT_OLLAMA_EMBED_MODEL = "nomic-embed-text"
+private const val DEFAULT_OLLAMA_EMBED_MODEL = "nomic-embed-text:latest"
 private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
 
-// One-time warning flag so we don't spam the console
 private val warnedOllamaOnce = AtomicBoolean(false)
 
 fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
@@ -89,7 +87,7 @@ private fun ensureOllamaAvailable(
     val tagsBody =
         try {
             val conn =
-                (URL("${baseUrl.removeSuffix("/")}/api/tags").openConnection() as HttpURLConnection).apply {
+                (URI("${baseUrl.removeSuffix("/")}/api/tags").toURL().openConnection() as HttpURLConnection).apply {
                     connectTimeout = 1500
                     readTimeout = 1500
                     requestMethod = "GET"
@@ -110,13 +108,59 @@ private fun ensureOllamaAvailable(
         }
 
     if (!tagsBody.contains("\"name\":\"$model\"")) {
+        // Try to pull the model automatically
+        val pulled = tryPullOllamaModel(baseUrl, model)
+        if (pulled) {
+            // Re-check tags after pulling
+            val refreshedTags =
+                try {
+                    val conn =
+                        (URI("${baseUrl.removeSuffix("/")}/api/tags").toURL().openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 1500
+                            readTimeout = 3000
+                            requestMethod = "GET"
+                            doInput = true
+                        }
+                    conn.inputStream.bufferedReader().use { it.readText() }
+                } catch (_: Exception) {
+                    "" // If we cannot re-fetch, fall through to error
+                }
+            if (refreshedTags.contains("\"name\":\"$model\"")) return
+        }
+
         error(
             """
-            ❌ Ollama model '$model' not found.
+            ❌ Ollama model '$model' not found${if (pulled) " after attempting to pull it" else ""}.
 
-            Pull it first:
+            Pull it manually:
               ollama pull $model
             """.trimIndent(),
         )
     }
 }
+
+private fun tryPullOllamaModel(
+    baseUrl: String,
+    model: String,
+): Boolean =
+    try {
+        val conn =
+            (URI("${baseUrl.removeSuffix("/")}/api/pull").toURL().openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 120_000
+                requestMethod = "POST"
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+            }
+        val payload = "{" + "\"name\":\"$model\"" + "}"
+        conn.outputStream.use { os ->
+            os.write(payload.toByteArray())
+            os.flush()
+        }
+        val code = conn.responseCode
+        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+        stream?.bufferedReader()?.use { it.readText() }
+        code in 200..299
+    } catch (_: Exception) {
+        false
+    }
