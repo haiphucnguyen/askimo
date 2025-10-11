@@ -31,7 +31,11 @@ import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Prompts
 import io.askimo.web.WebServer
+import org.jline.keymap.KeyMap
+import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
+import org.jline.reader.Reference
+import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
 import org.jline.terminal.TerminalBuilder
@@ -92,6 +96,7 @@ fun main(args: Array<String>) {
 
                 // Setup parser and completer
                 val parser = DefaultParser()
+
                 val completer =
                     AggregateCompleter(
                         SetParamCompleter(),
@@ -104,11 +109,38 @@ fun main(args: Array<String>) {
                         .parser(parser)
                         .completer(completer)
                         .build()
+                reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
+                // --- Custom widget that inserts a literal newline into the buffer ---
+                reader.widgets["insert-newline"] =
+                    Widget {
+                        reader.buffer.write("\n")
+                        // Refresh the line so the new row shows immediately
+                        reader.callWidget(LineReader.REDRAW_LINE)
+                        reader.callWidget(LineReader.REDISPLAY)
+                        true
+                    }
+
+                // --- Key bindings ---
+                // Get the main keymap
+                @Suppress("UNCHECKED_CAST")
+                val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
+
+                // Keep Enter as "send"
+                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // Enter/Return (CR)
+
+                // Map Shift+Enter (varies by terminal) to our insert-newline widget
+                // 1) CSI-u “modified keys” (WezTerm/kitty/xterm/Windows Terminal when enabled)
+                mainMap.bind(Reference("insert-newline"), "\u001B[13;2u") // Shift+Enter
+                // 2) Some terminals emit ESC + CR for modified Enter
+                mainMap.bind(Reference("insert-newline"), "\u001B\r")
+                // 3) Always map Ctrl+J (LF) as a portable fallback for newline
+                mainMap.bind(Reference("insert-newline"), "\n")
 
                 // 🔑 Init Prompts here so some commands (such as :db add) can use ask/askSecret/askBool/askInt
                 Prompts.init(reader)
 
                 terminal.writer().println("askimo> Ask anything. Type :help for commands.")
+                terminal.writer().println("💡 Tip: Press Ctrl+J for a new line, Enter to send. (Shift+Enter may also work)")
                 terminal.flush()
 
                 (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
