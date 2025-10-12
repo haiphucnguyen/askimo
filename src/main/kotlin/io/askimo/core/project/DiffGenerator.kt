@@ -13,18 +13,11 @@ class DiffGenerator(
     fun generateDiff(request: DiffRequest): String {
         val built = PromptBuilder.build(request)
 
-        // Most ChatService implementations send a single user message.
-        // Inline the system instructions at the top of the user content.
         val prompt = built.asSingleMessage()
 
         val sb = StringBuilder()
         val stream: TokenStream = chat.stream(prompt)
-
-        // --- adapt these two callbacks to your TokenStream API if names differ ---
-
-        // ------------------------------------------------------------------------
-
-        // Clean & return
+        stream.onPartialResponse { sb.append(it) }
         return sb.toString().trim()
             .removeMarkdownFencesIfAny()
     }

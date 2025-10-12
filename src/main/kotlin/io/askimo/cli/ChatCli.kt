@@ -47,6 +47,7 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
 import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.TerminalBuilder
+import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
@@ -103,26 +104,39 @@ fun main(args: Array<String>) {
                 val history = DefaultHistory(reader)
                 Runtime.getRuntime().addShutdownHook(Thread { runCatching { history.save() } })
 
-                // --- Secondary prompt style ---
-                reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
+                // Is this a “real” terminal with raw mode & cursor addressing?
+                val supportsRaw = terminal.getBooleanCapability(InfoCmp.Capability.cursor_address)
 
-                // --- Widget for newline ---
-                reader.widgets["insert-newline"] =
-                    Widget {
-                        reader.buffer.write("\n")
-                        reader.callWidget(LineReader.REDRAW_LINE)
-                        reader.callWidget(LineReader.REDISPLAY)
-                        true
-                    }
+
                 // --- Key bindings ---
                 // Get the main keymap
                 @Suppress("UNCHECKED_CAST")
                 val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
 
-                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // CR (Ctrl-M / many terms)
-                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\n") // LF (some terms)
+                if (supportsRaw) {
+                    val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
+                    // --- Secondary prompt style ---
+                    reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
 
-                mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J'))
+                    // --- Widget for newline ---
+                    reader.widgets["insert-newline"] =
+                        Widget {
+                            reader.buffer.write("\n")
+                            reader.callWidget(LineReader.REDRAW_LINE)
+                            reader.callWidget(LineReader.REDISPLAY)
+                            true
+                        }
+
+                    mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // CR (Ctrl-M / many terms)
+                    mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\n") // LF (some terms)
+                    mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J'))     // Ctrl+J
+                    terminal.writer().println("💡 Tip: Ctrl+J for newline, Enter to send.")
+                } else {
+                    terminal.writer().println(
+                        "💡 Limited console detected. Enter submits. " +
+                                "Use Alt+Enter for a newline, or enable 'Emulate terminal in output console' in your Run config."
+                    )
+                }
 
                 mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
                 mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
