@@ -24,6 +24,12 @@ import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.core.VersionInfo
+import io.askimo.core.project.Budgets
+import io.askimo.core.project.DiffGenerator
+import io.askimo.core.project.EditFlow
+import io.askimo.core.project.EditIntentDetector
+import io.askimo.core.project.PatchApplier
+import io.askimo.core.project.ProjectStore
 import io.askimo.core.providers.chat
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
@@ -172,6 +178,9 @@ fun main(args: Array<String>) {
                         break
                     }
 
+                    val diffGenerator = DiffGenerator(session.getChatService())
+                    val editFlow = EditFlow(diffGenerator, PatchApplier(), Budgets())
+
                     val keyword = parsedLine.words().firstOrNull()
 
                     if (keyword != null && keyword.startsWith(":")) {
@@ -185,32 +194,44 @@ fun main(args: Array<String>) {
                     } else {
                         val prompt = parsedLine.line()
 
-                        val indicator = LoadingIndicator(reader.terminal, "Thinking…")
-                        indicator.start()
+                        val active = ProjectStore.getActive()
+                        val hasActive = active != null
+                        val intent = EditIntentDetector.detect(prompt, hasActive)
 
-                        val firstTokenSeen = AtomicBoolean(false)
-
-                        val mdRenderer = MarkdownJLineRenderer()
-                        val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
-
-                        val output =
-                            session.getChatService().chat(prompt) { token ->
-                                if (firstTokenSeen.compareAndSet(false, true)) {
-                                    indicator.stopWithElapsed()
-                                    reader.terminal.flush()
-                                }
-                                mdSink.append(token)
-                            }
-                        if (!firstTokenSeen.get()) {
-                            indicator.stopWithElapsed()
+                        if (hasActive && intent.isEdit) {
+                            val (meta, _) = active!!
+                            editFlow.run(prompt, meta)
+                            session.lastResponse = "Applied edit flow for: $prompt"
                             reader.terminal.writer().println()
-                            reader.terminal.flush()
-                        }
-                        mdSink.finish()
+                            reader.terminal.writer().flush()
+                        } else {
+                            val indicator = LoadingIndicator(reader.terminal, "Thinking…")
+                            indicator.start()
 
-                        session.lastResponse = output
-                        reader.terminal.writer().println()
-                        reader.terminal.writer().flush()
+                            val firstTokenSeen = AtomicBoolean(false)
+
+                            val mdRenderer = MarkdownJLineRenderer()
+                            val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
+
+                            val output =
+                                session.getChatService().chat(prompt) { token ->
+                                    if (firstTokenSeen.compareAndSet(false, true)) {
+                                        indicator.stopWithElapsed()
+                                        reader.terminal.flush()
+                                    }
+                                    mdSink.append(token)
+                                }
+                            if (!firstTokenSeen.get()) {
+                                indicator.stopWithElapsed()
+                                reader.terminal.writer().println()
+                                reader.terminal.flush()
+                            }
+                            mdSink.finish()
+
+                            session.lastResponse = output
+                            reader.terminal.writer().println()
+                            reader.terminal.writer().flush()
+                        }
                     }
 
                     terminal.flush()

@@ -3,7 +3,7 @@ package io.askimo.core.project
 import dev.langchain4j.service.TokenStream
 import io.askimo.core.providers.ChatService
 
-class ChatServiceDiffGenerator(
+class DiffGenerator(
     private val chat: ChatService
 ) {
     /**
@@ -21,8 +21,7 @@ class ChatServiceDiffGenerator(
         val stream: TokenStream = chat.stream(prompt)
 
         // --- adapt these two callbacks to your TokenStream API if names differ ---
-        stream.onToken { token -> sb.append(token) }    // append as tokens arrive
-        stream.awaitCompletion()                        // block until done
+
         // ------------------------------------------------------------------------
 
         // Clean & return

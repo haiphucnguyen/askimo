@@ -8,7 +8,7 @@ import java.nio.file.Paths
 
 
 class EditFlow(
-    private val diffGen: ChatServiceDiffGenerator,
+    private val diffGen: DiffGenerator,
     private val patchApplier: PatchApplier,
     private val budgets: Budgets = Budgets()
 ) {
