@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 
@@ -31,6 +32,25 @@ class ConfigCommandHandler(
 
         settings.describe().forEach {
             println("    $it")
+        }
+
+        val active = ProjectStore.getActive()
+        if (active == null) {
+            println("  Active project: (none)")
+        } else {
+            val (meta, ptr) = active
+            val exists = try {
+                java.nio.file.Files.isDirectory(java.nio.file.Paths.get(meta.root))
+            } catch (_: Exception) { false }
+            val home = System.getProperty("user.home")
+            val rootDisp = meta.root.replaceFirst(home, "~")
+            println("  Active project:")
+            println("    Name:       ${meta.name}")
+            println("    ID:         ${meta.id}")
+            println("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
+            println("    Selected:   ${ptr.selectedAt}")
+            println("    Created:    ${meta.createdAt}")
+            println("    Last used:  ${meta.lastUsedAt}")
         }
     }
 }
