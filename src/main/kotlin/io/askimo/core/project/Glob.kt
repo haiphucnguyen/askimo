@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.project
 
 /**
@@ -7,7 +11,10 @@ package io.askimo.core.project
  *  - "?"  matches a single character (no '/')
  */
 object Glob {
-    fun match(glob: String, pathUnix: String): Boolean {
+    fun match(
+        glob: String,
+        pathUnix: String,
+    ): Boolean {
         val regex = toRegex(glob)
         return regex.matches(pathUnix)
     }

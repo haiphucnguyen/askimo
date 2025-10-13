@@ -1,2 +1,5 @@
 [
+  {
+    "interfaces": ["io.askimo.core.providers.ChatService"]
+  }
 ]

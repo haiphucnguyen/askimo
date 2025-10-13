@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.project
 
 import java.nio.file.Path
@@ -5,19 +9,22 @@ import java.nio.file.Paths
 
 object PathGuards {
     // Guard-list for MVP (you can expand later)
-    private val blockedGlobs = listOf(
-        ".git/**",
-        "**/*.lock",
-        "pom.xml",
-        "build.gradle",
-        "build.gradle.kts",
-        "package.json",
-        ".github/workflows/**"
-    )
+    private val blockedGlobs =
+        listOf(
+            ".git/**",
+            "**/*.lock",
+            "pom.xml",
+            "build.gradle",
+            "build.gradle.kts",
+            "package.json",
+            ".github/workflows/**",
+        )
 
     /** True if abs is inside the project root directory. */
-    fun isUnderRoot(abs: Path, rootAbs: String): Boolean =
-        abs.normalize().startsWith(Paths.get(rootAbs).normalize())
+    fun isUnderRoot(
+        abs: Path,
+        rootAbs: String,
+    ): Boolean = abs.normalize().startsWith(Paths.get(rootAbs).normalize())
 
     /** True if file matches any guarded pattern (do not edit). */
     fun isBlocked(abs: Path): Boolean {

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.project
 
 /**
@@ -7,5 +11,5 @@ data class Budgets(
     val maxFiles: Int = 3,
     val maxChangedLines: Int = 300,
     val allowDirty: Boolean = false,
-    val applyDirect: Boolean = false // set true if you add a --write flag to skip the confirm prompt
+    val applyDirect: Boolean = false,
 )

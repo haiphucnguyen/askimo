@@ -1,10 +1,14 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
 package io.askimo.core.project
 
 import dev.langchain4j.service.TokenStream
 import io.askimo.core.providers.ChatService
 
 class DiffGenerator(
-    private val chat: ChatService
+    private val chat: ChatService,
 ) {
     /**
      * Builds the diff prompt and returns the full model output as a string.
@@ -18,7 +22,9 @@ class DiffGenerator(
         val sb = StringBuilder()
         val stream: TokenStream = chat.stream(prompt)
         stream.onPartialResponse { sb.append(it) }
-        return sb.toString().trim()
+        return sb
+            .toString()
+            .trim()
             .removeMarkdownFencesIfAny()
     }
 }

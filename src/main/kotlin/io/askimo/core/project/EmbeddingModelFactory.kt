@@ -8,6 +8,12 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.ANTHROPIC
+import io.askimo.core.providers.ModelProvider.GEMINI
+import io.askimo.core.providers.ModelProvider.OLLAMA
+import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.UNKNOWN
+import io.askimo.core.providers.ModelProvider.X_AI
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,7 +26,7 @@ private val warnedOllamaOnce = AtomicBoolean(false)
 
 fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
     when (provider) {
-        ModelProvider.OPEN_AI -> {
+        OPEN_AI -> {
             val openAiKey =
                 System.getenv("OPENAI_API_KEY")
                     ?: error("OPENAI_API_KEY missing for OpenAI embeddings")
@@ -31,16 +37,14 @@ fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
                 .build()
         }
 
-        // For providers with no native embeddings, we ALWAYS use local Ollama
-        ModelProvider.ANTHROPIC, ModelProvider.GEMINI, ModelProvider.X_AI -> {
+        ANTHROPIC, GEMINI, X_AI -> {
             noteOllamaRequired(provider)
             buildOllamaEmbeddingModel()
         }
 
-        // If user explicitly picked OLLAMA for chat, also use Ollama for embeddings
-        ModelProvider.OLLAMA -> buildOllamaEmbeddingModel()
+        OLLAMA -> buildOllamaEmbeddingModel()
 
-        ModelProvider.UNKNOWN -> error("Unsupported embedding provider: $provider")
+        UNKNOWN -> error("Unsupported embedding provider: $provider")
     }
 
 private fun buildOllamaEmbeddingModel(): EmbeddingModel {

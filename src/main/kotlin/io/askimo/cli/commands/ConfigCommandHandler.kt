@@ -39,9 +39,16 @@ class ConfigCommandHandler(
             println("  Active project: (none)")
         } else {
             val (meta, ptr) = active
-            val exists = try {
-                java.nio.file.Files.isDirectory(java.nio.file.Paths.get(meta.root))
-            } catch (_: Exception) { false }
+            val exists =
+                try {
+                    java.nio.file.Files
+                        .isDirectory(
+                            java.nio.file.Paths
+                                .get(meta.root),
+                        )
+                } catch (_: Exception) {
+                    false
+                }
             val home = System.getProperty("user.home")
             val rootDisp = meta.root.replaceFirst(home, "~")
             println("  Active project:")

@@ -11,6 +11,7 @@ import io.askimo.cli.commands.ConfigCommandHandler
 import io.askimo.cli.commands.CopyCommandHandler
 import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
+import io.askimo.cli.commands.DeleteAllProjectsCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
@@ -107,7 +108,6 @@ fun main(args: Array<String>) {
                 // Is this a “real” terminal with raw mode & cursor addressing?
                 val supportsRaw = terminal.getBooleanCapability(InfoCmp.Capability.cursor_address)
 
-
                 // --- Key bindings ---
                 // Get the main keymap
                 @Suppress("UNCHECKED_CAST")
@@ -129,12 +129,12 @@ fun main(args: Array<String>) {
 
                     mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // CR (Ctrl-M / many terms)
                     mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\n") // LF (some terms)
-                    mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J'))     // Ctrl+J
+                    mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J')) // Ctrl+J
                     terminal.writer().println("💡 Tip: Ctrl+J for newline, Enter to send.")
                 } else {
                     terminal.writer().println(
                         "💡 Limited console detected. Enter submits. " +
-                                "Use Alt+Enter for a newline, or enable 'Emulate terminal in output console' in your Run config."
+                            "Use Alt+Enter for a newline, or enable 'Emulate terminal in output console' in your Run config.",
                     )
                 }
 
@@ -168,6 +168,7 @@ fun main(args: Array<String>) {
                         DeleteRecipeCommandHandler(),
                         ListRecipesCommandHandler(),
                         DeleteProjectCommandHandler(),
+                        DeleteAllProjectsCommandHandler(),
                         HistoryCommandHandler(reader, terminal, historyFile),
                     )
 

@@ -237,16 +237,17 @@ class PgVectorIndexer(
     }
 
     private fun newStore(): EmbeddingStore<TextSegment> {
-        val embeddingStore = PgVectorEmbeddingStore
-            .builder()
-            .host(extractHost(pgUrl))
-            .port(extractPort(pgUrl))
-            .database(extractDatabase(pgUrl))
-            .user(pgUser)
-            .password(pgPass)
-            .table(projectTable)
-            .dimension(dimension)
-            .build()
+        val embeddingStore =
+            PgVectorEmbeddingStore
+                .builder()
+                .host(extractHost(pgUrl))
+                .port(extractPort(pgUrl))
+                .database(extractDatabase(pgUrl))
+                .user(pgUser)
+                .password(pgPass)
+                .table(projectTable)
+                .dimension(dimension)
+                .build()
         ensureIndexes(pgUrl, pgUser, pgPass, projectTable)
         return embeddingStore
     }
@@ -272,12 +273,13 @@ class PgVectorIndexer(
                     val content = filePath.readText()
                     if (content.isNotBlank()) {
                         val relativePath = root.relativize(filePath).toString()
-                        val header = buildString {
-                            appendLine("FILE: $relativePath")
-                            appendLine("NAME: ${filePath.fileName}")
-                            appendLine("EXT: ${filePath.extension.lowercase()}")
-                            appendLine("---")
-                        }
+                        val header =
+                            buildString {
+                                appendLine("FILE: $relativePath")
+                                appendLine("NAME: ${filePath.fileName}")
+                                appendLine("EXT: ${filePath.extension.lowercase()}")
+                                appendLine("---")
+                            }
 
                         val segment =
                             TextSegment.from(
@@ -458,37 +460,36 @@ class PgVectorIndexer(
         return results.matches().map { it.embedded().text() }
     }
 
-    private fun ensureIndexes(pgUrl: String, user: String, pass: String, table: String) {
-        val stmts = listOf(
-            "CREATE EXTENSION IF NOT EXISTS vector;",
-            "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
-
-            // project_id
-            """CREATE INDEX IF NOT EXISTS ${table}_proj_idx
+    private fun ensureIndexes(
+        pgUrl: String,
+        user: String,
+        pass: String,
+        table: String,
+    ) {
+        val stmts =
+            listOf(
+                "CREATE EXTENSION IF NOT EXISTS vector;",
+                "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+                // project_id
+                """CREATE INDEX IF NOT EXISTS ${table}_proj_idx
            ON $table ( ((metadata)::jsonb ->> 'project_id') );""",
-
-            // file_name (lowered)
-            """CREATE INDEX IF NOT EXISTS ${table}_file_name_idx
+                // file_name (lowered)
+                """CREATE INDEX IF NOT EXISTS ${table}_file_name_idx
            ON $table ( lower(((metadata)::jsonb ->> 'file_name')) );""",
-
-            // file_path btree
-            """CREATE INDEX IF NOT EXISTS ${table}_file_path_idx
+                // file_path btree
+                """CREATE INDEX IF NOT EXISTS ${table}_file_path_idx
            ON $table ( ((metadata)::jsonb ->> 'file_path') );""",
-
-            // full metadata GIN
-            """CREATE INDEX IF NOT EXISTS ${table}_meta_gin
+                // full metadata GIN
+                """CREATE INDEX IF NOT EXISTS ${table}_meta_gin
            ON $table USING GIN ( ((metadata)::jsonb) jsonb_path_ops );""",
-
-            // trigram on file_path
-            """CREATE INDEX IF NOT EXISTS ${table}_file_path_trgm
+                // trigram on file_path
+                """CREATE INDEX IF NOT EXISTS ${table}_file_path_trgm
            ON $table USING GIN ( ((metadata)::jsonb ->> 'file_path') gin_trgm_ops );""",
-
-            // ANN index on embedding
-            """CREATE INDEX IF NOT EXISTS ${table}_embedding_ivfflat
+                // ANN index on embedding
+                """CREATE INDEX IF NOT EXISTS ${table}_embedding_ivfflat
            ON $table USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);""",
-
-            "ANALYZE $table;"
-        )
+                "ANALYZE $table;",
+            )
 
         DriverManager.getConnection(pgUrl, user, pass).use { conn ->
             conn.autoCommit = true
@@ -504,5 +505,4 @@ class PgVectorIndexer(
             }
         }
     }
-
 }
