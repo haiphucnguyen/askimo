@@ -183,10 +183,6 @@ graalvmNative {
     }
 }
 
-tasks.named("nativeCompile") {
-    dependsOn("test")
-}
-
 extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true
 
 spotless {
