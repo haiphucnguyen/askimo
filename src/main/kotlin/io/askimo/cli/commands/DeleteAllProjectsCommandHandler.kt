@@ -94,8 +94,6 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
                     PostgresContainerManager.startIfNeeded()
                 } catch (e: Exception) {
                     println("⚠️  Metadata removed, but could not connect to Postgres to drop embeddings: ${e.message}")
-                    e.printStackTrace()
-                    // We still continue to final summary.
                     null
                 }
 
