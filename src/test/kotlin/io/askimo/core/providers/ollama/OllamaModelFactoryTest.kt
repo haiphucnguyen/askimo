@@ -12,9 +12,14 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertTrue
 
+@DisabledIfEnvironmentVariable(
+    named = "DISABLE_DOCKER_TESTS",
+    matches = "(?i)true|1|yes"
+)
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
 class OllamaModelFactoryTest {

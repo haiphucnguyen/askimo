@@ -42,11 +42,15 @@ jobs:
       # Generate metadata first, then compile (arm runner)
       - name: Generate Graal metadata (Linux/macOS)
         if: runner.os != 'Windows'
+        env:
+          DISABLE_DOCKER_TESTS: ${{ runner.os == 'macOS' }}
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -PtraceAgent=true clean test
 
       - name: Generate Graal metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          DISABLE_DOCKER_TESTS: true
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true -PtraceAgent=true clean test
 
       - name: Upload test report
