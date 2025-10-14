@@ -1,3 +1,6 @@
 {
-  "rules": [{ "includeClasses": "io.askimo.**" }]
+  "rules": [
+    { "includeClasses": "io.askimo.**" },
+    { "includeClasses": "dev.langchain4j.**" }
+  ]
 }

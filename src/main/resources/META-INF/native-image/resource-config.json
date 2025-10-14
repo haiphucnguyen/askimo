@@ -14,6 +14,21 @@
         "pattern": "\\QMETA-INF/services/dev.langchain4j.service.guardrail.spi.GuardrailServiceBuilderFactory\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.classloading.ClassMetadataProviderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.InputGuardrailExecutorBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.OutputGuardrailExecutorBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.config.InputGuardrailsConfigBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.config.OutputGuardrailsConfigBuilderFactory\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.observability.AiServiceListenerRegistrarFactory\\E"
       },
       {
@@ -45,6 +60,9 @@
       },
       {
         "pattern": "\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/java.util.spi.ResourceBundleControlProvider\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader\\E"
@@ -195,5 +213,9 @@
       }
     ]
   },
-  "bundles": []
+  "bundles": [
+    {
+      "name": "org.postgresql.translation.messages"
+    }
+  ]
 }

@@ -130,7 +130,7 @@ val traceAgent = (findProperty("traceAgent") as String?) == "true"
 
 tasks.register<Sync>("syncGraalMetadata") {
     from("$buildDir/graal-agent")
-    include("**/*-config.json") // only metadata
+    include("**/*-config.json")
     exclude("**/agent-extracted-predefined-classes/**", "**/predefined-classes-*.json")
     into("src/main/resources/META-INF/native-image")
 }

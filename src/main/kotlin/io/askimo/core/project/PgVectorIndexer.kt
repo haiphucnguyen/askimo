@@ -231,9 +231,11 @@ class PgVectorIndexer(
 
     private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session.getActiveProvider())
 
+    private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
+
     // capture the actual dimension ONCE from the real model unless user overrode it
     private val dimension: Int by lazy {
-        preferredDim ?: buildEmbeddingModel().dimension()
+        preferredDim ?: embeddingModel.dimension()
     }
 
     private fun newStore(): EmbeddingStore<TextSegment> {
@@ -258,7 +260,6 @@ class PgVectorIndexer(
         val detectedTypes = detectProjectTypes(root)
         println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        val embeddingModel = buildEmbeddingModel()
         val embeddingStore = newStore()
 
         var indexedCount = 0
@@ -433,7 +434,7 @@ class PgVectorIndexer(
     }
 
     fun embed(text: String): List<Float> =
-        buildEmbeddingModel()
+        embeddingModel
             .embed(text)
             .content()
             .vector()
