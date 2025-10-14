@@ -7,35 +7,25 @@ package io.askimo.core.providers.ollama
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.chat
+import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.ollama.OllamaContainer
-import org.testcontainers.utility.DockerImageName
 import kotlin.test.assertTrue
 
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
 class OllamaModelFactoryTest {
-    companion object {
-        @Container
-        @JvmStatic
-        val ollama: OllamaContainer =
-            OllamaContainer(DockerImageName.parse("ollama/ollama:latest")).withReuse(true)
-    }
-
     @Test
     @DisplayName("OllamaModelFactory can stream responses from tinyllama via Testcontainers Ollama")
     fun canCreateChatServiceAndStream() {
-        // Derive the base URL of the Ollama HTTP API exposed by the container
+        val ollama = SharedOllama.container
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
         val baseUrl = "http://$host:$port"
 
-        // Ensure the tinyllama model is present in the Ollama instance
         ollama.execInContainer("ollama", "pull", "tinyllama:latest")
 
         val settings = OllamaSettings(baseUrl = baseUrl)

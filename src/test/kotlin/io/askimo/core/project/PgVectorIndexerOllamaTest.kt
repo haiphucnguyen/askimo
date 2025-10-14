@@ -7,6 +7,7 @@ package io.askimo.core.project
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionParams
+import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -18,8 +19,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.ollama.OllamaContainer
-import org.testcontainers.utility.DockerImageName
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -28,11 +27,6 @@ import kotlin.io.path.writeText
 @TestInstance(Lifecycle.PER_CLASS)
 class PgVectorIndexerOllamaTest {
     companion object {
-        @Container
-        @JvmStatic
-        val ollama: OllamaContainer =
-            OllamaContainer(DockerImageName.parse("ollama/ollama:0.12.5")).withReuse(true)
-
         // Use a pgvector-enabled Postgres image
         class PgVectorPostgres(
             image: String,
@@ -55,6 +49,7 @@ class PgVectorIndexerOllamaTest {
         @TempDir tmp: Path,
     ) {
         // Configure Ollama base URL and model (auto-pull if missing as per EmbeddingModelFactory)
+        val ollama = SharedOllama.container
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
         val baseUrl = "http://$host:$port"
