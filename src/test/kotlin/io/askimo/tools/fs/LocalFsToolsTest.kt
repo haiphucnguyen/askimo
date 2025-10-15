@@ -135,9 +135,11 @@ class LocalFsToolsTest {
         val r2 = t.filesByType(tmp.toString(), category = "image", recursive = true, limit = 10)
         assertEquals(3, r2["count"], "Recursive image count should include nested jpg as well")
         val files2 = (r2["files"] as List<*>).map { it.toString() }
-        assertTrue(files2.any { it.endsWith("a.PNG") || it.endsWith("a.png") })
-        assertTrue(files2.any { it.endsWith("b.png") })
-        assertTrue(files2.any { it.endsWith("imgs/nested/c.jpg") || it.endsWith("nested/c.jpg") })
+        // Normalize path separators for cross-platform compatibility (Windows vs Unix)
+        val files2Norm = files2.map { it.replace('\\', '/') }
+        assertTrue(files2Norm.any { it.endsWith("a.PNG") || it.endsWith("a.png") })
+        assertTrue(files2Norm.any { it.endsWith("b.png") })
+        assertTrue(files2Norm.any { it.endsWith("imgs/nested/c.jpg") || it.endsWith("nested/c.jpg") })
 
         // Pagination: limit=2 on the full recursive list under tmp
         val rPage1 = t.filesByType(tmp.toString(), category = "image", recursive = true, limit = 2)
