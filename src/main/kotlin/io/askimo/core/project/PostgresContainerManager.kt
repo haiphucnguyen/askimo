@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.config.AppConfig
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
@@ -29,6 +30,11 @@ object PostgresContainerManager {
                     .withStartupTimeout(java.time.Duration.ofSeconds(60))
                     .withReuse(true)
                     .apply { start() }
+
+            System.setProperty("ASKIMO_PG_URL", c.jdbcUrl)
+            System.setProperty("ASKIMO_PG_USER", c.username)
+            System.setProperty("ASKIMO_PG_PASS", c.password)
+            AppConfig.reload()
 
             ensurePgVector(c)
             Runtime.getRuntime().addShutdownHook(Thread { runCatching { c.stop() } })
