@@ -52,9 +52,6 @@ class CreateProjectCommandHandler(
 
         val indexer =
             PgVectorIndexer(
-                pgUrl = pg.jdbcUrl,
-                pgUser = pg.username,
-                pgPass = pg.password,
                 projectId = name,
                 session = session,
             )

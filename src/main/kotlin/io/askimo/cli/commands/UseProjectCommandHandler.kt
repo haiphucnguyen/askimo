@@ -44,11 +44,8 @@ class UseProjectCommandHandler(
             return
         }
 
-        val projectPath =
-            java.nio.file.Paths
-                .get(meta.root)
-        if (!java.nio.file.Files
-                .isDirectory(projectPath)
+        val projectPath = Paths.get(meta.root)
+        if (!Files.isDirectory(projectPath)
         ) {
             println("⚠️ Saved path does not exist anymore: ${meta.root}")
             return
@@ -71,18 +68,12 @@ class UseProjectCommandHandler(
                 return
             }
 
-        // NOTE: MVP still keys embeddings by project *name*.
-        // When you switch indexer to use meta.id, update projectId below.
         val indexer =
             PgVectorIndexer(
-                pgUrl = pg.jdbcUrl,
-                pgUser = pg.username,
-                pgPass = pg.password,
-                projectId = meta.name, // MVP: keep name; later: meta.id
+                projectId = meta.name,
                 session = session,
             )
 
-        // Session now uses ProjectMeta directly (per your change)
         session.setScope(meta)
         session.enableRagWith(indexer)
 

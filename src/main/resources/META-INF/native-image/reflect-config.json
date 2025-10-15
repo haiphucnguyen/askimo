@@ -1187,6 +1187,138 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.AppConfigData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.PgVectorConfig",
+          "io.askimo.core.config.EmbeddingConfig",
+          "io.askimo.core.config.RetryConfig",
+          "io.askimo.core.config.ThrottleConfig",
+          "io.askimo.core.config.IndexingConfig"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.PgVectorConfig",
+          "io.askimo.core.config.EmbeddingConfig",
+          "io.askimo.core.config.RetryConfig",
+          "io.askimo.core.config.ThrottleConfig",
+          "io.askimo.core.config.IndexingConfig",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.EmbeddingConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["int", "int", "java.lang.Integer"]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "int",
+          "java.lang.Integer",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.IndexingConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["long"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.PgVectorConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.RetryConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["int", "long"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "long",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ThrottleConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["long"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.project.EmbeddingModelFactoryOllamaTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -1197,12 +1329,6 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "autoPullsMissingModelAndEmbeds", "parameterTypes": [] }
     ]
-  },
-  {
-    "name": "io.askimo.core.project.EmbeddingModelFactoryOllamaTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.core.project.PgVectorIndexerOllamaTest",
@@ -1268,12 +1394,6 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] }
     ]
-  },
-  {
-    "name": "io.askimo.core.providers.ollama.OllamaModelFactoryTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.core.recipes.PostAction",
@@ -1442,6 +1562,12 @@
       },
       { "name": "getProviderSettings", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "io.askimo.testcontainers.SharedOllama",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.tools.fs.LocalFsTools",
@@ -2244,7 +2370,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$qVf6yvT7",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$kBgPJtbn",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

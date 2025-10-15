@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.config.AppConfig
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionParams
@@ -26,7 +27,7 @@ import kotlin.io.path.writeText
 
 @DisabledIfEnvironmentVariable(
     named = "DISABLE_DOCKER_TESTS",
-    matches = "(?i)true|1|yes"
+    matches = "(?i)true|1|yes",
 )
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
@@ -68,6 +69,7 @@ class PgVectorIndexerOllamaTest {
         System.setProperty("ASKIMO_PG_URL", jdbcUrl)
         System.setProperty("ASKIMO_PG_USER", postgres.username)
         System.setProperty("ASKIMO_PG_PASS", postgres.password)
+        AppConfig.reload()
 
         // Create a small temp project with a couple of indexable files
         val file1 = tmp.resolve("hello.kt")
@@ -90,11 +92,7 @@ class PgVectorIndexerOllamaTest {
         val session = Session(SessionParams(currentProvider = OLLAMA))
         val indexer =
             PgVectorIndexer(
-                pgUrl = System.getProperty("ASKIMO_PG_URL"),
-                pgUser = System.getProperty("ASKIMO_PG_USER"),
-                pgPass = System.getProperty("ASKIMO_PG_PASS"),
                 projectId = "pgvector-indexer-test",
-                preferredDim = null,
                 session = session,
             )
 

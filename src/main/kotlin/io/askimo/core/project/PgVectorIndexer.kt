@@ -5,11 +5,14 @@
 package io.askimo.core.project
 
 import dev.langchain4j.data.document.Metadata
+import dev.langchain4j.data.embedding.Embedding
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
+import io.askimo.core.config.AppConfig
 import io.askimo.core.session.Session
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.DriverManager
@@ -17,29 +20,37 @@ import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.streams.asSequence
 
 /**
  * Indexes project files into a pgvector-backed store and exposes basic embedding and
  * similarity search utilities.
  *
- * Responsibility:
- * - Scan a project directory, select indexable files, and compute text embeddings
- * - Persist embeddings and lightweight metadata to a per-project table in Postgres
- * - Provide helpers to embed ad hoc text and run vector similarity searches for retrieval
+ * Reliability improvements vs. the base version:
+ *  - Chunking large files (configurable) with small overlap to avoid huge requests
+ *  - Retry with exponential backoff on transient HTTP/IO errors (EOF, 5xx, resets)
+ *  - Light request throttling to avoid overwhelming local model endpoints
+ *  - Soft file-size cap (skippable or adjustable)
+ *  - Richer metadata (chunk_index / chunk_total) for traceability
  */
 class PgVectorIndexer(
-    private val pgUrl: String = System.getenv("ASKIMO_PG_URL") ?: "jdbc:postgresql://localhost:5432/askimo",
-    private val pgUser: String = System.getenv("ASKIMO_PG_USER") ?: "askimo",
-    private val pgPass: String = System.getenv("ASKIMO_PG_PASS") ?: "askimo",
-    private val table: String = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings",
     private val projectId: String,
-    private val preferredDim: Int? = null,
     private val session: Session,
 ) {
-    private val projectTable: String = "${table}__${slug(projectId)}"
+    private val projectTable: String = "${AppConfig.pgVector.table}__${slug(projectId)}"
 
     private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
+
+    private val maxCharsPerChunk = AppConfig.embedding.max_chars_per_chunk
+    private val chunkOverlap = AppConfig.embedding.chunk_overlap
+    private val perRequestSleepMs = AppConfig.throttle.per_request_sleep_ms
+    private val retryAttempts = AppConfig.retry.attempts
+    private val retryBaseDelayMs = AppConfig.retry.base_delay_ms
+    private val maxFileBytes = AppConfig.indexing.max_file_bytes
+
+    private val defaultCharset: Charset = Charsets.UTF_8
 
     private val supportedExtensions =
         setOf(
@@ -76,7 +87,7 @@ class PgVectorIndexer(
             "toml",
         )
 
-    // Project type markers
+    // ---------- Project type markers / excludes ----------
     private data class ProjectType(
         val name: String,
         val markers: Set<String>,
@@ -212,7 +223,6 @@ class PgVectorIndexer(
             ),
         )
 
-    // Common excludes for all project types
     private val commonExcludes =
         setOf(
             ".git/",
@@ -233,27 +243,27 @@ class PgVectorIndexer(
 
     private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
 
-    // capture the actual dimension ONCE from the real model unless user overrode it
     private val dimension: Int by lazy {
-        preferredDim ?: embeddingModel.dimension()
+        AppConfig.embedding.preferred_dim ?: embeddingModel.dimension()
     }
 
     private fun newStore(): EmbeddingStore<TextSegment> {
         val embeddingStore =
             PgVectorEmbeddingStore
                 .builder()
-                .host(extractHost(pgUrl))
-                .port(extractPort(pgUrl))
-                .database(extractDatabase(pgUrl))
-                .user(pgUser)
-                .password(pgPass)
+                .host(extractHost(AppConfig.pgVector.url))
+                .port(extractPort(AppConfig.pgVector.url))
+                .database(extractDatabase(AppConfig.pgVector.url))
+                .user(AppConfig.pgVector.user)
+                .password(AppConfig.pgVector.password)
                 .table(projectTable)
                 .dimension(dimension)
                 .build()
-        ensureIndexes(pgUrl, pgUser, pgPass, projectTable)
+        ensureIndexes(AppConfig.pgVector.url, AppConfig.pgVector.user, AppConfig.pgVector.password, projectTable)
         return embeddingStore
     }
 
+    // ---------- Public API ----------
     fun indexProject(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
 
@@ -262,7 +272,10 @@ class PgVectorIndexer(
 
         val embeddingStore = newStore()
 
-        var indexedCount = 0
+        var indexedFiles = 0
+        var addedSegments = 0
+        var skippedFiles = 0
+        var failedChunks = 0
 
         Files
             .walk(root)
@@ -271,76 +284,124 @@ class PgVectorIndexer(
             .filter { isIndexableFile(it, root, detectedTypes) }
             .forEach { filePath ->
                 try {
-                    val content = filePath.readText()
-                    if (content.isNotBlank()) {
-                        val relativePath = root.relativize(filePath).toString()
-                        val header =
-                            buildString {
-                                appendLine("FILE: $relativePath")
-                                appendLine("NAME: ${filePath.fileName}")
-                                appendLine("EXT: ${filePath.extension.lowercase()}")
-                                appendLine("---")
-                            }
+                    if (tooLargeToIndex(filePath)) {
+                        println(
+                            "  ⚠️  Skipped ${filePath.fileName}: file > $maxFileBytes bytes (raise ASKIMO_EMBED_MAX_FILE_BYTES or pre-trim)",
+                        )
+                        skippedFiles++
+                        return@forEach
+                    }
 
-                        val segment =
+                    val content = safeReadText(filePath)
+                    if (content.isBlank()) {
+                        // Empty text file; ignore quietly
+                        return@forEach
+                    }
+
+                    val relativePath = root.relativize(filePath).toString().replace('\\', '/')
+                    val header = buildFileHeader(relativePath, filePath)
+                    val body = header + content
+
+                    val chunks = chunkText(body, maxCharsPerChunk, chunkOverlap, filePath.extension.lowercase())
+                    val total = chunks.size
+
+                    var fileSucceeded = false
+
+                    chunks.forEachIndexed { idx, chunk ->
+                        val seg =
                             TextSegment.from(
-                                header + content,
+                                chunk,
                                 Metadata(
                                     mapOf(
                                         "project_id" to projectId,
                                         "file_path" to relativePath,
                                         "file_name" to filePath.fileName.toString(),
                                         "extension" to filePath.extension,
+                                        "chunk_index" to idx.toString(),
+                                        "chunk_total" to total.toString(),
                                     ),
                                 ),
                             )
 
-                        val embedding = embeddingModel.embed(segment)
-                        embeddingStore.add(embedding.content(), segment)
-
-                        indexedCount++
-                        if (indexedCount % 10 == 0) {
-                            println("  Indexed $indexedCount files into $projectTable …")
+                        try {
+                            val embedding =
+                                withRetry(retryAttempts, retryBaseDelayMs) {
+                                    embeddingModel.embed(seg)
+                                }
+                            embeddingStore.add(embedding.content(), seg)
+                            addedSegments++
+                            fileSucceeded = true
+                            throttle()
+                        } catch (e: Throwable) {
+                            failedChunks++
+                            println("  ⚠️  Chunk failure ${filePath.fileName}[$idx/$total]: ${e.message}")
                         }
                     }
+
+                    if (fileSucceeded) {
+                        indexedFiles++
+                        if (indexedFiles % 10 == 0) {
+                            println("  ✅ Indexed $indexedFiles files, $addedSegments segments → table=$projectTable")
+                        }
+                    } else {
+                        // all chunks failed, treat as skip
+                        skippedFiles++
+                    }
                 } catch (e: Exception) {
+                    skippedFiles++
                     println("  ⚠️  Skipped ${filePath.fileName}: ${e.message}")
                 }
             }
 
-        return indexedCount
+        println(
+            "📊 Indexing done: filesIndexed=$indexedFiles, segmentsAdded=$addedSegments, filesSkipped=$skippedFiles, failedChunks=$failedChunks → $projectTable",
+        )
+        return indexedFiles
     }
 
+    fun embed(text: String): List<Float> =
+        embeddingModel
+            .embed(text)
+            .content()
+            .vector()
+            .toList()
+
+    fun similaritySearch(
+        embedding: List<Float>,
+        topK: Int,
+    ): List<String> {
+        val embeddingStore = newStore()
+        val queryEmbedding = Embedding.from(embedding.toFloatArray())
+        val results =
+            embeddingStore.search(
+                dev.langchain4j.store.embedding.EmbeddingSearchRequest
+                    .builder()
+                    .queryEmbedding(queryEmbedding)
+                    .maxResults(topK)
+                    .build(),
+            )
+        return results.matches().map { it.embedded().text() }
+    }
+
+    // ---------- Internals ----------
     private fun detectProjectTypes(root: Path): List<ProjectType> {
         val detected = mutableListOf<ProjectType>()
 
-        // Check for project type markers in the root directory
         Files.list(root).use { stream ->
-            val rootFiles =
-                stream
-                    .map { it.name }
-                    .toList()
-                    .toSet()
-
+            val rootFiles = stream.map { it.name }.toList().toSet()
             for (projectType in projectTypes) {
-                // Check if any marker file exists
                 val hasMarker =
                     projectType.markers.any { marker ->
                         if (marker.contains("*")) {
-                            // Handle wildcards (e.g., "*.csproj")
                             val pattern = marker.replace("*", ".*").toRegex()
                             rootFiles.any { pattern.matches(it) }
                         } else {
                             rootFiles.contains(marker)
                         }
                     }
-
-                if (hasMarker) {
-                    detected.add(projectType)
-                }
+                if (hasMarker) detected.add(projectType)
             }
         }
-
         return detected
     }
 
@@ -355,19 +416,15 @@ class PgVectorIndexer(
         // Skip hidden files
         if (fileName.startsWith(".")) return false
 
-        // Check against common excludes
-        if (shouldExclude(relativePath, fileName, commonExcludes)) {
-            return false
-        }
+        // Common excludes
+        if (shouldExclude(relativePath, fileName, commonExcludes)) return false
 
-        // Check against project-specific excludes
+        // Project-specific excludes
         for (projectType in detectedTypes) {
-            if (shouldExclude(relativePath, fileName, projectType.excludePaths)) {
-                return false
-            }
+            if (shouldExclude(relativePath, fileName, projectType.excludePaths)) return false
         }
 
-        // Check file extension
+        // Extension allowlist
         return path.extension.lowercase() in supportedExtensions
     }
 
@@ -378,27 +435,16 @@ class PgVectorIndexer(
     ): Boolean {
         for (pattern in excludePatterns) {
             when {
-                // Directory pattern (ends with /)
                 pattern.endsWith("/") -> {
                     val dirPattern = pattern.removeSuffix("/")
-                    if (relativePath.contains("/$dirPattern/") ||
-                        relativePath.startsWith("$dirPattern/")
-                    ) {
+                    if (relativePath.contains("/$dirPattern/") || relativePath.startsWith("$dirPattern/")) {
                         return true
                     }
                 }
-                // Wildcard pattern (contains *)
                 pattern.contains("*") -> {
-                    val regex =
-                        pattern
-                            .replace(".", "\\.")
-                            .replace("*", ".*")
-                            .toRegex()
-                    if (regex.matches(fileName) || regex.matches(relativePath)) {
-                        return true
-                    }
+                    val regex = pattern.replace(".", "\\.").replace("*", ".*").toRegex()
+                    if (regex.matches(fileName) || regex.matches(relativePath)) return true
                 }
-                // Exact match
                 else -> {
                     if (fileName == pattern ||
                         relativePath.contains("/$pattern/") ||
@@ -410,6 +456,125 @@ class PgVectorIndexer(
             }
         }
         return false
+    }
+
+    private fun buildFileHeader(
+        relativePath: String,
+        filePath: Path,
+    ): String =
+        buildString {
+            appendLine("FILE: $relativePath")
+            appendLine("NAME: ${filePath.fileName}")
+            appendLine("EXT: ${filePath.extension.lowercase()}")
+            appendLine("---")
+        }
+
+    /** Prefer reading as UTF-8; if it fails, try platform default; then ASCII fallback. */
+    private fun safeReadText(path: Path): String =
+        try {
+            path.readText(defaultCharset)
+        } catch (_: Exception) {
+            try {
+                path.readText(Charset.defaultCharset())
+            } catch (_: Exception) {
+                String(Files.readAllBytes(path), Charsets.US_ASCII)
+            }
+        }
+
+    private fun tooLargeToIndex(path: Path): Boolean =
+        try {
+            Files.size(path) > maxFileBytes
+        } catch (_: Exception) {
+            false
+        }
+
+    /**
+     * Simple, fast character-based chunker with a tiny bit of format awareness.
+     * - JSON/XML get slightly smaller default chunks because they often lack whitespace.
+     * - We try to break at a newline boundary to reduce mid-token splits.
+     */
+    private fun chunkText(
+        s: String,
+        maxChars: Int,
+        overlapChars: Int,
+        extLower: String,
+    ): List<String> {
+        val effectiveMax =
+            when (extLower) {
+                "json", "xml" -> max(1500, (maxChars * 0.75).toInt()) // tighten for dense formats
+                else -> maxChars
+            }
+        val effectiveOverlap = min(overlapChars, effectiveMax / 4)
+
+        if (s.length <= effectiveMax) return listOf(s)
+
+        val chunks = ArrayList<String>()
+        var start = 0
+        while (start < s.length) {
+            var end = min(start + effectiveMax, s.length)
+
+            // Try to end on a newline boundary if reasonable
+            if (end < s.length) {
+                val lastNl = s.lastIndexOf('\n', end)
+                if (lastNl >= start + (effectiveMax / 2)) {
+                    end = min(lastNl + 1, s.length)
+                }
+            }
+
+            // Safety: avoid zero-advance
+            if (end <= start) end = min(start + effectiveMax, s.length)
+
+            chunks.add(s.substring(start, end))
+            if (end == s.length) break
+            start = max(0, end - effectiveOverlap)
+        }
+        return chunks
+    }
+
+    private fun throttle() {
+        if (perRequestSleepMs > 0) {
+            try {
+                Thread.sleep(perRequestSleepMs)
+            } catch (_: InterruptedException) {
+            }
+        }
+    }
+
+    private fun <T> withRetry(
+        attempts: Int = 4,
+        baseDelayMs: Long = 150,
+        block: () -> T,
+    ): T {
+        var last: Throwable? = null
+        for (i in 1..attempts) {
+            try {
+                return block()
+            } catch (e: Throwable) {
+                last = e
+                if (!isTransientEmbeddingError(e) || i == attempts) break
+                val backoff = baseDelayMs * (1L shl (i - 1)) // 150, 300, 600, 1200...
+                try {
+                    Thread.sleep(backoff)
+                } catch (_: InterruptedException) {
+                }
+            }
+        }
+        throw last ?: IllegalStateException("Unknown embedding error")
+    }
+
+    private fun isTransientEmbeddingError(e: Throwable): Boolean {
+        val msg = (e.message ?: "").lowercase()
+        // Covers EOF, timeouts, resets, and common gateway errors from local HTTP servers or proxies
+        return msg.contains("eof") ||
+            msg.contains("timeout") ||
+            msg.contains("timed out") ||
+            msg.contains("connection reset") ||
+            msg.contains("connection refused") ||
+            msg.contains("bad gateway") ||
+            msg.contains("service unavailable") ||
+            msg.contains("502") ||
+            msg.contains("503") ||
+            msg.contains("504")
     }
 
     private fun extractHost(jdbcUrl: String): String {
@@ -431,34 +596,6 @@ class PgVectorIndexer(
     private fun extractDatabase(jdbcUrl: String): String {
         val parts = jdbcUrl.split("/")
         return parts.lastOrNull()?.split("?")?.firstOrNull() ?: "askimo"
-    }
-
-    fun embed(text: String): List<Float> =
-        embeddingModel
-            .embed(text)
-            .content()
-            .vector()
-            .toList()
-
-    fun similaritySearch(
-        embedding: List<Float>,
-        topK: Int,
-    ): List<String> {
-        val embeddingStore = newStore()
-
-        val queryEmbedding =
-            dev.langchain4j.data.embedding.Embedding
-                .from(embedding.toFloatArray())
-        val results =
-            embeddingStore.search(
-                dev.langchain4j.store.embedding.EmbeddingSearchRequest
-                    .builder()
-                    .queryEmbedding(queryEmbedding)
-                    .maxResults(topK)
-                    .build(),
-            )
-
-        return results.matches().map { it.embedded().text() }
     }
 
     private fun ensureIndexes(
@@ -486,7 +623,7 @@ class PgVectorIndexer(
                 // trigram on file_path
                 """CREATE INDEX IF NOT EXISTS ${table}_file_path_trgm
            ON $table USING GIN ( ((metadata)::jsonb ->> 'file_path') gin_trgm_ops );""",
-                // ANN index on embedding
+                // ANN index on embedding (requires ANALYZE and some rows to be effective)
                 """CREATE INDEX IF NOT EXISTS ${table}_embedding_ivfflat
            ON $table USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);""",
                 "ANALYZE $table;",
@@ -499,7 +636,6 @@ class PgVectorIndexer(
                     try {
                         st.execute(sql.trimIndent())
                     } catch (e: Exception) {
-                        // Log and continue so one issue (e.g., missing column) doesn't block others
                         System.err.println("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
                     }
                 }
