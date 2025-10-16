@@ -4,7 +4,8 @@
  */
 package io.askimo.core.session
 
-import io.askimo.cli.Logger.log
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,11 +41,12 @@ object SessionConfigManager {
                         appJson.decodeFromString<SessionParams>(it.readText())
                     }
                 } catch (e: Exception) {
-                    println("⚠️ Failed to parse config file at $configPath. Using default configuration.")
+                    info("⚠️ Failed to parse config file at $configPath. Using default configuration.")
+                    debug(e)
                     SessionParams.noOp()
                 }
             } else {
-                println("⚠️ Config file not found at $configPath. Using default configuration.")
+                info("⚠️ Config file not found at $configPath. Using default configuration.")
                 SessionParams.noOp()
             }
 
@@ -66,11 +68,11 @@ object SessionConfigManager {
                 ).use {
                     it.write(appJson.encodeToString(params))
                 }
-            cached = params // update cache immediately
-            log { "Saving config to: $configPath successfully." }
+            cached = params
+            info("Saving config to: $configPath successfully.")
         } catch (e: Exception) {
-            e.printStackTrace()
-            System.err.println("❌ Failed to save session config to $configPath: ${e.message}")
+            info("❌ Failed to save session config to $configPath: ${e.message}")
+            debug(e)
         }
     }
 

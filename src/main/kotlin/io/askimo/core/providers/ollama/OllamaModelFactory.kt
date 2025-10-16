@@ -13,6 +13,8 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
@@ -38,7 +40,8 @@ class OllamaModelFactory : ChatModelFactory {
                 }.filter { it.isNotBlank() }
                 .distinct()
         } catch (e: Exception) {
-            println("⚠️ Failed to fetch models from Ollama: ${e.message}")
+            info("⚠️ Failed to fetch models from Ollama: ${e.message}")
+            debug(e)
             emptyList()
         }
 

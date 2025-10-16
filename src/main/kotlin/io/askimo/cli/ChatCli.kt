@@ -37,7 +37,8 @@ import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
-import io.askimo.core.util.Prompts
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.web.WebServer
 import org.jline.keymap.KeyMap
 import org.jline.reader.LineReader
@@ -140,9 +141,6 @@ fun main(args: Array<String>) {
 
                 mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
                 mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
-
-                // 🔑 Init Prompts here so some commands (such as :db add) can use ask/askSecret/askBool/askInt
-                Prompts.init(reader)
 
                 terminal.writer().println("askimo> Ask anything. Type :help for commands.")
                 terminal.writer().println("💡 Tip 1: Press Ctrl+J for a new line, Enter to send.")
@@ -270,7 +268,8 @@ fun main(args: Array<String>) {
                 out.flush()
             }
         } catch (e: IOException) {
-            System.err.println("❌ Error: ${e.message}")
+            info("❌ Error: ${e.message}")
+            debug(e)
         }
     }
 }
@@ -342,7 +341,7 @@ private fun buildPrompt(
 
 private fun printFullVersionInfo() {
     val a = VersionInfo
-    println(
+    info(
         """
         ${a.name} ${a.version}
         Author: ${a.author}
@@ -385,7 +384,7 @@ private fun runYamlCommand(
     name: String,
     overrides: Map<String, String>,
 ) {
-    println("🚀 Running recipe '$name'…")
+    info("🚀 Running recipe '$name'…")
 
     val toolRegistry = ToolRegistry.defaults()
 

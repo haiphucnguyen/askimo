@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.util.Logger.info
 import java.io.File
 
 class PatchApplier {
@@ -28,7 +29,7 @@ class PatchApplier {
         val output = proc.inputStream.bufferedReader().readText()
         val ok = proc.waitFor() == 0
         if (!ok) {
-            System.err.println(output)
+            info(output)
             // rollback temp branch
             exec(root, "git", "reset", "--hard")
             exec(root, "git", "checkout", "-")
@@ -54,7 +55,7 @@ class PatchApplier {
                 .start()
         val out = p.inputStream.bufferedReader().readText()
         val success = p.waitFor() == 0
-        if (!success) System.err.println(out)
+        if (!success) info(out)
         return success
     }
 }

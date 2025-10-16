@@ -4,6 +4,8 @@
  */
 package io.askimo.core.providers
 
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -37,7 +39,8 @@ object ProviderModelUtils {
                     .sorted()
             }
         } catch (e: Exception) {
-            println("⚠️ Failed to fetch models from $providerName: ${e.message}")
+            info("⚠️ Failed to fetch models from $providerName: ${e.message}")
+            debug(e)
             emptyList()
         }
 }

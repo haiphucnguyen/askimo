@@ -7,6 +7,7 @@ package io.askimo.core.recipes
 import io.askimo.cli.LoadingIndicator
 import io.askimo.core.providers.chat
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -104,7 +105,7 @@ class RecipeExecutor(
                 tools.invoke(action.call.tool, resolvedArgs)
             }
         }
-        println(formatted)
+        info(formatted)
     }
 
     private fun resolveArgs(

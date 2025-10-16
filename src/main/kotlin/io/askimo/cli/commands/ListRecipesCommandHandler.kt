@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -15,7 +16,7 @@ class ListRecipesCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val dir = Paths.get(System.getProperty("user.home"), ".askimo", "recipes")
         if (!Files.exists(dir)) {
-            println("ℹ️  No recipes registered yet.")
+            info("ℹ️  No recipes registered yet.")
             return
         }
 
@@ -27,14 +28,14 @@ class ListRecipesCommandHandler : CommandHandler {
                 .toList()
 
         if (files.isEmpty()) {
-            println("ℹ️  No recipes registered.")
+            info("ℹ️  No recipes registered.")
             return
         }
 
-        println("📦 Registered recipes (${files.size})")
-        println("────────────────────────────")
+        info("📦 Registered recipes (${files.size})")
+        info("────────────────────────────")
         files.forEach {
-            println(it.fileName.toString().removeSuffix(".yml"))
+            info(it.fileName.toString().removeSuffix(".yml"))
         }
     }
 }

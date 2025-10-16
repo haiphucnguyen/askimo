@@ -7,6 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.ParamKey
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.Masking
 import org.jline.reader.ParsedLine
 
@@ -36,17 +37,16 @@ class ParamsCommandHandler(
         val settings = session.getCurrentProviderSettings()
         val model = resolveCurrentModel(settings)
 
-        println("Provider : ${provider.name.lowercase()}")
-        println("Model    : $model")
-        println()
+        info("Provider : ${provider.name.lowercase()}")
+        info("Model    : $model")
 
         val keys = ParamKey.supportedFor(settings)
         if (keys.isEmpty()) {
-            println("No configurable parameters for this provider.")
+            info("No configurable parameters for this provider.")
             return
         }
 
-        println("Parameters (current values):")
+        info("Parameters (current values):")
         keys.forEach { key ->
             val raw = safeGetValue(key, settings)
             val shown =
@@ -62,12 +62,12 @@ class ParamsCommandHandler(
                     ""
                 }
 
-            println("  ${key.key} = $shown  (${key.type}) – ${key.description}$sugg")
+            info("  ${key.key} = $shown  (${key.type}) – ${key.description}$sugg")
         }
 
-        println()
-        println("Use :set-param <key> <value> to change parameters.")
-        println("Use :params --list to see available keys without values.")
+        
+        info("Use :set-param <key> <value> to change parameters.")
+        info("Use :params --list to see available keys without values.")
     }
 
     private fun listKeys() {
@@ -75,7 +75,7 @@ class ParamsCommandHandler(
         val settings = session.getCurrentProviderSettings()
         val model = resolveCurrentModel(settings)
 
-        println("Available parameter keys for $model ($provider):")
+        info("Available parameter keys for $model ($provider):")
         ParamKey.supportedFor(settings).forEach { key ->
             val secureBadge = if (key.secure) " 🔒" else ""
             val sugg =
@@ -85,7 +85,7 @@ class ParamsCommandHandler(
                     ""
                 }
 
-            println("  ${key.key}$secureBadge (${key.type}) – ${key.description}$sugg")
+            info("  ${key.key}$secureBadge (${key.type}) – ${key.description}$sugg")
         }
     }
 

@@ -4,15 +4,17 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.util.Logger.info
+
 object DiffPreview {
     fun print(summary: DiffInspector.Summary) {
-        println("📝 Preview: ${summary.changedFiles} file(s), +${summary.totalAdded} / -${summary.totalRemoved} lines")
+        info("📝 Preview: ${summary.changedFiles} file(s), +${summary.totalAdded} / -${summary.totalRemoved} lines")
     }
 
     /** Simple pass-through; you can colorize later. */
     fun printUnified(diff: String) {
-        println("----- BEGIN DIFF -----")
-        println(diff)
-        println("------ END DIFF ------")
+        info("----- BEGIN DIFF -----")
+        info(diff)
+        info("------ END DIFF ------")
     }
 }

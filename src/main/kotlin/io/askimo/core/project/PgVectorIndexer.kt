@@ -12,6 +12,8 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -636,7 +638,8 @@ class PgVectorIndexer(
                     try {
                         st.execute(sql.trimIndent())
                     } catch (e: Exception) {
-                        System.err.println("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
+                        info("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
+                        debug(e)
                     }
                 }
             }

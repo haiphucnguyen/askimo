@@ -4,11 +4,11 @@
  */
 package io.askimo.core.session
 
-import io.askimo.cli.Logger.log
 import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.util.Logger.debug
 
 object SessionFactory {
     @Volatile
@@ -57,7 +57,7 @@ object SessionFactory {
     fun reloadFromDisk(): Session = createSession(SessionConfigManager.load(), forceReload = true)
 
     private fun buildSession(params: SessionParams): Session {
-        log { "Building session with params: $params" }
+        debug( "Building session with params: $params" )
 
         val session = Session(params)
         val provider = session.params.currentProvider

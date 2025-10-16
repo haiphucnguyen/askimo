@@ -5,6 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -24,12 +25,12 @@ class CopyCommandHandler(
     override fun handle(line: ParsedLine) {
         val response = session.lastResponse
         if (response.isNullOrBlank()) {
-            println("⚠️ No response to copy. Ask something first.")
+            info("⚠️ No response to copy. Ask something first.")
             return
         }
 
         if (copyToClipboard(response)) {
-            println("✅ Copied last response to clipboard.")
+            info("✅ Copied last response to clipboard.")
         }
     }
 
@@ -60,20 +61,20 @@ class CopyCommandHandler(
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
                         else -> {
-                            println("⚠️ No clipboard utility found (xclip or xsel). Install one to enable copying.")
+                            info("⚠️ No clipboard utility found (xclip or xsel). Install one to enable copying.")
                             return false
                         }
                     }
                 }
                 else -> {
-                    println("⚠️ Clipboard not supported on this OS.")
+                    info("⚠️ Clipboard not supported on this OS.")
                     return false
                 }
             }
 
             true
         } catch (e: Exception) {
-            println("❌ Failed to copy to clipboard: ${e.message}")
+            info("❌ Failed to copy to clipboard: ${e.message}")
             false
         }
     }

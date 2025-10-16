@@ -6,6 +6,7 @@ package io.askimo.web
 
 import io.askimo.core.providers.chat
 import io.askimo.core.session.SessionFactory
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -60,7 +61,7 @@ class WebServer(
                         install(ContentNegotiation) { json(appJson) }
 
                         val session = SessionFactory.createSession()
-                        println("Web server running at http://$host:$attemptPort")
+                        info("Web server running at http://$host:$attemptPort")
                         routing {
                             post("/api/chat/stream") {
                                 val raw = call.receiveText()
@@ -103,7 +104,7 @@ class WebServer(
                 server = engine
                 boundPort = attemptPort
 
-                println("Web server running at http://$host:$attemptPort")
+                info("Web server running at http://$host:$attemptPort")
                 return
             } catch (t: Throwable) {
                 lastError = t
@@ -117,7 +118,7 @@ class WebServer(
                     throw t
                 }
 
-                println("Port $attemptPort is in use; trying ${attemptPort + 1}…")
+                info("Port $attemptPort is in use; trying ${attemptPort + 1}…")
                 attemptPort++
             }
         }

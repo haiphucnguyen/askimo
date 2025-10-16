@@ -8,6 +8,8 @@ import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -24,31 +26,31 @@ class CreateProjectCommandHandler(
         val args = line.words().drop(1)
         val (name, dir) =
             parseArgs(args) ?: run {
-                println("Usage: :create-project -n <project-name> -d <project-folder>")
+                info("Usage: :create-project -n <project-name> -d <project-folder>")
                 return
             }
 
         val projectPath = Paths.get(dir).toAbsolutePath().normalize()
         if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
-            println("❌ Folder does not exist or is not a directory: $projectPath")
+            info("❌ Folder does not exist or is not a directory: $projectPath")
             return
         }
 
         if (ProjectStore.getByName(name) != null) {
-            println("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
+            info("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
             return
         }
 
-        println("🐘 Starting local Postgres+pgvector (Testcontainers)…")
+        info("🐘 Starting local Postgres+pgvector (Testcontainers)…")
         val pg =
             try {
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
-                println("❌ Failed to start Postgres container: ${e.message}")
-                e.printStackTrace()
+                info("❌ Failed to start Postgres container: ${e.message}")
+                debug(e);
                 return
             }
-        println("✅ Postgres ready on ${pg.jdbcUrl}")
+        info("✅ Postgres ready on ${pg.jdbcUrl}")
 
         val indexer =
             PgVectorIndexer(
@@ -56,30 +58,31 @@ class CreateProjectCommandHandler(
                 session = session,
             )
 
-        println("🔎 Indexing project '$name' at $projectPath …")
+        info("🔎 Indexing project '$name' at $projectPath …")
         try {
             val count = indexer.indexProject(projectPath)
-            println("✅ Indexed $count documents into pgvector (project '$name').")
+            info("✅ Indexed $count documents into pgvector (project '$name').")
         } catch (e: Exception) {
-            println("❌ Index failed: ${e.message}")
-            e.printStackTrace()
+            info("❌ Index failed: ${e.message}")
+            debug(e)
         }
 
         val meta =
             try {
                 ProjectStore.create(name, projectPath.toString())
             } catch (e: IllegalStateException) {
-                println("⚠️ ${e.message}")
+                info("⚠️ ${e.message}")
+                debug(e)
                 ProjectStore.getByName(name) ?: return
             }
 
-        println("🗂️  Saved project '${meta.name}' as ${meta.id} → ${meta.root}")
-        println("⭐ Active project set to '${meta.name}'")
+        info("🗂️  Saved project '${meta.name}' as ${meta.id} → ${meta.root}")
+        info("⭐ Active project set to '${meta.name}'")
 
         // Keep existing session wiring (compat shim for old type if needed)
         session.setScope(meta)
         session.enableRagWith(indexer)
-        println("🧠 RAG enabled for project '${meta.name}' (scope set).")
+        info("🧠 RAG enabled for project '${meta.name}' (scope set).")
     }
 
     private fun parseArgs(args: List<String>): Pair<String, String>? {

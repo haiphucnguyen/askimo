@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
+import io.ktor.util.reflect.typeInfo
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -127,11 +130,11 @@ object AppConfig {
             try {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
-                System.err.println("Config parse failed at $path → ${e.message}")
+                info("Config parse failed at $path ")
+                debug( e)
                 envFallback()
             }
         } else {
-            // Shouldn’t happen, but just in case
             envFallback()
         }
     }
@@ -194,11 +197,12 @@ object AppConfig {
             }
             Files.writeString(target, DEFAULT_YAML)
             // Best-effort log
-            println("📝 Created default config at $target")
+            info("📝 Created default config at $target")
         } catch (e: FileAlreadyExistsException) {
-            // Race with another thread/process: ignore
+            debug(e)
         } catch (e: Exception) {
-            System.err.println("Failed to create default config at $target → ${e.message}")
+            info("Failed to create default config at $target → ${e.message}")
+            debug(e)
         }
     }
 

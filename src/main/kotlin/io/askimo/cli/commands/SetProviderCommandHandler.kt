@@ -10,6 +10,7 @@ import io.askimo.core.providers.ProviderValidator
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -29,7 +30,7 @@ class SetProviderCommandHandler(
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            println("❌ Usage: :set-provider <provider>")
+            info("❌ Usage: :set-provider <provider>")
             return
         }
 
@@ -37,20 +38,20 @@ class SetProviderCommandHandler(
         val provider = runCatching { ModelProvider.valueOf(input) }.getOrNull()
 
         if (provider == null) {
-            println("❌ Unknown provider: '$input'")
-            println("💡 Use `:providers` to list all supported model providers.")
+            info("❌ Unknown provider: '$input'")
+            info("💡 Use `:providers` to list all supported model providers.")
             return
         }
 
         if (!ProviderRegistry.getSupportedProviders().contains(provider)) {
-            println("❌ Provider '$input' is not registered.")
-            println("💡 Use `:providers` to see which providers are currently available.")
+            info("❌ Provider '$input' is not registered.")
+            info("💡 Use `:providers` to see which providers are currently available.")
             return
         }
 
         val factory = session.getModelFactory(provider)
         if (factory == null) {
-            println("❌ No factory registered for provider: ${provider.name.lowercase()}")
+            info("❌ No factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
@@ -72,15 +73,14 @@ class SetProviderCommandHandler(
         SessionConfigManager.save(session.params)
         session.rebuildActiveChatService(KEEP_PER_PROVIDER_MODEL)
 
-        println("✅ Model provider set to: ${provider.name.lowercase()}")
-        println("💡 Use `:models` to list all available models for this provider.")
-        println("💡 Then use `:set-param model <modelName>` to choose one.")
+        info("✅ Model provider set to: ${provider.name.lowercase()}")
+        info("💡 Use `:models` to list all available models for this provider.")
+        info("💡 Then use `:set-param model <modelName>` to choose one.")
 
         if (!ProviderValidator.validate(provider, session.getCurrentProviderSettings())) {
-            println()
-            println("⚠️  This provider isn't fully configured yet.")
-            println(ProviderValidator.getHelpText(provider))
-            println("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
+            info("⚠️  This provider isn't fully configured yet.")
+            info(ProviderValidator.getHelpText(provider))
+            info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
         }
     }
 }

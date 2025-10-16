@@ -8,6 +8,7 @@ import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -29,7 +30,7 @@ class ModelsCommandHandler(
         val factory = ProviderRegistry.getFactory(provider)
 
         if (factory == null) {
-            println("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+            info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
@@ -39,11 +40,11 @@ class ModelsCommandHandler(
                     ?: factory.defaultSettings(),
             )
         if (models.isEmpty()) {
-            println("⚠️ No models available for provider: ${provider.name.lowercase()}")
+            info("⚠️ No models available for provider: ${provider.name.lowercase()}")
 
             when (provider) {
                 OLLAMA -> {
-                    println(
+                    info(
                         """
                         💡 You may not have any models installed yet.
 
@@ -56,7 +57,7 @@ class ModelsCommandHandler(
                     )
                 }
                 OPEN_AI -> {
-                    println(
+                    info(
                         """
                         💡 One possible reason is that you haven't provided your OpenAI API key yet.
 
@@ -71,10 +72,10 @@ class ModelsCommandHandler(
                 else -> {}
             }
         } else {
-            println("Available models for provider '${provider.name.lowercase()}':")
-            models.forEach { println("- $it") }
+            info("Available models for provider '${provider.name.lowercase()}':")
+            models.forEach { info("- $it") }
         }
 
-        println("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
+        info("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
     }
 }

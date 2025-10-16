@@ -8,6 +8,8 @@ import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -33,21 +35,21 @@ class UseProjectCommandHandler(
         val args = line.words().drop(1)
         val key = args.firstOrNull()
         if (key.isNullOrBlank()) {
-            println("Usage: :project <project-name|project-id>")
+            info("Usage: :project <project-name|project-id>")
             return
         }
 
         // Resolve by id first, then by name (case-insensitive)
         val meta = ProjectStore.getById(key) ?: ProjectStore.getByName(key)
         if (meta == null) {
-            println("❌ Project '$key' not found. Use :projects to list.")
+            info("❌ Project '$key' not found. Use :projects to list.")
             return
         }
 
         val projectPath = Paths.get(meta.root)
         if (!Files.isDirectory(projectPath)
         ) {
-            println("⚠️ Saved path does not exist anymore: ${meta.root}")
+            info("⚠️ Saved path does not exist anymore: ${meta.root}")
             return
         }
 
@@ -55,16 +57,16 @@ class UseProjectCommandHandler(
         try {
             ProjectStore.setActive(meta.id)
         } catch (e: Exception) {
-            println("⚠️ Could not set active project pointer: ${e.message}")
+            info("⚠️ Could not set active project pointer: ${e.message}")
         }
 
-        println("🐘 Ensuring Postgres+pgvector is running…")
+        info("🐘 Ensuring Postgres+pgvector is running…")
         val pg =
             try {
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
-                println("❌ Failed to start Postgres container: ${e.message}")
-                e.printStackTrace()
+                info("❌ Failed to start Postgres container: ${e.message}")
+                debug(e)
                 return
             }
 
@@ -77,8 +79,8 @@ class UseProjectCommandHandler(
         session.setScope(meta)
         session.enableRagWith(indexer)
 
-        println("✅ Active project: '${meta.name}'  (id=${meta.id})")
-        println("   ↳ ${meta.root}")
-        println("🧠 RAG enabled for '${meta.name}'.")
+        info("✅ Active project: '${meta.name}'  (id=${meta.id})")
+        info("   ↳ ${meta.root}")
+        info("🧠 RAG enabled for '${meta.name}'.")
     }
 }

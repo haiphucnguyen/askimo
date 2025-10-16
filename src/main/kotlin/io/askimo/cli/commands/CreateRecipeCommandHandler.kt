@@ -5,6 +5,8 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.recipes.RecipeDef
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.Yaml.yamlMapper
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
@@ -23,13 +25,13 @@ class CreateRecipeCommandHandler : CommandHandler {
         val args = line.words().drop(1)
         val (maybeName, templatePath) =
             parseArgs(args) ?: run {
-                println("Usage: :create-recipe <name?> -template <file.yml>")
+                info("Usage: :create-recipe <name?> -template <file.yml>")
                 return
             }
 
         val src = expandHome(templatePath!!)
         if (!src.exists()) {
-            println("❌ Template not found: $src")
+            info("❌ Template not found: $src")
             return
         }
 
@@ -37,7 +39,7 @@ class CreateRecipeCommandHandler : CommandHandler {
             try {
                 yamlMapper.readValue(src.readText(), RecipeDef::class.java)
             } catch (e: Exception) {
-                println("❌ Invalid YAML (${e.message})")
+                info("❌ Invalid YAML (${e.message})")
                 return
             }
 
@@ -46,7 +48,7 @@ class CreateRecipeCommandHandler : CommandHandler {
                 !maybeName.isNullOrBlank() -> maybeName
                 defFromFile.name.isNotBlank() -> defFromFile.name
                 else -> {
-                    println("❌ Recipe name missing. Provide it as first arg or in YAML `name:`.")
+                    info("❌ Recipe name missing. Provide it as first arg or in YAML `name:`.")
                     return
                 }
             }
@@ -55,14 +57,14 @@ class CreateRecipeCommandHandler : CommandHandler {
         try {
             Files.createDirectories(targetDir)
         } catch (e: Exception) {
-            println("❌ Cannot create recipes dir: $targetDir (${e.message})")
+            info("❌ Cannot create recipes dir: $targetDir (${e.message})")
             return
         }
 
         val dst = targetDir.resolve("$name.yml")
         if (Files.exists(dst)) {
-            println("⚠️ Recipe '$name' already exists at $dst")
-            println("   Delete it first or choose a different name.")
+            info("⚠️ Recipe '$name' already exists at $dst")
+            info("   Delete it first or choose a different name.")
             return
         }
 
@@ -73,19 +75,20 @@ class CreateRecipeCommandHandler : CommandHandler {
                 // pretty writer is fine; order may differ but schema is kept
                 yamlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(normalized)
             } catch (e: Exception) {
-                println("❌ Failed to serialize YAML (${e.message})")
+                info("❌ Failed to serialize YAML (${e.message})")
                 return
             }
 
         try {
             Files.writeString(dst, yamlOut)
         } catch (e: Exception) {
-            println("❌ Failed to write: $dst (${e.message})")
+            info("❌ Failed to write: $dst (${e.message})")
+            debug(e)
             return
         }
 
-        println("✅ Registered recipe '$name' at $dst")
-        println("➡  Run: askimo -r $name")
+        info("✅ Registered recipe '$name' at $dst")
+        info("➡  Run: askimo -r $name")
     }
 
     private fun parseArgs(args: List<String>): Pair<String?, String?>? {

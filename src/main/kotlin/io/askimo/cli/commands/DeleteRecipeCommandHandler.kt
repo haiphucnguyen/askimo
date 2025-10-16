@@ -4,6 +4,8 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -15,29 +17,30 @@ class DeleteRecipeCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            println("Usage: :delete-recipe <name>")
+            info("Usage: :delete-recipe <name>")
             return
         }
 
         val name = args[0]
         val path = Paths.get(System.getProperty("user.home"), ".askimo", "recipes", "$name.yml")
         if (!Files.exists(path)) {
-            println("❌ Recipe '$name' not found.")
+            info("❌ Recipe '$name' not found.")
             return
         }
 
         print("⚠️  Delete recipe '$name'? [y/N]: ")
         val confirm = readlnOrNull()?.trim()?.lowercase()
         if (confirm != "y") {
-            println("✋ Aborted.")
+            info("✋ Aborted.")
             return
         }
 
         try {
             Files.delete(path)
-            println("🗑️  Deleted '$name'")
+            info("🗑️  Deleted '$name'")
         } catch (e: Exception) {
-            println("❌ Failed to delete: ${e.message}")
+            info("❌ Failed to delete: ${e.message}")
+            debug(e)
         }
     }
 }

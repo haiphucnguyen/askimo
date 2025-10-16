@@ -7,6 +7,8 @@ package io.askimo.cli.commands
 import io.askimo.core.project.PgVectorAdmin
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 class DeleteProjectCommandHandler : CommandHandler {
@@ -18,7 +20,7 @@ class DeleteProjectCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            println("Usage: :delete-project <project-name>")
+            info("Usage: :delete-project <project-name>")
             return
         }
 
@@ -27,26 +29,26 @@ class DeleteProjectCommandHandler : CommandHandler {
         // Lookup by name in the new per-project store
         val meta = ProjectStore.getByName(name)
         if (meta == null) {
-            println("❌ Project '$name' not found. Use :projects to list.")
+            info("❌ Project '$name' not found. Use :projects to list.")
             return
         }
 
         // 1) Soft-delete the per-project file (moves to ~/.askimo/trash)
         val removed = ProjectStore.softDelete(meta.id)
         if (!removed) {
-            println("ℹ️  Project '${meta.name}' was not removed (already missing).")
+            info("ℹ️  Project '${meta.name}' was not removed (already missing).")
             return
         }
-        println("🗂️  Removed project '${meta.name}' (id=${meta.id}) from registry.")
+        info("🗂️  Removed project '${meta.name}' (id=${meta.id}) from registry.")
 
         // 2) Drop pgvector table for this project (still keyed by project *name* in MVP)
-        println("🐘 Ensuring Postgres+pgvector is running…")
+        info("🐘 Ensuring Postgres+pgvector is running…")
         val pg =
             try {
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
-                println("⚠️ Soft-deleted metadata, but could not connect to Postgres to drop embeddings: ${e.message}")
-                e.printStackTrace()
+                info("⚠️ Soft-deleted metadata, but could not connect to Postgres to drop embeddings: ${e.message}")
+                debug(e)
                 return
             }
 
@@ -54,10 +56,10 @@ class DeleteProjectCommandHandler : CommandHandler {
             val base = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings"
             val table = PgVectorAdmin.projectTableName(base, meta.name) // MVP: table keyed by name
             PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, meta.name)
-            println("🧹 Dropped embeddings table \"$table\" for project '${meta.name}'.")
+            info("🧹 Dropped embeddings table \"$table\" for project '${meta.name}'.")
         } catch (e: Exception) {
-            println("⚠️ Metadata removed, but failed to drop embeddings for '${meta.name}': ${e.message}")
-            e.printStackTrace()
+            info("⚠️ Metadata removed, but failed to drop embeddings for '${meta.name}': ${e.message}")
+            debug(e)
         }
     }
 }

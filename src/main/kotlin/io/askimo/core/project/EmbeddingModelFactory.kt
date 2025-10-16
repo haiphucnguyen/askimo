@@ -17,6 +17,8 @@ import io.askimo.core.providers.ModelProvider.X_AI
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -69,7 +71,7 @@ private fun noteOllamaRequired(provider: ModelProvider) {
     if (warnedOllamaOnce.compareAndSet(false, true)) {
         val model = System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
         val url = System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-        println(
+        info(
             """
             ℹ️  ${provider.name} does not provide embeddings. Askimo uses local Ollama for RAG embeddings.
                • Ollama URL: $url
@@ -95,13 +97,13 @@ private fun ensureOllamaAvailable(
 
     // ⛓️ Pull synchronously; returns only when the model is ready
     if (!pullSync(baseUrl, model)) {
-        error("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
+        info("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
     }
 
     // One re-check (no polling needed since pullSync blocks)
     val after = getTags(baseUrl, readMs = 8_000) ?: error(notReachable(baseUrl, model))
     if (!hasModel(after, model)) {
-        error("❌ Ollama model '$model' still not listed after synchronous pull.")
+        info("❌ Ollama model '$model' still not listed after synchronous pull.")
     }
 }
 
@@ -127,7 +129,8 @@ private fun pullSync(
             ?.bufferedReader()
             ?.use { it.readText() }
         code in 200..299
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        debug(e)
         false
     }
 

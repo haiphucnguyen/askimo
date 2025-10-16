@@ -6,6 +6,7 @@ package io.askimo.cli.commands
 
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.ProjectStore
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -21,7 +22,7 @@ class ListProjectsCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val metas = ProjectStore.list()
         if (metas.isEmpty()) {
-            println("ℹ️  No projects saved yet. Use :create-project to add one.")
+            info("ℹ️  No projects saved yet. Use :create-project to add one.")
             return
         }
 
@@ -35,7 +36,7 @@ class ListProjectsCommandHandler : CommandHandler {
                     .thenBy { it.name.lowercase() },
             )
 
-        println("📚 Projects:")
+        info("📚 Projects:")
         projects.forEachIndexed { i, p ->
             val isActive = (p.id == activeId)
             val rootDisp = p.root.replaceFirst(home, "~")
@@ -52,7 +53,7 @@ class ListProjectsCommandHandler : CommandHandler {
             val missing = if (exists) "" else "  (missing)"
             val star = if (isActive) "⭐ " else "   "
 
-            println(
+            info(
                 "%s%2d. %-20s  id=%s\n      ↳ %s%s".format(
                     star,
                     i + 1,

@@ -6,6 +6,7 @@ package io.askimo.cli.commands
 
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -25,18 +26,18 @@ class ConfigCommandHandler(
         val provider = session.getActiveProvider()
         val settings = session.getCurrentProviderSettings()
 
-        println("🔧 Current configuration:")
-        println("  Provider:    $provider")
-        println("  Model:       ${if (session.hasChatService()) session.params.model else "(not set)"}")
-        println("  Settings:")
+        info("🔧 Current configuration:")
+        info("  Provider:    $provider")
+        info("  Model:       ${if (session.hasChatService()) session.params.model else "(not set)"}")
+        info("  Settings:")
 
         settings.describe().forEach {
-            println("    $it")
+            info("    $it")
         }
 
         val active = ProjectStore.getActive()
         if (active == null) {
-            println("  Active project: (none)")
+            info("  Active project: (none)")
         } else {
             val (meta, ptr) = active
             val exists =
@@ -51,13 +52,13 @@ class ConfigCommandHandler(
                 }
             val home = System.getProperty("user.home")
             val rootDisp = meta.root.replaceFirst(home, "~")
-            println("  Active project:")
-            println("    Name:       ${meta.name}")
-            println("    ID:         ${meta.id}")
-            println("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
-            println("    Selected:   ${ptr.selectedAt}")
-            println("    Created:    ${meta.createdAt}")
-            println("    Last used:  ${meta.lastUsedAt}")
+            info("  Active project:")
+            info("    Name:       ${meta.name}")
+            info("    ID:         ${meta.id}")
+            info("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
+            info("    Selected:   ${ptr.selectedAt}")
+            info("    Created:    ${meta.createdAt}")
+            info("    Last used:  ${meta.lastUsedAt}")
         }
     }
 }

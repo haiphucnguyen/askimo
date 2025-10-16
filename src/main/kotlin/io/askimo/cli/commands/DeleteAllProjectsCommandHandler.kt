@@ -7,6 +7,8 @@ package io.askimo.cli.commands
 import io.askimo.core.project.PgVectorAdmin
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 class DeleteAllProjectsCommandHandler : CommandHandler {
@@ -32,21 +34,21 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
             try {
                 ProjectStore.list()
             } catch (e: Exception) {
-                println("❌ Could not list projects: ${e.message}")
-                e.printStackTrace()
+                info("❌ Could not list projects: ${e.message}")
+                debug(e)
                 return
             }
 
         if (projects.isEmpty()) {
-            println("ℹ️  No projects found.")
+            info("ℹ️  No projects found.")
             return
         }
 
-        println("🗂️  Found ${projects.size} project(s):")
-        projects.forEachIndexed { i, p -> println("   ${i + 1}. ${p.name} (id=${p.id})") }
+        info("🗂️  Found ${projects.size} project(s):")
+        projects.forEachIndexed { i, p -> info("   ${i + 1}. ${p.name} (id=${p.id})") }
 
         if (dryRun) {
-            println(
+            info(
                 "🔎 DRY RUN: Would soft-delete ${projects.size} metadata file(s) " +
                     (if (keepEmbeddings) "and keep embeddings" else "and drop corresponding embeddings tables") + ".",
             )
@@ -54,14 +56,14 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
         }
 
         if (!force) {
-            println(
+            info(
                 "\n⚠️  This will DELETE ALL projects (soft-delete metadata) " +
                     (if (keepEmbeddings) "and keep embeddings tables." else "and DROP their embeddings tables.") +
                     "\nType EXACTLY: DELETE ALL  to continue, or anything else to abort.",
             )
             val confirm = readLine()?.trim()
             if (confirm != "DELETE ALL") {
-                println("✅ Aborted.")
+                info("✅ Aborted.")
                 return
             }
         }
@@ -74,13 +76,13 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
                 val removed = ProjectStore.softDelete(meta.id)
                 if (removed) {
                     softDeletedCount++
-                    println("🗑️  Soft-deleted '${meta.name}' (id=${meta.id}).")
+                    info("🗑️  Soft-deleted '${meta.name}' (id=${meta.id}).")
                 } else {
-                    println("ℹ️  '${meta.name}' (id=${meta.id}) was already removed.")
+                    info("ℹ️  '${meta.name}' (id=${meta.id}) was already removed.")
                 }
             } catch (e: Exception) {
                 softDeleteFailures += meta.name to e
-                println("⚠️  Failed to remove '${meta.name}': ${e.message}")
+                info("⚠️  Failed to remove '${meta.name}': ${e.message}")
             }
         }
 
@@ -88,12 +90,12 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
         var embeddingsDropped = 0
         val embeddingFailures = mutableListOf<Pair<String, Throwable>>()
         if (!keepEmbeddings) {
-            println("🐘 Ensuring Postgres+pgvector is running…")
+            info("🐘 Ensuring Postgres+pgvector is running…")
             val pg =
                 try {
                     PostgresContainerManager.startIfNeeded()
                 } catch (e: Exception) {
-                    println("⚠️  Metadata removed, but could not connect to Postgres to drop embeddings: ${e.message}")
+                    info("⚠️  Metadata removed, but could not connect to Postgres to drop embeddings: ${e.message}")
                     null
                 }
 
@@ -104,36 +106,36 @@ class DeleteAllProjectsCommandHandler : CommandHandler {
                         val table = PgVectorAdmin.projectTableName(base, meta.name)
                         PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, meta.name)
                         embeddingsDropped++
-                        println("🧹 Dropped embeddings table \"$table\" for '${meta.name}'.")
+                        info("🧹 Dropped embeddings table \"$table\" for '${meta.name}'.")
                     } catch (e: Exception) {
                         embeddingFailures += meta.name to e
-                        println("⚠️  Failed to drop embeddings for '${meta.name}': ${e.message}")
+                        info("⚠️  Failed to drop embeddings for '${meta.name}': ${e.message}")
                     }
                 }
             }
         }
 
-        println("\n===== Summary =====")
-        println("Soft-deleted metadata: $softDeletedCount / ${projects.size}")
+        info("\n===== Summary =====")
+        info("Soft-deleted metadata: $softDeletedCount / ${projects.size}")
         if (softDeleteFailures.isNotEmpty()) {
-            println("Soft-delete failures (${softDeleteFailures.size}):")
+            info("Soft-delete failures (${softDeleteFailures.size}):")
             softDeleteFailures.forEach { (name, ex) ->
-                println("  - $name → ${ex.message}")
+                info("  - $name → ${ex.message}")
             }
         }
 
         if (!keepEmbeddings) {
-            println("Embeddings tables dropped: $embeddingsDropped / ${projects.size}")
+            info("Embeddings tables dropped: $embeddingsDropped / ${projects.size}")
             if (embeddingFailures.isNotEmpty()) {
-                println("Embeddings drop failures (${embeddingFailures.size}):")
+                info("Embeddings drop failures (${embeddingFailures.size}):")
                 embeddingFailures.forEach { (name, ex) ->
-                    println("  - $name → ${ex.message}")
+                    info("  - $name → ${ex.message}")
                 }
             }
         } else {
-            println("Embeddings: kept (per --keep-embeddings).")
+            info("Embeddings: kept (per --keep-embeddings).")
         }
 
-        println("===================")
+        info("===================")
     }
 }

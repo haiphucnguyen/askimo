@@ -5,6 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.session.Session
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -26,6 +27,6 @@ class ClearMemoryCommandHandler(
 
         session.removeMemory(provider, modelName)
 
-        println("🧹 Chat memory cleared for $provider / $modelName")
+        info("🧹 Chat memory cleared for $provider / $modelName")
     }
 }

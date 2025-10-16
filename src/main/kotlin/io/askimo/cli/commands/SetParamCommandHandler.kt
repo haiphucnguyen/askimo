@@ -8,6 +8,8 @@ import io.askimo.core.session.MemoryPolicy
 import io.askimo.core.session.ParamKey
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -27,8 +29,8 @@ class SetParamCommandHandler(
         val args = line.words().drop(1)
 
         if (args.size != 2) {
-            println("Usage: :set-param <key> <value>")
-            println("Type :params --list to see valid keys and descriptions.")
+            info("Usage: :set-param <key> <value>")
+            info("Type :params --list to see valid keys and descriptions.")
             return
         }
 
@@ -37,7 +39,7 @@ class SetParamCommandHandler(
 
         val key = ParamKey.fromInput(keyInput)
         if (key == null) {
-            println("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
+            info("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
             return
         }
 
@@ -45,7 +47,7 @@ class SetParamCommandHandler(
             val provider = session.params.currentProvider
             val factory = session.getModelFactory(provider)
             if (factory == null) {
-                println("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+                info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
                 return
             }
 
@@ -59,9 +61,10 @@ class SetParamCommandHandler(
             SessionConfigManager.save(session.params)
 
             session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
-            println("✅ '${key.key}' is updated")
+            info("✅ '${key.key}' is updated")
         } catch (e: IllegalArgumentException) {
-            println("❌ Invalid value for '$keyInput': ${e.message}")
+            info("❌ Invalid value for '$keyInput': ${e.message}")
+            debug(e)
         }
     }
 }

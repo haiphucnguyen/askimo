@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 /**
@@ -24,9 +25,9 @@ class HelpCommandHandler : CommandHandler {
     }
 
     override fun handle(line: ParsedLine) {
-        println("Available commands:\n")
+        info("Available commands:\n")
         commands.sortedBy { it.keyword }.forEach {
-            println("  ${it.keyword.padEnd(14)} - ${it.description}")
+            info("  ${it.keyword.padEnd(14)} - ${it.description}")
         }
     }
 }

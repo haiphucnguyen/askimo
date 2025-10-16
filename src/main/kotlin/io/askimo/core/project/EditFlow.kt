@@ -5,6 +5,8 @@
 package io.askimo.core.project
 
 import io.askimo.core.util.Git
+import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import io.askimo.core.util.TimeUtil
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,7 +24,7 @@ class EditFlow(
         // Collect files mentioned
         val sources = resolveFiles(meta, instruction)
         if (sources.isEmpty()) {
-            println("ℹ️  No eligible files to edit under project root.")
+            info("ℹ️  No eligible files to edit under project root.")
             return
         }
 
@@ -39,23 +41,24 @@ class EditFlow(
             try {
                 diffGen.generateDiff(req)
             } catch (e: Exception) {
-                println("❌ Model error: ${e.message}")
+                info("❌ Model error: ${e.message}")
+                debug(e)
                 return
             }
         if (diff.isBlank()) {
-            println("ℹ️  No changes proposed.")
+            info("ℹ️  No changes proposed.")
             return
         }
 
         val sum = DiffInspector.summarize(diff)
         if (sum.changedFiles > budgets.maxFiles || sum.totalChanged > budgets.maxChangedLines) {
-            println(
+            info(
                 "⛔ Exceeds budget: ${sum.changedFiles} files, ${sum.totalChanged} lines (max ${budgets.maxFiles}/${budgets.maxChangedLines}).",
             )
             return
         }
         if (DiffInspector.containsBlockedPaths(diff)) {
-            println("⛔ Diff touches guarded files (build/lock/CI).")
+            info("⛔ Diff touches guarded files (build/lock/CI).")
             return
         }
 
@@ -65,12 +68,12 @@ class EditFlow(
         print("Apply changes on a temp branch? [y/N]: ")
         val yes = readlnOrNull()?.trim()?.lowercase() in setOf("y", "yes")
         if (!yes) {
-            println("🛑 Aborted.")
+            info("🛑 Aborted.")
             return
         }
 
         if (!budgets.allowDirty && Git.isDirty(meta.root)) {
-            println("⛔ Working tree dirty. Commit/stash or allow dirty.")
+            info("⛔ Working tree dirty. Commit/stash or allow dirty.")
             return
         }
 
@@ -82,15 +85,16 @@ class EditFlow(
         try {
             Files.createDirectories(backupPath.parent)
             Files.writeString(backupPath, diff)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            debug(e)
         }
 
         val ok = patchApplier.apply(meta.root, branch, diff)
         if (ok) {
-            println("✅ Applied on temp branch $branch")
-            println("🧷 Backup patch: ${backupPath.toAbsolutePath()}")
+            info("✅ Applied on temp branch $branch")
+            info("🧷 Backup patch: ${backupPath.toAbsolutePath()}")
         } else {
-            println("❌ Patch failed; see backup: ${backupPath.toAbsolutePath()}")
+            info("❌ Patch failed; see backup: ${backupPath.toAbsolutePath()}")
         }
     }
 
@@ -109,15 +113,15 @@ class EditFlow(
         for (absStr in absPaths) {
             val abs = Paths.get(absStr).toAbsolutePath().normalize()
             if (!PathGuards.isUnderRoot(abs, meta.root)) {
-                println("⛔ Outside root: $abs")
+                info("⛔ Outside root: $abs")
                 continue
             }
             if (!Files.isRegularFile(abs)) {
-                println("⚠️ Not a file: $abs")
+                info("⚠️ Not a file: $abs")
                 continue
             }
             if (PathGuards.isBlocked(abs)) {
-                println("⛔ Guarded file: $abs")
+                info("⛔ Guarded file: $abs")
                 continue
             }
             val text = Files.readString(abs)
