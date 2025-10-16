@@ -5,6 +5,7 @@
 package io.askimo.cli
 
 import io.askimo.cli.autocompleter.SetParamCompleter
+import io.askimo.cli.commands.AgentCommandHandler
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
@@ -25,12 +26,6 @@ import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.core.VersionInfo
-import io.askimo.core.project.Budgets
-import io.askimo.core.project.DiffGenerator
-import io.askimo.core.project.EditFlow
-import io.askimo.core.project.EditIntentDetector
-import io.askimo.core.project.PatchApplier
-import io.askimo.core.project.ProjectStore
 import io.askimo.core.providers.chat
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
@@ -168,6 +163,7 @@ fun main(args: Array<String>) {
                         DeleteProjectCommandHandler(),
                         DeleteAllProjectsCommandHandler(),
                         HistoryCommandHandler(reader, terminal, historyFile),
+                        AgentCommandHandler(session),
                     )
 
                 (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
@@ -191,9 +187,6 @@ fun main(args: Array<String>) {
                         break
                     }
 
-                    val diffGenerator = DiffGenerator(session.getChatService())
-                    val editFlow = EditFlow(diffGenerator, PatchApplier(), Budgets())
-
                     val keyword = parsedLine.words().firstOrNull()
 
                     if (keyword != null && keyword.startsWith(":")) {
@@ -207,44 +200,32 @@ fun main(args: Array<String>) {
                     } else {
                         val prompt = parsedLine.line()
 
-                        val active = ProjectStore.getActive()
-                        val hasActive = active != null
-                        val intent = EditIntentDetector.detect(prompt, hasActive)
+                        val indicator = LoadingIndicator(reader.terminal, "Thinking…")
+                        indicator.start()
 
-                        if (hasActive && intent.isEdit) {
-                            val (meta, _) = active!!
-                            editFlow.run(prompt, meta)
-                            session.lastResponse = "Applied edit flow for: $prompt"
-                            reader.terminal.writer().println()
-                            reader.terminal.writer().flush()
-                        } else {
-                            val indicator = LoadingIndicator(reader.terminal, "Thinking…")
-                            indicator.start()
+                        val firstTokenSeen = AtomicBoolean(false)
 
-                            val firstTokenSeen = AtomicBoolean(false)
+                        val mdRenderer = MarkdownJLineRenderer()
+                        val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
 
-                            val mdRenderer = MarkdownJLineRenderer()
-                            val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
-
-                            val output =
-                                session.getChatService().chat(prompt) { token ->
-                                    if (firstTokenSeen.compareAndSet(false, true)) {
-                                        indicator.stopWithElapsed()
-                                        reader.terminal.flush()
-                                    }
-                                    mdSink.append(token)
+                        val output =
+                            session.getChatService().chat(prompt) { token ->
+                                if (firstTokenSeen.compareAndSet(false, true)) {
+                                    indicator.stopWithElapsed()
+                                    reader.terminal.flush()
                                 }
-                            if (!firstTokenSeen.get()) {
-                                indicator.stopWithElapsed()
-                                reader.terminal.writer().println()
-                                reader.terminal.flush()
+                                mdSink.append(token)
                             }
-                            mdSink.finish()
-
-                            session.lastResponse = output
+                        if (!firstTokenSeen.get()) {
+                            indicator.stopWithElapsed()
                             reader.terminal.writer().println()
-                            reader.terminal.writer().flush()
+                            reader.terminal.flush()
                         }
+                        mdSink.finish()
+
+                        session.lastResponse = output
+                        reader.terminal.writer().println()
+                        reader.terminal.writer().flush()
                     }
 
                     terminal.flush()

@@ -12,7 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class EditFlow(
+class CodingAssistant(
     private val diffGen: DiffGenerator,
     private val patchApplier: PatchApplier,
     private val budgets: Budgets = Budgets(),
@@ -102,12 +102,26 @@ class EditFlow(
         meta: ProjectMeta,
         instruction: String,
     ): List<SourceFile> {
+        val filePathRegex = Regex("""[A-Za-z0-9_\-./]+(?:\.[A-Za-z0-9_\-]+)""")
         val absPaths =
-            EditIntentDetector
-                .detect(instruction, true)
-                .targetPaths
-                .map { p -> if (Paths.get(p).isAbsolute) p else Paths.get(meta.root).resolve(p).toString() }
+            filePathRegex
+                .findAll(instruction)
+                .map { it.value }
+                .filter { path ->
+                    val hasExtension = path.contains('.')
+                    val hasPathSeparators = path.contains('/') || path.contains('\\')
+                    val notCommand = !path.startsWith(":")
+                    val commonExtensions = listOf(".kt", ".java", ".js", ".ts", ".py", ".rb", ".cpp", ".h", ".cs", ".go", ".rs", ".php", ".swift", ".scala")
+                    val hasCodeExtension = commonExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }
+
+                    hasExtension && (hasPathSeparators || hasCodeExtension) && notCommand
+                }
+                .map { p ->
+                    if (Paths.get(p).isAbsolute) p
+                    else Paths.get(meta.root).resolve(p).toString()
+                }
                 .distinct()
+                .toList()
 
         val files = mutableListOf<SourceFile>()
         for (absStr in absPaths) {

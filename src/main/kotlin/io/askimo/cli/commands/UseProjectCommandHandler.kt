@@ -26,16 +26,16 @@ import java.nio.file.Paths
 class UseProjectCommandHandler(
     private val session: Session,
 ) : CommandHandler {
-    override val keyword: String = ":project"
+    override val keyword: String = ":use-project"
     override val description: String =
         "Activate a saved project (sets active pointer, session scope, and enables RAG).\n" +
-            "Usage: :project <project-name|project-id>"
+            "Usage: :use-project <project-name|project-id>"
 
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         val key = args.firstOrNull()
         if (key.isNullOrBlank()) {
-            info("Usage: :project <project-name|project-id>")
+            info("Usage: :use-project <project-name|project-id>")
             return
         }
 
@@ -58,6 +58,7 @@ class UseProjectCommandHandler(
             ProjectStore.setActive(meta.id)
         } catch (e: Exception) {
             info("⚠️ Could not set active project pointer: ${e.message}")
+            debug(e)
         }
 
         info("🐘 Ensuring Postgres+pgvector is running…")
@@ -75,6 +76,7 @@ class UseProjectCommandHandler(
                 projectId = meta.name,
                 session = session,
             )
+
 
         session.setScope(meta)
         session.enableRagWith(indexer)

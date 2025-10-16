@@ -249,6 +249,12 @@ class PgVectorIndexer(
         AppConfig.embedding.preferred_dim ?: embeddingModel.dimension()
     }
 
+    /**
+     * Cached embedding store instance to avoid recreating it multiple times.
+     * Initialized lazily when first accessed.
+     */
+    private val embeddingStore: EmbeddingStore<TextSegment> by lazy { newStore() }
+
     private fun newStore(): EmbeddingStore<TextSegment> {
         val embeddingStore =
             PgVectorEmbeddingStore
@@ -265,14 +271,14 @@ class PgVectorIndexer(
         return embeddingStore
     }
 
-    // ---------- Public API ----------
     fun indexProject(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
 
         val detectedTypes = detectProjectTypes(root)
         println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        val embeddingStore = newStore()
+        // Use cached embeddingStore instead of creating new one
+        val embeddingStore = this.embeddingStore
 
         var indexedFiles = 0
         var addedSegments = 0
@@ -337,6 +343,7 @@ class PgVectorIndexer(
                         } catch (e: Throwable) {
                             failedChunks++
                             println("  ⚠️  Chunk failure ${filePath.fileName}[$idx/$total]: ${e.message}")
+                            debug(e)
                         }
                     }
 
@@ -352,6 +359,7 @@ class PgVectorIndexer(
                 } catch (e: Exception) {
                     skippedFiles++
                     println("  ⚠️  Skipped ${filePath.fileName}: ${e.message}")
+                    debug(e)
                 }
             }
 
@@ -372,7 +380,7 @@ class PgVectorIndexer(
         embedding: List<Float>,
         topK: Int,
     ): List<String> {
-        val embeddingStore = newStore()
+        // Use cached embeddingStore instead of creating new one
         val queryEmbedding = Embedding.from(embedding.toFloatArray())
         val results =
             embeddingStore.search(

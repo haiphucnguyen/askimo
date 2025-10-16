@@ -36,7 +36,7 @@ private fun String.removeMarkdownFencesIfAny(): String {
         val idx = trimmed.indexOf('\n')
         val afterFence = if (idx >= 0) trimmed.substring(idx + 1) else trimmed
         val end = afterFence.lastIndexOf("```")
-        return if (end >= 0) afterFence.substring(0, end).trim() else afterFence.trim()
+        return if (end >= 0) afterFence.take(end).trim() else afterFence.trim()
     }
     return trimmed
 }

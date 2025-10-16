@@ -18,6 +18,7 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
+import io.askimo.core.util.Logger.info
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -273,6 +274,7 @@ class Session(
                 memory = memory,
                 retrievalAugmentor = rag,
             )
+        info("RAG enabled for $model")
         setChatService(upgraded)
     }
 }
