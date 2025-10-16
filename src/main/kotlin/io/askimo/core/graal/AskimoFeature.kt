@@ -4,72 +4,37 @@
  */
 package io.askimo.core.graal
 
-import io.askimo.core.providers.ChatService
-import io.askimo.core.recipes.RecipeDef
+import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import org.graalvm.nativeimage.hosted.Feature
-import org.graalvm.nativeimage.hosted.RuntimeProxyCreation
+import org.graalvm.nativeimage.hosted.RuntimeClassInitialization
 import org.graalvm.nativeimage.hosted.RuntimeReflection
-import java.lang.reflect.Constructor
-import java.lang.reflect.Field
-import java.lang.reflect.Method
-import java.lang.reflect.RecordComponent
 
 class AskimoFeature : Feature {
-    /**
-     * Dynamic proxies to register.
-     * Each inner array is the *ordered* list of interfaces passed to Proxy.newProxyInstance(...).
-     * Order matters for multi-interface proxies.
-     */
-    private val proxies: Array<Array<Class<*>>> =
-        arrayOf(
-            arrayOf(ChatService::class.java),
-            // example for multi-interface proxy:
-            // arrayOf(If1::class.java, If2::class.java)
-        )
-
-    /** Classes to fully register for reflection (ctors + methods + fields). */
-    private val reflects: Array<Class<*>> =
-        arrayOf(
-            RecipeDef::class.java,
-            GitTools::class.java,
-            // io.askimo.api.dto.ChatMessage::class.java,
-            // io.askimo.api.dto.ChatResponse::class.java,
-        )
-
     override fun beforeAnalysis(access: Feature.BeforeAnalysisAccess) {
-        println(">>> AskimoFeature: beforeAnalysis running")
-        // Proxies
-        for (ifaces in proxies) {
-            // Kotlin spread operator passes vararg correctly
-            RuntimeProxyCreation.register(*ifaces)
-        }
+        // Register Askimo tool classes invoked via reflection by your ToolRegistry
+        registerAllDeclared(LocalFsTools::class.java, GitTools::class.java)
 
-        // Classes
-        reflects.forEach { registerDeep(it) }
+        // Handle LangChain4j internal Jackson deserializer (cannot import; use analysis access)
+        val openAiEmbeddingDeserializer =
+            access.findClassByName("dev.langchain4j.model.openai.internal.embedding.OpenAiEmbeddingDeserializer")
+
+        if (openAiEmbeddingDeserializer != null) {
+            // Ensure its <clinit> runs at runtime (not during image build)
+            RuntimeClassInitialization.initializeAtRunTime(openAiEmbeddingDeserializer)
+
+            // Jackson needs constructors registered for reflection
+            RuntimeReflection.register(openAiEmbeddingDeserializer)
+            openAiEmbeddingDeserializer.declaredConstructors.forEach { RuntimeReflection.register(it) }
+        }
     }
 
-    private fun registerDeep(c: Class<*>) {
-        RuntimeReflection.register(c)
-
-        // Constructors, methods, fields
-        c.declaredConstructors.forEach { RuntimeReflection.register(it as Constructor<*>) }
-        c.declaredMethods.forEach { RuntimeReflection.register(it as Method) }
-        c.declaredFields.forEach { RuntimeReflection.register(it as Field) }
-
-        // Records: canonical ctor + component accessors (safe to try)
-        if (c.isRecord) {
-            try {
-                val components: Array<RecordComponent> = c.recordComponents
-                val sig = components.map { it.type }.toTypedArray()
-                val canonical = c.getDeclaredConstructor(*sig)
-                RuntimeReflection.register(canonical)
-                components.forEach { comp ->
-                    RuntimeReflection.register(comp.accessor)
-                }
-            } catch (_: Throwable) {
-                // ignore; some environments may not expose full record metadata
-            }
+    /** Register class + all declared constructors & methods for reflection. */
+    private fun registerAllDeclared(vararg classes: Class<*>) {
+        classes.forEach { clazz ->
+            RuntimeReflection.register(clazz)
+            clazz.declaredConstructors.forEach { RuntimeReflection.register(it) }
+            clazz.declaredMethods.forEach { RuntimeReflection.register(it) }
         }
     }
 }

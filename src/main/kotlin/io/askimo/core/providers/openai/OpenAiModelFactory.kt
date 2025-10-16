@@ -15,6 +15,7 @@ import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
@@ -46,7 +47,7 @@ class OpenAiModelFactory : ChatModelFactory {
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
-                .apiKey(settings.apiKey)
+                .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
                 .apply {
                     if (supportsSampling(model)) {

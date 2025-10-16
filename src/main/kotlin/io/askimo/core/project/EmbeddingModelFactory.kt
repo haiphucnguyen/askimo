@@ -14,6 +14,9 @@ import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPEN_AI
 import io.askimo.core.providers.ModelProvider.UNKNOWN
 import io.askimo.core.providers.ModelProvider.X_AI
+import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.session.SessionFactory
+import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,12 +30,11 @@ private val warnedOllamaOnce = AtomicBoolean(false)
 fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
     when (provider) {
         OPEN_AI -> {
-            val openAiKey =
-                System.getenv("OPENAI_API_KEY")
-                    ?: error("OPENAI_API_KEY missing for OpenAI embeddings")
+            val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
             val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
+
             OpenAiEmbeddingModelBuilder()
-                .apiKey(openAiKey)
+                .apiKey(safeApiKey(openAiKey))
                 .modelName(modelName)
                 .build()
         }

@@ -1571,7 +1571,28 @@
   },
   {
     "name": "io.askimo.tools.fs.LocalFsTools",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.tools.fs.LocalFsToolsTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "testCountEntries", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "testFilesByType", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "testReadText", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "testTotalSizeByType",
+        "parameterTypes": ["java.nio.file.Path"]
+      }
+    ]
   },
   {
     "name": "io.askimo.tools.git.GitTools",
@@ -2370,7 +2391,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$kBgPJtbn",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$FUAida8k",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

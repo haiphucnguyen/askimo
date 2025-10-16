@@ -12,6 +12,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
@@ -44,7 +45,7 @@ class AnthropicModelFactory : ChatModelFactory {
         val chatModel =
             AnthropicStreamingChatModel
                 .builder()
-                .apiKey(settings.apiKey)
+                .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
                 .baseUrl(settings.baseUrl)
                 .build()
