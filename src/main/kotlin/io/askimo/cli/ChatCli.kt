@@ -4,7 +4,7 @@
  */
 package io.askimo.cli
 
-import io.askimo.cli.autocompleter.SetParamCompleter
+import io.askimo.cli.autocompleter.CliCommandCompleter
 import io.askimo.cli.commands.AgentCommandHandler
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
@@ -86,7 +86,7 @@ fun main(args: Array<String>) {
 
                 val completer =
                     AggregateCompleter(
-                        SetParamCompleter(),
+                        CliCommandCompleter(),
                     )
 
                 val reader =
