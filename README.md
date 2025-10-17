@@ -102,7 +102,7 @@ Other ways to install → [Installation Guide](docs/installation.md)
 | `:clear`          | Clear the chat history for the current session                                                              | `:clear`                                          |
 | `:create-project` | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
 | `:projects`       | List all saved Askimo projects                                                                              | `:projects`                                       |
-| `:project`        | Activate a saved project (sets scope and enables RAG)                                                       | `:project myapp`                                  |
+| `:use-project`    | Activate a saved project (sets scope and enables RAG)                                                       | `:project myapp`                                  |
 | `:delete-project` | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table      | `:delete-project myapp`                           |
 | `:create-recipe`  | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe -template recipe.yml`    |
 | `:recipes`        | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes`                                        |

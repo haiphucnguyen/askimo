@@ -39,6 +39,8 @@ class CliCommandCompleter : Completer {
                 ":history" to "Show command history",
                 ":agent" to "Run coding assistant for code modifications, documentation, refactoring",
             )
+
+        private const val MAX_SUGGESTIONS = 5
     }
 
     override fun complete(
@@ -53,11 +55,12 @@ class CliCommandCompleter : Completer {
             1 -> {
                 // Complete command names
                 val partial = words[0]
+                val tempCandidates = mutableListOf<Candidate>()
 
-                // Try exact prefix matching for complete commands
+                // Try exact prefix matching for complete commands (highest priority)
                 COMMANDS.forEach { (command, description) ->
                     if (command.startsWith(partial, ignoreCase = true)) {
-                        candidates.add(
+                        tempCandidates.add(
                             Candidate(
                                 command,
                                 command,
@@ -65,7 +68,7 @@ class CliCommandCompleter : Completer {
                                 description,
                                 null,
                                 null,
-                                true,
+                                false,
                             ),
                         )
                     }
@@ -84,10 +87,10 @@ class CliCommandCompleter : Completer {
                             }
 
                         // Only suggest if we haven't already added this command through exact prefix matching
-                        val alreadyAdded = candidates.any { it.value() == command }
+                        val alreadyAdded = tempCandidates.any { it.value() == command }
 
-                        if (hasMatchingSegment && !alreadyAdded) {
-                            candidates.add(
+                        if (hasMatchingSegment && !alreadyAdded && tempCandidates.size < MAX_SUGGESTIONS) {
+                            tempCandidates.add(
                                 Candidate(
                                     command,
                                     command,
@@ -95,7 +98,7 @@ class CliCommandCompleter : Completer {
                                     COMMANDS[command] ?: "",
                                     null,
                                     null,
-                                    true,
+                                    false,
                                 ),
                             )
                         }
@@ -103,11 +106,13 @@ class CliCommandCompleter : Completer {
                 }
 
                 // Also suggest incremental completions for compound commands (existing logic)
-                if (partial.startsWith(":") && partial.length > 1) {
+                if (partial.startsWith(":") && partial.length > 1 && tempCandidates.size < MAX_SUGGESTIONS) {
                     val partialWithoutColon = partial.substring(1)
 
                     // Find commands that start with the partial and suggest the next word segment
                     COMMANDS.keys.forEach { command ->
+                        if (tempCandidates.size >= MAX_SUGGESTIONS) return@forEach
+
                         val commandWithoutColon = command.substring(1)
                         if (commandWithoutColon.startsWith(partialWithoutColon, ignoreCase = true) &&
                             commandWithoutColon.length > partialWithoutColon.length &&
@@ -131,8 +136,8 @@ class CliCommandCompleter : Completer {
                                 val description = "Complete to: $command"
 
                                 // Avoid duplicate suggestions
-                                if (candidates.none { it.value() == suggestion }) {
-                                    candidates.add(
+                                if (tempCandidates.none { it.value() == suggestion }) {
+                                    tempCandidates.add(
                                         Candidate(
                                             suggestion,
                                             suggestion,
@@ -140,7 +145,7 @@ class CliCommandCompleter : Completer {
                                             description,
                                             null,
                                             null,
-                                            true,
+                                            false,
                                         ),
                                     )
                                 }
@@ -148,14 +153,18 @@ class CliCommandCompleter : Completer {
                         }
                     }
                 }
+
+                // Add only top 5 suggestions to the main candidates list
+                candidates.addAll(tempCandidates.take(MAX_SUGGESTIONS))
             }
             2 -> {
                 // Complete parameters for commands that need them
                 when (words[0]) {
                     ":set-param" -> {
                         // Complete parameter names for set-param command
+                        val tempCandidates = mutableListOf<Candidate>()
                         ParamKey.all().forEach { param ->
-                            candidates.add(
+                            tempCandidates.add(
                                 Candidate(
                                     param.key,
                                     param.key,
@@ -163,10 +172,11 @@ class CliCommandCompleter : Completer {
                                     "${param.type} – ${param.description}",
                                     null,
                                     null,
-                                    true,
+                                    false,
                                 ),
                             )
                         }
+                        candidates.addAll(tempCandidates.take(MAX_SUGGESTIONS))
                     }
                 }
             }
@@ -174,9 +184,11 @@ class CliCommandCompleter : Completer {
                 // Complete values for set-param command
                 if (words[0] == ":set-param") {
                     val param = ParamKey.fromInput(words[1])
+                    val tempCandidates = mutableListOf<Candidate>()
                     param?.suggestions?.forEach {
-                        candidates.add(Candidate(it))
+                        tempCandidates.add(Candidate(it, it, null, null, null, null, false))
                     }
+                    candidates.addAll(tempCandidates.take(MAX_SUGGESTIONS))
                 }
             }
         }
