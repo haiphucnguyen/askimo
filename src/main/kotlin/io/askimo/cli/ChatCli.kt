@@ -296,7 +296,7 @@ private fun readStdinIfAny(
         val lines = text.split('\n')
         if (lines.size > tailLines) {
             val tail = lines.takeLast(tailLines).joinToString("\n")
-            text = tail + "\n\n(…truncated to last $tailLines lines…)"
+            text = "$tail\n\n(…truncated to last $tailLines lines…)"
         }
     }
 
