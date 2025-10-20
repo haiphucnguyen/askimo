@@ -4,6 +4,7 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
@@ -13,10 +14,11 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
 /**
- * Manages the persistence of session configuration.
+ * Manages the persistence of session configuration with secure API key storage.
  *
  * This singleton object handles loading and saving session parameters to/from a JSON file
- * located in the user's home directory. It uses Gson for JSON serialization and deserialization.
+ * located in the user's home directory. API keys are stored securely in system keychain
+ * or encrypted storage instead of plain text.
  */
 object SessionConfigManager {
     /** Path to the configuration file in the user's home directory */
@@ -26,13 +28,19 @@ object SessionConfigManager {
     @Volatile
     private var cached: SessionParams? = null
 
+    /** Secure session manager for handling API keys */
+    private val secureSessionManager = SecureSessionManager()
+
     /**
      * Loads session parameters.
      * - Returns the cached instance if available.
-     * - Otherwise loads from disk and caches the result.
+     * - Otherwise loads from disk, migrates API keys to secure storage, and caches the result.
      */
     fun load(): SessionParams {
-        cached?.let { return it }
+        cached?.let {
+            // Load API keys from secure storage into the cached session
+            return secureSessionManager.loadSecureSession(it)
+        }
 
         val loaded =
             if (Files.exists(configPath)) {
@@ -50,23 +58,39 @@ object SessionConfigManager {
                 SessionParams.noOp()
             }
 
-        cached = loaded
-        return loaded
+        // Migrate existing API keys to secure storage
+        val migrationResult = secureSessionManager.migrateExistingApiKeys(loaded)
+
+        // Show security report if there were API keys to migrate
+        if (migrationResult.results.isNotEmpty()) {
+            migrationResult.getSecurityReport().forEach { info(it) }
+        }
+
+        // Load API keys from secure storage
+        val secureLoaded = secureSessionManager.loadSecureSession(loaded)
+
+        cached = secureLoaded
+        return secureLoaded
     }
 
     /**
      * Saves the session parameters to the configuration file and updates the cache.
+     * API keys are stored securely and removed from the session file.
      */
     fun save(params: SessionParams) {
         try {
             Files.createDirectories(configPath.parent)
+
+            // Create sanitized version without API keys for file storage
+            val sanitizedParams = secureSessionManager.saveSecureSession(params)
+
             Files
                 .newBufferedWriter(
                     configPath,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
                 ).use {
-                    it.write(appJson.encodeToString(params))
+                    it.write(appJson.encodeToString(sanitizedParams))
                 }
             cached = params
             info("Saving config to: $configPath successfully.")

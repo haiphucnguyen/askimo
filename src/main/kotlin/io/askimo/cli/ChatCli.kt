@@ -6,6 +6,7 @@ package io.askimo.cli
 
 import io.askimo.cli.autocompleter.CliCommandCompleter
 import io.askimo.cli.commands.AgentCommandHandler
+import io.askimo.cli.commands.ApiKeySecurityCommandHandler
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
@@ -167,6 +168,7 @@ fun main(args: Array<String>) {
                         DeleteAllProjectsCommandHandler(),
                         HistoryCommandHandler(reader, terminal, historyFile),
                         AgentCommandHandler(session),
+                        ApiKeySecurityCommandHandler(session),
                     )
 
                 (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
