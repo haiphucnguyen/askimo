@@ -29,13 +29,6 @@ import kotlin.streams.asSequence
 /**
  * Indexes project files into a pgvector-backed store and exposes basic embedding and
  * similarity search utilities.
- *
- * Reliability improvements vs. the base version:
- *  - Chunking large files (configurable) with small overlap to avoid huge requests
- *  - Retry with exponential backoff on transient HTTP/IO errors (EOF, 5xx, resets)
- *  - Light request throttling to avoid overwhelming local model endpoints
- *  - Soft file-size cap (skippable or adjustable)
- *  - Richer metadata (chunk_index / chunk_total) for traceability
  */
 class PgVectorIndexer(
     private val projectId: String,
