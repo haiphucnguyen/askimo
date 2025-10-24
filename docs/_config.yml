@@ -2,7 +2,7 @@ title: Askimo CLI
 description: Cross-platform AI CLI for OpenAI, Ollama, Gemini, and more.
 remote_theme: just-the-docs/just-the-docs
 color_scheme: light
-url: https://haiphucnguyen.github.io/askimo/
+url: https://haiphucnguyen.github.io
 
 #logo: /assets/images/askimo-logo-64.png
 favicon_ico: /assets/images/askimo-favicon.ico

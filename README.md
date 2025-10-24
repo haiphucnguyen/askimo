@@ -46,25 +46,6 @@ Askimo is a command-line assistant that talks with LLMs - from online providers 
 
 ![Demo](public/demo2.gif)
 
-💬 Simple Web Chat (Local Usage)
-
-Askimo isn’t only for the terminal - you can also start a lightweight local web chat UI if you prefer a browser interface.
-This feature is designed for quick testing or personal use, not for production deployment.
-
-* **Start Askimo web server**
-```
-askimo --web
-```
-
-
-Then open your browser to the URL printed in the console (look for Web server running at http://127.0.0.1:8080). If port 8080 is busy, Askimo will pick the next free port-use the exact address shown in that log line.
-The web UI supports real-time streaming responses and Markdown rendering.
-
-![Askimo-web](public/askimo-web.png)
-
-> ⚠️ Important: Before running askimo web, you must finish setting up your AI provider (e.g., Ollama, OpenAI) and select a model using the Askimo CLI.
-> The web version is currently a simple chat page - it does not support configuring providers, models, or AI parameters. All configuration must be done beforehand via the CLI.
-
 ## Quickstart
 
 ### macOS / Linux (Homebrew)
