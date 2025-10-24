@@ -4,15 +4,18 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.util.TimeUtil.stamp
 import kotlinx.serialization.json.Json
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.READ
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+import java.nio.file.StandardOpenOption.WRITE
 import java.util.UUID
 import kotlin.io.path.exists
 
@@ -33,7 +36,7 @@ object ProjectStore {
         ensureLayout()
         if (getByName(name) != null) error("Project '$name' already exists.")
         val id = UUID.randomUUID().toString()
-        val now = nowIso()
+        val now = stamp()
         val meta =
             ProjectMeta(
                 id = id,
@@ -65,12 +68,12 @@ object ProjectStore {
     fun getByName(name: String): ProjectMeta? = list().firstOrNull { it.name.equals(name, ignoreCase = true) }
 
     fun save(meta: ProjectMeta) {
-        writeProjectFile(meta.copy(updatedAt = nowIso()))
+        writeProjectFile(meta.copy(updatedAt = stamp()))
     }
 
     fun setActive(projectId: String) {
         val meta = getById(projectId) ?: error("Unknown project id '$projectId'")
-        val ptr = ActivePointer(projectId = meta.id, root = meta.root, selectedAt = nowIso())
+        val ptr = ActivePointer(projectId = meta.id, root = meta.root, selectedAt = stamp())
         atomicWrite(activeFile, json.encodeToString(ptr))
     }
 
@@ -90,7 +93,7 @@ object ProjectStore {
         Files.move(
             file,
             trash.resolve("${file.fileName}.${System.currentTimeMillis()}.bak"),
-            StandardCopyOption.REPLACE_EXISTING,
+            REPLACE_EXISTING,
         )
         if (activeFile.exists()) {
             getActive()?.first?.let { if (it.id == id) Files.deleteIfExists(activeFile) }
@@ -128,14 +131,14 @@ object ProjectStore {
         Files.writeString(
             tmp,
             content,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING,
-            StandardOpenOption.WRITE,
+            CREATE,
+            TRUNCATE_EXISTING,
+            WRITE,
         )
 
         // Best-effort fsync (FileChannel has force())
         runCatching {
-            FileChannel.open(tmp, StandardOpenOption.READ).use { it.force(true) }
+            FileChannel.open(tmp, READ).use { it.force(true) }
         }
 
         // Atomic move where supported; fall back to non-atomic replace if needed
@@ -144,20 +147,18 @@ object ProjectStore {
                 Files.move(
                     tmp,
                     path,
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE,
+                    REPLACE_EXISTING,
+                    ATOMIC_MOVE,
                 )
                 true
             }.getOrElse {
-                Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING)
+                Files.move(tmp, path, REPLACE_EXISTING)
                 true
             }
 
         // (optional) verify write succeeded
         if (!moved) error("Failed to write $path")
     }
-
-    private fun nowIso(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
     private fun normalizeAbs(p: String): String =
         Paths

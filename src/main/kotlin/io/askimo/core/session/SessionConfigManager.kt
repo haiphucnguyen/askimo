@@ -63,7 +63,7 @@ object SessionConfigManager {
 
         // Show security report if there were API keys to migrate
         if (migrationResult.results.isNotEmpty()) {
-            migrationResult.getSecurityReport().forEach { info(it) }
+            migrationResult.getSecurityReport().forEach { debug(it) }
         }
 
         // Load API keys from secure storage

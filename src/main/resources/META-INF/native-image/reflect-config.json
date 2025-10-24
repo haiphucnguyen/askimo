@@ -756,6 +756,10 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "com.sun.crypto.provider.AESKeyGenerator",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "com.sun.crypto.provider.ARCFOURCipher",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -1483,7 +1487,15 @@
         "parameterTypes": []
       },
       {
+        "name": "invoke IoTools readFile returns error for missing file",
+        "parameterTypes": []
+      },
+      {
         "name": "invoke on missing tool throws error with available list",
+        "parameterTypes": []
+      },
+      {
+        "name": "invoke works for IoTools readFile using array args",
         "parameterTypes": []
       },
       {
@@ -1513,6 +1525,25 @@
       },
       { "name": "getArgs", "parameterTypes": [] },
       { "name": "getTool", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.security.SecureApiKeyStorageTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      {
+        "name": "test API key migration from plain text",
+        "parameterTypes": []
+      },
+      { "name": "test encryption fallback", "parameterTypes": [] },
+      { "name": "test secure session loading", "parameterTypes": [] },
+      { "name": "test storage security descriptions", "parameterTypes": [] }
     ]
   },
   {
@@ -1571,10 +1602,14 @@
   },
   {
     "name": "io.askimo.tools.fs.LocalFsTools",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredMethods": true
+    "queryAllDeclaredMethods": true,
+    "methods": [
+      { "name": "readFile", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "writeFile",
+        "parameterTypes": ["java.lang.String", "java.lang.String"]
+      }
+    ]
   },
   {
     "name": "io.askimo.tools.fs.LocalFsToolsTest",
@@ -1587,7 +1622,6 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "testCountEntries", "parameterTypes": ["java.nio.file.Path"] },
       { "name": "testFilesByType", "parameterTypes": ["java.nio.file.Path"] },
-      { "name": "testReadText", "parameterTypes": ["java.nio.file.Path"] },
       {
         "name": "testTotalSizeByType",
         "parameterTypes": ["java.nio.file.Path"]
@@ -1597,16 +1631,6 @@
   {
     "name": "io.askimo.tools.git.GitTools",
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.tools.git.IoTools",
-    "queryAllDeclaredMethods": true,
-    "methods": [
-      {
-        "name": "writeFile",
-        "parameterTypes": ["java.lang.String", "java.lang.String"]
-      }
-    ]
   },
   {
     "name": "java.io.Closeable",
@@ -2391,7 +2415,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$FUAida8k",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$8PidVg5d",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -2424,6 +2448,10 @@
   },
   {
     "name": "sun.security.provider.DSA$SHA256withDSA",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.provider.MD5",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

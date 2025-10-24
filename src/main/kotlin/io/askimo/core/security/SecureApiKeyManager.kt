@@ -7,7 +7,7 @@ package io.askimo.core.security
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod.ENCRYPTED
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod.KEYCHAIN
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.warn
 
 /**
@@ -40,7 +40,7 @@ object SecureApiKeyManager {
     ): StorageResult {
         // Try keychain first
         if (KeychainManager.storeApiKey(provider, apiKey)) {
-            info("✅ API key for $provider stored securely in system keychain")
+            debug("✅ API key for $provider stored securely in system keychain")
             return StorageResult(true, KEYCHAIN)
         }
 

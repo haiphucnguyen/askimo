@@ -88,7 +88,7 @@ class CreateRecipeCommandHandler : CommandHandler {
         }
 
         info("✅ Registered recipe '$name' at $dst")
-        info("➡  Run: askimo -r $name")
+        info("➡  Run: askimo -r $name <arguments>")
     }
 
     private fun parseArgs(args: List<String>): Pair<String?, String?>? {

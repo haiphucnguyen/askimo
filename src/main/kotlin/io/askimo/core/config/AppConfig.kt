@@ -11,7 +11,6 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
-import io.ktor.util.reflect.typeInfo
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -131,7 +130,7 @@ object AppConfig {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
                 info("Config parse failed at $path ")
-                debug( e)
+                debug(e)
                 envFallback()
             }
         } else {

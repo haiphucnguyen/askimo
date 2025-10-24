@@ -5,6 +5,7 @@
 package io.askimo.tools.fs
 
 import dev.langchain4j.agent.tool.Tool
+import io.askimo.core.util.Logger.debug
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -20,11 +21,9 @@ import kotlin.sequences.forEach
 import kotlin.text.matches
 import kotlin.toString
 
-class LocalFsTools(
-    private val allowedRoot: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath().normalize(),
-    private val cwd: Path = Paths.get("").toAbsolutePath().normalize(),
-) {
-    // Track background processes
+object LocalFsTools {
+    private var allowedRoot: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath().normalize()
+    private var cwd: Path = Paths.get("").toAbsolutePath().normalize()
     private val backgroundProcesses = mutableMapOf<Long, BackgroundProcess>()
 
     private data class BackgroundProcess(
@@ -71,53 +70,6 @@ class LocalFsTools(
             "doc" to setOf("pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "md", "rtf"),
             "archive" to setOf("zip", "tar", "gz", "tgz", "bz2", "7z", "rar"),
         )
-
-    /**
-     * Reads and returns the content of a small UTF-8 text file.
-     *
-     * Validates file size against ASKIMO_FILE_MAX_KB limit and rejects binary files.
-     *
-     * @param path The file path to read (supports ~ expansion and relative paths)
-     * @return Map with success/failure status and file content or error details
-     *
-     * @usage
-     * ```
-     * readText("./README.md")
-     * readText("~/Documents/notes.txt")
-     * ```
-     *
-     * @errors
-     * - "too_large": File exceeds size limit
-     * - "binary": File appears to be binary
-     * - "read_failed": File not found, permission denied, or other IO error
-     */
-    @Tool(
-        """
-        Read a small UTF-8 text file and return its content for summarization.
-        Params: path (string).
-        Limits: file size ≤ ASKIMO_FILE_MAX_KB (default 100 KB), rejects binary.
-        Returns: { ok: true, text: string } or { ok: false, error, message }.
-        """,
-    )
-    fun readText(path: String): Map<String, Any?> {
-        val maxKb = System.getenv("ASKIMO_FILE_MAX_KB")?.toIntOrNull()?.coerceAtLeast(1) ?: 100
-        val maxBytes = maxKb * 1024
-        return try {
-            val file = safeFile(path)
-            val size = Files.size(file)
-            if (size > maxBytes) {
-                return err("too_large", "file > $maxKb KB")
-            }
-            val bytes = Files.readAllBytes(file)
-            if (looksBinary(bytes)) {
-                return err("binary", "appears binary")
-            }
-            val text = bytes.toString(Charsets.UTF_8)
-            mapOf("ok" to true, "text" to text, "path" to file.toString(), "bytes" to size)
-        } catch (e: Exception) {
-            err("read_failed", "${e::class.simpleName}: ${e.message}")
-        }
-    }
 
     /**
      * Counts files and directories in a folder with optional recursion and hidden file inclusion.
@@ -697,6 +649,37 @@ class LocalFsTools(
         } catch (e: Exception) {
             err("search_content_failed", "${e::class.simpleName}: ${e.message}")
         }
+    }
+
+    @Tool("Write text file to path")
+    fun writeFile(
+        path: String,
+        content: String,
+    ): String {
+        val p = Paths.get(path)
+        Files.createDirectories(p.toAbsolutePath().parent)
+        Files.writeString(p, content)
+        return "wrote:\n${p.toAbsolutePath()}"
+    }
+
+    @Tool("Read text file from path")
+    fun readFile(path: String): String {
+        val p = Paths.get(path)
+        if (!Files.exists(p)) {
+            return "Error: File not found at $path"
+        }
+        if (!Files.isRegularFile(p)) {
+            return "Error: Path is not a regular file: $path"
+        }
+        return Files.readString(p)
+    }
+
+    /**
+     * TEST-ONLY: Set allowedRoot and cwd for test purposes.
+     */
+    fun setTestRoot(root: Path) {
+        allowedRoot = root.toAbsolutePath().normalize()
+        cwd = root.toAbsolutePath().normalize()
     }
 
     private fun findAvailableShell(): String {

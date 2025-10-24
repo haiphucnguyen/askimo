@@ -5,6 +5,7 @@
 package io.askimo.tools.git
 
 import dev.langchain4j.agent.tool.Tool
+import io.askimo.tools.fs.LocalFsTools
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 
@@ -26,7 +27,7 @@ class GitTools {
         writeEditmsg: Boolean = true,
     ): String {
         // Optionally save commit message to file (mimics git's default behavior)
-        if (writeEditmsg) IoTools.writeFile(".git/COMMIT_EDITMSG", message)
+        if (writeEditmsg) LocalFsTools.writeFile(".git/COMMIT_EDITMSG", message)
 
         // Early check: no staged changes = fail fast
         val hasStaged = exec(listOf("git", "diff", "--cached", "--name-only")).isNotBlank()

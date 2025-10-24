@@ -61,7 +61,7 @@ class OpenAiModelFactory : ChatModelFactory {
                 .builder(ChatService::class.java)
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
-                .tools(LocalFsTools())
+                .tools(LocalFsTools)
                 .systemMessageProvider { systemMessage(verbosityInstruction(settings.presets.verbosity)) }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

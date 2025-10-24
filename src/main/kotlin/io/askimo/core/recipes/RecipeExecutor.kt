@@ -31,6 +31,7 @@ class RecipeExecutor(
 ) {
     data class RunOpts(
         val overrides: Map<String, String> = emptyMap(),
+        val externalArgs: List<String> = emptyList(),
         val terminal: Terminal? = null,
         val spinnerMessage: String = "Thinking…",
         val spinnerDoneLabel: String = "Done",
@@ -45,9 +46,12 @@ class RecipeExecutor(
         // 1) baseline vars (defaults ⊕ overrides)
         val vars = def.defaults.toMutableMap().apply { putAll(opts.overrides) }
 
+        opts.externalArgs.forEachIndexed { i, v -> vars["arg${i + 1}"] = v }
+
         // 2) pre-step: resolve declared vars via tools (generic; no git knowledge here)
         def.vars.forEach { (varName, call) ->
-            val out = tools.invoke(call.tool, call.args)
+            val renderedArgs = resolveArgs(call.args, vars)
+            val out = tools.invoke(call.tool, renderedArgs)
             vars[varName] = out?.toString().orEmpty()
         }
 

@@ -4,7 +4,6 @@ jline = "3.30.5"
 langchain4j = "1.7.1"
 commonmark = "0.25.1"
 kotlinxSerializationJson = "1.9.0"
-ktor = "3.2.3"
 slf4j = "2.0.17"
 junitBom = "5.14.0"
 postgresql = "42.7.7"
@@ -42,12 +41,6 @@ jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "
 
 # Kotlinx Serialization
 kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
-
-# Ktor
-ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
-ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
-ktor-server-content-negotiation = { group = "io.ktor", name = "ktor-server-content-negotiation", version.ref = "ktor" }
-ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 # Logging
 slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }

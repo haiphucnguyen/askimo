@@ -5,8 +5,8 @@
 package io.askimo.core.recipes
 
 import dev.langchain4j.agent.tool.Tool
+import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
-import io.askimo.tools.git.IoTools
 
 class ToolRegistry private constructor(
     private val annotated: Map<String, Pair<Any, java.lang.reflect.Method>>,
@@ -73,13 +73,26 @@ class ToolRegistry private constructor(
         return when (args) {
             null -> m.invoke(target)
             is Array<*> -> m.invoke(target, *args)
+            is List<*> -> {
+                val params = m.parameters
+                if (params.size == 1 && params[0].type.isAssignableFrom(List::class.java)) {
+                    // Method expects a single List parameter
+                    m.invoke(target, args)
+                } else {
+                    val callArgs = Array<Any?>(params.size) { null }
+                    for (i in params.indices) {
+                        val raw = if (i < args.size) args[i] else null
+                        callArgs[i] = coerce(raw, params[i].type)
+                    }
+                    m.invoke(target, *callArgs)
+                }
+            }
             is Map<*, *> -> {
-                val map = args as Map<*, *>
                 val params = m.parameters
                 val callArgs = Array<Any?>(params.size) { null }
                 for (i in params.indices) {
                     val p = params[i]
-                    val raw = map[p.name]
+                    val raw = args[p.name]
                     callArgs[i] = coerce(raw, p.type)
                 }
                 m.invoke(target, *callArgs)
@@ -115,7 +128,7 @@ class ToolRegistry private constructor(
                 providers =
                     listOf(
                         GitTools(),
-                        IoTools,
+                        LocalFsTools,
                     ),
                 allow = allow,
             )

@@ -1,0 +1,27 @@
+name: summarize
+version: 1
+description: "Summarize the content of a file concisely"
+
+allowedTools:
+  - readFile
+
+vars:
+  file_content:
+    tool: readFile
+    args: ["{{arg1}}"]
+
+system: |
+  You are an expert technical writer.
+  Summarize the following file content in a concise and precise way.
+  Output MUST be plain text only.
+
+userTemplate: |
+  File path: {{arg1}}
+  Content:
+  ====BEGIN====
+  {{file_content}}
+  ====END====
+
+postActions: []
+
+defaults: {}

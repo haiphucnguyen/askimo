@@ -10,8 +10,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.invoke
+import kotlin.io.resolve
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
+import kotlin.toString
 
 class ToolRegistryTest {
     @TempDir
@@ -58,5 +61,24 @@ class ToolRegistryTest {
         assertContains(ex.message ?: "", "Available:")
         assertContains(ex.message ?: "", "writeFile")
         assertContains(ex.message ?: "", "status")
+    }
+
+    @Test
+    fun `invoke works for IoTools readFile using array args`() {
+        val reg = ToolRegistry.defaults()
+        val target = tempDir.resolve("readme.txt").toAbsolutePath().toString()
+        Files.writeString(Path.of(target), "sample content")
+
+        val result = reg.invoke("readFile", arrayOf(target)) as String
+        assertEquals("sample content", result)
+    }
+
+    @Test
+    fun `invoke IoTools readFile returns error for missing file`() {
+        val reg = ToolRegistry.defaults()
+        val missingPath = tempDir.resolve("missing.txt").toAbsolutePath().toString()
+
+        val result = reg.invoke("readFile", arrayOf(missingPath)) as String
+        assertTrue(result.startsWith("Error: File not found"))
     }
 }

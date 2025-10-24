@@ -8,7 +8,6 @@ import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.session.SessionParams
 import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.Logger.warn
 
 /**
@@ -86,7 +85,7 @@ class SecureSessionManager {
                     hasInsecureKeys = true
                     warn("Failed to migrate API key for ${provider.name} to secure storage")
                 } else {
-                    info("Migrated API key for ${provider.name} to ${result.method.name}")
+                    debug("Migrated API key for ${provider.name} to ${result.method.name}")
                     // Update the settings to use placeholder
                     updateApiKeyPlaceholder(settings, result.method)
                 }
