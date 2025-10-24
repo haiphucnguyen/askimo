@@ -13,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -59,9 +60,9 @@ class SecureApiKeyStorageTest {
 
     @Test
     fun `test secure session loading`() {
-        // Skip test on Windows due to lack of keychain support
+        // Skip test on non-macOS platforms due to lack of keychain support
         val osName = System.getProperty("os.name").lowercase()
-        assumeFalse(osName.contains("win"), "Keychain not supported on Windows")
+        assumeTrue(osName.contains("mac"), "Keychain only supported on macOS")
 
         // Create a session with placeholder API key
         val sessionParams = SessionParams()
