@@ -19,13 +19,13 @@ class CreateRecipeCommandHandler : CommandHandler {
     override val keyword: String = ":create-recipe"
     override val description: String =
         "Create a provider-agnostic recipe from a YAML template.\n" +
-            "Usage: :create-recipe <name?> -template <file.yml>"
+            "Usage: :create-recipe <name?> -f <file.yml>"
 
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         val (maybeName, templatePath) =
             parseArgs(args) ?: run {
-                info("Usage: :create-recipe <name?> -template <file.yml>")
+                info("Usage: :create-recipe <name?> -f <file.yml>")
                 return
             }
 
@@ -101,7 +101,7 @@ class CreateRecipeCommandHandler : CommandHandler {
         }
         while (i < args.size) {
             when (args[i]) {
-                "-template", "--template" -> {
+                "-f", "--file" -> {
                     if (i + 1 < args.size) {
                         template = args[i + 1]
                         i += 2

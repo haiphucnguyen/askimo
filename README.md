@@ -70,26 +70,65 @@ Other ways to install → [Installation Guide](docs/installation.md)
 
 ## Available Commands
 
-| Command           | Description                                                                                                 | Example Usage                                      |
-|-------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
-| `:help`           | Show all available commands                                                                                 | `:help`                                           |
-| `:set-param`      | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
-| `:params`         | View current session parameters                                                                             | `:params`                                         |
-| `:config`         | Show the current provider, model, and settings                                                              | `:config`                                         |
-| `:providers`      | List all supported AI providers                                                                             | `:providers`                                      |
-| `:set-provider`   | Switch to a different AI provider                                                                           | `:set-provider ollama`                            |
-| `:models`         | List available models for the current provider                                                              | `:models`                                         |
-| `:copy`           | Copy the last response to the clipboard                                                                     | `:copy`                                           |
-| `:clear`          | Clear the chat history for the current session                                                              | `:clear`                                          |
-| `:create-project` | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
-| `:projects`       | List all saved Askimo projects                                                                              | `:projects`                                       |
-| `:use-project`    | Activate a saved project (sets scope and enables RAG)                                                       | `:project myapp`                                  |
-| `:delete-project` | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table      | `:delete-project myapp`                           |
-| `:create-recipe`  | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe -template recipe.yml`    |
-| `:recipes`        | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes`                                        |
-| `:delete-recipe`  | Delete a registered recipe from ~/.askimo/recipes                                                           | `:delete-recipe myrecipe`                         |
-| `:exit`           | Exit the Askimo REPL                                                                                        | `:exit`                                           |
+Askimo supports **two modes** for running commands:
 
+### 🔄 Interactive Mode
+Start Askimo without arguments to enter interactive mode:
+```bash
+askimo
+askimo> :help
+```
+
+### 🚀 Non-Interactive Mode  
+Run commands directly from the command line:
+```bash
+askimo --help
+askimo --list-providers
+askimo --set-provider openai
+```
+
+### 📋 Command Reference
+
+All commands work in both modes - just use `:command` for interactive or `--command` for non-interactive:
+
+| Interactive Mode    | Non-Interactive Mode     | Description                                                                                                 | Example Usage                                      |
+|-------------------|--------------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
+| `:help`           | `--help`                 | Show all available commands                                                                                 | `:help` or `askimo --help`                       |
+| `:set-param`      | `--set-param`            | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
+| `:params`         | `--params`               | View current session parameters                                                                             | `:params` or `askimo --params`                   |
+| `:config`         | `--config`               | Show the current provider, model, and settings                                                              | `:config` or `askimo --config`                   |
+| `:providers`      | `--providers`            | List all supported AI providers                                                                             | `:providers` or `askimo --providers`             |
+| `:set-provider`   | `--set-provider`         | Switch to a different AI provider                                                                           | `:set-provider ollama` or `askimo --set-provider ollama` |
+| `:models`         | `--models`               | List available models for the current provider                                                              | `:models` or `askimo --models`                   |
+| `:copy`           | `--copy`                 | Copy the last response to the clipboard                                                                     | `:copy`                                           |
+| `:clear`          | `--clear`                | Clear the chat history for the current session                                                              | `:clear`                                          |
+| `:create-project` | `--create-project`       | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
+| `:projects`       | `--projects`             | List all saved Askimo projects                                                                              | `:projects` or `askimo --projects`               |
+| `:use-project`    | `--use-project`          | Activate a saved project (sets scope and enables RAG)                                                       | `:use-project myapp`                             |
+| `:delete-project` | `--delete-project`       | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table      | `:delete-project myapp`                           |
+| `:create-recipe`  | `--create-recipe`        | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe --template recipe.yml` or `askimo --create-recipe myrecipe --template recipe.yml` |
+| `:recipes`        | `--recipes`              | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes` or `askimo --recipes`                 |
+| `:delete-recipe`  | `--delete-recipe`        | Delete a registered recipe from ~/.askimo/recipes                                                           | `:delete-recipe myrecipe`                         |
+| `:exit`           | N/A                      | Exit the Askimo REPL (interactive mode only)                                                                | `:exit`                                           |
+
+### 💡 Quick Examples
+
+**Interactive Mode:**
+```bash
+$ askimo
+askimo> :providers
+askimo> :set-provider openai  
+askimo> :config
+askimo> What is TypeScript?
+```
+
+**Non-Interactive Mode:**
+```bash
+$ askimo --providers
+$ askimo --set-provider openai
+$ askimo --config
+$ echo "function add(a, b) { return a + b; }" | askimo "Convert this to TypeScript"
+```
 
 ➡ **[View the full command reference »](docs/commands.md)**  
 Includes detailed usage, options, and examples for each command.
@@ -113,4 +152,3 @@ Askimo is designed to be pluggable, so you can tailor it to your needs:
 * Create a feature branch
 
 * Open a PR
-

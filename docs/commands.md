@@ -265,12 +265,12 @@ Create a provider-agnostic recipe from a YAML template file. Recipes are reusabl
 
 **Parameters:**
 - `[name]` - Optional name for the recipe (can also be specified in the YAML file)
-- `-template, --template` - Path to the YAML template file
+- `-f, --file` - Path to the YAML template file
 
 **Example:**
 
 ```bash
-:create-recipe myrecipe -template ~/templates/code-review.yml
+:create-recipe myrecipe -f ~/templates/code-review.yml
 ```
 
 **Notes:**

@@ -19,8 +19,8 @@ class ApiKeySecurityCommandHandler(
     override val keyword: String = ":security"
     override val description: String = "Manage API key security settings"
 
-    override fun handle(parsedLine: org.jline.reader.ParsedLine) {
-        val args = parsedLine.words().drop(1)
+    override fun handle(line: org.jline.reader.ParsedLine) {
+        val args = line.words().drop(1)
 
         if (args.isEmpty()) {
             showSecurityStatus()

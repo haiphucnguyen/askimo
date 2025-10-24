@@ -12,7 +12,7 @@ testcontainers = "1.21.3"
 mockitoKotlin = "6.1.0"
 kotlin = "2.2.20"
 jackson = "2.19.2"
-spotless = "7.2.1"
+spotless = "8.0.0"
 shadow = "9.0.1"
 graalvmSvm = "25.0.0"
 

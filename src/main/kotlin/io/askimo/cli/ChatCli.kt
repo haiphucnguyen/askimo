@@ -26,10 +26,10 @@ import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
+import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.chat
 import io.askimo.core.recipes.RecipeExecutor
-import io.askimo.core.recipes.RecipeExecutor.RunOpts
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
@@ -58,16 +58,73 @@ fun main(args: Array<String>) {
 
     val historyFile = Paths.get(System.getProperty("user.home"), ".askimo", "history").toAbsolutePath()
     val session = SessionFactory.createSession()
+
+    // Create all command handlers once
+    val commandHandlers: List<CommandHandler> =
+        listOf(
+            HelpCommandHandler(),
+            ConfigCommandHandler(session),
+            ParamsCommandHandler(session),
+            SetParamCommandHandler(session),
+            ListProvidersCommandHandler(),
+            SetProviderCommandHandler(session),
+            ModelsCommandHandler(session),
+            CopyCommandHandler(session),
+            ClearMemoryCommandHandler(session),
+            CreateProjectCommandHandler(session),
+            ListProjectsCommandHandler(),
+            UseProjectCommandHandler(session),
+            DeleteProjectCommandHandler(),
+            CreateRecipeCommandHandler(),
+            DeleteRecipeCommandHandler(),
+            ListRecipesCommandHandler(),
+            DeleteAllProjectsCommandHandler(),
+            AgentCommandHandler(session),
+            ApiKeySecurityCommandHandler(session),
+        )
+
+    // Helper function to convert interactive keyword to non-interactive flag
+    fun keywordToFlag(keyword: String): String = "--" + keyword.removePrefix(":")
+
+    // Set up help command with all available commands for both interactive and non-interactive modes
+    (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
+
+    // Check for non-interactive commands
+    for (handler in commandHandlers) {
+        val flag = keywordToFlag(handler.keyword)
+
+        if (args.any { it == flag }) {
+            // Special handling for commands that need terminal/reader (skip in non-interactive)
+            if (handler is HistoryCommandHandler) continue
+
+            // Check if command takes arguments
+            val flagArgs = NonInteractiveCommandParser.extractFlagArguments(args, flag)
+            if (flagArgs != null && flagArgs.isNotEmpty()) {
+                // Command with arguments
+                val parsedLine = NonInteractiveCommandParser.createParameterizedParsedLine(handler.keyword, *flagArgs.toTypedArray())
+                handler.handle(parsedLine)
+            } else {
+                // Command without arguments
+                handler.handle(NonInteractiveCommandParser.createEmptyParsedLine())
+            }
+            return
+        }
+    }
+
     try {
         val cliCommandName = args.getFlagValue("-r", "--recipe")
         if (cliCommandName != null) {
             val overrides = args.extractOverrides("--set")
             // Extract external args: all args after the recipe name that are not flags or overrides
             val recipeFlagIndex = args.indexOfFirst { it == "-r" || it == "--recipe" }
-            val externalArgs = if (recipeFlagIndex != -1 && recipeFlagIndex + 2 <= args.size) {
-                args.drop(recipeFlagIndex + 2)
-                    .filter { !it.startsWith("--") && !it.startsWith("-") && !it.contains("=") }
-            } else emptyList()
+            val externalArgs =
+                if (recipeFlagIndex != -1 && recipeFlagIndex + 2 <= args.size) {
+                    args
+                        .drop(recipeFlagIndex + 2)
+                        .filter { !it.startsWith("--") && !it.startsWith("-") && !it.contains("=") }
+                } else {
+                    emptyList()
+                }
             runYamlCommand(session, cliCommandName, overrides, externalArgs)
             return
         }
@@ -104,7 +161,7 @@ fun main(args: Array<String>) {
             val history = DefaultHistory(reader)
             Runtime.getRuntime().addShutdownHook(Thread { runCatching { history.save() } })
 
-            // Is this a “real” terminal with raw mode & cursor addressing?
+            // Is this a "real" terminal with raw mode & cursor addressing?
             val supportsRaw = terminal.getBooleanCapability(InfoCmp.Capability.cursor_address)
 
             // --- Key bindings ---
@@ -145,32 +202,9 @@ fun main(args: Array<String>) {
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
-            val commandHandlers: List<CommandHandler> =
-                listOf(
-                    HelpCommandHandler(),
-                    ConfigCommandHandler(session),
-                    ParamsCommandHandler(session),
-                    SetParamCommandHandler(session),
-                    ListProvidersCommandHandler(),
-                    SetProviderCommandHandler(session),
-                    ModelsCommandHandler(session),
-                    CopyCommandHandler(session),
-                    ClearMemoryCommandHandler(session),
-                    CreateProjectCommandHandler(session),
-                    ListProjectsCommandHandler(),
-                    UseProjectCommandHandler(session),
-                    DeleteProjectCommandHandler(),
-                    CreateRecipeCommandHandler(),
-                    DeleteRecipeCommandHandler(),
-                    ListRecipesCommandHandler(),
-                    DeleteProjectCommandHandler(),
-                    DeleteAllProjectsCommandHandler(),
-                    HistoryCommandHandler(reader, terminal, historyFile),
-                    AgentCommandHandler(session),
-                    ApiKeySecurityCommandHandler(session),
-                )
+            val interactiveCommandHandlers = commandHandlers + HistoryCommandHandler(reader, terminal, historyFile)
 
-            (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
+            (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
 
             while (true) {
                 val input = reader.readLine("askimo> ") ?: continue
@@ -194,7 +228,7 @@ fun main(args: Array<String>) {
                 val keyword = parsedLine.words().firstOrNull()
 
                 if (keyword != null && keyword.startsWith(":")) {
-                    val handler = commandHandlers.find { it.keyword == keyword }
+                    val handler = interactiveCommandHandlers.find { it.keyword == keyword }
                     if (handler != null) {
                         handler.handle(parsedLine)
                     } else {
@@ -238,7 +272,7 @@ fun main(args: Array<String>) {
             val userPrompt = args.joinToString(" ").trim()
             val stdinText =
                 readStdinIfAny(
-                    maxBytes = 1_000_000, // ~1MB cap to avoid OOM
+                    maxBytes = 1_000_000_000, // ~1GB cap to avoid OOM
                     tailLines = 1500, // keep only last N lines if huge
                 )
             val prompt = buildPrompt(userPrompt, stdinText)

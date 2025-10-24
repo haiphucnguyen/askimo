@@ -45,7 +45,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             """.trimIndent()
         Files.writeString(templateFile, yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "my-recipe", "-template", templateFile.toString())
+        val parsedLine = mockParsedLine(":create-recipe", "my-recipe", "-f", templateFile.toString())
 
         handler.handle(parsedLine)
 
@@ -70,7 +70,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with non-existent template shows error`() {
-        val parsedLine = mockParsedLine(":create-recipe", "my-recipe", "-template", "/non/existent/file.yml")
+        val parsedLine = mockParsedLine(":create-recipe", "my-recipe", "-f", "/non/existent/file.yml")
 
         handler.handle(parsedLine)
 
@@ -83,7 +83,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
         val templateFile = tempDir.resolve("invalid.yml")
         Files.writeString(templateFile, "invalid: yaml: content:")
 
-        val parsedLine = mockParsedLine(":create-recipe", "test", "-template", templateFile.toString())
+        val parsedLine = mockParsedLine(":create-recipe", "test", "-f", templateFile.toString())
 
         handler.handle(parsedLine)
 
@@ -105,7 +105,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             """.trimIndent()
         Files.writeString(templateFile, yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "-template", templateFile.toString())
+        val parsedLine = mockParsedLine(":create-recipe", "-f", templateFile.toString())
 
         handler.handle(parsedLine)
 
@@ -129,7 +129,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             """.trimIndent()
         Files.writeString(templateFile, yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "-template", templateFile.toString())
+        val parsedLine = mockParsedLine(":create-recipe", "-f", templateFile.toString())
 
         handler.handle(parsedLine)
 
@@ -157,7 +157,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
         Files.createDirectories(recipesDir)
         Files.writeString(recipesDir.resolve("existing-recipe.yml"), yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "existing-recipe", "-template", templateFile.toString())
+        val parsedLine = mockParsedLine(":create-recipe", "existing-recipe", "-f", templateFile.toString())
 
         handler.handle(parsedLine)
 
@@ -179,7 +179,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             """.trimIndent()
         Files.writeString(templateFile, yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "test", "-template", "~/template.yml")
+        val parsedLine = mockParsedLine(":create-recipe", "test", "-f", "~/template.yml")
 
         handler.handle(parsedLine)
 
@@ -213,7 +213,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             mockParsedLine(
                 ":create-recipe",
                 "gitcommit-test",
-                "-template",
+                "-f",
                 templatePath.toString(),
             )
 
