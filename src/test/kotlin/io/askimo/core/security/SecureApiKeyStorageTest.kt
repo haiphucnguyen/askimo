@@ -7,19 +7,15 @@ package io.askimo.core.security
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.session.SessionParams
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import java.nio.file.Paths
-import kotlin.text.get
-import kotlin.text.set
 
 class SecureApiKeyStorageTest {
     private lateinit var secureSessionManager: SecureSessionManager
@@ -77,7 +73,7 @@ class SecureApiKeyStorageTest {
 
         // The key should be loaded from keychain, not remain as placeholder
         val loadedSettings = secureSession.providerSettings[ModelProvider.OPEN_AI] as OpenAiSettings
-        Assertions.assertEquals("sk-actual-key-from-keychain", loadedSettings.apiKey)
+        assertEquals("sk-actual-key-from-keychain", loadedSettings.apiKey)
     }
 
     @Test
