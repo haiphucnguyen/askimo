@@ -1,6 +1,7 @@
 ---
 title: Creating a New Chat Model in Askimo
-nav_order: 6
+parent: Development & Customization
+nav_order: 2
 description: Step-by-step guide to adding and configuring a new chat model in Askimo CLI.
 ---
 # Creating a New Chat Model in Askimo

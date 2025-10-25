@@ -1,6 +1,6 @@
 ---
 title: Using Recipes in Askimo
-nav_order: 8
+nav_order: 6
 description: Learn how to create, list, delete, and run recipes in Askimo CLI using YAML templates.
 ---
 
