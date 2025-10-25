@@ -13,7 +13,6 @@ import io.askimo.cli.commands.ConfigCommandHandler
 import io.askimo.cli.commands.CopyCommandHandler
 import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
-import io.askimo.cli.commands.DeleteAllProjectsCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
@@ -78,7 +77,6 @@ fun main(args: Array<String>) {
             CreateRecipeCommandHandler(),
             DeleteRecipeCommandHandler(),
             ListRecipesCommandHandler(),
-            DeleteAllProjectsCommandHandler(),
             AgentCommandHandler(session),
             ApiKeySecurityCommandHandler(session),
         )
