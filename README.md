@@ -105,10 +105,10 @@ All commands work in both modes - just use `:command` for interactive or `--comm
 | `:create-project` | `--create-project`       | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
 | `:projects`       | `--projects`             | List all saved Askimo projects                                                                              | `:projects` or `askimo --projects`               |
 | `:use-project`    | `--use-project`          | Activate a saved project (sets scope and enables RAG)                                                       | `:use-project myapp`                             |
-| `:delete-project` | `--delete-project`       | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table      | `:delete-project myapp`                           |
+| `:delete-project` | `--delete-project`       | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table. Use `--all` to delete all projects      | `:delete-project myapp` or `:delete-project --all`                           |
 | `:create-recipe`  | `--create-recipe`        | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe --template recipe.yml` or `askimo --create-recipe myrecipe --template recipe.yml` |
 | `:recipes`        | `--recipes`              | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes` or `askimo --recipes`                 |
-| `:delete-recipe`  | `--delete-recipe`        | Delete a registered recipe from ~/.askimo/recipes                                                           | `:delete-recipe myrecipe`                         |
+| `:delete-recipe`  | `--delete-recipe`        | Delete a registered recipe from ~/.askimo/recipes. Use `--all` to delete all recipes                                                           | `:delete-recipe myrecipe` or `:delete-recipe --all`                         |
 | `:exit`           | N/A                      | Exit the Askimo REPL (interactive mode only)                                                                | `:exit`                                           |
 
 ### 💡 Quick Examples

@@ -234,24 +234,31 @@ Activate a previously saved Askimo project by name. This sets the project scope 
 ## :delete-project
 
 **Description:**
-Delete a saved project from the Askimo registry (~/.askimo/projects.json) and drop its pgvector embedding table from the database.
+Delete a saved project from the Askimo registry (~/.askimo/projects.json) and drop its pgvector embedding table from the database, or delete all projects at once.
 
 **Syntax:**
 
 :delete-project \<project-name\>
+:delete-project --all
 
 **Parameters:**
 - `<project-name>` - Name of the project to delete
+- `--all` - Delete all saved projects and their embeddings
 
-**Example:**
+**Examples:**
 
 ```bash
+# Delete a specific project
 :delete-project myapp
+
+# Delete all projects
+:delete-project --all
 ```
 
 **Notes:**
-- This action removes the project from the registry and deletes all indexed embeddings
-- The original project folder remains untouched
+- This action removes the project(s) from the registry and deletes all indexed embeddings
+- The original project folders remain untouched
+- When using `--all`, you'll see a list of all projects before confirmation
 - This operation cannot be undone
 
 ## :create-recipe
@@ -301,21 +308,28 @@ refactoring
 ## :delete-recipe
 
 **Description:**
-Delete a registered recipe from ~/.askimo/recipes.
+Delete a registered recipe from ~/.askimo/recipes, or delete all recipes at once.
 
 **Syntax:**
 
 :delete-recipe \<name\>
+:delete-recipe --all
 
 **Parameters:**
 - `<name>` - Name of the recipe to delete
+- `--all` - Delete all registered recipes
 
-**Example:**
+**Examples:**
 
 ```bash
+# Delete a specific recipe
 :delete-recipe myrecipe
+
+# Delete all recipes
+:delete-recipe --all
 ```
 
 **Notes:**
 - You will be prompted to confirm the deletion
+- When using `--all`, you'll see a list of all recipes before confirmation
 - This operation cannot be undone
