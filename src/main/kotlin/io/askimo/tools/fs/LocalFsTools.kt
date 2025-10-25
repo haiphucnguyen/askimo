@@ -5,7 +5,7 @@
 package io.askimo.tools.fs
 
 import dev.langchain4j.agent.tool.Tool
-import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.AskimoHome
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -22,7 +22,7 @@ import kotlin.text.matches
 import kotlin.toString
 
 object LocalFsTools {
-    private var allowedRoot: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath().normalize()
+    private var allowedRoot: Path = AskimoHome.userHome().toAbsolutePath().normalize()
     private var cwd: Path = Paths.get("").toAbsolutePath().normalize()
     private val backgroundProcesses = mutableMapOf<Long, BackgroundProcess>()
 
@@ -33,11 +33,7 @@ object LocalFsTools {
         val startTime: Long = System.currentTimeMillis(),
     )
 
-    private fun expandHome(raw: String): Path {
-        val home = System.getProperty("user.home")
-        val expanded = raw.replace(Regex("^~(?=/|$)"), home)
-        return Paths.get(expanded)
-    }
+    private fun expandHome(raw: String): Path = AskimoHome.expandTilde(raw)
 
     /** Resolve "~" and relative paths (relative to CWD), normalize, and ensure under allowedRoot. */
     private fun resolveAndGuard(raw: String): Path {
@@ -505,33 +501,32 @@ object LocalFsTools {
         "List all background processes started by runCommand. " +
             "Returns: {ok: true, processes: [{pid, command, cwd, status, startTime}]} or {ok: false, error, message}.",
     )
-    fun listBackgroundProcesses(): Map<String, Any?> =
-        try {
-            val processes =
-                backgroundProcesses.map { (pid, processInfo) ->
-                    val isAlive = processInfo.process.isAlive
-                    val runningTime = System.currentTimeMillis() - processInfo.startTime
-                    mapOf(
-                        "pid" to pid,
-                        "command" to processInfo.command,
-                        "cwd" to processInfo.cwd,
-                        "status" to if (isAlive) "running" else "finished",
-                        "startTime" to processInfo.startTime,
-                        "runningTimeMs" to runningTime,
-                    )
-                }
+    fun listBackgroundProcesses(): Map<String, Any?> = try {
+        val processes =
+            backgroundProcesses.map { (pid, processInfo) ->
+                val isAlive = processInfo.process.isAlive
+                val runningTime = System.currentTimeMillis() - processInfo.startTime
+                mapOf(
+                    "pid" to pid,
+                    "command" to processInfo.command,
+                    "cwd" to processInfo.cwd,
+                    "status" to if (isAlive) "running" else "finished",
+                    "startTime" to processInfo.startTime,
+                    "runningTimeMs" to runningTime,
+                )
+            }
 
-            // Clean up finished processes
-            backgroundProcesses.entries.removeIf { !it.value.process.isAlive }
+        // Clean up finished processes
+        backgroundProcesses.entries.removeIf { !it.value.process.isAlive }
 
-            mapOf(
-                "ok" to true,
-                "processes" to processes,
-                "count" to processes.size,
-            )
-        } catch (e: Exception) {
-            err("list_failed", "${e::class.simpleName}: ${e.message}")
-        }
+        mapOf(
+            "ok" to true,
+            "processes" to processes,
+            "count" to processes.size,
+        )
+    } catch (e: Exception) {
+        err("list_failed", "${e::class.simpleName}: ${e.message}")
+    }
 
     /**
      * Searches for text content within files across a directory tree.
@@ -696,12 +691,11 @@ object LocalFsTools {
 
     private fun parseCursor(cursor: String?): Int = cursor?.toIntOrNull()?.coerceAtLeast(0) ?: 0
 
-    private fun isHidden(p: Path): Boolean =
-        try {
-            Files.isHidden(p) || p.fileName?.toString()?.startsWith(".") == true
-        } catch (_: Exception) {
-            false
-        }
+    private fun isHidden(p: Path): Boolean = try {
+        Files.isHidden(p) || p.fileName?.toString()?.startsWith(".") == true
+    } catch (_: Exception) {
+        false
+    }
 
     private fun looksBinary(
         bytes: ByteArray,

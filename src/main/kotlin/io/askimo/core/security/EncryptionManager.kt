@@ -4,10 +4,10 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.debug
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -26,7 +26,7 @@ object EncryptionManager {
     private const val GCM_IV_LENGTH = 12
     private const val GCM_TAG_LENGTH = 16
 
-    private val keyPath: Path = Paths.get(System.getProperty("user.home"), ".askimo", ".key")
+    private val keyPath: Path = AskimoHome.encryptionKeyFile()
 
     /**
      * Encrypts an API key using AES-256-GCM.
@@ -34,26 +34,25 @@ object EncryptionManager {
      * @param plaintext The API key to encrypt
      * @return Base64-encoded encrypted data, or null if encryption fails
      */
-    fun encrypt(plaintext: String): String? =
-        try {
-            val secretKey = getOrCreateSecretKey()
-            val cipher = Cipher.getInstance(TRANSFORMATION)
+    fun encrypt(plaintext: String): String? = try {
+        val secretKey = getOrCreateSecretKey()
+        val cipher = Cipher.getInstance(TRANSFORMATION)
 
-            // Generate random IV
-            val iv = ByteArray(GCM_IV_LENGTH)
-            SecureRandom().nextBytes(iv)
-            val spec = GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
+        // Generate random IV
+        val iv = ByteArray(GCM_IV_LENGTH)
+        SecureRandom().nextBytes(iv)
+        val spec = GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
 
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
-            val encryptedData = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
+        val encryptedData = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
 
-            // Combine IV + encrypted data
-            val combined = iv + encryptedData
-            Base64.getEncoder().encodeToString(combined)
-        } catch (e: Exception) {
-            debug("Failed to encrypt API key: ${e.message}")
-            null
-        }
+        // Combine IV + encrypted data
+        val combined = iv + encryptedData
+        Base64.getEncoder().encodeToString(combined)
+    } catch (e: Exception) {
+        debug("Failed to encrypt API key: ${e.message}")
+        null
+    }
 
     /**
      * Decrypts an encrypted API key.
@@ -61,36 +60,34 @@ object EncryptionManager {
      * @param ciphertext Base64-encoded encrypted data
      * @return Decrypted API key, or null if decryption fails
      */
-    fun decrypt(ciphertext: String): String? =
-        try {
-            val secretKey = getOrCreateSecretKey()
-            val cipher = Cipher.getInstance(TRANSFORMATION)
+    fun decrypt(ciphertext: String): String? = try {
+        val secretKey = getOrCreateSecretKey()
+        val cipher = Cipher.getInstance(TRANSFORMATION)
 
-            val combined = Base64.getDecoder().decode(ciphertext)
+        val combined = Base64.getDecoder().decode(ciphertext)
 
-            // Extract IV and encrypted data
-            val iv = combined.sliceArray(0 until GCM_IV_LENGTH)
-            val encryptedData = combined.sliceArray(GCM_IV_LENGTH until combined.size)
+        // Extract IV and encrypted data
+        val iv = combined.sliceArray(0 until GCM_IV_LENGTH)
+        val encryptedData = combined.sliceArray(GCM_IV_LENGTH until combined.size)
 
-            val spec = GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+        val spec = GCMParameterSpec(GCM_TAG_LENGTH * 8, iv)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
 
-            val decryptedData = cipher.doFinal(encryptedData)
-            String(decryptedData, Charsets.UTF_8)
-        } catch (e: Exception) {
-            debug("Failed to decrypt API key: ${e.message}")
-            null
-        }
+        val decryptedData = cipher.doFinal(encryptedData)
+        String(decryptedData, Charsets.UTF_8)
+    } catch (e: Exception) {
+        debug("Failed to decrypt API key: ${e.message}")
+        null
+    }
 
     /**
      * Gets the secret key from file, or creates a new one if it doesn't exist.
      */
-    private fun getOrCreateSecretKey(): SecretKey =
-        if (Files.exists(keyPath)) {
-            loadSecretKey()
-        } else {
-            createAndSaveSecretKey()
-        }
+    private fun getOrCreateSecretKey(): SecretKey = if (Files.exists(keyPath)) {
+        loadSecretKey()
+    } else {
+        createAndSaveSecretKey()
+    }
 
     /**
      * Creates a new AES-256 secret key and saves it to file.
@@ -134,16 +131,15 @@ object EncryptionManager {
     /**
      * Deletes the encryption key file.
      */
-    fun deleteKey(): Boolean =
-        try {
-            if (Files.exists(keyPath)) {
-                Files.delete(keyPath)
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            debug("Failed to delete encryption key: ${e.message}")
+    fun deleteKey(): Boolean = try {
+        if (Files.exists(keyPath)) {
+            Files.delete(keyPath)
+            true
+        } else {
             false
         }
+    } catch (e: Exception) {
+        debug("Failed to delete encryption key: ${e.message}")
+        false
+    }
 }

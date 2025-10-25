@@ -10,11 +10,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.invoke
-import kotlin.io.resolve
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
-import kotlin.toString
 
 class ToolRegistryTest {
     @TempDir

@@ -6,6 +6,7 @@ package io.askimo.cli.commands
 
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
@@ -50,7 +51,7 @@ class ConfigCommandHandler(
                 } catch (_: Exception) {
                     false
                 }
-            val home = System.getProperty("user.home")
+            val home = AskimoHome.userHome().toString()
             val rootDisp = meta.root.replaceFirst(home, "~")
             info("  Active project:")
             info("    Name:       ${meta.name}")

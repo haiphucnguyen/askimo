@@ -4,11 +4,11 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
-import java.nio.file.Paths
 
 class DeleteRecipeCommandHandler : CommandHandler {
     override val keyword = ":delete-recipe"
@@ -22,7 +22,7 @@ class DeleteRecipeCommandHandler : CommandHandler {
         }
 
         val name = args[0]
-        val path = Paths.get(System.getProperty("user.home"), ".askimo", "recipes", "$name.yml")
+        val path = AskimoHome.recipesDir().resolve("$name.yml")
         if (!Files.exists(path)) {
             info("❌ Recipe '$name' not found.")
             return

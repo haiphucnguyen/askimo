@@ -4,17 +4,17 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
-import java.nio.file.Paths
 
 class ListRecipesCommandHandler : CommandHandler {
     override val keyword = ":recipes"
     override val description = "List all registered commands in ~/.askimo/recipes"
 
     override fun handle(line: ParsedLine) {
-        val dir = Paths.get(System.getProperty("user.home"), ".askimo", "recipes")
+        val dir = AskimoHome.recipesDir()
         if (!Files.exists(dir)) {
             info("ℹ️  No recipes registered yet.")
             return
@@ -33,9 +33,7 @@ class ListRecipesCommandHandler : CommandHandler {
         }
 
         info("📦 Registered recipes (${files.size})")
-        info("────────────────────────────")
-        files.forEach {
-            info(it.fileName.toString().removeSuffix(".yml"))
-        }
+        info("──────────────────────────────")
+        files.forEach { info(it.fileName.toString().removeSuffix(".yml")) }
     }
 }

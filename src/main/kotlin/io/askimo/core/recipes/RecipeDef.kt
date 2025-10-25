@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
  * @property name Unique identifier for the recipe.
  * @property version Schema version of the recipe definition (default is 3).
  * @property description Optional human‑readable description of what the recipe does.
- * @property allowedTools Whitelist of tool names that the recipe is allowed to use.
+ * @property allowedTools Whitelist of tool names that the recipe is allowed to use. If empty, ALL tools are allowed.
  * @property vars Map of variable placeholders to tool calls used to compute their values.
  * @property system The system prompt provided to the chat model.
  * @property userTemplate The user prompt template rendered with resolved variables.
@@ -27,7 +27,7 @@ data class RecipeDef(
     val name: String,
     val version: Int = 3,
     val description: String? = null,
-    val allowedTools: List<String> = emptyList(),
+    val allowedTools: List<String> = emptyList(), // empty ⇒ unrestricted
     val vars: Map<String, VarCall> = emptyMap(),
     val system: String,
     val userTemplate: String,

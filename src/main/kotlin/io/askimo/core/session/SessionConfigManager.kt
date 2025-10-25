@@ -5,12 +5,12 @@
 package io.askimo.core.session
 
 import io.askimo.core.security.SecureSessionManager
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
 /**
@@ -22,7 +22,7 @@ import java.nio.file.StandardOpenOption
  */
 object SessionConfigManager {
     /** Path to the configuration file in the user's home directory */
-    private val configPath: Path = Paths.get(System.getProperty("user.home"), ".askimo", "session")
+    private val configPath: Path = AskimoHome.sessionFile()
 
     /** In-memory cache for the loaded session */
     @Volatile

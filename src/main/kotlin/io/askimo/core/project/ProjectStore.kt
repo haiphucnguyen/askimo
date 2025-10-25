@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.TimeUtil.stamp
 import kotlinx.serialization.json.Json
 import java.nio.channels.FileChannel
@@ -25,9 +26,9 @@ object ProjectStore {
             prettyPrint = true
             ignoreUnknownKeys = true
         }
-    private val baseDir: Path = Paths.get(System.getProperty("user.home")).resolve(".askimo")
-    private val projectsDir: Path = baseDir.resolve("projects")
-    private val activeFile: Path = baseDir.resolve("active")
+    private val baseDir: Path get() = AskimoHome.base()
+    private val projectsDir: Path get() = AskimoHome.projectsDir()
+    private val activeFile: Path get() = baseDir.resolve("active")
 
     fun create(
         name: String,
@@ -113,11 +114,10 @@ object ProjectStore {
         atomicWrite(path, json.encodeToString(payload))
     }
 
-    private fun readProjectFile(path: Path): ProjectMeta? =
-        runCatching {
-            val pf = json.decodeFromString<ProjectFileV1>(Files.readString(path))
-            pf.project
-        }.getOrNull()
+    private fun readProjectFile(path: Path): ProjectMeta? = runCatching {
+        val pf = json.decodeFromString<ProjectFileV1>(Files.readString(path))
+        pf.project
+    }.getOrNull()
 
     private fun atomicWrite(
         path: Path,
@@ -160,10 +160,9 @@ object ProjectStore {
         if (!moved) error("Failed to write $path")
     }
 
-    private fun normalizeAbs(p: String): String =
-        Paths
-            .get(p)
-            .toAbsolutePath()
-            .normalize()
-            .toString()
+    private fun normalizeAbs(p: String): String = Paths
+        .get(p)
+        .toAbsolutePath()
+        .normalize()
+        .toString()
 }

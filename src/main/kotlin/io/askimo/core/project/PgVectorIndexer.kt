@@ -38,12 +38,12 @@ class PgVectorIndexer(
 
     private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
 
-    private val maxCharsPerChunk = AppConfig.embedding.max_chars_per_chunk
-    private val chunkOverlap = AppConfig.embedding.chunk_overlap
-    private val perRequestSleepMs = AppConfig.throttle.per_request_sleep_ms
+    private val maxCharsPerChunk = AppConfig.embedding.maxCharsPerChunk
+    private val chunkOverlap = AppConfig.embedding.chunkOverlap
+    private val perRequestSleepMs = AppConfig.throttle.perRequestSleepMs
     private val retryAttempts = AppConfig.retry.attempts
-    private val retryBaseDelayMs = AppConfig.retry.base_delay_ms
-    private val maxFileBytes = AppConfig.indexing.max_file_bytes
+    private val retryBaseDelayMs = AppConfig.retry.baseDelayMs
+    private val maxFileBytes = AppConfig.indexing.maxFileBytes
 
     private val defaultCharset: Charset = Charsets.UTF_8
 
@@ -96,125 +96,125 @@ class PgVectorIndexer(
                 name = "Gradle",
                 markers = setOf("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradlew"),
                 excludePaths =
-                    setOf(
-                        "build/",
-                        ".gradle/",
-                        "out/",
-                        "bin/",
-                        ".kotlintest/",
-                        ".kotlin/",
-                    ),
+                setOf(
+                    "build/",
+                    ".gradle/",
+                    "out/",
+                    "bin/",
+                    ".kotlintest/",
+                    ".kotlin/",
+                ),
             ),
             ProjectType(
                 name = "Maven",
                 markers = setOf("pom.xml", "mvnw"),
                 excludePaths =
-                    setOf(
-                        "target/",
-                        ".mvn/",
-                        "out/",
-                        "bin/",
-                    ),
+                setOf(
+                    "target/",
+                    ".mvn/",
+                    "out/",
+                    "bin/",
+                ),
             ),
             // JavaScript/TypeScript projects
             ProjectType(
                 name = "Node.js",
                 markers = setOf("package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"),
                 excludePaths =
-                    setOf(
-                        "node_modules/",
-                        "dist/",
-                        "build/",
-                        ".next/",
-                        ".nuxt/",
-                        "out/",
-                        "coverage/",
-                        ".cache/",
-                        ".parcel-cache/",
-                        ".turbo/",
-                        ".vite/",
-                    ),
+                setOf(
+                    "node_modules/",
+                    "dist/",
+                    "build/",
+                    ".next/",
+                    ".nuxt/",
+                    "out/",
+                    "coverage/",
+                    ".cache/",
+                    ".parcel-cache/",
+                    ".turbo/",
+                    ".vite/",
+                ),
             ),
             // Python projects
             ProjectType(
                 name = "Python",
                 markers = setOf("requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"),
                 excludePaths =
-                    setOf(
-                        "__pycache__/",
-                        "*.pyc",
-                        "*.pyo",
-                        "*.pyd",
-                        ".pytest_cache/",
-                        ".mypy_cache/",
-                        ".tox/",
-                        "venv/",
-                        "env/",
-                        ".venv/",
-                        ".env/",
-                        "dist/",
-                        "build/",
-                        "*.egg-info/",
-                        ".eggs/",
-                    ),
+                setOf(
+                    "__pycache__/",
+                    "*.pyc",
+                    "*.pyo",
+                    "*.pyd",
+                    ".pytest_cache/",
+                    ".mypy_cache/",
+                    ".tox/",
+                    "venv/",
+                    "env/",
+                    ".venv/",
+                    ".env/",
+                    "dist/",
+                    "build/",
+                    "*.egg-info/",
+                    ".eggs/",
+                ),
             ),
             // Go projects
             ProjectType(
                 name = "Go",
                 markers = setOf("go.mod", "go.sum"),
                 excludePaths =
-                    setOf(
-                        "vendor/",
-                        "bin/",
-                        "pkg/",
-                    ),
+                setOf(
+                    "vendor/",
+                    "bin/",
+                    "pkg/",
+                ),
             ),
             // Rust projects
             ProjectType(
                 name = "Rust",
                 markers = setOf("Cargo.toml", "Cargo.lock"),
                 excludePaths =
-                    setOf(
-                        "target/",
-                        "Cargo.lock",
-                    ),
+                setOf(
+                    "target/",
+                    "Cargo.lock",
+                ),
             ),
             // Ruby projects
             ProjectType(
                 name = "Ruby",
                 markers = setOf("Gemfile", "Gemfile.lock", "Rakefile"),
                 excludePaths =
-                    setOf(
-                        "vendor/",
-                        ".bundle/",
-                        "tmp/",
-                        "log/",
-                    ),
+                setOf(
+                    "vendor/",
+                    ".bundle/",
+                    "tmp/",
+                    "log/",
+                ),
             ),
             // PHP projects
             ProjectType(
                 name = "PHP/Composer",
                 markers = setOf("composer.json", "composer.lock"),
                 excludePaths =
-                    setOf(
-                        "vendor/",
-                        "var/cache/",
-                        "var/log/",
-                    ),
+                setOf(
+                    "vendor/",
+                    "var/cache/",
+                    "var/log/",
+                ),
             ),
             // .NET projects
             ProjectType(
                 name = ".NET",
                 markers = setOf("*.csproj", "*.sln", "*.fsproj", "*.vbproj"),
                 excludePaths =
-                    setOf(
-                        "bin/",
-                        "obj/",
-                        "packages/",
-                        ".vs/",
-                        "Debug/",
-                        "Release/",
-                    ),
+                setOf(
+                    "bin/",
+                    "obj/",
+                    "packages/",
+                    ".vs/",
+                    "Debug/",
+                    "Release/",
+                ),
             ),
         )
 
@@ -239,7 +239,7 @@ class PgVectorIndexer(
     private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
 
     private val dimension: Int by lazy {
-        AppConfig.embedding.preferred_dim ?: embeddingModel.dimension()
+        AppConfig.embedding.preferredDim ?: embeddingModel.dimension()
     }
 
     /**
@@ -362,12 +362,11 @@ class PgVectorIndexer(
         return indexedFiles
     }
 
-    fun embed(text: String): List<Float> =
-        embeddingModel
-            .embed(text)
-            .content()
-            .vector()
-            .toList()
+    fun embed(text: String): List<Float> = embeddingModel
+        .embed(text)
+        .content()
+        .vector()
+        .toList()
 
     fun similaritySearch(
         embedding: List<Float>,
@@ -464,32 +463,29 @@ class PgVectorIndexer(
     private fun buildFileHeader(
         relativePath: String,
         filePath: Path,
-    ): String =
-        buildString {
-            appendLine("FILE: $relativePath")
-            appendLine("NAME: ${filePath.fileName}")
-            appendLine("EXT: ${filePath.extension.lowercase()}")
-            appendLine("---")
-        }
+    ): String = buildString {
+        appendLine("FILE: $relativePath")
+        appendLine("NAME: ${filePath.fileName}")
+        appendLine("EXT: ${filePath.extension.lowercase()}")
+        appendLine("---")
+    }
 
     /** Prefer reading as UTF-8; if it fails, try platform default; then ASCII fallback. */
-    private fun safeReadText(path: Path): String =
+    private fun safeReadText(path: Path): String = try {
+        path.readText(defaultCharset)
+    } catch (_: Exception) {
         try {
-            path.readText(defaultCharset)
+            path.readText(Charset.defaultCharset())
         } catch (_: Exception) {
-            try {
-                path.readText(Charset.defaultCharset())
-            } catch (_: Exception) {
-                String(Files.readAllBytes(path), Charsets.US_ASCII)
-            }
+            String(Files.readAllBytes(path), Charsets.US_ASCII)
         }
+    }
 
-    private fun tooLargeToIndex(path: Path): Boolean =
-        try {
-            Files.size(path) > maxFileBytes
-        } catch (_: Exception) {
-            false
-        }
+    private fun tooLargeToIndex(path: Path): Boolean = try {
+        Files.size(path) > maxFileBytes
+    } catch (_: Exception) {
+        false
+    }
 
     /**
      * Simple, fast character-based chunker with a tiny bit of format awareness.

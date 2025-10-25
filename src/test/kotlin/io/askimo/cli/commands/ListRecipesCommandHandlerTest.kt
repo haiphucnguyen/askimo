@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,25 +20,24 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
     @TempDir
     lateinit var tempHome: Path
 
-    private lateinit var originalHome: String
+    private lateinit var testBaseScope: AskimoHome.TestBaseScope
     private lateinit var recipesDir: Path
 
     @BeforeEach
     fun setUp() {
         handler = ListRecipesCommandHandler()
 
-        // Save original home and set temp home for testing
-        originalHome = System.getProperty("user.home")
-        System.setProperty("user.home", tempHome.toString())
+        // Use AskimoHome's test override instead of manipulating system properties
+        testBaseScope = AskimoHome.withTestBase(tempHome.resolve(".askimo"))
 
-        // Create recipes directory
-        recipesDir = tempHome.resolve(".askimo/recipes")
+        // Create recipes directory using AskimoHome
+        recipesDir = AskimoHome.recipesDir()
     }
 
     @AfterEach
     fun tearDown() {
-        // Restore original home directory
-        System.setProperty("user.home", originalHome)
+        // Clean up the test base override
+        testBaseScope.close()
     }
 
     @Test

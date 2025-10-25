@@ -9,8 +9,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,22 +32,22 @@ data class PgVectorConfig(
 )
 
 data class EmbeddingConfig(
-    val max_chars_per_chunk: Int = 4000,
-    val chunk_overlap: Int = 200,
-    val preferred_dim: Int? = null,
+    val maxCharsPerChunk: Int = 4000,
+    val chunkOverlap: Int = 200,
+    val preferredDim: Int? = null,
 )
 
 data class RetryConfig(
     val attempts: Int = 4,
-    val base_delay_ms: Long = 150,
+    val baseDelayMs: Long = 150,
 )
 
 data class ThrottleConfig(
-    val per_request_sleep_ms: Long = 30,
+    val perRequestSleepMs: Long = 30,
 )
 
 data class IndexingConfig(
-    val max_file_bytes: Long = 2_000_000,
+    val maxFileBytes: Long = 2_000_000,
 )
 
 data class AppConfigData(
@@ -113,13 +115,12 @@ object AppConfig {
             }
 
     /** Reload on demand after editing the file. */
-    fun reload(): AppConfigData =
-        synchronized(this) {
-            cached = null
-            val re = loadOnce()
-            cached = re
-            re
-        }
+    fun reload(): AppConfigData = synchronized(this) {
+        cached = null
+        val re = loadOnce()
+        cached = re
+        re
+    }
 
     private fun loadOnce(): AppConfigData {
         val path = resolveOrCreateConfigPath()
@@ -149,28 +150,22 @@ object AppConfig {
      * Otherwise, if home path is missing, we create ~/.askimo/askimo.yml.
      */
     private fun resolveOrCreateConfigPath(): Path? {
-        // 1) System property
         System.getProperty("askimo.config")?.takeIf { it.isNotBlank() }?.let { p ->
             val path = Paths.get(p)
             if (!path.exists()) writeDefaultConfig(path)
             return path
         }
-        // 2) Env var
         System.getenv("ASKIMO_CONFIG")?.takeIf { it.isNotBlank() }?.let { p ->
             val path = Paths.get(p)
             if (!path.exists()) writeDefaultConfig(path)
             return path
         }
-        // 3) Home default
-        val home = System.getProperty("user.home") ?: ""
-        val homePath = Paths.get(home, ".askimo", "askimo.yml")
+        val homeBase = AskimoHome.base()
+        val homePath = homeBase.resolve("askimo.yml")
         if (!homePath.exists()) writeDefaultConfig(homePath)
         if (homePath.isRegularFile()) return homePath
-
-        // 4) CWD default (only if it already exists; no auto-create here to avoid cluttering repos)
         val cwdPath = Paths.get("askimo.yml")
         if (cwdPath.isRegularFile()) return cwdPath
-
         return null
     }
 
@@ -208,12 +203,11 @@ object AppConfig {
     /** Supports ${ENV} or ${ENV:default} inside YAML. */
     private val placeholder = "\\$\\{([A-Za-z_][A-Za-z0-9_]*)(?::([^}]*))?}".toRegex()
 
-    private fun interpolateEnv(text: String): String =
-        placeholder.replace(text) { m ->
-            val key = m.groupValues[1]
-            val def = m.groupValues.getOrNull(2)
-            propOrEnv(key) ?: def.orEmpty()
-        }
+    private fun interpolateEnv(text: String): String = placeholder.replace(text) { m ->
+        val key = m.groupValues[1]
+        val def = m.groupValues.getOrNull(2)
+        propOrEnv(key) ?: def.orEmpty()
+    }
 
     private fun propOrEnv(key: String): String? = System.getProperty(key) ?: System.getenv(key)
 
@@ -245,22 +239,22 @@ object AppConfig {
             )
         val emb =
             EmbeddingConfig(
-                max_chars_per_chunk = envInt("ASKIMO_EMBED_MAX_CHARS_PER_CHUNK", 4000),
-                chunk_overlap = envInt("ASKIMO_EMBED_CHUNK_OVERLAP", 200),
-                preferred_dim = envNullableInt("ASKIMO_EMBED_DIM"),
+                maxCharsPerChunk = envInt("ASKIMO_EMBED_MAX_CHARS_PER_CHUNK", 4000),
+                chunkOverlap = envInt("ASKIMO_EMBED_CHUNK_OVERLAP", 200),
+                preferredDim = envNullableInt("ASKIMO_EMBED_DIM"),
             )
         val r =
             RetryConfig(
                 attempts = envInt("ASKIMO_EMBED_RETRY_ATTEMPTS", 4),
-                base_delay_ms = envLong("ASKIMO_EMBED_RETRY_BASE_MS", 150L),
+                baseDelayMs = envLong("ASKIMO_EMBED_RETRY_BASE_MS", 150L),
             )
         val t =
             ThrottleConfig(
-                per_request_sleep_ms = envLong("ASKIMO_EMBED_SLEEP_MS", 30L),
+                perRequestSleepMs = envLong("ASKIMO_EMBED_SLEEP_MS", 30L),
             )
         val idx =
             IndexingConfig(
-                max_file_bytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
+                maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
             )
         return AppConfigData(pg, emb, r, t, idx)
     }

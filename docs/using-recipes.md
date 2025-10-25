@@ -13,15 +13,34 @@ Recipes are a key feature of Askimo, designed to automate repetitive tasks and e
 - **Custom Prompts and Parameters:** You can create recipes with parameters, allowing users to customize the behavior, input, and output of each recipe. This makes recipes highly flexible for different scenarios.
 - **Consistent Workflows:** Recipes ensure that tasks are performed consistently, following your preferred format and rules.
 
-## Example: Custom Summarization Recipe
-Suppose you frequently need to summarize different files. You can create a recipe that takes a file path as a parameter and customizes the system and user messages:
+## Tool Access Control (`allowedTools`)
+By default, a recipe has access to ALL built‑in tools. You only need to specify `allowedTools:` when you want to restrict what the recipe may call.
+
+Ways to allow all tools:
+- Omit the `allowedTools` field entirely.
+- Or set it to an empty list: `allowedTools: []`
+
+Restricting tools example:
+```yaml
+allowedTools:
+  - readFile
+  - writeFile
+```
+This limits the recipe to just those tools; any attempt to use others will fail with an error.
+
+Built‑in tool names available when unrestricted:
+- Git: `stagedDiff`, `status`, `branch`, `commit`
+- Filesystem: `writeFile`, `readFile` (plus additional internal FS/search utilities if present in future releases)
+
+> Note: Tool names are the Kotlin method names (e.g. `writeFile`). If new tools are added you'll see them in `:help` or error messages listing available tools.
+
+## Example: Custom Summarization Recipe (No Restrictions)
+Suppose you frequently need to summarize different files. This recipe leaves tooling unrestricted (no `allowedTools` field):
 
 ```yaml
 name: summarize
 version: 1
 description: "Summarize the content of a file concisely"
-allowedTools:
-  - readFile
 vars:
   file_content:
     tool: readFile
@@ -39,7 +58,7 @@ userTemplate: |
 postActions: []
 ```
 
-When you run this recipe, you can specify the file to summarize:
+Run it:
 ```
 summarize README.md
 ```
@@ -48,7 +67,7 @@ You can further customize the `system` message to change the writing style, or t
 ## Parameterization and Customization
 Recipes support parameters using the `{{argN}}` syntax, which allows users to pass arguments when running the recipe. These parameters can be used in any section, including `vars`, `system`, and `userTemplate`.
 
-**Example: Custom Commit Message Recipe**
+**Example: Custom Commit Message Recipe (Restricted Tools)**
 ```yaml
 name: gitCommit
 version: 5
@@ -57,6 +76,7 @@ allowedTools:
   - stagedDiff
   - status
   - branch
+  - commit
 vars:
   diff:
     tool: stagedDiff
@@ -70,7 +90,7 @@ userTemplate: |
   {{status}}
 postActions: []
 ```
-You can run this recipe and specify a style parameter:
+Run it:
 ```
 gitCommit "feat(scope): summary"
 ```
@@ -139,7 +159,7 @@ summarize README.md
 This runs the `summarize` recipe on the specified file.
 
 ## Recipe Template Example
-Here’s a simplified example from `gitcommit.yml`:
+Here’s a simplified example from `gitcommit.yml` (with explicit restriction):
 
 ```yaml
 name: gitCommit
@@ -148,6 +168,7 @@ allowedTools:
   - stagedDiff
   - status
   - branch
+  - commit
 vars:
   diff:
     tool: stagedDiff
@@ -215,4 +236,5 @@ Refer to the `templates/gitcommit.yml` and `templates/summarize.yml` files for m
 ## Best Practices
 - Store your recipes in `~/.askimo/recipes` for easy access.
 - Use descriptive names and document the purpose of each recipe in the YAML.
+- Only add `allowedTools` when you need to sandbox a recipe.
 - Refer to `gitcommit.yml` and `summarize.yml` in the `templates/` folder for inspiration.

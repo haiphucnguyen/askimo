@@ -4,13 +4,13 @@
  */
 package io.askimo.core.recipes
 
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Yaml.yamlMapper
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 class RecipeRegistry(
-    private val baseDir: Path = Paths.get(System.getProperty("user.home"), ".askimo", "recipes"),
+    private val baseDir: Path = AskimoHome.recipesDir(),
 ) {
     fun load(name: String): RecipeDef {
         val file = baseDir.resolve("$name.yml")

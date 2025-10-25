@@ -184,7 +184,11 @@ extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true
 spotless {
     ratchetFrom("origin/main")
     kotlin {
-        ktlint()
+        ktlint().editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-unused-imports" to "enabled",
+            ),
+        )
         licenseHeaderFile(
             rootProject.file("HEADER-SRC"),
             "(package|import|@file:)",

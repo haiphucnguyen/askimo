@@ -6,6 +6,7 @@ package io.askimo.cli.commands
 
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.ProjectStore
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
@@ -27,7 +28,7 @@ class ListProjectsCommandHandler : CommandHandler {
         }
 
         val activeId = ProjectStore.getActive()?.first?.id
-        val home = System.getProperty("user.home")
+        val home = AskimoHome.userHome().toString()
 
         // Sort by lastUsedAt desc (fallback to createdAt)
         val projects =
