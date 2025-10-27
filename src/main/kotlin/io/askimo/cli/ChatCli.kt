@@ -16,12 +16,14 @@ import io.askimo.cli.commands.CreateRecipeCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
-import io.askimo.cli.commands.HistoryCommandHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ListRecipesCommandHandler
+import io.askimo.cli.commands.ListSessionsCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
+import io.askimo.cli.commands.NewSessionCommandHandler
 import io.askimo.cli.commands.ParamsCommandHandler
+import io.askimo.cli.commands.ResumeSessionCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
@@ -33,7 +35,7 @@ import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
-import io.askimo.core.util.AskimoHome
+import io.askimo.core.session.MessageRole
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import org.jline.keymap.KeyMap
@@ -43,7 +45,6 @@ import org.jline.reader.Reference
 import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
-import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp
 import java.io.IOException
@@ -55,8 +56,14 @@ fun main(args: Array<String>) {
         return
     }
 
-    val historyFile = AskimoHome.historyFile().toAbsolutePath()
     val session = SessionFactory.createSession()
+
+    // Add shutdown hook to gracefully close database connections
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            session.chatSessionRepository.close()
+        },
+    )
 
     // Create all command handlers once
     val commandHandlers: List<CommandHandler> =
@@ -79,6 +86,9 @@ fun main(args: Array<String>) {
             ListRecipesCommandHandler(),
             AgentCommandHandler(session),
             ApiKeySecurityCommandHandler(session),
+            NewSessionCommandHandler(session),
+            ListSessionsCommandHandler(),
+            ResumeSessionCommandHandler(session),
         )
 
     // Helper function to convert interactive keyword to non-interactive flag
@@ -92,9 +102,6 @@ fun main(args: Array<String>) {
         val flag = keywordToFlag(handler.keyword)
 
         if (args.any { it == flag }) {
-            // Special handling for commands that need terminal/reader (skip in non-interactive)
-            if (handler is HistoryCommandHandler) continue
-
             // Check if command takes arguments
             val flagArgs = NonInteractiveCommandParser.extractFlagArguments(args, flag)
             if (flagArgs != null && flagArgs.isNotEmpty()) {
@@ -149,15 +156,11 @@ fun main(args: Array<String>) {
                     .builder()
                     .terminal(terminal)
                     .parser(parser)
-                    .variable(LineReader.HISTORY_FILE, historyFile)
-                    .variable(LineReader.HISTORY_SIZE, 100)
                     .variable(LineReader.COMPLETION_STYLE_LIST_SELECTION, "fg:blue")
-                    .variable(LineReader.LIST_MAX, 5) // Limit to 5 suggestions max
+                    .variable(LineReader.LIST_MAX, 5)
                     .variable(LineReader.COMPLETION_STYLE_STARTING, "")
                     .completer(completer)
                     .build()
-            val history = DefaultHistory(reader)
-            Runtime.getRuntime().addShutdownHook(Thread { runCatching { history.save() } })
 
             // Is this a "real" terminal with raw mode & cursor addressing?
             val supportsRaw = terminal.getBooleanCapability(InfoCmp.Capability.cursor_address)
@@ -200,7 +203,7 @@ fun main(args: Array<String>) {
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
-            val interactiveCommandHandlers = commandHandlers + HistoryCommandHandler(reader, terminal, historyFile)
+            val interactiveCommandHandlers = commandHandlers
 
             (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
 
@@ -236,6 +239,14 @@ fun main(args: Array<String>) {
                 } else {
                     val prompt = parsedLine.line()
 
+                    // Ensure we have a chat session
+                    if (session.currentChatSession == null) {
+                        session.startNewChatSession()
+                    }
+
+                    // Save user message
+                    session.addChatMessage(MessageRole.USER, prompt)
+
                     val indicator = LoadingIndicator(reader.terminal, "Thinking…")
                     indicator.start()
 
@@ -258,6 +269,9 @@ fun main(args: Array<String>) {
                         reader.terminal.flush()
                     }
                     mdSink.finish()
+
+                    // Save assistant response
+                    session.addChatMessage(MessageRole.ASSISTANT, output)
 
                     session.lastResponse = output
                     reader.terminal.writer().println()

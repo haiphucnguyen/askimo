@@ -83,6 +83,10 @@ class Session(
 
     var lastResponse: String? = null
 
+    // Chat session support
+    val chatSessionRepository = ChatSessionRepository()
+    var currentChatSession: ChatSession? = null
+
     /**
      * The active chat model for this session.
      * This property is initialized lazily and can only be set through setChatModel().
@@ -136,10 +140,9 @@ class Session(
     /**
      * Gets the current provider's settings.
      */
-    fun getCurrentProviderSettings(): ProviderSettings =
-        params.providerSettings[params.currentProvider]
-            ?: getModelFactory()?.defaultSettings()
-            ?: NoopProviderSettings
+    fun getCurrentProviderSettings(): ProviderSettings = params.providerSettings[params.currentProvider]
+        ?: getModelFactory()?.defaultSettings()
+        ?: NoopProviderSettings
 
     /**
      * Sets the provider-specific settings into the map.
@@ -164,10 +167,9 @@ class Session(
     /**
      * Gets the provider-specific settings map, or creates defaults if missing.
      */
-    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings =
-        params.providerSettings.getOrPut(provider) {
-            getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
-        }
+    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings = params.providerSettings.getOrPut(provider) {
+        getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
+    }
 
     /**
      * Retrieves an existing chat memory for the given provider and model combination,
@@ -233,8 +235,7 @@ class Session(
      * @param memoryPolicy Controls whether the existing memory bucket for this
      * (provider, model) is reused or reset when building for the first time.
      */
-    fun getChatService(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatService =
-        if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
+    fun getChatService(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatService = if (hasChatService()) chatService else rebuildActiveChatService(memoryPolicy)
 
     /**
      * Enables Retrieval-Augmented Generation (RAG) for the current session using
@@ -276,5 +277,52 @@ class Session(
             )
         info("RAG enabled for $model")
         setChatService(upgraded)
+    }
+
+    /**
+     * Starts a new chat session and makes it the current active session.
+     *
+     * @return The newly created ChatSession
+     */
+    fun startNewChatSession(): ChatSession {
+        val session = chatSessionRepository.createSession("New Chat")
+        currentChatSession = session
+        return session
+    }
+
+    /**
+     * Resumes an existing chat session by ID.
+     *
+     * @param sessionId The ID of the session to resume
+     * @return true if the session was found and resumed, false otherwise
+     */
+    fun resumeChatSession(sessionId: String): Boolean {
+        val session = chatSessionRepository.getSession(sessionId)
+        return if (session != null) {
+            currentChatSession = session
+            true
+        } else {
+            false
+        }
+    }
+
+    /**
+     * Adds a message to the current chat session.
+     *
+     * @param role The role of the message sender ([MessageRole.USER] or [MessageRole.ASSISTANT])
+     * @param content The content of the message
+     */
+    fun addChatMessage(role: MessageRole, content: String) {
+        currentChatSession?.let { session ->
+            chatSessionRepository.addMessage(session.id, role, content)
+
+            // Generate title from first user message
+            if (role == MessageRole.USER) {
+                val messages = chatSessionRepository.getMessages(session.id)
+                if (messages.count { it.role == MessageRole.USER } == 1) {
+                    chatSessionRepository.generateAndUpdateTitle(session.id, content)
+                }
+            }
+        }
     }
 }

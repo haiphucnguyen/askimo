@@ -15,6 +15,8 @@ jackson = "2.19.2"
 spotless = "8.0.0"
 shadow = "9.0.1"
 graalvmSvm = "25.0.0"
+sqlite = "3.50.3.0"
+hikaricp = "7.0.2"
 
 [libraries]
 # JLine
@@ -47,6 +49,8 @@ slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
 
 # Database and MCP SDK
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
+hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
 
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }

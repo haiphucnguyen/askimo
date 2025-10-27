@@ -30,6 +30,8 @@ dependencies {
     implementation(libs.testcontainers.postgresql)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.dataformat.yaml)
+    implementation(libs.sqlite.jdbc)
+    implementation(libs.hikaricp)
     implementation(kotlin("stdlib"))
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
