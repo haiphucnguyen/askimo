@@ -16,14 +16,14 @@ import java.util.concurrent.CountDownLatch
  * @param onToken Optional callback function that is invoked for each token received from the model
  * @return The complete response from the language model as a string
  */
-fun ChatService.chat(
+fun ChatService.sendMessage(
     prompt: String,
     onToken: (String) -> Unit = {},
 ): String {
     val sb = StringBuilder()
     val done = CountDownLatch(1)
 
-    stream(prompt)
+    sendMessageStreaming(prompt)
         .onPartialResponse { chunk ->
             sb.append(chunk)
             onToken(chunk)

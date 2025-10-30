@@ -47,7 +47,7 @@ class OllamaModelFactoryTest {
         val prompt = "Reply with a single short word."
 
         val result = StringBuilder()
-        val stream = chatService.stream(prompt)
+        val stream = chatService.sendMessageStreaming(prompt)
         stream.onPartialResponse { token -> result.append(token) }
         stream.onError { error -> throw error }
         stream.start()

@@ -6,6 +6,7 @@ package io.askimo.core.session
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import io.askimo.core.config.AppConfig
 import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.ProjectMeta
@@ -94,9 +95,9 @@ class Session(
     var currentChatSession: ChatSession? = null
 
     // Configuration for context management
-    private val maxRecentMessages = 10 // Keep last 5 exchanges
-    private val maxTokensForContext = 3000 // Rough token limit for context
-    private val summarizationThreshold = 50 // Summarize every 50 messages
+    private val maxRecentMessages = AppConfig.chat.maxRecentMessages
+    private val maxTokensForContext = AppConfig.chat.maxTokensForContext
+    private val summarizationThreshold = AppConfig.chat.summarizationThreshold
 
     /**
      * The active chat model for this session.
@@ -418,24 +419,6 @@ class Session(
     }
 
     /**
-     * Chat with current session using intelligent context management
-     */
-    fun chatWithCurrentSession(userMessage: String, onToken: (String) -> Unit = {}): String {
-        if (currentChatSession == null) {
-            startNewChatSession()
-        }
-
-        // Save user message
-        addChatMessage(MessageRole.USER, userMessage)
-
-        // Prepare the prompt with context
-        val prompt = preparePromptWithContext(userMessage)
-
-        // Use streaming directly with the callback
-        return streamChatResponse(prompt, onToken)
-    }
-
-    /**
      * Prepare context and save user message, return the prompt to use for streaming.
      * This allows ChatCli to handle streaming directly while still managing session context.
      */
@@ -489,30 +472,6 @@ class Session(
         }
     }
 
-    /**
-     * Stream chat response and handle the response
-     */
-    private fun streamChatResponse(prompt: String, onToken: (String) -> Unit): String {
-        val responseBuilder = StringBuilder()
-        val stream = getChatService().stream(prompt)
-        stream.onPartialResponse { token ->
-            onToken(token) // Call the callback in real-time
-            responseBuilder.append(token)
-        }
-        stream.onError { error -> throw error }
-        stream.start()
-
-        val response = responseBuilder.toString()
-
-        // Save AI response
-        addChatMessage(MessageRole.ASSISTANT, response)
-
-        // Trigger summarization if session is getting long
-        triggerSummarizationIfNeeded()
-
-        return response
-    }
-
     private fun triggerSummarizationIfNeeded() {
         val sessionId = currentChatSession?.id ?: return
         val messageCount = chatSessionRepository.getMessageCount(sessionId)
@@ -545,7 +504,7 @@ class Session(
                 chatSessionRepository.saveSummary(mergedSummary)
             }
         } catch (e: Exception) {
-            // Log error but don't fail the main conversation
+            debug("Error while summarizing: ${e.message}", e)
             println("Warning: Failed to create conversation summary: ${e.message}")
         }
     }
@@ -586,7 +545,7 @@ class Session(
         """.trimIndent()
 
         try {
-            val summaryResponse = getChatService().chat(summaryPrompt)
+            val summaryResponse = getChatService().sendMessage(summaryPrompt)
             return parseAISummaryResponse(sessionId, summaryResponse, messages.last().id)
         } catch (e: Exception) {
             debug("Error while generating summary: ${e.message}", e)
@@ -673,7 +632,7 @@ class Session(
             sessionId = newSummary.sessionId,
             keyFacts = mergedFacts,
             mainTopics = mergedTopics,
-            recentContext = newSummary.recentContext, // Always use the latest context
+            recentContext = newSummary.recentContext,
             lastSummarizedMessageId = newSummary.lastSummarizedMessageId,
             createdAt = newSummary.createdAt,
         )

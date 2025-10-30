@@ -17,7 +17,7 @@ import java.util.function.Consumer
  * that they need to configure a chat model using the ':set-provider' command.
  */
 object NoopChatService : ChatService {
-    override fun stream(prompt: String): TokenStream {
+    override fun sendMessageStreaming(prompt: String): TokenStream {
         return object : TokenStream {
             private var errorConsumer: Consumer<Throwable>? = null
 
@@ -44,5 +44,5 @@ object NoopChatService : ChatService {
         }
     }
 
-    override fun chat(prompt: String): String = throw RuntimeException("No chat model configured. Please configure a chat model using the 'set provider' command.")
+    override fun sendMessage(prompt: String): String = throw RuntimeException("No chat model configured. Please configure a chat model using the 'set provider' command.")
 }

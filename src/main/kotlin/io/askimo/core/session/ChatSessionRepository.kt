@@ -16,7 +16,7 @@ import javax.sql.DataSource
 
 class ChatSessionRepository {
     private val hikariDataSource: HikariDataSource by lazy {
-        val dbPath = AskimoHome.userHome().resolve("chat_sessions.db").toString()
+        val dbPath = AskimoHome.base().resolve("chat_sessions.db").toString()
 
         val config = HikariConfig().apply {
             jdbcUrl = "jdbc:sqlite:$dbPath"

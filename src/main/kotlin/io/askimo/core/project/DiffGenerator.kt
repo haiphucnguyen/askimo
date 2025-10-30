@@ -20,7 +20,7 @@ class DiffGenerator(
         val prompt = built.asSingleMessage()
 
         val sb = StringBuilder()
-        val stream: TokenStream = chat.stream(prompt)
+        val stream: TokenStream = chat.sendMessageStreaming(prompt)
         stream.onPartialResponse { sb.append(it) }
         stream.onError { error -> throw error }
         stream.start()

@@ -29,8 +29,8 @@ import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
-import io.askimo.core.providers.chat
-import io.askimo.core.providers.chatWithCallback
+import io.askimo.core.providers.sendMessage
+import io.askimo.core.providers.sendMessageStreaming
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
@@ -252,7 +252,7 @@ fun main(args: Array<String>) {
                     val promptWithContext = session.prepareContextAndGetPrompt(prompt)
 
                     // Stream the response directly for real-time display
-                    val output = session.getChatService().chat(promptWithContext) { token ->
+                    val output = session.getChatService().sendMessage(promptWithContext) { token ->
                         if (firstTokenSeen.compareAndSet(false, true)) {
                             indicator.stopWithElapsed()
                             reader.terminal.flush()
@@ -286,7 +286,7 @@ fun main(args: Array<String>) {
             val prompt = buildPrompt(userPrompt, stdinText)
             val out = System.out.writer()
             val output =
-                session.getChatService().chatWithCallback(prompt) { token ->
+                session.getChatService().sendMessageStreaming(prompt) { token ->
                     out.write(token)
                     out.flush()
                 }
@@ -426,7 +426,7 @@ private fun runYamlCommand(
     val executor =
         RecipeExecutor(
             session = session,
-            registry = registry, // will re-load; negligible overhead
+            registry = registry,
             tools = toolRegistry,
         )
 

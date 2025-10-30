@@ -5,7 +5,7 @@
 package io.askimo.core.recipes
 
 import io.askimo.cli.LoadingIndicator
-import io.askimo.core.providers.chat
+import io.askimo.core.providers.sendMessage
 import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.info
 import org.jline.terminal.Terminal
@@ -83,7 +83,7 @@ class RecipeExecutor(
         val output =
             session
                 .getChatService()
-                .chat(prompt) { _ ->
+                .sendMessage(prompt) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()
                         opts.terminal?.flush()
@@ -115,14 +115,13 @@ class RecipeExecutor(
     private fun resolveArgs(
         args: Any?,
         vars: Map<String, String>,
-    ): Any? =
-        when (args) {
-            null -> null
-            is String -> MiniTpl.render(args, vars)
-            is List<*> -> args.map { if (it is String) MiniTpl.render(it, vars) else it }
-            is Map<*, *> -> args.mapValues { (_, v) -> if (v is String) MiniTpl.render(v, vars) else v }
-            else -> args
-        }
+    ): Any? = when (args) {
+        null -> null
+        is String -> MiniTpl.render(args, vars)
+        is List<*> -> args.map { if (it is String) MiniTpl.render(it, vars) else it }
+        is Map<*, *> -> args.mapValues { (_, v) -> if (v is String) MiniTpl.render(v, vars) else v }
+        else -> args
+    }
 
     private fun evalBool(expr: String): Boolean {
         val t = expr.trim()

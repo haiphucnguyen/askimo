@@ -50,12 +50,19 @@ data class IndexingConfig(
     val maxFileBytes: Long = 2_000_000,
 )
 
+data class ChatConfig(
+    val maxRecentMessages: Int = 10,
+    val maxTokensForContext: Int = 3000,
+    val summarizationThreshold: Int = 50,
+)
+
 data class AppConfigData(
     val pgvector: PgVectorConfig = PgVectorConfig(),
     val embedding: EmbeddingConfig = EmbeddingConfig(),
     val retry: RetryConfig = RetryConfig(),
     val throttle: ThrottleConfig = ThrottleConfig(),
     val indexing: IndexingConfig = IndexingConfig(),
+    val chat: ChatConfig = ChatConfig(),
 )
 
 /**
@@ -64,12 +71,12 @@ data class AppConfigData(
  *   AppConfig.embedding.max_chars_per_chunk
  */
 object AppConfig {
-    // Public section-style accessors
     val pgVector: PgVectorConfig get() = delegate.pgvector
     val embedding: EmbeddingConfig get() = delegate.embedding
     val retry: RetryConfig get() = delegate.retry
     val throttle: ThrottleConfig get() = delegate.throttle
     val indexing: IndexingConfig get() = delegate.indexing
+    val chat: ChatConfig get() = delegate.chat
 
     @Volatile private var cached: AppConfigData? = null
 
@@ -105,6 +112,11 @@ object AppConfig {
 
         indexing:
           max_file_bytes: ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
+
+        chat:
+          max_recent_messages: ${'$'}{ASKIMO_CHAT_MAX_RECENT_MESSAGES:10}
+          max_tokens_for_context: ${'$'}{ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT:3000}
+          summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:50}
         """.trimIndent()
 
     // Lazy, thread-safe init
@@ -256,6 +268,12 @@ object AppConfig {
             IndexingConfig(
                 maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
             )
-        return AppConfigData(pg, emb, r, t, idx)
+        val chat =
+            ChatConfig(
+                maxRecentMessages = envInt("ASKIMO_CHAT_MAX_RECENT_MESSAGES", 10),
+                maxTokensForContext = envInt("ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT", 3000),
+                summarizationThreshold = envInt("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 50),
+            )
+        return AppConfigData(pg, emb, r, t, idx, chat)
     }
 }
