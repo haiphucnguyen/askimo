@@ -252,8 +252,7 @@ fun main(args: Array<String>) {
                     val promptWithContext = session.prepareContextAndGetPrompt(prompt)
 
                     // Stream the response directly for real-time display
-                    val output = session.getChatService().chat(promptWithContext) {
-                            token ->
+                    val output = session.getChatService().chat(promptWithContext) { token ->
                         if (firstTokenSeen.compareAndSet(false, true)) {
                             indicator.stopWithElapsed()
                             reader.terminal.flush()

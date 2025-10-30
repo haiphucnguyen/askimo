@@ -53,8 +53,6 @@ class OllamaModelFactoryTest {
         stream.start()
         val output = result.toString().trim()
 
-        // The test verifies that the chat service can be created and streaming works
-        // Some models may not respond to all prompts, so we just verify no errors occurred
-        assertTrue(true, "ChatService created and streaming API works without errors")
+        assertTrue(output.isBlank(), "Expected a non-empty response from tinyllama, but got blank")
     }
 }
