@@ -22,6 +22,8 @@ class DiffGenerator(
         val sb = StringBuilder()
         val stream: TokenStream = chat.stream(prompt)
         stream.onPartialResponse { sb.append(it) }
+        stream.onError { error -> throw error }
+        stream.start()
         return sb
             .toString()
             .trim()

@@ -6,6 +6,8 @@ package io.askimo.core.providers
 
 import dev.langchain4j.service.TokenStream
 import dev.langchain4j.service.UserMessage
+import io.askimo.core.session.ChatMessage
+import io.askimo.core.session.MessageRole
 
 /**
  * Defines the contract for services that provide chat functionality with language models.
@@ -26,4 +28,63 @@ interface ChatService {
     fun stream(
         @UserMessage prompt: String,
     ): TokenStream
+
+    /**
+     * Sends a simple chat message and returns the complete response.
+     *
+     * @param prompt The user message to send
+     * @return The complete response from the AI
+     */
+    fun chat(@UserMessage prompt: String): String
+}
+
+/**
+ * Extension function that sends a chat message and calls the onToken callback for each token.
+ *
+ * @param prompt The user message to send
+ * @param onToken Callback function called for each token as it's generated
+ * @return The complete response from the AI
+ */
+fun ChatService.chatWithCallback(prompt: String, onToken: (String) -> Unit = {}): String {
+    val result = StringBuilder()
+    stream(prompt)
+        .onPartialResponse { token ->
+            onToken(token)
+            result.append(token)
+        }
+        .onError { error ->
+            throw error
+        }
+        .start()
+    return result.toString()
+}
+
+/**
+ * Extension function that sends a chat message with conversation history.
+ *
+ * @param messages The conversation history including the current message
+ * @param onToken Callback function called for each token as it's generated
+ * @return The complete response from the AI
+ */
+fun ChatService.chatWithHistory(messages: List<ChatMessage>, onToken: (String) -> Unit = {}): String {
+    // Convert the conversation history into a single prompt
+    // This is a simplified approach - in a real implementation, you might want to
+    // use langchain4j's proper conversation memory handling
+    val conversationText = messages.joinToString("\n\n") { message ->
+        when (message.role) {
+            MessageRole.USER -> "User: ${message.content}"
+            MessageRole.ASSISTANT -> "Assistant: ${message.content}"
+            MessageRole.SYSTEM -> "System: ${message.content}"
+        }
+    }
+
+    // If we have conversation history, create a prompt that includes context
+    val finalPrompt = if (messages.size > 1) {
+        "Previous conversation context:\n$conversationText\n\nPlease continue the conversation naturally."
+    } else {
+        // If only one message, just use its content
+        messages.lastOrNull()?.content ?: ""
+    }
+
+    return chatWithCallback(finalPrompt, onToken)
 }

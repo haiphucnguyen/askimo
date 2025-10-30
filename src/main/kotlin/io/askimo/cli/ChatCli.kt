@@ -30,12 +30,12 @@ import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.chat
+import io.askimo.core.providers.chatWithCallback
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.MessageRole
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import org.jline.keymap.KeyMap
@@ -239,14 +239,7 @@ fun main(args: Array<String>) {
                 } else {
                     val prompt = parsedLine.line()
 
-                    // Ensure we have a chat session
-                    if (session.currentChatSession == null) {
-                        session.startNewChatSession()
-                    }
-
-                    // Save user message
-                    session.addChatMessage(MessageRole.USER, prompt)
-
+                    // Use the intelligent context management system
                     val indicator = LoadingIndicator(reader.terminal, "Thinking…")
                     indicator.start()
 
@@ -255,14 +248,18 @@ fun main(args: Array<String>) {
                     val mdRenderer = MarkdownJLineRenderer()
                     val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
 
-                    val output =
-                        session.getChatService().chat(prompt) { token ->
-                            if (firstTokenSeen.compareAndSet(false, true)) {
-                                indicator.stopWithElapsed()
-                                reader.terminal.flush()
-                            }
-                            mdSink.append(token)
+                    // Prepare context and get the prompt to use
+                    val promptWithContext = session.prepareContextAndGetPrompt(prompt)
+
+                    // Stream the response directly for real-time display
+                    val output = session.getChatService().chat(promptWithContext) {
+                            token ->
+                        if (firstTokenSeen.compareAndSet(false, true)) {
+                            indicator.stopWithElapsed()
+                            reader.terminal.flush()
                         }
+                        mdSink.append(token)
+                    }
                     if (!firstTokenSeen.get()) {
                         indicator.stopWithElapsed()
                         reader.terminal.writer().println()
@@ -270,8 +267,8 @@ fun main(args: Array<String>) {
                     }
                     mdSink.finish()
 
-                    // Save assistant response
-                    session.addChatMessage(MessageRole.ASSISTANT, output)
+                    // Save the AI response to session
+                    session.saveAiResponse(output)
 
                     session.lastResponse = output
                     reader.terminal.writer().println()
@@ -290,7 +287,7 @@ fun main(args: Array<String>) {
             val prompt = buildPrompt(userPrompt, stdinText)
             val out = System.out.writer()
             val output =
-                session.getChatService().chat(prompt) { token ->
+                session.getChatService().chatWithCallback(prompt) { token ->
                     out.write(token)
                     out.flush()
                 }

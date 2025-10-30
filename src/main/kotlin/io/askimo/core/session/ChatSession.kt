@@ -20,3 +20,12 @@ data class ChatMessage(
     val content: String,
     val createdAt: LocalDateTime,
 )
+
+data class ConversationSummary(
+    val sessionId: String,
+    val keyFacts: Map<String, String>, // Structured key-value facts
+    val mainTopics: List<String>,
+    val recentContext: String, // Recent conversation flow
+    val lastSummarizedMessageId: String,
+    val createdAt: LocalDateTime,
+)

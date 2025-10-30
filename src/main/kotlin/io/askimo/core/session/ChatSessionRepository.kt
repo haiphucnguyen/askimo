@@ -7,10 +7,11 @@ package io.askimo.core.session
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.askimo.core.util.AskimoHome
+import kotlinx.serialization.json.Json
 import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 import javax.sql.DataSource
 
 class ChatSessionRepository {
@@ -40,6 +41,7 @@ class ChatSessionRepository {
     }
 
     private val dataSource: DataSource get() = hikariDataSource
+    private val json = Json { ignoreUnknownKeys = true }
 
     private fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
@@ -61,6 +63,20 @@ class ChatSessionRepository {
                     session_id TEXT NOT NULL,
                     role TEXT NOT NULL,
                     content TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
+                )
+            """,
+            )
+
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_summaries (
+                    session_id TEXT PRIMARY KEY,
+                    key_facts TEXT NOT NULL,
+                    main_topics TEXT NOT NULL,
+                    recent_context TEXT NOT NULL,
+                    last_summarized_message_id TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
                 )
@@ -214,7 +230,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.fromValue(rs.getString("role")),
+                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),
@@ -223,6 +239,128 @@ class ChatSessionRepository {
             }
         }
         return messages
+    }
+
+    fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at
+                FROM chat_messages
+                WHERE session_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+            """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                stmt.setInt(2, limit)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages.reversed() // Return in chronological order
+    }
+
+    fun getMessageCount(sessionId: String): Int = dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT COUNT(*) FROM chat_messages WHERE session_id = ?").use { stmt ->
+            stmt.setString(1, sessionId)
+            val rs = stmt.executeQuery()
+            if (rs.next()) rs.getInt(1) else 0
+        }
+    }
+
+    fun getMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at
+                FROM chat_messages
+                WHERE session_id = ? AND created_at > (
+                    SELECT created_at FROM chat_messages WHERE id = ?
+                )
+                ORDER BY created_at ASC
+                LIMIT ?
+            """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                stmt.setString(2, afterMessageId)
+                stmt.setInt(3, limit)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages
+    }
+
+    fun saveSummary(summary: ConversationSummary) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                INSERT OR REPLACE INTO conversation_summaries
+                (session_id, key_facts, main_topics, recent_context, last_summarized_message_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ).use { stmt ->
+                stmt.setString(1, summary.sessionId)
+                stmt.setString(2, json.encodeToString(summary.keyFacts))
+                stmt.setString(3, json.encodeToString(summary.mainTopics))
+                stmt.setString(4, summary.recentContext)
+                stmt.setString(5, summary.lastSummarizedMessageId)
+                stmt.setString(6, summary.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    fun getConversationSummary(sessionId: String): ConversationSummary? = dataSource.connection.use { conn ->
+        conn.prepareStatement(
+            """
+                SELECT session_id, key_facts, main_topics, recent_context, last_summarized_message_id, created_at
+                FROM conversation_summaries
+                WHERE session_id = ?
+            """,
+        ).use { stmt ->
+            stmt.setString(1, sessionId)
+            val rs = stmt.executeQuery()
+            if (rs.next()) {
+                try {
+                    ConversationSummary(
+                        sessionId = rs.getString("session_id"),
+                        keyFacts = json.decodeFromString<Map<String, String>>(rs.getString("key_facts")),
+                        mainTopics = json.decodeFromString<List<String>>(rs.getString("main_topics")),
+                        recentContext = rs.getString("recent_context"),
+                        lastSummarizedMessageId = rs.getString("last_summarized_message_id"),
+                        createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                    )
+                } catch (e: Exception) {
+                    null // Return null if JSON parsing fails
+                }
+            } else {
+                null
+            }
+        }
     }
 
     private fun generateTitle(firstMessage: String): String {

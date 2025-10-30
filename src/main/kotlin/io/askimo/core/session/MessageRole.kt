@@ -9,27 +9,20 @@ package io.askimo.core.session
  */
 enum class MessageRole(val value: String) {
     USER("user"),
-    ASSISTANT("assistant");
+    ASSISTANT("assistant"),
+    SYSTEM("system"),
+    ;
+
+    override fun toString(): String = value
 
     companion object {
         /**
          * Converts a string value to MessageRole enum.
-         * @param value The string value ("user" or "assistant")
+         * @param value The string value ("user", "assistant", or "system")
          * @return The corresponding MessageRole enum value
          * @throws IllegalArgumentException if the value is not recognized
          */
-        fun fromValue(value: String): MessageRole {
-            return entries.find { it.value == value }
-                ?: throw IllegalArgumentException("Unknown message role: $value")
-        }
-
-        /**
-         * Safely converts a string value to MessageRole enum, returning null if not found.
-         * @param value The string value ("user" or "assistant")
-         * @return The corresponding MessageRole enum value or null if not found
-         */
-        fun fromValueOrNull(value: String): MessageRole? {
-            return entries.find { it.value == value }
-        }
+        fun fromValue(value: String): MessageRole = values().find { it.value == value }
+            ?: throw IllegalArgumentException("Unknown MessageRole value: $value")
     }
 }

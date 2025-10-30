@@ -43,4 +43,6 @@ object NoopChatService : ChatService {
             }
         }
     }
+
+    override fun chat(prompt: String): String = throw RuntimeException("No chat model configured. Please configure a chat model using the 'set provider' command.")
 }

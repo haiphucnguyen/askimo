@@ -14,6 +14,8 @@ import org.testcontainers.utility.DockerImageName
  */
 object SharedOllama {
     val container: OllamaContainer by lazy {
+        System.setProperty("testcontainers.reuse.enable", "true")
+
         val image = DockerImageName.parse("ollama/ollama:0.12.5")
         OllamaContainer(image)
             .withReuse(true)

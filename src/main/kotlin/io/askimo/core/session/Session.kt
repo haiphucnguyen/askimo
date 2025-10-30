@@ -18,9 +18,15 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
+import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.LocalDateTime
 
 /**
  * Controls what happens to the *chat memory* when the active [ChatService] is re-created
@@ -83,9 +89,14 @@ class Session(
 
     var lastResponse: String? = null
 
-    // Chat session support
+    // Chat session support with intelligent context management
     val chatSessionRepository = ChatSessionRepository()
     var currentChatSession: ChatSession? = null
+
+    // Configuration for context management
+    private val maxRecentMessages = 10 // Keep last 5 exchanges
+    private val maxTokensForContext = 3000 // Rough token limit for context
+    private val summarizationThreshold = 50 // Summarize every 50 messages
 
     /**
      * The active chat model for this session.
@@ -324,5 +335,347 @@ class Session(
                 }
             }
         }
+    }
+
+    /**
+     * Gets intelligent context for the current session including summary + recent messages
+     */
+    fun getContextForSession(): List<ChatMessage> {
+        val sessionId = currentChatSession?.id ?: return emptyList()
+        val contextMessages = mutableListOf<ChatMessage>()
+
+        // 1. Add structured summary as system context
+        val summary = chatSessionRepository.getConversationSummary(sessionId)
+        if (summary != null) {
+            val structuredContext = buildStructuredContext(summary)
+            contextMessages.add(
+                ChatMessage(
+                    id = "system-context",
+                    sessionId = sessionId,
+                    role = MessageRole.SYSTEM,
+                    content = structuredContext,
+                    createdAt = summary.createdAt,
+                ),
+            )
+        }
+
+        // 2. Add recent messages for conversation flow
+        val recentMessages = chatSessionRepository.getRecentMessages(sessionId, maxRecentMessages)
+        contextMessages.addAll(recentMessages)
+
+        return trimContextByTokens(contextMessages, maxTokensForContext)
+    }
+
+    private fun buildStructuredContext(summary: ConversationSummary): String {
+        val contextBuilder = StringBuilder()
+
+        contextBuilder.append("Previous conversation context:\n\n")
+
+        // Add key facts in a structured way
+        if (summary.keyFacts.isNotEmpty()) {
+            contextBuilder.append("Key Information:\n")
+            summary.keyFacts.forEach { (key, value) ->
+                contextBuilder.append("- $key: $value\n")
+            }
+            contextBuilder.append("\n")
+        }
+
+        // Add main topics
+        if (summary.mainTopics.isNotEmpty()) {
+            contextBuilder.append("Main topics discussed: ${summary.mainTopics.joinToString(", ")}\n\n")
+        }
+
+        // Add recent context
+        if (summary.recentContext.isNotEmpty()) {
+            contextBuilder.append("Recent conversation flow: ${summary.recentContext}\n\n")
+        }
+
+        contextBuilder.append("Continue the conversation naturally based on this context.")
+
+        return contextBuilder.toString()
+    }
+
+    private fun trimContextByTokens(messages: List<ChatMessage>, maxTokens: Int): List<ChatMessage> {
+        var totalChars = 0
+        val result = mutableListOf<ChatMessage>()
+
+        // Keep system messages (summaries) and trim from the oldest user/assistant messages
+        val systemMessages = messages.filter { it.role == MessageRole.SYSTEM }
+        val conversationMessages = messages.filter { it.role != MessageRole.SYSTEM }.reversed()
+
+        result.addAll(systemMessages)
+        totalChars += systemMessages.sumOf { it.content.length }
+
+        for (message in conversationMessages) {
+            val messageChars = message.content.length
+            if (totalChars + messageChars > maxTokens * 4) break
+
+            result.add(0, message) // Add to beginning to maintain order
+            totalChars += messageChars
+        }
+
+        return result
+    }
+
+    /**
+     * Chat with current session using intelligent context management
+     */
+    fun chatWithCurrentSession(userMessage: String, onToken: (String) -> Unit = {}): String {
+        if (currentChatSession == null) {
+            startNewChatSession()
+        }
+
+        // Save user message
+        addChatMessage(MessageRole.USER, userMessage)
+
+        // Prepare the prompt with context
+        val prompt = preparePromptWithContext(userMessage)
+
+        // Use streaming directly with the callback
+        return streamChatResponse(prompt, onToken)
+    }
+
+    /**
+     * Prepare context and save user message, return the prompt to use for streaming.
+     * This allows ChatCli to handle streaming directly while still managing session context.
+     */
+    fun prepareContextAndGetPrompt(userMessage: String): String {
+        if (currentChatSession == null) {
+            startNewChatSession()
+        }
+
+        // Save user message
+        addChatMessage(MessageRole.USER, userMessage)
+
+        // Prepare the prompt with context
+        return preparePromptWithContext(userMessage)
+    }
+
+    /**
+     * Save the AI response after streaming is complete
+     */
+    fun saveAiResponse(response: String) {
+        addChatMessage(MessageRole.ASSISTANT, response)
+        triggerSummarizationIfNeeded()
+    }
+
+    /**
+     * Prepare the prompt with conversation context
+     */
+    private fun preparePromptWithContext(userMessage: String): String {
+        // Get smart context (summary + recent messages)
+        val contextMessages = getContextForSession()
+
+        return if (contextMessages.isNotEmpty()) {
+            // Convert conversation history into a single prompt for streaming
+            val conversationText = contextMessages.joinToString("\n\n") { message ->
+                when (message.role) {
+                    MessageRole.USER -> "User: ${message.content}"
+                    MessageRole.ASSISTANT -> "Assistant: ${message.content}"
+                    MessageRole.SYSTEM -> "System: ${message.content}"
+                }
+            }
+
+            // If we have conversation history, create a prompt that includes context
+            if (contextMessages.size > 1) {
+                "Previous conversation context:\n$conversationText\n\nPlease continue the conversation naturally."
+            } else {
+                // If only one message, just use its content
+                contextMessages.lastOrNull()?.content ?: userMessage
+            }
+        } else {
+            // Use simple prompt for first message
+            userMessage
+        }
+    }
+
+    /**
+     * Stream chat response and handle the response
+     */
+    private fun streamChatResponse(prompt: String, onToken: (String) -> Unit): String {
+        val responseBuilder = StringBuilder()
+        val stream = getChatService().stream(prompt)
+        stream.onPartialResponse { token ->
+            onToken(token) // Call the callback in real-time
+            responseBuilder.append(token)
+        }
+        stream.onError { error -> throw error }
+        stream.start()
+
+        val response = responseBuilder.toString()
+
+        // Save AI response
+        addChatMessage(MessageRole.ASSISTANT, response)
+
+        // Trigger summarization if session is getting long
+        triggerSummarizationIfNeeded()
+
+        return response
+    }
+
+    private fun triggerSummarizationIfNeeded() {
+        val sessionId = currentChatSession?.id ?: return
+        val messageCount = chatSessionRepository.getMessageCount(sessionId)
+
+        // Summarize every N messages
+        if (messageCount > summarizationThreshold && messageCount % summarizationThreshold == 0) {
+            summarizeOlderMessages()
+        }
+    }
+
+    private fun summarizeOlderMessages() {
+        val sessionId = currentChatSession?.id ?: return
+
+        try {
+            // Get messages that haven't been summarized yet
+            val existingSummary = chatSessionRepository.getConversationSummary(sessionId)
+            val lastSummarizedId = existingSummary?.lastSummarizedMessageId ?: ""
+
+            val messagesToSummarize = if (lastSummarizedId.isEmpty()) {
+                // First summarization - get older messages, leave recent ones
+                val allMessages = chatSessionRepository.getMessages(sessionId)
+                allMessages.dropLast(maxRecentMessages).takeLast(40)
+            } else {
+                chatSessionRepository.getMessagesAfter(sessionId, lastSummarizedId, 40)
+            }
+
+            if (messagesToSummarize.size >= 20) { // Only summarize if we have enough content
+                val newSummary = createIntelligentSummary(messagesToSummarize)
+                val mergedSummary = mergeWithExistingSummary(newSummary, existingSummary)
+                chatSessionRepository.saveSummary(mergedSummary)
+            }
+        } catch (e: Exception) {
+            // Log error but don't fail the main conversation
+            println("Warning: Failed to create conversation summary: ${e.message}")
+        }
+    }
+
+    private fun createIntelligentSummary(messages: List<ChatMessage>): ConversationSummary {
+        val sessionId = currentChatSession?.id ?: throw IllegalStateException("No active session")
+
+        val conversationText = messages.joinToString("\n") { "${it.role}: ${it.content}" }
+
+        // Create a structured summarization prompt
+        val summaryPrompt = """
+            Analyze this conversation and extract structured information. Focus on factual information and key details while ignoring off-topic content.
+
+            Conversation:
+            $conversationText
+
+            Please provide a response in the following JSON format:
+            {
+                "keyFacts": {
+                    // Extract specific factual information as key-value pairs
+                    // For aquarium: "tankSize": "20 gallons", "substrate": "sand gravel", "cycled": "false"
+                    // For coding: "language": "Python", "framework": "Django", "database": "PostgreSQL"
+                    // For cooking: "cuisine": "Italian", "dietaryRestrictions": "vegetarian", "skillLevel": "beginner"
+                },
+                "mainTopics": [
+                    // List of main topics discussed (e.g., ["aquarium cycling", "plant selection", "water parameters"])
+                ],
+                "recentContext": "Brief summary of the most recent conversation flow and current focus"
+            }
+
+            Rules:
+            - Only include factual, relevant information in keyFacts
+            - Ignore casual conversation, greetings, or off-topic messages
+            - If someone mentions specific numbers, names, or technical details, include them
+            - Group related facts logically
+            - Keep recentContext under 100 words
+            - If no relevant facts are found, use empty objects/arrays
+        """.trimIndent()
+
+        try {
+            val summaryResponse = getChatService().chat(summaryPrompt)
+            return parseAISummaryResponse(sessionId, summaryResponse, messages.last().id)
+        } catch (e: Exception) {
+            debug("Error while generating summary: ${e.message}", e)
+            return createFallbackSummary(sessionId, messages)
+        }
+    }
+
+    private fun parseAISummaryResponse(sessionId: String, response: String, lastMessageId: String): ConversationSummary {
+        try {
+            // Extract JSON from response (handle cases where AI adds explanation text)
+            val jsonStart = response.indexOf("{")
+            val jsonEnd = response.lastIndexOf("}") + 1
+
+            if (jsonStart == -1 || jsonEnd <= jsonStart) {
+                return createFallbackSummary(sessionId, emptyList())
+            }
+
+            val jsonText = response.substring(jsonStart, jsonEnd)
+
+            // Parse JSON
+            val jsonObject = Json.parseToJsonElement(jsonText).jsonObject
+
+            val keyFacts = jsonObject["keyFacts"]?.jsonObject?.mapValues {
+                it.value.jsonPrimitive.content
+            } ?: emptyMap()
+
+            val mainTopics = jsonObject["mainTopics"]?.jsonArray?.map {
+                it.jsonPrimitive.content
+            } ?: emptyList()
+
+            val recentContext = jsonObject["recentContext"]?.jsonPrimitive?.content ?: ""
+
+            return ConversationSummary(
+                sessionId = sessionId,
+                keyFacts = keyFacts,
+                mainTopics = mainTopics,
+                recentContext = recentContext,
+                lastSummarizedMessageId = lastMessageId,
+                createdAt = LocalDateTime.now(),
+            )
+        } catch (e: Exception) {
+            return createFallbackSummary(sessionId, emptyList())
+        }
+    }
+
+    private fun createFallbackSummary(sessionId: String, messages: List<ChatMessage>): ConversationSummary {
+        // Simple fallback summary
+        val topics = if (messages.isNotEmpty()) {
+            listOf("general conversation")
+        } else {
+            emptyList()
+        }
+
+        val context = if (messages.isNotEmpty()) {
+            "Ongoing conversation with ${messages.size} messages"
+        } else {
+            "New conversation"
+        }
+
+        return ConversationSummary(
+            sessionId = sessionId,
+            keyFacts = emptyMap(),
+            mainTopics = topics,
+            recentContext = context,
+            lastSummarizedMessageId = messages.lastOrNull()?.id ?: "",
+            createdAt = LocalDateTime.now(),
+        )
+    }
+
+    private fun mergeWithExistingSummary(newSummary: ConversationSummary, existingSummary: ConversationSummary?): ConversationSummary {
+        if (existingSummary == null) return newSummary
+
+        // Merge key facts (new facts override old ones, but keep non-conflicting facts)
+        val mergedFacts = existingSummary.keyFacts.toMutableMap()
+        newSummary.keyFacts.forEach { (key, value) ->
+            // Update existing facts or add new ones
+            mergedFacts[key] = value
+        }
+
+        // Merge topics (keep unique topics)
+        val mergedTopics = (existingSummary.mainTopics + newSummary.mainTopics).distinct()
+
+        return ConversationSummary(
+            sessionId = newSummary.sessionId,
+            keyFacts = mergedFacts,
+            mainTopics = mergedTopics,
+            recentContext = newSummary.recentContext, // Always use the latest context
+            lastSummarizedMessageId = newSummary.lastSummarizedMessageId,
+            createdAt = newSummary.createdAt,
+        )
     }
 }
