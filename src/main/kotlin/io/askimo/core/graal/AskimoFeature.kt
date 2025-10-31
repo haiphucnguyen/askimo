@@ -27,6 +27,18 @@ class AskimoFeature : Feature {
             RuntimeReflection.register(openAiEmbeddingDeserializer)
             openAiEmbeddingDeserializer.declaredConstructors.forEach { RuntimeReflection.register(it) }
         }
+
+        // Initialize coroutine-related classes at runtime to avoid compilation issues
+        RuntimeClassInitialization.initializeAtRunTime("kotlinx.coroutines")
+        RuntimeClassInitialization.initializeAtRunTime("kotlin.coroutines")
+
+        // Register ProjectFileWatcher and related classes for reflection
+        val projectFileWatcherClass = access.findClassByName("io.askimo.core.project.ProjectFileWatcher")
+        if (projectFileWatcherClass != null) {
+            RuntimeReflection.register(projectFileWatcherClass)
+            projectFileWatcherClass.declaredMethods.forEach { RuntimeReflection.register(it) }
+            projectFileWatcherClass.declaredConstructors.forEach { RuntimeReflection.register(it) }
+        }
     }
 
     /** Register class + all declared constructors & methods for reflection. */

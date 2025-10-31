@@ -127,8 +127,9 @@ class ProjectFileWatcher(
      */
     private fun registerDirectory(dir: Path) {
         try {
+            val ws = watchService ?: return
             val watchKey = dir.register(
-                watchService,
+                ws,
                 StandardWatchEventKinds.ENTRY_CREATE,
                 StandardWatchEventKinds.ENTRY_MODIFY,
                 StandardWatchEventKinds.ENTRY_DELETE,
@@ -146,50 +147,59 @@ class ProjectFileWatcher(
         val ws = watchService ?: return
 
         while (isWatching && !Thread.currentThread().isInterrupted) {
-            try {
-                val watchKey = withContext(Dispatchers.IO) {
+            val watchKey = try {
+                withContext(Dispatchers.IO) {
                     ws.take()
                 }
-
-                val dir = watchKeys[watchKey] ?: continue
-
-                for (event in watchKey.pollEvents()) {
-                    val kind = event.kind()
-
-                    if (kind == StandardWatchEventKinds.OVERFLOW) {
-                        info("⚠️ Watch service overflow - some events may have been lost")
-                        continue
-                    }
-
-                    @Suppress("UNCHECKED_CAST")
-                    val fileName = (event as WatchEvent<Path>).context()
-                    val filePath = dir.resolve(fileName)
-
-                    // Handle the file change
-                    handleFileChange(kind, filePath)
-
-                    // If a new directory was created, register it for watching
-                    if (kind == StandardWatchEventKinds.ENTRY_CREATE &&
-                        Files.isDirectory(filePath) &&
-                        !shouldSkipDirectory(filePath)
-                    ) {
-                        registerDirectoryTree(filePath)
-                    }
-                }
-
-                val valid = watchKey.reset()
-                if (!valid) {
-                    watchKeys.remove(watchKey)
-                    if (watchKeys.isEmpty()) {
-                        break
-                    }
-                }
-            } catch (e: InterruptedException) {
+            } catch (_: InterruptedException) {
                 break
             } catch (e: Exception) {
-                debug("Error in file watcher: ${e.message}")
-                delay(1000) // Brief pause before continuing
+                debug("Error getting watch key: ${e.message}")
+                delay(1000)
+                continue
             }
+
+            processWatchKeyEvents(watchKey)
+        }
+    }
+
+    /**
+     * Processes events for a single watch key.
+     */
+    private suspend fun processWatchKeyEvents(watchKey: WatchKey) {
+        val dir = watchKeys[watchKey] ?: return
+
+        try {
+            for (event in watchKey.pollEvents()) {
+                val kind = event.kind()
+
+                if (kind == StandardWatchEventKinds.OVERFLOW) {
+                    info("⚠️ Watch service overflow - some events may have been lost")
+                    continue
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                val fileName = (event as WatchEvent<Path>).context()
+                val filePath = dir.resolve(fileName)
+
+                // Handle the file change
+                handleFileChange(kind, filePath)
+
+                // If a new directory was created, register it for watching
+                if (kind == StandardWatchEventKinds.ENTRY_CREATE &&
+                    Files.isDirectory(filePath) &&
+                    !shouldSkipDirectory(filePath)
+                ) {
+                    registerDirectoryTree(filePath)
+                }
+            }
+
+            val valid = watchKey.reset()
+            if (!valid) {
+                watchKeys.remove(watchKey)
+            }
+        } catch (e: Exception) {
+            debug("Error processing watch key events: ${e.message}")
         }
     }
 
@@ -201,7 +211,7 @@ class ProjectFileWatcher(
 
         val relativePath = try {
             projectRoot.relativize(filePath).toString().replace('\\', '/')
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             debug("Could not relativize path: $filePath")
             return
         }

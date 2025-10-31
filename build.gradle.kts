@@ -175,6 +175,9 @@ graalvmNative {
                     "--report-unsupported-elements-at-runtime",
                     "--features=io.askimo.core.graal.AskimoFeature",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
+                    "--initialize-at-run-time=kotlinx.coroutines,kotlin.coroutines,io.askimo.core.project.ProjectFileWatcher",
+                    "--allow-incomplete-classpath",
+                    "-H:+ReportExceptionStackTraces"
                 ),
             )
             resources.autodetect()
