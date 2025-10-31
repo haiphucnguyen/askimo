@@ -114,7 +114,7 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for event processing
 
         // Then: Indexer should be called to index the new file
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("new-file.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("new-file.kt"))
     }
 
     @Test
@@ -130,7 +130,7 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for event processing
 
         // Then: Indexer should be called with correct relative path
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("src/Source.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("src/Source.kt"))
     }
 
     @Test
@@ -149,8 +149,8 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for modification event
 
         // Then: Indexer should index for creation, then remove and re-index for modification
-        verify(mockIndexer, timeout(8000).times(2)).indexSingleFile(any(), eq("existing.kt"))
-        verify(mockIndexer, timeout(8000)).removeFileFromIndex(eq("existing.kt"))
+        verify(mockIndexer, timeout(8000).atLeast(2)).indexSingleFile(any(), eq("existing.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).removeFileFromIndex(eq("existing.kt"))
     }
 
     @Test
@@ -173,9 +173,9 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for processing
 
         // Then: All files should be indexed
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("file1.kt"))
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("file2.kt"))
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("file3.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("file1.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("file2.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("file3.kt"))
     }
 
     // === File Filtering Tests ===
@@ -195,8 +195,8 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for processing
 
         // Then: Only supported files should be indexed
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("test.kt"))
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("test.py"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("test.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("test.py"))
         verify(mockIndexer, never()).indexSingleFile(any(), eq("test.exe"))
         verify(mockIndexer, never()).indexSingleFile(any(), eq("test.bin"))
     }
@@ -214,7 +214,7 @@ class ProjectFileWatcherTest {
         delay(2000) // Allow extra time for processing
 
         // Then: Only visible files should be indexed
-        verify(mockIndexer, timeout(8000)).indexSingleFile(any(), eq("visible.kt"))
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(any(), eq("visible.kt"))
         verify(mockIndexer, never()).indexSingleFile(any(), eq(".hidden.kt"))
     }
 
@@ -235,7 +235,7 @@ class ProjectFileWatcherTest {
         delay(2000)
 
         // Then: Nested file should be indexed with correct relative path
-        verify(mockIndexer, timeout(8000)).indexSingleFile(
+        verify(mockIndexer, timeout(8000).atLeastOnce()).indexSingleFile(
             any(),
             eq("src/main/kotlin/NestedClass.kt"),
         )
@@ -243,22 +243,19 @@ class ProjectFileWatcherTest {
 
     @Test
     fun `new directories created after watcher starts are registered`() = runBlocking {
-        // Given: A running watcher
         fileWatcher.startWatching()
-        delay(2000) // Allow extra time for watcher to fully initialize
+        delay(2000)
 
-        // When: Create a new directory structure after watcher starts
         val newDir = tempDir.resolve("new-directory").createDirectories()
         delay(2000) // Allow more time for directory registration in CI
 
-        // Create a file in the new directory
         val fileInNewDir = newDir.resolve("file-in-new-dir.kt")
         fileInNewDir.writeText("class FileInNewDir {}")
         delay(3000) // Allow more time for file event processing in CI
 
         // Then: The file should be indexed with correct relative path
         // Using longer timeout for CI environments
-        verify(mockIndexer, timeout(10000)).indexSingleFile(any(), eq("new-directory/file-in-new-dir.kt"))
+        verify(mockIndexer, timeout(10000).atLeastOnce()).indexSingleFile(any(), eq("new-directory/file-in-new-dir.kt"))
     }
 
     // === Error Handling Tests ===
@@ -286,7 +283,8 @@ class ProjectFileWatcherTest {
         delay(1000)
 
         // Then: Second file should still be processed (watcher still running)
-        verify(mockIndexer, timeout(5000)).indexSingleFile(any(), eq("working.kt"))
+        // Use atLeastOnce() to handle potential duplicate file system events
+        verify(mockIndexer, timeout(5000).atLeastOnce()).indexSingleFile(any(), eq("working.kt"))
     }
 
     // === Configuration Tests ===
