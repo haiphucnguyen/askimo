@@ -147,20 +147,29 @@ class ProjectFileWatcher(
         val ws = watchService ?: return
 
         while (isWatching && !Thread.currentThread().isInterrupted) {
-            val watchKey = try {
-                withContext(Dispatchers.IO) {
-                    ws.take()
-                }
-            } catch (_: InterruptedException) {
-                break
-            } catch (e: Exception) {
-                debug("Error getting watch key: ${e.message}")
+            val watchKey = getNextWatchKey(ws)
+            if (watchKey == null) {
                 delay(1000)
                 continue
             }
 
             processWatchKeyEvents(watchKey)
         }
+    }
+
+    /**
+     * Gets the next watch key from the watch service, handling interruptions gracefully.
+     */
+    private suspend fun getNextWatchKey(ws: WatchService): WatchKey? = try {
+        withContext(Dispatchers.IO) {
+            ws.take()
+        }
+    } catch (_: InterruptedException) {
+        isWatching = false
+        null
+    } catch (e: Exception) {
+        debug("Error getting watch key: ${e.message}")
+        null
     }
 
     /**
@@ -220,28 +229,49 @@ class ProjectFileWatcher(
             when (kind) {
                 StandardWatchEventKinds.ENTRY_CREATE -> {
                     info("📄 File created: $relativePath")
-                    withContext(Dispatchers.IO) {
-                        indexer.indexSingleFile(filePath, relativePath)
-                    }
+                    indexSingleFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_MODIFY -> {
                     info("📝 File modified: $relativePath")
-                    withContext(Dispatchers.IO) {
-                        // Remove old entries and re-index
-                        indexer.removeFileFromIndex(relativePath)
-                        indexer.indexSingleFile(filePath, relativePath)
-                    }
+                    reindexFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_DELETE -> {
                     info("🗑️ File deleted: $relativePath")
-                    withContext(Dispatchers.IO) {
-                        indexer.removeFileFromIndex(relativePath)
-                    }
+                    removeFileFromIndexAsync(relativePath)
                 }
             }
         } catch (e: Exception) {
             info("⚠️ Failed to update index for $relativePath: ${e.message}")
             debug(e)
+        }
+    }
+
+    /**
+     * Asynchronously indexes a single file.
+     */
+    private suspend fun indexSingleFileAsync(filePath: Path, relativePath: String) {
+        withContext(Dispatchers.IO) {
+            indexer.indexSingleFile(filePath, relativePath)
+        }
+    }
+
+    /**
+     * Asynchronously re-indexes a file by removing old entries and creating new ones.
+     */
+    private suspend fun reindexFileAsync(filePath: Path, relativePath: String) {
+        withContext(Dispatchers.IO) {
+            // Remove old entries and re-index
+            indexer.removeFileFromIndex(relativePath)
+            indexer.indexSingleFile(filePath, relativePath)
+        }
+    }
+
+    /**
+     * Asynchronously removes a file from the index.
+     */
+    private suspend fun removeFileFromIndexAsync(relativePath: String) {
+        withContext(Dispatchers.IO) {
+            indexer.removeFileFromIndex(relativePath)
         }
     }
 

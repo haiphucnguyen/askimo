@@ -1,8 +1,8 @@
 [
   {
-    "interfaces":["io.askimo.core.providers.ChatService"]
+    "interfaces": ["io.askimo.core.providers.ChatService"]
   },
   {
-    "interfaces":["java.sql.Connection"]
+    "interfaces": ["java.sql.Connection"]
   }
 ]
