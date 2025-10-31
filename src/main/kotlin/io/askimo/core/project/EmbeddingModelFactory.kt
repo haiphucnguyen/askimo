@@ -29,27 +29,26 @@ private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
 
 private val warnedOllamaOnce = AtomicBoolean(false)
 
-fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel =
-    when (provider) {
-        OPEN_AI -> {
-            val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
-            val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
+fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider) {
+    OPEN_AI -> {
+        val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
+        val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
 
-            OpenAiEmbeddingModelBuilder()
-                .apiKey(safeApiKey(openAiKey))
-                .modelName(modelName)
-                .build()
-        }
-
-        ANTHROPIC, GEMINI, X_AI -> {
-            noteOllamaRequired(provider)
-            buildOllamaEmbeddingModel()
-        }
-
-        OLLAMA -> buildOllamaEmbeddingModel()
-
-        UNKNOWN -> error("Unsupported embedding provider: $provider")
+        OpenAiEmbeddingModelBuilder()
+            .apiKey(safeApiKey(openAiKey))
+            .modelName(modelName)
+            .build()
     }
+
+    ANTHROPIC, GEMINI, X_AI -> {
+        noteOllamaRequired(provider)
+        buildOllamaEmbeddingModel()
+    }
+
+    OLLAMA -> buildOllamaEmbeddingModel()
+
+    UNKNOWN -> error("Unsupported embedding provider: $provider")
+}
 
 private fun buildOllamaEmbeddingModel(): EmbeddingModel {
     val url = System.getProperty("OLLAMA_URL") ?: System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
@@ -110,47 +109,45 @@ private fun ensureOllamaAvailable(
 private fun pullSync(
     baseUrl: String,
     model: String,
-): Boolean =
-    try {
-        val url = URI("${baseUrl.removeSuffix("/")}/api/pull").toURL()
-        val conn =
-            (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15_000
-                // Big models can take a while; keep generous but finite:
-                readTimeout = 600_000 // 10 minutes
-                requestMethod = "POST"
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-            }
-        val payload = """{"name":"$model","stream":false}"""
-        conn.outputStream.use { it.write(payload.toByteArray()) }
-        val code = conn.responseCode
-        (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-        code in 200..299
-    } catch (e: Exception) {
-        debug(e)
-        false
-    }
+): Boolean = try {
+    val url = URI("${baseUrl.removeSuffix("/")}/api/pull").toURL()
+    val conn =
+        (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15_000
+            readTimeout = 600_000
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+    val payload = """{"name":"$model","stream":false}"""
+    conn.outputStream.use { it.write(payload.toByteArray()) }
+    val code = conn.responseCode
+    (if (code in 200..299) conn.inputStream else conn.errorStream)
+        ?.bufferedReader()
+        ?.use { it.readText() }
+    code in 200..299
+} catch (e: Exception) {
+    debug(e)
+    false
+}
 
 private fun getTags(
     baseUrl: String,
     readMs: Int,
-): String? =
-    try {
-        val url = URI("${baseUrl.removeSuffix("/")}/api/tags").toURL()
-        val conn =
-            (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 2_000
-                readTimeout = readMs
-                requestMethod = "GET"
-                doInput = true
-            }
-        conn.inputStream.bufferedReader().use { it.readText() }
-    } catch (_: Exception) {
-        null
-    }
+): String? = try {
+    val url = URI("${baseUrl.removeSuffix("/")}/api/tags").toURL()
+    val conn =
+        (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 2_000
+            readTimeout = readMs
+            requestMethod = "GET"
+            doInput = true
+        }
+    conn.inputStream.bufferedReader().use { it.readText() }
+} catch (_: Exception) {
+    debug("Failed to connect to Ollama at $baseUrl")
+    null
+}
 
 private fun hasModel(
     tagsJson: String,
@@ -167,4 +164,4 @@ private fun notReachable(
       • Install: https://ollama.com/download
       • Start:   ollama serve
       • Pull:    ollama pull $model
-    """.trimIndent()
+""".trimIndent()

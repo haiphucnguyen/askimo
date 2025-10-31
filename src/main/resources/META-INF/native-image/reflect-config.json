@@ -57,6 +57,9 @@
     "name": "[Lcom.github.dockerjava.api.model.VolumesFrom;"
   },
   {
+    "name": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
+  },
+  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -67,6 +70,9 @@
   },
   {
     "name": "[Ljava.lang.constant.ConstantDesc;"
+  },
+  {
+    "name": "[Ljava.sql.Statement;"
   },
   {
     "name": "[Lnet.bytebuddy.description.enumeration.EnumerationDescription;"
@@ -815,6 +821,18 @@
     "name": "com.sun.tools.attach.VirtualMachine"
   },
   {
+    "name": "com.zaxxer.hikari.HikariConfig",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.zaxxer.hikari.pool.PoolBase",
+    "fields": [{ "name": "catalog" }]
+  },
+  {
+    "name": "com.zaxxer.hikari.pool.PoolEntry",
+    "fields": [{ "name": "state" }]
+  },
+  {
     "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1203,7 +1221,8 @@
           "io.askimo.core.config.EmbeddingConfig",
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
-          "io.askimo.core.config.IndexingConfig"
+          "io.askimo.core.config.IndexingConfig",
+          "io.askimo.core.config.ChatConfig"
         ]
       },
       {
@@ -1214,6 +1233,26 @@
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
+          "io.askimo.core.config.ChatConfig",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ChatConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["int", "int", "int"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "int",
+          "int",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -1400,6 +1439,22 @@
     ]
   },
   {
+    "name": "io.askimo.core.recipes.IRecipeRegistry",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.recipes.IToolRegistry",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.recipes.MiniTpl",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.recipes.PostAction",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1470,6 +1525,43 @@
     ]
   },
   {
+    "name": "io.askimo.core.recipes.RecipeDefinition",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.recipes.RecipeExecutorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "testExternalArgSubstitution", "parameterTypes": [] },
+      { "name": "testRecipeExecutorWithExternalArg", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.recipes.RecipeExecutorTest$testExternalArgSubstitution$TestRecipeExecutor",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.recipes.RecipeExecutorTest$testRecipeExecutorWithExternalArg$TestRecipeExecutor",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.recipes.RecipeVarCall",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.recipes.ToolRegistryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -1537,6 +1629,7 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
       {
         "name": "test API key migration from plain text",
         "parameterTypes": []
@@ -1544,6 +1637,94 @@
       { "name": "test encryption fallback", "parameterTypes": [] },
       { "name": "test secure session loading", "parameterTypes": [] },
       { "name": "test storage security descriptions", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.session.ChatSessionRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      {
+        "name": "should add and retrieve messages for a session",
+        "parameterTypes": []
+      },
+      { "name": "should count messages correctly", "parameterTypes": [] },
+      {
+        "name": "should create and retrieve a chat session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should create database file in correct location",
+        "parameterTypes": []
+      },
+      {
+        "name": "should generate and update session title",
+        "parameterTypes": []
+      },
+      {
+        "name": "should generate title ending with period for sentences",
+        "parameterTypes": []
+      },
+      {
+        "name": "should generate title with ellipsis for long messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle conversation summary with complex data",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle database transactions correctly on failure",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle different message roles correctly",
+        "parameterTypes": []
+      },
+      { "name": "should handle empty messages list", "parameterTypes": [] },
+      { "name": "should handle empty sessions list", "parameterTypes": [] },
+      {
+        "name": "should limit recent messages correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve all sessions ordered by updated_at desc",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve messages after specific message",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve recent messages in chronological order",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent conversation summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save and retrieve conversation summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should update conversation summary when saving again",
+        "parameterTypes": []
+      },
+      {
+        "name": "should update session updated_at when adding message",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] }
     ]
   },
   {
@@ -2415,7 +2596,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$8PidVg5d",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$64ZF6Ehq",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -2433,6 +2614,13 @@
       { "name": "isClosed" },
       { "name": "statementState" }
     ]
+  },
+  {
+    "name": "org.slf4j.Logger"
+  },
+  {
+    "name": "org.sqlite.JDBC",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "sun.security.pkcs12.PKCS12KeyStore",

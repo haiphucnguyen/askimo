@@ -7,6 +7,7 @@ package io.askimo.core.project
 import java.sql.DriverManager
 
 object PgVectorAdmin {
+
     fun dropProjectTable(
         jdbcUrl: String,
         user: String,

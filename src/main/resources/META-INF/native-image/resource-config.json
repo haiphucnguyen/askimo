@@ -2,6 +2,9 @@
   "resources": {
     "includes": [
       {
+        "pattern": "\\QMETA-INF/maven/org.xerial/sqlite-jdbc/pom.properties\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.http.client.HttpClientBuilderFactory\\E"
       },
       {
@@ -201,6 +204,9 @@
       },
       {
         "pattern": "\\Qorg/slf4j/impl/StaticLoggerBinder.class\\E"
+      },
+      {
+        "pattern": "\\Qorg/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib\\E"
       },
       {
         "pattern": "\\Qtestcontainers.properties\\E"

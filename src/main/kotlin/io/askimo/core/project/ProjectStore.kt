@@ -136,7 +136,6 @@ object ProjectStore {
             WRITE,
         )
 
-        // Best-effort fsync (FileChannel has force())
         runCatching {
             FileChannel.open(tmp, READ).use { it.force(true) }
         }

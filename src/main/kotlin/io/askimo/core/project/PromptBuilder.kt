@@ -7,20 +7,21 @@ package io.askimo.core.project
 import kotlinx.serialization.json.Json
 
 object PromptBuilder {
+    private val json = Json { prettyPrint = false }
+
     data class BuiltPrompt(
         val system: String,
         val user: String,
     ) {
         /** For ChatService that only accepts a single user string, inline system first. */
-        fun asSingleMessage(): String =
-            buildString {
-                appendLine("SYSTEM INSTRUCTIONS")
-                appendLine("```")
-                appendLine(system.trim())
-                appendLine("```")
-                appendLine()
-                append(user)
-            }
+        fun asSingleMessage(): String = buildString {
+            appendLine("SYSTEM INSTRUCTIONS")
+            appendLine("```")
+            appendLine(system.trim())
+            appendLine("```")
+            appendLine()
+            append(user)
+        }
     }
 
     fun build(request: DiffRequest): BuiltPrompt {
@@ -38,9 +39,7 @@ object PromptBuilder {
             Output: ONLY a git unified diff (no prose, no backticks).
             """.trimIndent()
 
-        val headerJson =
-            Json { prettyPrint = false }
-                .encodeToString(request.header)
+        val headerJson = json.encodeToString(request.header)
 
         val user =
             buildString {
