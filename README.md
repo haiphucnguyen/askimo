@@ -84,7 +84,7 @@ Run commands directly from the command line:
 ```bash
 askimo --help
 askimo --list-providers
-askimo --set-provider openai
+askimo --set-provider open_ai
 echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
 ```
 
@@ -141,7 +141,7 @@ All commands work in both modes - just use `:command` for interactive or `--comm
 ```bash
 $ askimo
 askimo> :providers
-askimo> :set-provider openai  
+askimo> :set-provider open_ai  
 askimo> :config
 askimo> What is TypeScript?
 ```
@@ -149,7 +149,7 @@ askimo> What is TypeScript?
 **Non-Interactive Mode:**
 ```bash
 $ askimo --providers
-$ askimo --set-provider openai
+$ askimo --set-provider open_ai
 $ askimo --config
 $ askimo -p "What is TypeScript?"
 $ echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
