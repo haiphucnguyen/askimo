@@ -85,6 +85,29 @@ Run commands directly from the command line:
 askimo --help
 askimo --list-providers
 askimo --set-provider openai
+echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
+```
+
+### 💬 Direct Chat (Non-Interactive)
+Send a single message to AI without entering interactive mode:
+```bash
+askimo -p "Your prompt here"
+askimo --prompt "Your prompt here"
+```
+
+**With piped input:**
+```bash
+# Analyze code from stdin
+echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
+
+# Process file contents
+cat myfile.js | askimo --prompt "Explain this code"
+
+# Analyze git changes
+git diff | askimo -p "Summarize these changes"
+
+# Process command output
+ls -la | askimo -p "Explain these file permissions"
 ```
 
 ### 📋 Command Reference
@@ -94,6 +117,7 @@ All commands work in both modes - just use `:command` for interactive or `--comm
 | Interactive Mode    | Non-Interactive Mode     | Description                                                                                                 | Example Usage                                      |
 |-------------------|--------------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
 | `:help`           | `--help`                 | Show all available commands                                                                                 | `:help` or `askimo --help`                       |
+| N/A               | `-p, --prompt`           | Send a single chat message without entering interactive mode (supports stdin)                              | `askimo -p "Hello"` or `echo "code" \| askimo -p "Explain"`  |
 | `:set-param`      | `--set-param`            | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
 | `:params`         | `--params`               | View current session parameters                                                                             | `:params` or `askimo --params`                   |
 | `:config`         | `--config`               | Show the current provider, model, and settings                                                              | `:config` or `askimo --config`                   |
@@ -127,7 +151,8 @@ askimo> What is TypeScript?
 $ askimo --providers
 $ askimo --set-provider openai
 $ askimo --config
-$ echo "function add(a, b) { return a + b; }" | askimo "Convert this to TypeScript"
+$ askimo -p "What is TypeScript?"
+$ echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
 ```
 
 ➡ **[View the full command reference »](docs/commands.md)**  

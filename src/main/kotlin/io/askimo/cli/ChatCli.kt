@@ -32,7 +32,6 @@ import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.sendMessage
-import io.askimo.core.providers.sendMessageStreaming
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
@@ -48,6 +47,7 @@ import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
 import org.jline.terminal.TerminalBuilder
+import org.jline.terminal.Terminal
 import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -135,6 +135,14 @@ fun main(args: Array<String>) {
                     emptyList()
                 }
             runYamlCommand(session, cliCommandName, overrides, externalArgs)
+            return
+        }
+
+        val promptText = args.getFlagValue("-p", "--prompt")
+        if (promptText != null) {
+            val stdinText = readStdinIfAny()
+            val prompt = buildPrompt(promptText, stdinText)
+            sendChatMessage(session, prompt, showIndicator = true)
             return
         }
 
@@ -242,37 +250,7 @@ fun main(args: Array<String>) {
                     }
                 } else {
                     val prompt = parsedLine.line()
-
-                    // Use the intelligent context management system
-                    val indicator = LoadingIndicator(reader.terminal, "Thinking…")
-                    indicator.start()
-
-                    val firstTokenSeen = AtomicBoolean(false)
-
-                    val mdRenderer = MarkdownJLineRenderer()
-                    val mdSink = MarkdownStreamingSink(reader.terminal, mdRenderer)
-
-                    // Prepare context and get the prompt to use
-                    val promptWithContext = session.prepareContextAndGetPrompt(prompt)
-
-                    // Stream the response directly for real-time display
-                    val output = session.getChatService().sendMessage(promptWithContext) { token ->
-                        if (firstTokenSeen.compareAndSet(false, true)) {
-                            indicator.stopWithElapsed()
-                            reader.terminal.flush()
-                        }
-                        mdSink.append(token)
-                    }
-                    if (!firstTokenSeen.get()) {
-                        indicator.stopWithElapsed()
-                        reader.terminal.writer().println()
-                        reader.terminal.flush()
-                    }
-                    mdSink.finish()
-
-                    // Save the AI response to session
-                    session.saveAiResponse(output)
-
+                    val output = sendChatMessage(session, prompt, reader.terminal, showIndicator = true)
                     session.lastResponse = output
                     reader.terminal.writer().println()
                     reader.terminal.writer().flush()
@@ -282,21 +260,9 @@ fun main(args: Array<String>) {
             }
         } else {
             val userPrompt = args.joinToString(" ").trim()
-            val stdinText =
-                readStdinIfAny(
-                    maxBytes = 1_000_000_000, // ~1GB cap to avoid OOM
-                    tailLines = 1500, // keep only last N lines if huge
-                )
+            val stdinText = readStdinIfAny()
             val prompt = buildPrompt(userPrompt, stdinText)
-            val out = System.out.writer()
-            val output =
-                session.getChatService().sendMessageStreaming(prompt) { token ->
-                    out.write(token)
-                    out.flush()
-                }
-
-            out.write("\n")
-            out.flush()
+            sendChatMessage(session, prompt, showIndicator = true)
         }
     } catch (e: IOException) {
         info("❌ Error: ${e.message}")
@@ -304,9 +270,50 @@ fun main(args: Array<String>) {
     }
 }
 
+private fun sendChatMessage(
+    session: Session,
+    prompt: String,
+    terminal: Terminal? = null,
+    showIndicator: Boolean = true
+): String {
+    val actualTerminal = terminal ?: TerminalBuilder.builder().system(true).build()
+
+    val indicator = if (showIndicator) {
+        LoadingIndicator(actualTerminal, "Thinking…").apply { start() }
+    } else null
+
+    val firstTokenSeen = AtomicBoolean(false)
+    val mdRenderer = MarkdownJLineRenderer()
+    val mdSink = MarkdownStreamingSink(actualTerminal, mdRenderer)
+
+    // Prepare context and get the prompt to use
+    val promptWithContext = session.prepareContextAndGetPrompt(prompt)
+
+    // Stream the response directly for real-time display
+    val output = session.getChatService().sendMessage(promptWithContext) { token ->
+        if (firstTokenSeen.compareAndSet(false, true)) {
+            indicator?.stopWithElapsed()
+            actualTerminal.flush()
+        }
+        mdSink.append(token)
+    }
+
+    if (!firstTokenSeen.get()) {
+        indicator?.stopWithElapsed()
+        actualTerminal.writer().println()
+        actualTerminal.flush()
+    }
+    mdSink.finish()
+
+    // Save the AI response to session
+    session.saveAiResponse(output)
+
+    return output
+}
+
 private fun readStdinIfAny(
-    maxBytes: Int,
-    tailLines: Int,
+    maxBytes: Int = 1_000_000_000, // ~1GB cap to avoid OOM
+    tailLines: Int = 1500, // keep only last N lines if huge
 ): String {
     // If a console is attached, we're likely not in a pipeline.
     // In most Unix/Windows environments, piping detaches the console -> returns null.
