@@ -7,6 +7,7 @@ package io.askimo.core.session
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.config.AppConfig
+import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.ProjectMeta
@@ -147,6 +148,8 @@ class Session(
 
     fun clearScope() {
         scope = null
+        // Stop file watcher when clearing scope
+        FileWatcherManager.stopCurrentWatcher()
     }
 
     /**

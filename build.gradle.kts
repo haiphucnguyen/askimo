@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.langchain4j.anthropic)
     implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json.jvm)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.postgresql)
     implementation(libs.langchain4j.pgvector)
     implementation(libs.testcontainers.postgresql)

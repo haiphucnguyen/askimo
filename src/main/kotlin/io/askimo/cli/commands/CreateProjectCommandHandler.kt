@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
@@ -47,7 +48,7 @@ class CreateProjectCommandHandler(
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
                 info("❌ Failed to start Postgres container: ${e.message}")
-                debug(e);
+                debug(e)
                 return
             }
         info("✅ Postgres ready on ${pg.jdbcUrl}")
@@ -82,6 +83,10 @@ class CreateProjectCommandHandler(
         // Keep existing session wiring (compat shim for old type if needed)
         session.setScope(meta)
         session.enableRagWith(indexer)
+
+        // Start file watcher for the project
+        FileWatcherManager.startWatchingProject(projectPath, indexer)
+        info("👁️  File watcher started - changes will be automatically indexed.")
         info("🧠 RAG enabled for project '${meta.name}' (scope set).")
     }
 

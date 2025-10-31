@@ -4,6 +4,7 @@ jline = "3.30.5"
 langchain4j = "1.7.1"
 commonmark = "0.25.1"
 kotlinxSerializationJson = "1.9.0"
+kotlinxCoroutines = "1.9.0"
 slf4j = "2.0.17"
 junitBom = "5.14.0"
 postgresql = "42.7.7"
@@ -43,6 +44,9 @@ jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "
 
 # Kotlinx Serialization
 kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
+# Kotlinx Coroutines
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
 
 # Logging
 slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }

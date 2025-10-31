@@ -81,6 +81,9 @@
     "name": "[Lorg.testcontainers.shaded.com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;"
   },
   {
+    "name": "android.os.Build"
+  },
+  {
     "name": "apple.security.AppleProvider",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -1374,6 +1377,24 @@
     ]
   },
   {
+    "name": "io.askimo.core.project.PgVectorIndexer",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.String", "io.askimo.core.session.Session"]
+      },
+      {
+        "name": "indexSingleFile",
+        "parameterTypes": ["java.nio.file.Path", "java.lang.String"]
+      },
+      { "name": "removeFileFromIndex", "parameterTypes": ["java.lang.String"] }
+    ]
+  },
+  {
     "name": "io.askimo.core.project.PgVectorIndexerOllamaTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -1421,6 +1442,83 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.project.ProjectFileWatcher",
+    "fields": [{ "name": "isWatching" }]
+  },
+  {
+    "name": "io.askimo.core.project.ProjectFileWatcher$handleFileChange$1",
+    "fields": [{ "name": "label" }]
+  },
+  {
+    "name": "io.askimo.core.project.ProjectFileWatcher$startWatching$1",
+    "fields": [{ "name": "label" }]
+  },
+  {
+    "name": "io.askimo.core.project.ProjectFileWatcher$watchForChanges$1",
+    "fields": [{ "name": "label" }]
+  },
+  {
+    "name": "io.askimo.core.project.ProjectFileWatcherTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "can start and stop file watcher", "parameterTypes": [] },
+      {
+        "name": "error during indexing does not stop watcher",
+        "parameterTypes": []
+      },
+      {
+        "name": "file creation in subdirectory triggers indexing with correct path",
+        "parameterTypes": []
+      },
+      { "name": "file creation triggers indexing", "parameterTypes": [] },
+      {
+        "name": "file modification triggers re-indexing",
+        "parameterTypes": []
+      },
+      { "name": "hidden files are ignored", "parameterTypes": [] },
+      {
+        "name": "multiple file creation events are handled",
+        "parameterTypes": []
+      },
+      {
+        "name": "nested directory structure is handled correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "new directories created after watcher starts are registered",
+        "parameterTypes": []
+      },
+      {
+        "name": "only supported file extensions are processed",
+        "parameterTypes": []
+      },
+      { "name": "setUp", "parameterTypes": [] },
+      {
+        "name": "skipped directories include common build and IDE directories",
+        "parameterTypes": []
+      },
+      {
+        "name": "startWatching does nothing if already watching",
+        "parameterTypes": []
+      },
+      {
+        "name": "stopWatching does nothing if not watching",
+        "parameterTypes": []
+      },
+      {
+        "name": "supported extensions include common programming languages",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "watchedPath returns the project root", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.providers.ChatService",
@@ -1885,7 +1983,15 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.lang.Exception",
+    "allDeclaredFields": true
+  },
+  {
     "name": "java.lang.FunctionalInterface"
+  },
+  {
+    "name": "java.lang.IllegalStateException",
+    "allDeclaredFields": true
   },
   {
     "name": "java.lang.Integer",
@@ -1919,6 +2025,7 @@
       { "name": "addReads", "parameterTypes": ["java.lang.Module"] },
       { "name": "canRead", "parameterTypes": ["java.lang.Module"] },
       { "name": "getClassLoader", "parameterTypes": [] },
+      { "name": "getDescriptor", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] },
       { "name": "getPackages", "parameterTypes": [] },
       { "name": "getResourceAsStream", "parameterTypes": ["java.lang.String"] },
@@ -1968,6 +2075,17 @@
     "methods": [{ "name": "feature", "parameterTypes": [] }]
   },
   {
+    "name": "java.lang.RuntimeException",
+    "allDeclaredFields": true,
+    "queryAllPublicConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.String", "java.lang.Throwable"]
+      }
+    ]
+  },
+  {
     "name": "java.lang.SecurityManager",
     "methods": [
       {
@@ -2003,6 +2121,10 @@
   {
     "name": "java.lang.Thread",
     "fields": [{ "name": "threadLocalRandomProbe" }]
+  },
+  {
+    "name": "java.lang.Throwable",
+    "allDeclaredFields": true
   },
   {
     "name": "java.lang.WeakPairMap"
@@ -2178,6 +2300,10 @@
     "methods": [{ "name": "getInputArguments", "parameterTypes": [] }]
   },
   {
+    "name": "java.lang.module.ModuleDescriptor",
+    "methods": [{ "name": "name", "parameterTypes": [] }]
+  },
+  {
     "name": "java.lang.reflect.AccessibleObject",
     "methods": [{ "name": "setAccessible", "parameterTypes": ["boolean"] }]
   },
@@ -2228,8 +2354,21 @@
     ]
   },
   {
+    "name": "java.lang.reflect.TypeVariable",
+    "methods": [{ "name": "getAnnotatedBounds", "parameterTypes": [] }]
+  },
+  {
     "name": "java.net.UnixDomainSocketAddress",
     "methods": [{ "name": "of", "parameterTypes": ["java.lang.String"] }]
+  },
+  {
+    "name": "java.nio.file.ClosedWatchServiceException",
+    "allDeclaredFields": true,
+    "queryAllPublicConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "java.nio.file.Path"
   },
   {
     "name": "java.security.AccessController",
@@ -2556,6 +2695,9 @@
     "name": "kotlin.collections.Set"
   },
   {
+    "name": "kotlin.coroutines.jvm.internal.BaseContinuationImpl"
+  },
+  {
     "name": "kotlin.internal.PlatformDependent"
   },
   {
@@ -2580,6 +2722,97 @@
     "allPublicFields": true
   },
   {
+    "name": "kotlinx.coroutines.CancellableContinuationImpl",
+    "fields": [
+      { "name": "_decisionAndIndex$volatile" },
+      { "name": "_parentHandle$volatile" },
+      { "name": "_state$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.CancelledContinuation",
+    "fields": [{ "name": "_resumed$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.CompletedExceptionally",
+    "fields": [{ "name": "_handled$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.EventLoopImplBase",
+    "fields": [
+      { "name": "_delayed$volatile" },
+      { "name": "_isCompleted$volatile" },
+      { "name": "_queue$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.JobSupport",
+    "fields": [
+      { "name": "_parentHandle$volatile" },
+      { "name": "_state$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.JobSupport$Finishing",
+    "fields": [
+      { "name": "_exceptionsHolder$volatile" },
+      { "name": "_isCompleting$volatile" },
+      { "name": "_rootCause$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.DispatchedContinuation",
+    "fields": [{ "name": "_reusableCancellableContinuation$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.LimitedDispatcher",
+    "fields": [{ "name": "runningWorkers$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.LockFreeLinkedListNode",
+    "fields": [
+      { "name": "_next$volatile" },
+      { "name": "_prev$volatile" },
+      { "name": "_removedRef$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.LockFreeTaskQueue",
+    "fields": [{ "name": "_cur$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.LockFreeTaskQueueCore",
+    "fields": [{ "name": "_next$volatile" }, { "name": "_state$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.internal.StackTraceRecoveryKt"
+  },
+  {
+    "name": "kotlinx.coroutines.internal.ThreadSafeHeap",
+    "fields": [{ "name": "_size$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.scheduling.CoroutineScheduler",
+    "fields": [
+      { "name": "_isTerminated$volatile" },
+      { "name": "controlState$volatile" },
+      { "name": "parkedWorkersStack$volatile" }
+    ]
+  },
+  {
+    "name": "kotlinx.coroutines.scheduling.CoroutineScheduler$Worker",
+    "fields": [{ "name": "workerCtl$volatile" }]
+  },
+  {
+    "name": "kotlinx.coroutines.scheduling.WorkQueue",
+    "fields": [
+      { "name": "blockingTasksInBuffer$volatile" },
+      { "name": "consumerIndex$volatile" },
+      { "name": "lastScheduledTask$volatile" },
+      { "name": "producerIndex$volatile" }
+    ]
+  },
+  {
     "name": "org.jline.reader.ParsedLine",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2596,7 +2829,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$64ZF6Ehq",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$u4HQ9GvV",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -2621,6 +2854,9 @@
   {
     "name": "org.sqlite.JDBC",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.misc.SharedSecrets"
   },
   {
     "name": "sun.security.pkcs12.PKCS12KeyStore",

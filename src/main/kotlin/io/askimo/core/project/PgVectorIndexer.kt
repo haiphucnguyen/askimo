@@ -385,6 +385,87 @@ class PgVectorIndexer(
         return results.matches().map { it.embedded().text() }
     }
 
+    /**
+     * Indexes a single file and adds it to the embedding store.
+     */
+    fun indexSingleFile(filePath: Path, relativePath: String) {
+        if (!Files.exists(filePath) || !filePath.isRegularFile()) {
+            return
+        }
+
+        if (tooLargeToIndex(filePath)) {
+            info("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
+            return
+        }
+
+        val content = safeReadText(filePath)
+        if (content.isBlank()) return
+
+        val header = buildFileHeader(relativePath, filePath)
+        val body = header + content
+
+        val chunks = chunkText(body, maxCharsPerChunk, chunkOverlap, filePath.extension.lowercase())
+
+        chunks.forEachIndexed { idx, chunk ->
+            val seg = TextSegment.from(
+                chunk,
+                Metadata(
+                    mapOf(
+                        "project_id" to projectId,
+                        "file_path" to relativePath,
+                        "file_name" to filePath.fileName.toString(),
+                        "extension" to filePath.extension,
+                        "chunk_index" to idx.toString(),
+                        "chunk_total" to chunks.size.toString(),
+                    ),
+                ),
+            )
+
+            try {
+                val embedding = withRetry(retryAttempts, retryBaseDelayMs) {
+                    embeddingModel.embed(seg)
+                }
+                embeddingStore.add(embedding.content(), seg)
+                throttle()
+            } catch (e: Throwable) {
+                info("⚠️ Failed to index chunk $idx of ${filePath.fileName}: ${e.message}")
+                debug(e)
+            }
+        }
+    }
+
+    /**
+     * Removes all chunks for a specific file from the embedding store.
+     */
+    fun removeFileFromIndex(relativePath: String) {
+        try {
+            // Use SQL to delete entries matching the file path
+            val sql = """
+                DELETE FROM $projectTable
+                WHERE ((metadata)::jsonb ->> 'project_id') = ?
+                AND ((metadata)::jsonb ->> 'file_path') = ?
+            """.trimIndent()
+
+            DriverManager.getConnection(
+                AppConfig.pgVector.url,
+                AppConfig.pgVector.user,
+                AppConfig.pgVector.password,
+            ).use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, projectId)
+                    stmt.setString(2, relativePath)
+                    val deletedCount = stmt.executeUpdate()
+                    if (deletedCount > 0) {
+                        debug("Removed $deletedCount chunks for file: $relativePath")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            info("⚠️ Failed to remove file from index: $relativePath - ${e.message}")
+            debug(e)
+        }
+    }
+
     // ---------- Internals ----------
     private fun detectProjectTypes(root: Path): List<ProjectType> {
         val detected = mutableListOf<ProjectType>()

@@ -15,6 +15,7 @@ import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
+import io.askimo.cli.commands.FileWatcherStatusCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
@@ -26,6 +27,7 @@ import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.ResumeSessionCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
+import io.askimo.cli.commands.StopWatcherCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
@@ -81,6 +83,8 @@ fun main(args: Array<String>) {
             ListProjectsCommandHandler(),
             UseProjectCommandHandler(session),
             DeleteProjectCommandHandler(),
+            FileWatcherStatusCommandHandler(),
+            StopWatcherCommandHandler(),
             CreateRecipeCommandHandler(),
             DeleteRecipeCommandHandler(),
             ListRecipesCommandHandler(),

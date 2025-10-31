@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
@@ -47,8 +48,7 @@ class UseProjectCommandHandler(
         }
 
         val projectPath = Paths.get(meta.root)
-        if (!Files.isDirectory(projectPath)
-        ) {
+        if (!Files.isDirectory(projectPath)) {
             info("⚠️ Saved path does not exist anymore: ${meta.root}")
             return
         }
@@ -77,12 +77,15 @@ class UseProjectCommandHandler(
                 session = session,
             )
 
-
         session.setScope(meta)
         session.enableRagWith(indexer)
 
         info("✅ Active project: '${meta.name}'  (id=${meta.id})")
         info("   ↳ ${meta.root}")
+
+        // Start file watcher for the project (this will automatically stop any existing watcher)
+        FileWatcherManager.startWatchingProject(projectPath, indexer)
+        info("👁️  File watcher started - changes will be automatically indexed.")
         info("🧠 RAG enabled for '${meta.name}'.")
     }
 }
