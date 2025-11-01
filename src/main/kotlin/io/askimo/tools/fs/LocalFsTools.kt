@@ -52,12 +52,6 @@ object LocalFsTools {
         return dir
     }
 
-    private fun safeFile(raw: String): Path {
-        val file = resolveAndGuard(raw)
-        require(file.isRegularFile()) { "Not a regular file: $raw" }
-        return file
-    }
-
     private val categoryExts: Map<String, Set<String>> =
         mapOf(
             "video" to setOf("mp4", "mkv", "mov", "avi", "wmv", "flv", "webm", "m4v"),
@@ -268,59 +262,137 @@ object LocalFsTools {
     }
 
     /**
-     * Searches for files using glob pattern matching.
+     * Enhanced file search using flexible pattern matching for intelligent file discovery.
      *
      * @param path Directory to search
-     * @param glob Glob pattern (e.g., "*.kt", "test/**/*.java", "Session*")
-     * @param recursive Search subdirectories (default: false)
+     * @param glob Search term, filename, or glob pattern - automatically expanded for better discovery
+     * @param recursive Search subdirectories (default: true for better discovery)
      * @param includeHidden Include hidden files (default: false)
-     * @return Map with matching files list and count
+     * @param smartMatch Enable intelligent pattern expansion (default: true)
+     * @return Map with matching files, relevance scores, and search metadata
      *
      * @usage
      * ```
-     * searchFilesByGlob(".", "*.md")              // All markdown files
-     * searchFilesByGlob(".", "Session*")          // Files starting with "Session"
-     * searchFilesByGlob(".", "**\/\*.kt", recursive = true)  // All Kotlin files recursively
-     *```
+     * searchFilesByGlob(".", "PgVectorIndexer")           // Find any file containing "PgVectorIndexer"
+     * searchFilesByGlob(".", "SessionManager")            // Find files with "SessionManager" in name
+     * searchFilesByGlob(".", "user-config")               // Find files with "user-config" pattern
+     * searchFilesByGlob(".", "*.md", smartMatch = false)  // Traditional glob pattern
+     * searchFilesByGlob(".", "database")                  // Find files related to "database"
+     * ```
      *
      * @errors
      * - "search_failed": Path validation, permission, or pattern errors
      */
     @Tool(
-        "Search for files in a directory using a glob pattern. " +
-            "Params: path (string), glob (string), recursive (optional, default false), includeHidden (optional, default false). " +
-            "Returns: {ok: true, path, glob, files, count} or {ok: false, error, message}.",
+        """
+        Search for files using flexible pattern matching. The AI should use this tool when users ask about specific files, classes, modules, or components.
+
+        Supports multiple search strategies:
+        - Exact filename matching: "MyFile" finds "MyFile.txt", "MyFile.json", etc.
+        - Partial name matching: "Vector" finds "PgVectorIndexer.kt", "VectorUtils.py"
+        - Traditional glob patterns: "*.md", "test/**/*.py"
+        - Any naming convention: CamelCase, snake_case, kebab-case, etc.
+
+        Parameters:
+        - path (string): Directory to search (use "." for current project)
+        - glob (string): Search term, filename, or glob pattern
+        - recursive (boolean, default true): Search subdirectories for better discovery
+        - includeHidden (boolean, default false): Include hidden files
+        - smartMatch (boolean, default true): Enable intelligent pattern expansion
+
+        Returns: {ok: true, files: [string], count: number, patterns: [string], searchPath: string}
+
+        Example usage for AI:
+        - User asks "find PgVectorIndexer" → use searchFilesByGlob(".", "PgVectorIndexer")
+        - User asks "show me SessionManager" → use searchFilesByGlob(".", "SessionManager")
+        - User asks "where is database helper" → use searchFilesByGlob(".", "database")
+        - User asks "responsibility of MyClass" → use searchFilesByGlob(".", "MyClass")
+        """,
     )
     fun searchFilesByGlob(
         path: String,
         glob: String,
-        recursive: Boolean? = false,
+        recursive: Boolean? = true,
         includeHidden: Boolean? = false,
+        smartMatch: Boolean? = true,
     ): Map<String, Any?> {
         return try {
             val dir = safeDir(path)
-            val rec = recursive == true
+            val rec = recursive != false
             val include = includeHidden == true
-            val matcher = dir.fileSystem.getPathMatcher("glob:$glob")
-            val files = mutableListOf<String>()
-            val stream = if (rec) Files.walk(dir) else Files.list(dir)
-            stream.use { s ->
-                s
-                    .filter { it.isRegularFile() }
-                    .forEach { p ->
-                        val rel = dir.relativize(p)
-                        if (matcher.matches(rel) || matcher.matches(p.fileName)) {
-                            if (!include && isHidden(p)) return@forEach
-                            files += rel.toString()
-                        }
-                    }
+            val smart = smartMatch != false
+
+            val patterns = if (smart) {
+                generateIntelligentPatterns(glob)
+            } else {
+                listOf(glob)
             }
+
+            val allFiles = mutableMapOf<String, Double>() // file -> relevance score
+
+            patterns.forEachIndexed { index, pattern ->
+                val matcher = try {
+                    dir.fileSystem.getPathMatcher("glob:$pattern")
+                } catch (e: Exception) {
+                    // If pattern is invalid as glob, treat as literal filename
+                    try {
+                        dir.fileSystem.getPathMatcher("glob:*$pattern*")
+                    } catch (e2: Exception) {
+                        // Skip this pattern if it can't be processed
+                        return@forEachIndexed
+                    }
+                }
+
+                val stream = if (rec) Files.walk(dir) else Files.list(dir)
+                stream.use { s ->
+                    s
+                        .filter { it != null && Files.isRegularFile(it) }
+                        .forEach { file ->
+                            try {
+                                val rel = dir.relativize(file)
+                                val fileName = file.fileName?.toString() ?: ""
+
+                                if (fileName.isEmpty()) return@forEach
+                                if (!include && isHidden(file)) return@forEach
+
+                                val matches = when {
+                                    // Exact pattern match
+                                    matcher.matches(rel) || matcher.matches(file.fileName) -> true
+                                    // Filename contains the search term (case insensitive)
+                                    fileName.contains(glob, ignoreCase = true) -> true
+                                    // Path contains the search term
+                                    rel.toString().contains(glob, ignoreCase = true) -> true
+                                    else -> false
+                                }
+
+                                if (matches) {
+                                    val relevanceScore = calculateRelevance(fileName, rel.toString(), glob, index)
+                                    val existing = allFiles[rel.toString()]
+                                    if (existing == null || relevanceScore > existing) {
+                                        allFiles[rel.toString()] = relevanceScore
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Skip this file if there's an error processing it
+                            }
+                        }
+                }
+            }
+
+            // Sort by relevance score (higher is better)
+            val sortedFiles = allFiles.entries
+                .sortedByDescending { it.value }
+                .map { it.key }
+
             mapOf(
                 "ok" to true,
                 "path" to dir.toString(),
+                "searchPath" to dir.toString(),
                 "glob" to glob,
-                "files" to files,
-                "count" to files.size,
+                "patterns" to patterns,
+                "files" to sortedFiles,
+                "count" to sortedFiles.size,
+                "smartMatch" to smart,
             )
         } catch (e: Exception) {
             err("search_failed", "${e::class.simpleName}: ${e.message}")
@@ -751,5 +823,146 @@ object LocalFsTools {
                 .filter { it.isNotBlank() }
 
         return tokens.map { it.lowercase().removePrefix(".") }.toSet()
+    }
+
+    /**
+     * Generate intelligent search patterns for better file discovery
+     */
+    private fun generateIntelligentPatterns(searchTerm: String): List<String> {
+        val patterns = mutableListOf<String>()
+
+        // If it's already a glob pattern, use as-is
+        if (searchTerm.contains('*') || searchTerm.contains('?') || searchTerm.contains('[')) {
+            patterns.add(searchTerm)
+            return patterns
+        }
+
+        // Strategy 1: Exact filename with any extension
+        patterns.add(searchTerm) // Exact name (could be directory)
+        patterns.add("$searchTerm.*") // With any extension
+
+        // Strategy 2: Partial matches
+        patterns.add("*$searchTerm*") // Contains anywhere
+        patterns.add("$searchTerm*") // Starts with
+        patterns.add("*$searchTerm") // Ends with
+
+        // Strategy 3: Case variations and common separators
+        val variations = generateNameVariations(searchTerm)
+        variations.forEach { variation ->
+            patterns.add(variation)
+            patterns.add("$variation.*")
+            patterns.add("*$variation*")
+        }
+
+        // Strategy 4: Directory-based patterns
+        patterns.add("**/$searchTerm") // In any subdirectory
+        patterns.add("**/$searchTerm.*") // File in any subdirectory
+        patterns.add("**/*$searchTerm*") // Partial match in any subdirectory
+
+        return patterns.distinct()
+    }
+
+    /**
+     * Generate naming convention variations
+     */
+    private fun generateNameVariations(term: String): List<String> {
+        val variations = mutableListOf<String>()
+
+        // Original term
+        variations.add(term)
+
+        // Convert CamelCase to snake_case
+        if (term.matches(Regex(".*[A-Z].*"))) {
+            val snakeCase = term.replace(Regex("([a-z])([A-Z])")) { match ->
+                "${match.groupValues[1]}_${match.groupValues[2].lowercase()}"
+            }.lowercase()
+            variations.add(snakeCase)
+        }
+
+        // Convert snake_case to CamelCase
+        if (term.contains('_')) {
+            val camelCase = term.split('_')
+                .mapIndexed { index, part ->
+                    if (index == 0) {
+                        part.lowercase()
+                    } else {
+                        part.lowercase().replaceFirstChar { it.uppercase() }
+                    }
+                }
+                .joinToString("")
+            variations.add(camelCase)
+
+            // Also try PascalCase
+            val pascalCase = term.split('_')
+                .joinToString("") { part ->
+                    part.lowercase().replaceFirstChar { it.uppercase() }
+                }
+            variations.add(pascalCase)
+        }
+
+        // Convert kebab-case variations
+        if (term.contains('-')) {
+            val camelCase = term.split('-')
+                .mapIndexed { index, part ->
+                    if (index == 0) {
+                        part.lowercase()
+                    } else {
+                        part.lowercase().replaceFirstChar { it.uppercase() }
+                    }
+                }
+                .joinToString("")
+            variations.add(camelCase)
+
+            val snakeCase = term.replace('-', '_')
+            variations.add(snakeCase)
+        }
+
+        return variations.distinct()
+    }
+
+    /**
+     * Calculate relevance score for search results
+     */
+    private fun calculateRelevance(
+        fileName: String,
+        filePath: String,
+        searchTerm: String,
+        patternIndex: Int,
+    ): Double {
+        var score = 1.0
+
+        // Exact filename match gets highest score
+        if (fileName.equals(searchTerm, ignoreCase = true) ||
+            fileName.equals("$searchTerm.*".replace(".*", ""), ignoreCase = true)
+        ) {
+            score += 5.0
+        }
+
+        // Filename starts with search term
+        if (fileName.startsWith(searchTerm, ignoreCase = true)) {
+            score += 3.0
+        }
+
+        // Filename contains search term
+        if (fileName.contains(searchTerm, ignoreCase = true)) {
+            score += 2.0
+        }
+
+        // Earlier patterns get higher scores (more specific patterns first)
+        score += (10 - patternIndex) * 0.1
+
+        // Prefer files in root directory over deeply nested ones
+        val depth = filePath.count { it == '/' }
+        score += (10 - depth) * 0.05
+
+        // Prefer certain file extensions (customizable)
+        val extension = fileName.substringAfterLast('.', "").lowercase()
+        when (extension) {
+            "kt", "java", "py", "js", "ts", "rb" -> score += 0.5 // Source code
+            "md", "txt", "rst" -> score += 0.3 // Documentation
+            "json", "yml", "yaml", "xml" -> score += 0.2 // Config
+        }
+
+        return score
     }
 }

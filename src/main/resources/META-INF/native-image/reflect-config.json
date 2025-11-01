@@ -1908,11 +1908,31 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       { "name": "testCountEntries", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "testErrorHandling", "parameterTypes": ["java.nio.file.Path"] },
       { "name": "testFilesByType", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "testGetCommandOutput",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "testListBackgroundProcesses",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      { "name": "testReadFile", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "testRunCommand", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "testSearchFileContent",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "testSearchFilesByGlob",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
       {
         "name": "testTotalSizeByType",
         "parameterTypes": ["java.nio.file.Path"]
-      }
+      },
+      { "name": "testWriteFile", "parameterTypes": ["java.nio.file.Path"] }
     ]
   },
   {
@@ -2837,7 +2857,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$TXRpVxVK",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$dN5ukfL8",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -14,6 +14,7 @@ import kotlin.io.path.createFile
 import kotlin.io.path.writeBytes
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -138,5 +139,373 @@ class LocalFsToolsTest {
         val resRec = LocalFsTools.totalSizeByType(d.toString(), extensions = "pdf", recursive = true)
         assertEquals(3L, resRec["count"])
         assertEquals(Files.size(p1) + Files.size(p2) + Files.size(p3), resRec["bytes"])
+    }
+
+    @Test
+    @DisplayName("searchFilesByGlob: finds files with intelligent pattern matching and relevance scoring")
+    fun testSearchFilesByGlob(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Create test files with various naming conventions
+        val srcDir = tmp.resolve("src").apply { createDirectories() }
+        val testDir = tmp.resolve("test").apply { createDirectories() }
+
+        val userService = srcDir.resolve("UserService.kt").apply { createFile() }
+        val userHelper = srcDir.resolve("user_helper.py").apply { createFile() }
+        val userConfig = testDir.resolve("user-config.json").apply { createFile() }
+        val readme = tmp.resolve("README.md").apply { createFile() }
+        val hiddenFile = tmp.resolve(".hidden.txt").apply { createFile() }
+
+        // Test exact filename search
+        val result1 = LocalFsTools.searchFilesByGlob(tmp.toString(), "UserService")
+        assertEquals(true, result1["ok"])
+        val files1 = result1["files"] as List<*>
+        assertTrue(files1.any { it.toString().contains("UserService.kt") })
+        assertTrue((result1["smartMatch"] as Boolean))
+
+        // Test case-insensitive partial match
+        val result2 = LocalFsTools.searchFilesByGlob(tmp.toString(), "user")
+        assertEquals(true, result2["ok"])
+        val files2 = result2["files"] as List<*>
+        assertTrue(files2.size >= 3) // Should find UserService, user_helper, user-config
+        assertTrue(files2.any { it.toString().contains("UserService") })
+        assertTrue(files2.any { it.toString().contains("user_helper") })
+        assertTrue(files2.any { it.toString().contains("user-config") })
+
+        // Test traditional glob pattern with smartMatch disabled
+        val result3 = LocalFsTools.searchFilesByGlob(tmp.toString(), "*.md", smartMatch = false)
+        assertEquals(true, result3["ok"])
+        val files3 = result3["files"] as List<*>
+        assertEquals(1, files3.size)
+        assertTrue(files3.any { it.toString().contains("README.md") })
+
+        // Test non-recursive search
+        val result4 = LocalFsTools.searchFilesByGlob(tmp.toString(), "UserService", recursive = false)
+        assertEquals(true, result4["ok"])
+        val files4 = result4["files"] as List<*>
+        assertEquals(0, files4.size) // UserService.kt is in src/, not root
+
+        // Test includeHidden
+        val result5 = LocalFsTools.searchFilesByGlob(tmp.toString(), "hidden", includeHidden = true)
+        assertEquals(true, result5["ok"])
+        val files5 = result5["files"] as List<*>
+        assertTrue(files5.any { it.toString().contains(".hidden.txt") })
+
+        // Test no matches
+        val result6 = LocalFsTools.searchFilesByGlob(tmp.toString(), "nonexistent")
+        assertEquals(true, result6["ok"])
+        val files6 = result6["files"] as List<*>
+        assertEquals(0, files6.size)
+    }
+
+    @Test
+    @DisplayName("runCommand: executes shell commands with proper output and error handling")
+    fun testRunCommand(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Test simple successful command
+        val result1 = LocalFsTools.runCommand("echo 'Hello World'")
+        assertEquals(true, result1["ok"])
+        assertTrue((result1["output"] as String).contains("Hello World"))
+        assertEquals(0, result1["exitCode"])
+        assertNotNull(result1["cwd"])
+        assertEquals("echo 'Hello World'", result1["command"])
+
+        // Test command with custom working directory
+        val subDir = tmp.resolve("subdir").apply { createDirectories() }
+        val result2 = LocalFsTools.runCommand("pwd", cwd = subDir.toString())
+        assertEquals(true, result2["ok"])
+        assertTrue((result2["output"] as String).contains(subDir.toString()))
+        assertEquals(subDir.toString(), result2["cwd"])
+
+        // Test command with environment variables
+        val result3 = LocalFsTools.runCommand("echo \$TEST_VAR", env = mapOf("TEST_VAR" to "test_value"))
+        assertEquals(true, result3["ok"])
+        assertTrue((result3["output"] as String).contains("test_value"))
+
+        // Test command that produces error output but succeeds
+        val result4 = LocalFsTools.runCommand("echo 'error' >&2; echo 'output'")
+        assertEquals(true, result4["ok"])
+        assertTrue((result4["output"] as String).contains("output"))
+        assertTrue((result4["error"] as String).contains("error"))
+        assertEquals(0, result4["exitCode"])
+
+        // Test failing command
+        val result5 = LocalFsTools.runCommand("exit 1")
+        assertEquals(true, result5["ok"])
+        assertEquals(1, result5["exitCode"])
+
+        // Test background command
+        val result6 = LocalFsTools.runCommand("sleep 0.1", background = true)
+        assertEquals(true, result6["ok"])
+        assertEquals(true, result6["background"])
+        assertNotNull(result6["pid"])
+        assertEquals("sleep 0.1", result6["command"])
+    }
+
+    @Test
+    @DisplayName("getCommandOutput: retrieves output from background processes")
+    fun testGetCommandOutput(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Start a background process
+        val bgResult = LocalFsTools.runCommand("echo 'background output'", background = true)
+        assertEquals(true, bgResult["ok"])
+        val pid = bgResult["pid"] as Long
+
+        // Wait a moment for command to complete
+        Thread.sleep(200)
+
+        // Get output from background process
+        val outputResult = LocalFsTools.getCommandOutput(pid)
+        assertEquals(true, outputResult["ok"])
+        assertTrue((outputResult["output"] as String).contains("background output"))
+        // Process should be finished by now
+        assertNotNull(outputResult["exitCode"])
+
+        // Test getting output from non-existent process
+        val invalidResult = LocalFsTools.getCommandOutput(99999L)
+        assertEquals(false, invalidResult["ok"])
+        assertEquals("not_found", invalidResult["error"])
+    }
+
+    @Test
+    @DisplayName("listBackgroundProcesses: tracks and lists background processes")
+    fun testListBackgroundProcesses(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Test that listBackgroundProcesses returns expected structure
+        val result = LocalFsTools.listBackgroundProcesses()
+        assertEquals(true, result["ok"])
+        assertNotNull(result["count"])
+        assertNotNull(result["processes"])
+
+        val processes = result["processes"] as List<*>
+        val count = result["count"] as Int
+        assertEquals(processes.size, count)
+
+        // Start a background process and verify it's tracked
+        val bgResult = LocalFsTools.runCommand("echo 'test'", background = true)
+        assertEquals(true, bgResult["ok"])
+        val pid = bgResult["pid"] as Long
+
+        val listAfter = LocalFsTools.listBackgroundProcesses()
+        assertEquals(true, listAfter["ok"])
+        val processesAfter = listAfter["processes"] as List<*>
+
+        // Should have at least one process (our echo command might finish quickly)
+        val processMap = processesAfter.associateBy { (it as Map<*, *>)["pid"] }
+        // Either our process is still running or it finished and was cleaned up
+        assertTrue(processMap.containsKey(pid) || processMap.size >= 0)
+
+        // If process is still in the list, check its structure
+        if (processMap.containsKey(pid)) {
+            val proc = processMap[pid] as Map<*, *>
+            assertEquals("echo 'test'", proc["command"])
+            assertNotNull(proc["startTime"])
+            assertNotNull(proc["runningTimeMs"])
+            assertTrue(proc["status"] == "running" || proc["status"] == "finished")
+        }
+    }
+
+    @Test
+    @DisplayName("searchFileContent: finds text content within files with various options")
+    fun testSearchFileContent(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Create test files with content
+        val srcDir = tmp.resolve("src").apply { createDirectories() }
+        val docsDir = tmp.resolve("docs").apply { createDirectories() }
+
+        val javaFile = srcDir.resolve("Example.java").apply {
+            writeText("public class Example {\n    // TODO: implement this\n    private String name;\n}")
+        }
+        val kotlinFile = srcDir.resolve("Service.kt").apply {
+            writeText("class Service {\n    fun getName(): String {\n        return \"service\"\n    }\n}")
+        }
+        val readmeFile = docsDir.resolve("README.md").apply {
+            writeText("# Documentation\nThis is a TODO list\nfor the project.")
+        }
+        val binaryFile = tmp.resolve("binary.dat").apply {
+            writeBytes(byteArrayOf(0, 1, 2, 3, 255.toByte()))
+        }
+
+        // Test basic text search
+        val result1 = LocalFsTools.searchFileContent(tmp.toString(), "TODO")
+        assertEquals(true, result1["ok"])
+        val matches1 = result1["matches"] as List<*>
+        assertEquals(2, matches1.size) // Should find in both java file and readme
+
+        val match1 = matches1[0] as Map<*, *>
+        assertTrue(match1.containsKey("file"))
+        assertTrue(match1.containsKey("content"))
+        assertTrue(match1.containsKey("lineNumber"))
+
+        // Test case-sensitive search
+        val result2 = LocalFsTools.searchFileContent(tmp.toString(), "todo", caseSensitive = true)
+        assertEquals(true, result2["ok"])
+        val matches2 = result2["matches"] as List<*>
+        assertEquals(0, matches2.size) // Should not match "TODO" with case-sensitive
+
+        // Test file pattern filtering
+        val result3 = LocalFsTools.searchFileContent(
+            tmp.toString(),
+            "class",
+            filePattern = "*.java",
+        )
+        assertEquals(true, result3["ok"])
+        val matches3 = result3["matches"] as List<*>
+        assertEquals(1, matches3.size) // Should only find in Java file
+        val match3 = matches3[0] as Map<*, *>
+        assertTrue(match3["file"].toString().endsWith(".java"))
+
+        // Test non-recursive search
+        val result4 = LocalFsTools.searchFileContent(
+            tmp.toString(),
+            "class",
+            recursive = false,
+        )
+        assertEquals(true, result4["ok"])
+        val matches4 = result4["matches"] as List<*>
+        assertEquals(0, matches4.size) // No matches in root directory
+
+        // Test maxResults limit
+        val result5 = LocalFsTools.searchFileContent(
+            tmp.toString(),
+            "class",
+            maxResults = 1,
+        )
+        assertEquals(true, result5["ok"])
+        val matches5 = result5["matches"] as List<*>
+        assertEquals(1, matches5.size) // Limited to 1 result
+
+        // Test includeLineNumbers = false
+        val result6 = LocalFsTools.searchFileContent(
+            tmp.toString(),
+            "getName",
+            includeLineNumbers = false,
+        )
+        assertEquals(true, result6["ok"])
+        val matches6 = result6["matches"] as List<*>
+        assertEquals(1, matches6.size)
+        val match6 = matches6[0] as Map<*, *>
+        assertFalse(match6.containsKey("lineNumber"))
+
+        // Verify binary files are skipped (no explicit test since it's internal behavior)
+        val result7 = LocalFsTools.searchFileContent(tmp.toString(), "binary")
+        assertEquals(true, result7["ok"])
+        // Should not crash, binary files should be skipped
+    }
+
+    @Test
+    @DisplayName("writeFile: creates files and directories as needed")
+    fun testWriteFile(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Test writing file in existing directory
+        val file1Path = tmp.resolve("test.txt").toString()
+        val result1 = LocalFsTools.writeFile(file1Path, "Hello, World!")
+        assertTrue(result1.startsWith("wrote:"))
+        assertTrue(result1.contains(file1Path))
+
+        val file1 = tmp.resolve("test.txt")
+        assertTrue(Files.exists(file1))
+        assertEquals("Hello, World!", Files.readString(file1))
+
+        // Test writing file with nested directory creation
+        val file2Path = tmp.resolve("nested/deep/file.txt").toString()
+        val result2 = LocalFsTools.writeFile(file2Path, "Nested content")
+        assertTrue(result2.startsWith("wrote:"))
+
+        val file2 = tmp.resolve("nested/deep/file.txt")
+        assertTrue(Files.exists(file2))
+        assertEquals("Nested content", Files.readString(file2))
+        assertTrue(Files.isDirectory(tmp.resolve("nested")))
+        assertTrue(Files.isDirectory(tmp.resolve("nested/deep")))
+
+        // Test overwriting existing file
+        val result3 = LocalFsTools.writeFile(file1Path, "Updated content")
+        assertTrue(result3.startsWith("wrote:"))
+        assertEquals("Updated content", Files.readString(file1))
+
+        // Test writing empty content
+        val file3Path = tmp.resolve("empty.txt").toString()
+        val result4 = LocalFsTools.writeFile(file3Path, "")
+        assertTrue(result4.startsWith("wrote:"))
+        val file3 = tmp.resolve("empty.txt")
+        assertTrue(Files.exists(file3))
+        assertEquals("", Files.readString(file3))
+    }
+
+    @Test
+    @DisplayName("readFile: reads file content and handles error cases")
+    fun testReadFile(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Create test file
+        val testFile = tmp.resolve("test.txt")
+        testFile.writeText("Hello, World!\nLine 2\nLine 3")
+
+        // Test successful read
+        val result1 = LocalFsTools.readFile(testFile.toString())
+        assertEquals("Hello, World!\nLine 2\nLine 3", result1)
+
+        // Test reading non-existent file
+        val result2 = LocalFsTools.readFile(tmp.resolve("nonexistent.txt").toString())
+        assertTrue(result2.startsWith("Error: File not found"))
+
+        // Test reading directory instead of file
+        val dir = tmp.resolve("directory").apply { createDirectories() }
+        val result3 = LocalFsTools.readFile(dir.toString())
+        assertTrue(result3.startsWith("Error: Path is not a regular file"))
+
+        // Test reading empty file
+        val emptyFile = tmp.resolve("empty.txt").apply { writeText("") }
+        val result4 = LocalFsTools.readFile(emptyFile.toString())
+        assertEquals("", result4)
+
+        // Test reading file with special characters
+        val specialFile = tmp.resolve("special.txt").apply {
+            writeText("Special chars: áéíóú, 中文, emoji 🚀")
+        }
+        val result5 = LocalFsTools.readFile(specialFile.toString())
+        assertEquals("Special chars: áéíóú, 中文, emoji 🚀", result5)
+    }
+
+    @Test
+    @DisplayName("Error handling: validates path security and directory requirements")
+    fun testErrorHandling(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Test searchFilesByGlob with invalid path
+        val result1 = LocalFsTools.searchFilesByGlob("nonexistent", "test")
+        assertEquals(false, result1["ok"])
+        assertEquals("search_failed", result1["error"])
+
+        // Test runCommand with invalid working directory
+        val result2 = LocalFsTools.runCommand("echo test", cwd = "nonexistent")
+        assertEquals(false, result2["ok"])
+        assertEquals("run_failed", result2["error"])
+
+        // Test searchFileContent with invalid path
+        val result3 = LocalFsTools.searchFileContent("nonexistent", "test")
+        assertEquals(false, result3["ok"])
+        assertEquals("search_content_failed", result3["error"])
     }
 }

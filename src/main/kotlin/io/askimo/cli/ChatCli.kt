@@ -46,8 +46,8 @@ import org.jline.reader.Reference
 import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
-import org.jline.terminal.TerminalBuilder
 import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -151,7 +151,6 @@ fun main(args: Array<String>) {
                 TerminalBuilder
                     .builder()
                     .jna(true)
-                    .jni(true)
                     .system(true)
                     .build()
 
@@ -274,13 +273,15 @@ private fun sendChatMessage(
     session: Session,
     prompt: String,
     terminal: Terminal? = null,
-    showIndicator: Boolean = true
+    showIndicator: Boolean = true,
 ): String {
     val actualTerminal = terminal ?: TerminalBuilder.builder().system(true).build()
 
     val indicator = if (showIndicator) {
         LoadingIndicator(actualTerminal, "Thinking…").apply { start() }
-    } else null
+    } else {
+        null
+    }
 
     val firstTokenSeen = AtomicBoolean(false)
     val mdRenderer = MarkdownJLineRenderer()
