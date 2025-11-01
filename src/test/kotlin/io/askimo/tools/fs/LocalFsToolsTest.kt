@@ -4,6 +4,7 @@
  */
 package io.askimo.tools.fs
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -20,6 +21,13 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LocalFsToolsTest {
+
+    @AfterEach
+    fun cleanup() {
+        // Clean up any background processes after each test to prevent Windows file locking issues
+        LocalFsTools.cleanupBackgroundProcesses()
+    }
+
     @Test
     @DisplayName("countEntries: counts files/dirs/bytes; recursive and hidden flags work")
     fun testCountEntries(
@@ -139,6 +147,47 @@ class LocalFsToolsTest {
         val resRec = LocalFsTools.totalSizeByType(d.toString(), extensions = "pdf", recursive = true)
         assertEquals(3L, resRec["count"])
         assertEquals(Files.size(p1) + Files.size(p2) + Files.size(p3), resRec["bytes"])
+    }
+
+    @Test
+    @DisplayName("Background process cleanup: ensures proper cleanup to prevent Windows file locking")
+    fun testBackgroundProcessCleanup(
+        @TempDir tmp: Path,
+    ) {
+        LocalFsTools.setTestRoot(tmp)
+
+        // Start multiple background processes
+        val bgResult1 = LocalFsTools.runCommand("echo 'test1'", background = true)
+        assertEquals(true, bgResult1["ok"])
+        val pid1 = bgResult1["pid"] as Long
+
+        val bgResult2 = LocalFsTools.runCommand("echo 'test2'", background = true)
+        assertEquals(true, bgResult2["ok"])
+        val pid2 = bgResult2["pid"] as Long
+
+        // Verify processes are tracked
+        val listResult = LocalFsTools.listBackgroundProcesses()
+        assertEquals(true, listResult["ok"])
+        val processes = listResult["processes"] as List<*>
+        assertTrue(processes.size >= 2)
+
+        // Clean up all background processes
+        LocalFsTools.cleanupBackgroundProcesses()
+
+        // Verify all processes are cleaned up
+        val listAfterCleanup = LocalFsTools.listBackgroundProcesses()
+        assertEquals(true, listAfterCleanup["ok"])
+        val processesAfterCleanup = listAfterCleanup["processes"] as List<*>
+        assertEquals(0, processesAfterCleanup.size)
+
+        // Verify getting output from cleaned up processes returns not_found
+        val outputResult1 = LocalFsTools.getCommandOutput(pid1)
+        assertEquals(false, outputResult1["ok"])
+        assertEquals("not_found", outputResult1["error"])
+
+        val outputResult2 = LocalFsTools.getCommandOutput(pid2)
+        assertEquals(false, outputResult2["ok"])
+        assertEquals("not_found", outputResult2["error"])
     }
 
     @Test

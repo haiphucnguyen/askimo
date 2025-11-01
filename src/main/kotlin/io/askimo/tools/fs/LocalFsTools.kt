@@ -532,22 +532,44 @@ object LocalFsTools {
 
             // Check if the process is still running
             val isAlive = process.isAlive
-            if (!isAlive) {
-                // If the process has finished, remove it from the map
+
+            if (isAlive) {
+                // Process is still running, return empty output
+                mapOf(
+                    "ok" to true,
+                    "output" to "",
+                    "error" to "",
+                    "exitCode" to null,
+                )
+            } else {
+                // Process has finished, read output and clean up
                 backgroundProcesses.remove(pid)
+
+                val output = try {
+                    process.inputStream.bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    ""
+                }
+
+                val error = try {
+                    process.errorStream.bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    ""
+                }
+
+                val exitCode = try {
+                    process.waitFor()
+                } catch (e: Exception) {
+                    -1 // Default exit code if we can't get the real one
+                }
+
+                mapOf(
+                    "ok" to true,
+                    "output" to output,
+                    "error" to error,
+                    "exitCode" to exitCode,
+                )
             }
-
-            // Read output and error streams
-            val output = process.inputStream.bufferedReader().readText()
-            val error = process.errorStream.bufferedReader().readText()
-            val exitCode = if (isAlive) null else process.waitFor()
-
-            mapOf(
-                "ok" to true,
-                "output" to output,
-                "error" to error,
-                "exitCode" to exitCode,
-            )
         } catch (e: Exception) {
             err("output_failed", "${e::class.simpleName}: ${e.message}")
         }
@@ -747,6 +769,41 @@ object LocalFsTools {
     fun setTestRoot(root: Path) {
         allowedRoot = root.toAbsolutePath().normalize()
         cwd = root.toAbsolutePath().normalize()
+    }
+
+    /**
+     * TEST-ONLY: Clean up all background processes for test cleanup.
+     * This is important on Windows to prevent file handle leaks.
+     */
+    fun cleanupBackgroundProcesses() {
+        backgroundProcesses.values.forEach { processInfo ->
+            try {
+                val process = processInfo.process
+                if (process.isAlive) {
+                    // First try graceful termination
+                    process.destroy()
+                    // Wait a bit for graceful shutdown
+                    val terminated = process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS)
+                    if (!terminated) {
+                        // Force kill if it doesn't terminate gracefully
+                        process.destroyForcibly()
+                    }
+                }
+                // Close all streams to release file handles
+                try {
+                    process.inputStream.close()
+                } catch (e: Exception) { /* ignore */ }
+                try {
+                    process.errorStream.close()
+                } catch (e: Exception) { /* ignore */ }
+                try {
+                    process.outputStream.close()
+                } catch (e: Exception) { /* ignore */ }
+            } catch (e: Exception) {
+                // Ignore cleanup errors
+            }
+        }
+        backgroundProcesses.clear()
     }
 
     private fun findAvailableShell(): String {
