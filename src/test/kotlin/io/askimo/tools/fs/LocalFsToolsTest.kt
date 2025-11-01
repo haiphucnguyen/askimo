@@ -256,6 +256,8 @@ class LocalFsToolsTest {
     ) {
         LocalFsTools.setTestRoot(tmp)
 
+        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+
         // Test simple successful command
         val result1 = LocalFsTools.runCommand("echo 'Hello World'")
         assertEquals(true, result1["ok"])
@@ -266,18 +268,25 @@ class LocalFsToolsTest {
 
         // Test command with custom working directory
         val subDir = tmp.resolve("subdir").apply { createDirectories() }
-        val result2 = LocalFsTools.runCommand("pwd", cwd = subDir.toString())
+        val pwdCommand = if (isWindows) "echo %CD%" else "pwd"
+        val result2 = LocalFsTools.runCommand(pwdCommand, cwd = subDir.toString())
         assertEquals(true, result2["ok"])
         assertTrue((result2["output"] as String).contains(subDir.toString()))
         assertEquals(subDir.toString(), result2["cwd"])
 
         // Test command with environment variables
-        val result3 = LocalFsTools.runCommand("echo \$TEST_VAR", env = mapOf("TEST_VAR" to "test_value"))
+        val envCommand = if (isWindows) "echo %TEST_VAR%" else "echo \$TEST_VAR"
+        val result3 = LocalFsTools.runCommand(envCommand, env = mapOf("TEST_VAR" to "test_value"))
         assertEquals(true, result3["ok"])
         assertTrue((result3["output"] as String).contains("test_value"))
 
         // Test command that produces error output but succeeds
-        val result4 = LocalFsTools.runCommand("echo 'error' >&2; echo 'output'")
+        val errorCommand = if (isWindows) {
+            "echo error 1>&2 & echo output"
+        } else {
+            "echo 'error' >&2; echo 'output'"
+        }
+        val result4 = LocalFsTools.runCommand(errorCommand)
         assertEquals(true, result4["ok"])
         assertTrue((result4["output"] as String).contains("output"))
         assertTrue((result4["error"] as String).contains("error"))
@@ -289,11 +298,12 @@ class LocalFsToolsTest {
         assertEquals(1, result5["exitCode"])
 
         // Test background command
-        val result6 = LocalFsTools.runCommand("sleep 0.1", background = true)
+        val sleepCommand = if (isWindows) "timeout /t 1 /nobreak > nul" else "sleep 0.1"
+        val result6 = LocalFsTools.runCommand(sleepCommand, background = true)
         assertEquals(true, result6["ok"])
         assertEquals(true, result6["background"])
         assertNotNull(result6["pid"])
-        assertEquals("sleep 0.1", result6["command"])
+        assertEquals(sleepCommand, result6["command"])
     }
 
     @Test
