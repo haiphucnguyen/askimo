@@ -135,7 +135,6 @@ object ProjectStore {
                 true
             }
 
-        // (optional) verify write succeeded
         if (!moved) error("Failed to write $path")
     }
 

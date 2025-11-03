@@ -4,18 +4,40 @@
  */
 package io.askimo.core.graal
 
+import io.askimo.core.config.AppConfigData
+import io.askimo.core.config.ChatConfig
+import io.askimo.core.config.EmbeddingConfig
+import io.askimo.core.config.IndexingConfig
+import io.askimo.core.config.PgVectorConfig
+import io.askimo.core.config.RetryConfig
+import io.askimo.core.config.ThrottleConfig
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import org.graalvm.nativeimage.hosted.Feature
 import org.graalvm.nativeimage.hosted.RuntimeClassInitialization
 import org.graalvm.nativeimage.hosted.RuntimeReflection
 
+/**
+ * GraalVM native image feature that configures runtime reflection and class initialization
+ * for Askimo components to ensure proper functionality in compiled native executables.
+ */
 class AskimoFeature : Feature {
     override fun beforeAnalysis(access: Feature.BeforeAnalysisAccess) {
         // Register Askimo tool classes invoked via reflection by your ToolRegistry
         registerAllDeclared(LocalFsTools::class.java, GitTools::class.java)
 
-        // Handle LangChain4j internal Jackson deserializer (cannot import; use analysis access)
+        // Register configuration classes for reflection
+        registerAllDeclared(
+            AppConfigData::class.java,
+            PgVectorConfig::class.java,
+            EmbeddingConfig::class.java,
+            RetryConfig::class.java,
+            ThrottleConfig::class.java,
+            IndexingConfig::class.java,
+            ChatConfig::class.java,
+        )
+
+        // Handle LangChain4j internal Jackson deserializer (package-private, cannot import directly)
         val openAiEmbeddingDeserializer =
             access.findClassByName("dev.langchain4j.model.openai.internal.embedding.OpenAiEmbeddingDeserializer")
 
