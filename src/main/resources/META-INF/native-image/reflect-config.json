@@ -3,9 +3,6 @@
     "name": "[B"
   },
   {
-    "name": "[F"
-  },
-  {
     "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
   },
   {
@@ -16,45 +13,6 @@
   },
   {
     "name": "[Lcom.fasterxml.jackson.databind.ser.Serializers;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Bind;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Capability;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Device;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.ExposedPort;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Link;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.LxcConf;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.PortBinding;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Ports$Binding;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Ulimit;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.Volume;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.VolumeBind;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.VolumeRW;"
-  },
-  {
-    "name": "[Lcom.github.dockerjava.api.model.VolumesFrom;"
   },
   {
     "name": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
@@ -99,669 +57,16 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "com.github.dockerjava.api.command.AsyncDockerCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.CreateContainerCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.CreateContainerResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setId", "parameterTypes": ["java.lang.String"] },
-      { "name": "setWarnings", "parameterTypes": ["java.lang.String[]"] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.DockerCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.ExecCreateCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.ExecCreateCmdResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.ExecStartCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.GraphData",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.GraphDriver",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.HealthState",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.HealthStateLog",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectContainerResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectContainerResponse$ContainerState",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "queryAllPublicConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "com.github.dockerjava.api.command.InspectContainerResponse"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectContainerResponse$Mount",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectContainerResponse$Node",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "queryAllPublicConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectExecResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectExecResponse$Container",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "queryAllPublicConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectExecResponse$ProcessConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "queryAllPublicConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "com.github.dockerjava.api.command.InspectExecResponse"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.InspectImageResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.RootFS",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.command.SyncDockerCmd",
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.AccessMode",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "com.github.dockerjava.api.model.AuthConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "getAuth", "parameterTypes": [] },
-      { "name": "getEmail", "parameterTypes": [] },
-      { "name": "getIdentitytoken", "parameterTypes": [] },
-      { "name": "getPassword", "parameterTypes": [] },
-      { "name": "getRegistryAddress", "parameterTypes": [] },
-      { "name": "getRegistrytoken", "parameterTypes": [] },
-      { "name": "getStackOrchestrator", "parameterTypes": [] },
-      { "name": "getUsername", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Bind",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.BindOptions",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.BindPropagation",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Binds",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "fromPrimitive", "parameterTypes": ["java.lang.String[]"] },
-      { "name": "toPrimitive", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.BlkioRateDevice",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.BlkioWeightDevice",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Capability",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ClusterInfo",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ContainerConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ContainerNetwork",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ContainerNetwork$Ipam",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Device",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.DeviceRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.DockerObject",
     "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "methods": [{ "name": "getRawValues", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Driver",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ExposedPort",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ExposedPorts",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "fromPrimitive", "parameterTypes": ["java.util.Map"] },
-      { "name": "toPrimitive", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ExternalCA",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ExternalCAProtocol",
-    "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.HealthCheck",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.HostConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "getAutoRemove", "parameterTypes": [] },
-      { "name": "getBlkioDeviceReadBps", "parameterTypes": [] },
-      { "name": "getBlkioDeviceReadIOps", "parameterTypes": [] },
-      { "name": "getBlkioDeviceWriteBps", "parameterTypes": [] },
-      { "name": "getBlkioDeviceWriteIOps", "parameterTypes": [] },
-      { "name": "getBlkioWeight", "parameterTypes": [] },
-      { "name": "getBlkioWeightDevice", "parameterTypes": [] },
-      { "name": "getCapAdd", "parameterTypes": [] },
-      { "name": "getCapDrop", "parameterTypes": [] },
-      { "name": "getCgroup", "parameterTypes": [] },
-      { "name": "getCgroupParent", "parameterTypes": [] },
-      { "name": "getCgroupnsMode", "parameterTypes": [] },
-      { "name": "getConsoleSize", "parameterTypes": [] },
-      { "name": "getContainerIDFile", "parameterTypes": [] },
-      { "name": "getCpuCount", "parameterTypes": [] },
-      { "name": "getCpuPercent", "parameterTypes": [] },
-      { "name": "getCpuPeriod", "parameterTypes": [] },
-      { "name": "getCpuQuota", "parameterTypes": [] },
-      { "name": "getCpuRealtimePeriod", "parameterTypes": [] },
-      { "name": "getCpuRealtimeRuntime", "parameterTypes": [] },
-      { "name": "getCpuShares", "parameterTypes": [] },
-      { "name": "getCpusetCpus", "parameterTypes": [] },
-      { "name": "getCpusetMems", "parameterTypes": [] },
-      { "name": "getDeviceCgroupRules", "parameterTypes": [] },
-      { "name": "getDeviceRequests", "parameterTypes": [] },
-      { "name": "getDevices", "parameterTypes": [] },
-      { "name": "getDiskQuota", "parameterTypes": [] },
-      { "name": "getDns", "parameterTypes": [] },
-      { "name": "getDnsOptions", "parameterTypes": [] },
-      { "name": "getDnsSearch", "parameterTypes": [] },
-      { "name": "getExtraHosts", "parameterTypes": [] },
-      { "name": "getGroupAdd", "parameterTypes": [] },
-      { "name": "getInit", "parameterTypes": [] },
-      { "name": "getIoMaximumBandwidth", "parameterTypes": [] },
-      { "name": "getIoMaximumIOps", "parameterTypes": [] },
-      { "name": "getIpcMode", "parameterTypes": [] },
-      { "name": "getIsolation", "parameterTypes": [] },
-      { "name": "getKernelMemory", "parameterTypes": [] },
-      { "name": "getLxcConf", "parameterTypes": [] },
-      { "name": "getMemory", "parameterTypes": [] },
-      { "name": "getMemoryReservation", "parameterTypes": [] },
-      { "name": "getMemorySwap", "parameterTypes": [] },
-      { "name": "getMemorySwappiness", "parameterTypes": [] },
-      { "name": "getMounts", "parameterTypes": [] },
-      { "name": "getNanoCPUs", "parameterTypes": [] },
-      { "name": "getNetworkMode", "parameterTypes": [] },
-      { "name": "getOomKillDisable", "parameterTypes": [] },
-      { "name": "getOomScoreAdj", "parameterTypes": [] },
-      { "name": "getPidMode", "parameterTypes": [] },
-      { "name": "getPidsLimit", "parameterTypes": [] },
-      { "name": "getPortBindings", "parameterTypes": [] },
-      { "name": "getPrivileged", "parameterTypes": [] },
-      { "name": "getPublishAllPorts", "parameterTypes": [] },
-      { "name": "getReadonlyRootfs", "parameterTypes": [] },
-      { "name": "getRestartPolicy", "parameterTypes": [] },
-      { "name": "getRuntime", "parameterTypes": [] },
-      { "name": "getSecurityOpts", "parameterTypes": [] },
-      { "name": "getShmSize", "parameterTypes": [] },
-      { "name": "getStorageOpt", "parameterTypes": [] },
-      { "name": "getSysctls", "parameterTypes": [] },
-      { "name": "getTmpFs", "parameterTypes": [] },
-      { "name": "getUlimits", "parameterTypes": [] },
-      { "name": "getUsernsMode", "parameterTypes": [] },
-      { "name": "getUtSMode", "parameterTypes": [] },
-      { "name": "getVolumeDriver", "parameterTypes": [] },
-      { "name": "getVolumesFrom", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Image",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ImageOptions",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Info",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.InfoRegistryConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.InfoRegistryConfig$IndexConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.InternetProtocol",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Isolation",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "methods": [{ "name": "fromValue", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Link",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Links",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "toPrimitive", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.LocalNodeState",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "methods": [{ "name": "forValue", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.LogConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "setType",
-        "parameterTypes": [
-          "com.github.dockerjava.api.model.LogConfig$LoggingType"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.LogConfig$LoggingType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "methods": [{ "name": "fromValue", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.LxcConf",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Mount",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.MountType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.NetworkSettings",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.PeerNode",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Ports",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "fromPrimitive", "parameterTypes": ["java.util.Map"] },
-      { "name": "toPrimitive", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Ports$Binding",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.PropagationMode",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ResourceVersion",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.RestartPolicy",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.RuntimeInfo",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setPath", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SELContext",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmCAConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmDispatcherConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmInfo",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmOrchestration",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmRaftConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.SwarmSpec",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.TaskDefaults",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.TmpfsOptions",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Ulimit",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Version",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VersionComponent",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VersionPlatform",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Volume",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumeBind",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumeBinds",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumeOptions",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumeRW",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.Volumes",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "toPrimitive", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumesFrom",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.VolumesRW",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.pgvector.PGvector",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.sun.crypto.provider.AESCipher$General",
@@ -796,31 +101,7 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "com.sun.crypto.provider.HmacCore$HmacSHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "com.sun.crypto.provider.HmacCore$HmacSHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA1",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA224",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA512",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -1236,27 +517,6 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "getInput", "parameterTypes": [] },
-      { "name": "getModel", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.ollama.EmbeddingResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setEmbeddings", "parameterTypes": ["java.util.List"] },
-      { "name": "setModel", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1525,14 +785,7 @@
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "should start postgres container and be connectable",
-        "parameterTypes": []
-      },
-      { "name": "tearDownAll", "parameterTypes": [] }
-    ]
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "io.askimo.cli.commands.CreateProjectCommandHandlerTest$Companion",
@@ -1942,10 +1195,7 @@
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "indexAndSearch", "parameterTypes": ["java.nio.file.Path"] }
-    ]
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "io.askimo.core.project.PgVectorIndexerOllamaTest$Companion",
@@ -1957,10 +1207,7 @@
     "name": "io.askimo.core.project.PgVectorIndexerOllamaTest$Companion$PgVectorPostgres",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "methods": [
-      { "name": "containerIsCreated", "parameterTypes": ["java.lang.String"] }
-    ]
+    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.core.project.PostgresContainerManagerTest",
@@ -2563,10 +1810,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.io.Closeable",
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.io.Serializable",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2575,14 +1818,7 @@
   {
     "name": "java.lang.AutoCloseable",
     "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
-  },
-  {
-    "name": "java.lang.Boolean",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.lang.Class",
@@ -2630,8 +1866,7 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "java.lang.Enum",
-    "queryAllDeclaredMethods": true
+    "name": "java.lang.Enum"
   },
   {
     "name": "java.lang.Exception",
@@ -2642,13 +1877,11 @@
   },
   {
     "name": "java.lang.IllegalStateException",
-    "allDeclaredFields": true
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.lang.Integer",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "name": "java.lang.Integer"
   },
   {
     "name": "java.lang.Iterable",
@@ -2657,10 +1890,7 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.lang.Long",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "name": "java.lang.Long"
   },
   {
     "name": "java.lang.Module",
@@ -2738,15 +1968,6 @@
       {
         "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.lang.Throwable"]
-      }
-    ]
-  },
-  {
-    "name": "java.lang.SecurityManager",
-    "methods": [
-      {
-        "name": "checkPermission",
-        "parameterTypes": ["java.security.Permission"]
       }
     ]
   },
@@ -3021,10 +2242,6 @@
     "methods": [{ "name": "getAnnotatedBounds", "parameterTypes": [] }]
   },
   {
-    "name": "java.net.UnixDomainSocketAddress",
-    "methods": [{ "name": "of", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
     "name": "java.nio.file.ClosedWatchServiceException",
     "allDeclaredFields": true,
     "queryAllPublicConstructors": true,
@@ -3069,10 +2286,6 @@
   },
   {
     "name": "java.sql.Date"
-  },
-  {
-    "name": "java.sql.SQLException",
-    "fields": [{ "name": "next" }]
   },
   {
     "name": "java.sql.Timestamp"
@@ -3218,10 +2431,6 @@
   {
     "name": "java.util.concurrent.atomic.AtomicBoolean",
     "fields": [{ "name": "value" }]
-  },
-  {
-    "name": "java.util.concurrent.atomic.AtomicMarkableReference",
-    "fields": [{ "name": "pair" }]
   },
   {
     "name": "java.util.concurrent.atomic.AtomicReference",
@@ -3550,24 +2759,12 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$SubZuyvi",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$eOi0hyix",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "org.postgresql.Driver"
-  },
-  {
-    "name": "org.postgresql.core.QueryExecutorCloseAction",
-    "fields": [{ "name": "pgStream" }]
-  },
-  {
-    "name": "org.postgresql.jdbc.PgStatement",
-    "fields": [
-      { "name": "cancelTimerTask" },
-      { "name": "isClosed" },
-      { "name": "statementState" }
-    ]
   },
   {
     "name": "org.slf4j.Logger"
@@ -3609,16 +2806,6 @@
   },
   {
     "name": "sun.security.provider.NativePRNG",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.security.SecureRandomParameters"]
-      }
-    ]
-  },
-  {
-    "name": "sun.security.provider.NativePRNG$NonBlocking",
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       {

@@ -27,12 +27,3 @@ data class ProjectFileV1(
     val project: ProjectMeta,
     // room for future defaults/policy/rag blocks; keep MVP lean
 )
-
-@Serializable
-data class ActivePointer(
-    val projectId: String,
-    // absolute path
-    val root: String,
-    // ISO-8601
-    val selectedAt: String,
-)

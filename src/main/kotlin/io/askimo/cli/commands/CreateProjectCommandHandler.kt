@@ -43,28 +43,22 @@ class CreateProjectCommandHandler(
         }
 
         info("🐘 Starting local Postgres+pgvector (Testcontainers)…")
-        val pg =
-            try {
-                PostgresContainerManager.startIfNeeded()
-            } catch (e: Exception) {
-                info("❌ Failed to start Postgres container: ${e.message}")
-                debug(e)
-                return
-            }
-        info("✅ Postgres ready on ${pg.jdbcUrl}")
+        var indexer: PgVectorIndexer? = null
+        try {
+            val pg = PostgresContainerManager.startIfNeeded()
+            info("✅ Postgres ready on ${pg.jdbcUrl}")
 
-        val indexer =
-            PgVectorIndexer(
+            indexer = PgVectorIndexer(
                 projectId = name,
                 session = session,
             )
 
-        info("🔎 Indexing project '$name' at $projectPath …")
-        try {
+            info("🔎 Indexing project '$name' at $projectPath …")
             val count = indexer.indexProject(projectPath)
             info("✅ Indexed $count documents into pgvector (project '$name').")
         } catch (e: Exception) {
-            info("❌ Index failed: ${e.message}")
+            info("⚠️ Failed to start Postgres container or index project: ${e.message}")
+            info("📝 Proceeding without vector indexing - you can index later when Docker is available.")
             debug(e)
         }
 
@@ -82,12 +76,17 @@ class CreateProjectCommandHandler(
 
         // Keep existing session wiring (compat shim for old type if needed)
         session.setScope(meta)
-        session.enableRagWith(indexer)
 
-        // Start file watcher for the project
-        FileWatcherManager.startWatchingProject(projectPath, indexer)
-        info("👁️  File watcher started - changes will be automatically indexed.")
-        info("🧠 RAG enabled for project '${meta.name}' (scope set).")
+        if (indexer != null) {
+            session.enableRagWith(indexer)
+
+            // Start file watcher for the project
+            FileWatcherManager.startWatchingProject(projectPath, indexer)
+            info("👁️  File watcher started - changes will be automatically indexed.")
+            info("🧠 RAG enabled for project '${meta.name}' (scope set).")
+        } else {
+            info("📝 Project created without vector indexing. Start Docker and use indexing commands to enable RAG later.")
+        }
     }
 
     private fun parseArgs(args: List<String>): Pair<String, String>? {
@@ -101,6 +100,6 @@ class CreateProjectCommandHandler(
             }
             i++
         }
-        return if (!name.isNullOrBlank() && !dir.isNullOrBlank()) name!! to dir!! else null
+        return if (!name.isNullOrBlank() && !dir.isNullOrBlank()) name to dir else null
     }
 }

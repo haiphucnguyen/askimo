@@ -4,7 +4,6 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Logger.info
@@ -36,30 +35,22 @@ class ConfigCommandHandler(
             info("    $it")
         }
 
-        val active = ProjectStore.getActive()
-        if (active == null) {
+        val scope = session.scope
+        if (scope == null) {
             info("  Active project: (none)")
         } else {
-            val (meta, ptr) = active
             val exists =
                 try {
                     java.nio.file.Files
-                        .isDirectory(
-                            java.nio.file.Paths
-                                .get(meta.root),
-                        )
+                        .isDirectory(scope.projectDir)
                 } catch (_: Exception) {
                     false
                 }
             val home = AskimoHome.userHome().toString()
-            val rootDisp = meta.root.replaceFirst(home, "~")
+            val rootDisp = scope.projectDir.toString().replaceFirst(home, "~")
             info("  Active project:")
-            info("    Name:       ${meta.name}")
-            info("    ID:         ${meta.id}")
+            info("    Name:       ${scope.projectName}")
             info("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
-            info("    Selected:   ${ptr.selectedAt}")
-            info("    Created:    ${meta.createdAt}")
-            info("    Last used:  ${meta.lastUsedAt}")
         }
     }
 }

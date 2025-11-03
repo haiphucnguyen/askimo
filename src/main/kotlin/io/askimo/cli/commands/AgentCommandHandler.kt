@@ -63,17 +63,23 @@ class AgentCommandHandler(
 
         val prompt = args.joinToString(" ")
 
-        val active = ProjectStore.getActive()
-        if (active == null) {
+        val scope = session.scope
+        if (scope == null) {
             info("❌ No active project. Use :use-project <name> to set an active project first.")
             info("💡 Create a project with :create-project <name> <path>")
             return
         }
 
-        val (meta, _) = active
-
         try {
             info("🤖 Running coding assistant for: $prompt")
+
+            // Find the ProjectMeta from the store using the scope's project name
+            val meta = ProjectStore.list().find { it.name == scope.projectName }
+            if (meta == null) {
+                info("❌ Could not find project metadata for '${scope.projectName}'")
+                return
+            }
+
             codingAssistant.run(prompt, meta)
 
             session.lastResponse = "Applied coding assistant for: $prompt"

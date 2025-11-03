@@ -28,7 +28,6 @@ object ProjectStore {
         }
     private val baseDir: Path get() = AskimoHome.base()
     private val projectsDir: Path get() = AskimoHome.projectsDir()
-    private val activeFile: Path get() = baseDir.resolve("active")
 
     fun create(
         name: String,
@@ -48,7 +47,6 @@ object ProjectStore {
                 lastUsedAt = now,
             )
         writeProjectFile(meta)
-        setActive(meta.id)
         return meta
     }
 
@@ -72,21 +70,6 @@ object ProjectStore {
         writeProjectFile(meta.copy(updatedAt = stamp()))
     }
 
-    fun setActive(projectId: String) {
-        val meta = getById(projectId) ?: error("Unknown project id '$projectId'")
-        val ptr = ActivePointer(projectId = meta.id, root = meta.root, selectedAt = stamp())
-        atomicWrite(activeFile, json.encodeToString(ptr))
-    }
-
-    fun getActive(): Pair<ProjectMeta, ActivePointer>? {
-        if (!activeFile.exists()) return null
-        return runCatching {
-            val ptr = json.decodeFromString<ActivePointer>(Files.readString(activeFile))
-            val meta = getById(ptr.projectId) ?: return null
-            meta to ptr
-        }.getOrNull()
-    }
-
     fun softDelete(id: String): Boolean {
         val file = projectsDir.resolve("prj_$id.json")
         if (!file.exists()) return false
@@ -96,9 +79,6 @@ object ProjectStore {
             trash.resolve("${file.fileName}.${System.currentTimeMillis()}.bak"),
             REPLACE_EXISTING,
         )
-        if (activeFile.exists()) {
-            getActive()?.first?.let { if (it.id == id) Files.deleteIfExists(activeFile) }
-        }
         return true
     }
 

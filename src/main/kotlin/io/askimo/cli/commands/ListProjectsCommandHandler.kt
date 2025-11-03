@@ -27,7 +27,6 @@ class ListProjectsCommandHandler : CommandHandler {
             return
         }
 
-        val activeId = ProjectStore.getActive()?.first?.id
         val home = AskimoHome.userHome().toString()
 
         // Sort by lastUsedAt desc (fallback to createdAt)
@@ -39,7 +38,6 @@ class ListProjectsCommandHandler : CommandHandler {
 
         info("📚 Projects:")
         projects.forEachIndexed { i, p ->
-            val isActive = (p.id == activeId)
             val rootDisp = p.root.replaceFirst(home, "~")
             val exists =
                 try {
@@ -52,11 +50,9 @@ class ListProjectsCommandHandler : CommandHandler {
                     false
                 }
             val missing = if (exists) "" else "  (missing)"
-            val star = if (isActive) "⭐ " else "   "
 
             info(
-                "%s%2d. %-20s  id=%s\n      ↳ %s%s".format(
-                    star,
+                "%2d. %-20s  id=%s\n      ↳ %s%s".format(
                     i + 1,
                     p.name,
                     p.id,

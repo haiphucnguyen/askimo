@@ -53,39 +53,36 @@ class UseProjectCommandHandler(
             return
         }
 
-        // Set active pointer right away
-        try {
-            ProjectStore.setActive(meta.id)
-        } catch (e: Exception) {
-            info("⚠️ Could not set active project pointer: ${e.message}")
-            debug(e)
-        }
-
         info("🐘 Ensuring Postgres+pgvector is running…")
-        val pg =
-            try {
-                PostgresContainerManager.startIfNeeded()
-            } catch (e: Exception) {
-                info("❌ Failed to start Postgres container: ${e.message}")
-                debug(e)
-                return
-            }
+        var indexer: PgVectorIndexer? = null
+        try {
+            val pg = PostgresContainerManager.startIfNeeded()
+            info("✅ Postgres ready on ${pg.jdbcUrl}")
 
-        val indexer =
-            PgVectorIndexer(
+            indexer = PgVectorIndexer(
                 projectId = meta.name,
                 session = session,
             )
+        } catch (e: Exception) {
+            info("⚠️ Failed to start Postgres container: ${e.message}")
+            info("📝 Proceeding without vector indexing - you can enable it later when Docker is available.")
+            debug(e)
+        }
 
         session.setScope(meta)
-        session.enableRagWith(indexer)
 
         info("✅ Active project: '${meta.name}'  (id=${meta.id})")
         info("   ↳ ${meta.root}")
 
-        // Start file watcher for the project (this will automatically stop any existing watcher)
-        FileWatcherManager.startWatchingProject(projectPath, indexer)
-        info("👁️  File watcher started - changes will be automatically indexed.")
-        info("🧠 RAG enabled for '${meta.name}'.")
+        if (indexer != null) {
+            session.enableRagWith(indexer)
+
+            // Start file watcher for the project (this will automatically stop any existing watcher)
+            FileWatcherManager.startWatchingProject(projectPath, indexer)
+            info("👁️  File watcher started - changes will be automatically indexed.")
+            info("🧠 RAG enabled for '${meta.name}'.")
+        } else {
+            info("📝 Project activated without vector indexing. Start Docker and use indexing commands to enable RAG later.")
+        }
     }
 }
