@@ -374,7 +374,6 @@ private fun displayBanner() {
         val version = VersionInfo
         println("${version.name} ${version.version}")
         println()
-
     } catch (_: Exception) {
         println("Welcome to Askimo CLI")
         val version = VersionInfo

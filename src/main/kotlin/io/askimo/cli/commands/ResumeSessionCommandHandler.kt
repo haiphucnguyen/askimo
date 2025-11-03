@@ -4,8 +4,8 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.session.Session
 import io.askimo.core.session.MessageRole
+import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 

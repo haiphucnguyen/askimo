@@ -10,7 +10,6 @@ import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
-import kotlin.math.max
 import kotlin.math.min
 
 class ListSessionsCommandHandler : CommandHandler {
