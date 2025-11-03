@@ -11,6 +11,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import io.askimo.core.config.AppConfig
+import io.askimo.core.config.ProjectType
 import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
@@ -47,192 +48,11 @@ class PgVectorIndexer(
 
     private val defaultCharset: Charset = Charsets.UTF_8
 
-    private val supportedExtensions =
-        setOf(
-            "java",
-            "kt",
-            "kts",
-            "py",
-            "js",
-            "ts",
-            "jsx",
-            "tsx",
-            "go",
-            "rs",
-            "c",
-            "cpp",
-            "h",
-            "hpp",
-            "cs",
-            "rb",
-            "php",
-            "swift",
-            "scala",
-            "groovy",
-            "sh",
-            "bash",
-            "yaml",
-            "yml",
-            "json",
-            "xml",
-            "md",
-            "txt",
-            "gradle",
-            "properties",
-            "toml",
-        )
+    private val supportedExtensions = AppConfig.indexing.supportedExtensions
 
-    // ---------- Project type markers / excludes ----------
-    private data class ProjectType(
-        val name: String,
-        val markers: Set<String>,
-        val excludePaths: Set<String>,
-    )
+    private val projectTypes = AppConfig.indexing.projectTypes
 
-    private val projectTypes =
-        listOf(
-            // Java/Kotlin projects
-            ProjectType(
-                name = "Gradle",
-                markers = setOf("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradlew"),
-                excludePaths =
-                setOf(
-                    "build/",
-                    ".gradle/",
-                    "out/",
-                    "bin/",
-                    ".kotlintest/",
-                    ".kotlin/",
-                ),
-            ),
-            ProjectType(
-                name = "Maven",
-                markers = setOf("pom.xml", "mvnw"),
-                excludePaths =
-                setOf(
-                    "target/",
-                    ".mvn/",
-                    "out/",
-                    "bin/",
-                ),
-            ),
-            // JavaScript/TypeScript projects
-            ProjectType(
-                name = "Node.js",
-                markers = setOf("package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"),
-                excludePaths =
-                setOf(
-                    "node_modules/",
-                    "dist/",
-                    "build/",
-                    ".next/",
-                    ".nuxt/",
-                    "out/",
-                    "coverage/",
-                    ".cache/",
-                    ".parcel-cache/",
-                    ".turbo/",
-                    ".vite/",
-                ),
-            ),
-            // Python projects
-            ProjectType(
-                name = "Python",
-                markers = setOf("requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"),
-                excludePaths =
-                setOf(
-                    "__pycache__/",
-                    "*.pyc",
-                    "*.pyo",
-                    "*.pyd",
-                    ".pytest_cache/",
-                    ".mypy_cache/",
-                    ".tox/",
-                    "venv/",
-                    "env/",
-                    ".venv/",
-                    ".env/",
-                    "dist/",
-                    "build/",
-                    "*.egg-info/",
-                    ".eggs/",
-                ),
-            ),
-            // Go projects
-            ProjectType(
-                name = "Go",
-                markers = setOf("go.mod", "go.sum"),
-                excludePaths =
-                setOf(
-                    "vendor/",
-                    "bin/",
-                    "pkg/",
-                ),
-            ),
-            // Rust projects
-            ProjectType(
-                name = "Rust",
-                markers = setOf("Cargo.toml", "Cargo.lock"),
-                excludePaths =
-                setOf(
-                    "target/",
-                    "Cargo.lock",
-                ),
-            ),
-            // Ruby projects
-            ProjectType(
-                name = "Ruby",
-                markers = setOf("Gemfile", "Gemfile.lock", "Rakefile"),
-                excludePaths =
-                setOf(
-                    "vendor/",
-                    ".bundle/",
-                    "tmp/",
-                    "log/",
-                ),
-            ),
-            // PHP projects
-            ProjectType(
-                name = "PHP/Composer",
-                markers = setOf("composer.json", "composer.lock"),
-                excludePaths =
-                setOf(
-                    "vendor/",
-                    "var/cache/",
-                    "var/log/",
-                ),
-            ),
-            // .NET projects
-            ProjectType(
-                name = ".NET",
-                markers = setOf("*.csproj", "*.sln", "*.fsproj", "*.vbproj"),
-                excludePaths =
-                setOf(
-                    "bin/",
-                    "obj/",
-                    "packages/",
-                    ".vs/",
-                    "Debug/",
-                    "Release/",
-                ),
-            ),
-        )
-
-    private val commonExcludes =
-        setOf(
-            ".git/",
-            ".svn/",
-            ".hg/",
-            ".idea/",
-            ".vscode/",
-            ".DS_Store",
-            "*.log",
-            "*.tmp",
-            "*.temp",
-            "*.swp",
-            "*.bak",
-            ".history/",
-        )
+    private val commonExcludes = AppConfig.indexing.commonExcludes
 
     private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session.getActiveProvider())
 
@@ -270,7 +90,6 @@ class PgVectorIndexer(
         val detectedTypes = detectProjectTypes(root)
         println("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        // Use cached embeddingStore instead of creating new one
         val embeddingStore = this.embeddingStore
 
         var indexedFiles = 0
@@ -295,7 +114,6 @@ class PgVectorIndexer(
 
                     val content = safeReadText(filePath)
                     if (content.isBlank()) {
-                        // Empty text file; ignore quietly
                         return@forEach
                     }
 
@@ -346,7 +164,6 @@ class PgVectorIndexer(
                             println("  ✅ Indexed $indexedFiles files, $addedSegments segments → table=$projectTable")
                         }
                     } else {
-                        // all chunks failed, treat as skip
                         skippedFiles++
                     }
                 } catch (e: Exception) {
@@ -372,7 +189,6 @@ class PgVectorIndexer(
         embedding: List<Float>,
         topK: Int,
     ): List<String> {
-        // Use cached embeddingStore instead of creating new one
         val queryEmbedding = Embedding.from(embedding.toFloatArray())
         val results =
             embeddingStore.search(
@@ -439,7 +255,6 @@ class PgVectorIndexer(
      */
     fun removeFileFromIndex(relativePath: String) {
         try {
-            // Use SQL to delete entries matching the file path
             val sql = """
                 DELETE FROM $projectTable
                 WHERE ((metadata)::jsonb ->> 'project_id') = ?
@@ -496,18 +311,14 @@ class PgVectorIndexer(
         val fileName = path.fileName.toString()
         val relativePath = root.relativize(path).toString().replace('\\', '/')
 
-        // Skip hidden files
         if (fileName.startsWith(".")) return false
 
-        // Common excludes
         if (shouldExclude(relativePath, fileName, commonExcludes)) return false
 
-        // Project-specific excludes
         for (projectType in detectedTypes) {
             if (shouldExclude(relativePath, fileName, projectType.excludePaths)) return false
         }
 
-        // Extension allowlist
         return path.extension.lowercase() in supportedExtensions
     }
 
@@ -581,7 +392,7 @@ class PgVectorIndexer(
     ): List<String> {
         val effectiveMax =
             when (extLower) {
-                "json", "xml" -> max(1500, (maxChars * 0.75).toInt()) // tighten for dense formats
+                "json", "xml" -> max(1500, (maxChars * 0.75).toInt())
                 else -> maxChars
             }
         val effectiveOverlap = min(overlapChars, effectiveMax / 4)
@@ -644,7 +455,6 @@ class PgVectorIndexer(
 
     private fun isTransientEmbeddingError(e: Throwable): Boolean {
         val msg = (e.message ?: "").lowercase()
-        // Covers EOF, timeouts, resets, and common gateway errors from local HTTP servers or proxies
         return msg.contains("eof") ||
             msg.contains("timeout") ||
             msg.contains("timed out") ||
@@ -658,13 +468,11 @@ class PgVectorIndexer(
     }
 
     private fun extractHost(jdbcUrl: String): String {
-        // jdbc:postgresql://localhost:5432/askimo
         val regex = """://([^:/@]+)""".toRegex()
         return regex.find(jdbcUrl)?.groupValues?.get(1) ?: "localhost"
     }
 
     private fun extractPort(jdbcUrl: String): Int {
-        // jdbc:postgresql://localhost:5432/askimo
         val regex = """:(\d+)/""".toRegex()
         return regex
             .find(jdbcUrl)
@@ -688,22 +496,16 @@ class PgVectorIndexer(
             listOf(
                 "CREATE EXTENSION IF NOT EXISTS vector;",
                 "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
-                // project_id
                 """CREATE INDEX IF NOT EXISTS ${table}_proj_idx
            ON $table ( ((metadata)::jsonb ->> 'project_id') );""",
-                // file_name (lowered)
                 """CREATE INDEX IF NOT EXISTS ${table}_file_name_idx
            ON $table ( lower(((metadata)::jsonb ->> 'file_name')) );""",
-                // file_path btree
                 """CREATE INDEX IF NOT EXISTS ${table}_file_path_idx
            ON $table ( ((metadata)::jsonb ->> 'file_path') );""",
-                // full metadata GIN
                 """CREATE INDEX IF NOT EXISTS ${table}_meta_gin
            ON $table USING GIN ( ((metadata)::jsonb) jsonb_path_ops );""",
-                // trigram on file_path
                 """CREATE INDEX IF NOT EXISTS ${table}_file_path_trgm
            ON $table USING GIN ( ((metadata)::jsonb ->> 'file_path') gin_trgm_ops );""",
-                // ANN index on embedding (requires ANALYZE and some rows to be effective)
                 """CREATE INDEX IF NOT EXISTS ${table}_embedding_ivfflat
            ON $table USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);""",
                 "ANALYZE $table;",

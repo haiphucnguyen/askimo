@@ -23,7 +23,6 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
 
-// --- Types ---
 data class PgVectorConfig(
     val url: String = "",
     val user: String = "askimo",
@@ -46,9 +45,100 @@ data class ThrottleConfig(
     val perRequestSleepMs: Long = 30,
 )
 
+data class ProjectType(
+    val name: String,
+    val markers: Set<String>,
+    val excludePaths: Set<String>,
+)
+
 data class IndexingConfig(
     val maxFileBytes: Long = 2_000_000,
-)
+    val supportedExtensions: Set<String> = setOf(
+        "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
+        "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
+        "md", "txt", "gradle", "properties", "toml",
+    ),
+    val projectTypes: List<ProjectType> = listOf(
+        ProjectType(
+            name = "Gradle",
+            markers = setOf("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradlew"),
+            excludePaths = setOf("build/", ".gradle/", "out/", "bin/", ".kotlintest/", ".kotlin/"),
+        ),
+        ProjectType(
+            name = "Maven",
+            markers = setOf("pom.xml", "mvnw"),
+            excludePaths = setOf("target/", ".mvn/", "out/", "bin/"),
+        ),
+        ProjectType(
+            name = "Node.js",
+            markers = setOf("package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"),
+            excludePaths = setOf("node_modules/", "dist/", "build/", ".next/", ".nuxt/", "out/", "coverage/", ".cache/", ".parcel-cache/", ".turbo/", ".vite/"),
+        ),
+        ProjectType(
+            name = "Python",
+            markers = setOf("requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"),
+            excludePaths = setOf("__pycache__/", "*.pyc", "*.pyo", "*.pyd", ".pytest_cache/", ".mypy_cache/", ".tox/", "venv/", "env/", ".venv/", ".env/", "dist/", "build/", "*.egg-info/", ".eggs/"),
+        ),
+        ProjectType(
+            name = "Go",
+            markers = setOf("go.mod", "go.sum"),
+            excludePaths = setOf("vendor/", "bin/", "pkg/"),
+        ),
+        ProjectType(
+            name = "Rust",
+            markers = setOf("Cargo.toml", "Cargo.lock"),
+            excludePaths = setOf("target/", "Cargo.lock"),
+        ),
+        ProjectType(
+            name = "Ruby",
+            markers = setOf("Gemfile", "Gemfile.lock", "Rakefile"),
+            excludePaths = setOf("vendor/", ".bundle/", "tmp/", "log/"),
+        ),
+        ProjectType(
+            name = "PHP/Composer",
+            markers = setOf("composer.json", "composer.lock"),
+            excludePaths = setOf("vendor/", "var/cache/", "var/log/"),
+        ),
+        ProjectType(
+            name = ".NET",
+            markers = setOf("*.csproj", "*.sln", "*.fsproj", "*.vbproj"),
+            excludePaths = setOf("bin/", "obj/", "packages/", ".vs/", "Debug/", "Release/"),
+        ),
+    ),
+    val commonExcludes: Set<String> = setOf(
+        ".git/", ".svn/", ".hg/", ".idea/", ".vscode/", ".DS_Store",
+        "*.log", "*.tmp", "*.temp", "*.swp", "*.bak", ".history/",
+    ),
+) {
+    /**
+     * Cached combination of commonExcludes and all ProjectType excludePaths.
+     * This is computed once when the config is loaded for better performance.
+     */
+    val allExcludes: Set<String> by lazy {
+        buildSet {
+            addAll(commonExcludes)
+
+            projectTypes.forEach { projectType ->
+                addAll(projectType.excludePaths)
+            }
+        }
+    }
+
+    /**
+     * Cached set of directory names to skip, extracted from allExcludes patterns.
+     * This is computed once when the config is loaded for optimal performance.
+     */
+    val skipDirectoryNames: Set<String> by lazy {
+        allExcludes.mapNotNull { pattern ->
+            when {
+                pattern.endsWith("/") -> pattern.dropLast(1) // Remove trailing slash
+                pattern.startsWith(".") && !pattern.contains("*") -> pattern // Keep dot files/dirs as-is
+                !pattern.contains("*") && !pattern.contains("/") -> pattern // Simple directory names
+                else -> null // Skip wildcard patterns for now
+            }
+        }.toSet()
+    }
+}
 
 data class ChatConfig(
     val maxRecentMessages: Int = 10,
@@ -112,6 +202,10 @@ object AppConfig {
 
         indexing:
           max_file_bytes: ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
+          supported_extensions: ${'$'}{ASKIMO_INDEXING_SUPPORTED_EXTENSIONS:java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml}
+          common_excludes: ${'$'}{ASKIMO_INDEXING_COMMON_EXCLUDES:.git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/}
+          # Project types are configured with default values and can be customized via environment variables
+          # ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_MARKERS and ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_EXCLUDES
 
         chat:
           max_recent_messages: ${'$'}{ASKIMO_CHAT_MAX_RECENT_MESSAGES:10}
@@ -181,7 +275,6 @@ object AppConfig {
         return null
     }
 
-    /** Write DEFAULT_YAML to target path, creating parent directories and setting restrictive perms if possible. */
     private fun writeDefaultConfig(target: Path) {
         try {
             target.parent?.createDirectories()
@@ -240,6 +333,8 @@ object AppConfig {
             def: Long,
         ) = System.getenv(k)?.toLongOrNull() ?: def
 
+        fun envList(k: String, def: String): Set<String> = System.getenv(k)?.split(",")?.map { it.trim() }?.toSet() ?: def.split(",").map { it.trim() }.toSet()
+
         fun envNullableInt(k: String) = System.getenv(k)?.toIntOrNull()
 
         val pg =
@@ -267,6 +362,8 @@ object AppConfig {
         val idx =
             IndexingConfig(
                 maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
+                supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml"),
+                commonExcludes = envList("ASKIMO_INDEXING_COMMON_EXCLUDES", ".git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/"),
             )
         val chat =
             ChatConfig(

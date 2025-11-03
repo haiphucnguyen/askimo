@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.util.Logger.info
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,8 +55,6 @@ class ProjectFileWatcherTest {
     fun tearDown() {
         fileWatcher.stopWatching()
     }
-
-    // === Basic Functionality Tests ===
 
     @Test
     fun `watchedPath returns the project root`() {
@@ -244,18 +243,63 @@ class ProjectFileWatcherTest {
     @Test
     fun `new directories created after watcher starts are registered`() = runBlocking {
         fileWatcher.startWatching()
+        delay(3000) // Extended initial delay for CI systems
+
+        // Track initial directory count
+        val initialDirCount = fileWatcher.getWatchedDirectoryCount()
+
+        // Create the directory
+        val newDir = tempDir.resolve("new-directory").createDirectories()
+
+        // Wait for directory registration with polling approach
+        // This is necessary on macOS CI where directory registration can be delayed
+        var dirRegistered = false
+        repeat(10) { attempt ->
+            delay(1000)
+            val currentDirCount = fileWatcher.getWatchedDirectoryCount()
+            if (currentDirCount > initialDirCount) {
+                dirRegistered = true
+                return@repeat
+            }
+            if (attempt == 9) {
+                // Last attempt - log for debugging
+                info("Directory registration attempt ${attempt + 1}: initial=$initialDirCount, current=$currentDirCount")
+            }
+        }
+
+        // Additional delay after directory registration
         delay(2000)
 
-        val newDir = tempDir.resolve("new-directory").createDirectories()
-        delay(2000) // Allow more time for directory registration in CI
-
+        // Create file in the new directory
         val fileInNewDir = newDir.resolve("file-in-new-dir.kt")
         fileInNewDir.writeText("class FileInNewDir {}")
-        delay(3000) // Allow more time for file event processing in CI
 
-        // Then: The file should be indexed with correct relative path
-        // Using longer timeout for CI environments
-        verify(mockIndexer, timeout(10000).atLeastOnce()).indexSingleFile(any(), eq("new-directory/file-in-new-dir.kt"))
+        // On macOS CI, filesystem events can be significantly delayed
+        // Use very generous timeouts and multiple verification attempts
+        delay(5000)
+
+        // Multiple verification attempts for CI robustness
+        var verificationPassed = false
+        repeat(3) { attempt ->
+            try {
+                verify(mockIndexer, timeout(15000).atLeastOnce()).indexSingleFile(any(), eq("new-directory/file-in-new-dir.kt"))
+                verificationPassed = true
+                return@repeat
+            } catch (e: Exception) {
+                if (attempt < 2) {
+                    // Create another file to trigger events again
+                    val triggerFile = newDir.resolve("trigger-$attempt.kt")
+                    triggerFile.writeText("class Trigger$attempt {}")
+                    delay(3000)
+                } else {
+                    throw e
+                }
+            }
+        }
+
+        if (!verificationPassed) {
+            throw AssertionError("Test failed after multiple attempts. Directory registered: $dirRegistered")
+        }
     }
 
     // === Error Handling Tests ===

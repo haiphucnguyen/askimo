@@ -43,3 +43,7 @@ bin/
 .kotlin
 docs/_site
 Gemfile.lock
+
+### Environment variables ###
+.env
+

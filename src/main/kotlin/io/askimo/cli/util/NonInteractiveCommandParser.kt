@@ -31,25 +31,6 @@ object NonInteractiveCommandParser {
     ): ParsedLine = ParameterizedParsedLine(interactiveCommand, parameters.toList())
 
     /**
-     * Parses command line arguments for a specific flag and returns the argument value.
-     *
-     * @param args Command line arguments array
-     * @param flag The flag to look for (e.g., "--set-provider")
-     * @return The argument value following the flag, or null if not found or no value
-     */
-    fun extractFlagValue(
-        args: Array<String>,
-        flag: String,
-    ): String? {
-        val flagIndex = args.indexOfFirst { it == flag }
-        return if (flagIndex != -1 && flagIndex + 1 < args.size) {
-            args[flagIndex + 1]
-        } else {
-            null
-        }
-    }
-
-    /**
      * Extracts all arguments following a specific flag until the next flag or end of arguments.
      * This is a generic method that lets command handlers do their own parsing and validation.
      *

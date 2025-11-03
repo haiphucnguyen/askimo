@@ -18,11 +18,8 @@ class RecipeRegistry(
         return Files
             .newBufferedReader(file)
             .use { yamlMapper.readValue(it, RecipeDef::class.java) }
-            .fixWhenField() // tiny shim: map YAML 'when' → PostAction.when_
+            .fixWhenField()
     }
 }
 
-private fun RecipeDef.fixWhenField(): RecipeDef {
-    // If you map with Jackson annotations you can skip this. Shown compactly here.
-    return this
-}
+private fun RecipeDef.fixWhenField(): RecipeDef = this

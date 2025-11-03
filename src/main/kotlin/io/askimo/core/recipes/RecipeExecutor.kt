@@ -5,9 +5,9 @@
 package io.askimo.core.recipes
 
 import io.askimo.cli.LoadingIndicator
-import io.askimo.core.providers.sendMessage
+import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.Logger.debug
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -83,7 +83,7 @@ class RecipeExecutor(
         val output =
             session
                 .getChatService()
-                .sendMessage(prompt) { _ ->
+                .sendStreamingMessageWithCallback(prompt) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()
                         opts.terminal?.flush()
@@ -109,7 +109,7 @@ class RecipeExecutor(
                 tools.invoke(action.call.tool, resolvedArgs)
             }
         }
-        info(formatted)
+        debug(formatted)
     }
 
     private fun resolveArgs(
@@ -138,7 +138,6 @@ class RecipeExecutor(
         val t = text.trim()
         return when (mode.lowercase()) {
             "markdown", "md" -> {
-                // strip any existing fences and re-wrap cleanly
                 val clean =
                     t
                         .removePrefix("```markdown")
@@ -149,14 +148,12 @@ class RecipeExecutor(
                 "```markdown\n$clean\n```"
             }
             "ansi" -> {
-                // simple ANSI styling example: make header bold + cyan
                 val lines = t.lines()
                 if (lines.isEmpty()) return t
                 val header = "\u001B[1;36m${lines.first()}\u001B[0m"
                 (listOf(header) + lines.drop(1)).joinToString("\n")
             }
             else -> {
-                // plain text: remove any markdown fences if present
                 t
                     .removePrefix("```markdown")
                     .removePrefix("```md")

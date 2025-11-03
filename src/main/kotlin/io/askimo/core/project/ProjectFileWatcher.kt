@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.core.config.AppConfig
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import kotlinx.coroutines.CoroutineScope
@@ -51,18 +52,20 @@ class ProjectFileWatcher(
      */
     val watchedPath: Path get() = projectRoot
 
-    private val supportedExtensions = setOf(
-        "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
-        "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json",
-        "xml", "md", "txt", "gradle", "properties", "toml",
-    )
+    /**
+     * Gets the number of directories currently being watched.
+     * Useful for testing and debugging.
+     */
+    fun getWatchedDirectoryCount(): Int = watchKeys.size
+
+    private val supportedExtensions = AppConfig.indexing.supportedExtensions
 
     /**
      * Starts watching the project directory for file changes.
      */
     fun startWatching() {
         if (isWatching) {
-            info("File watcher is already running for: $projectRoot")
+            debug("File watcher is already running for: $projectRoot")
             return
         }
 
@@ -75,10 +78,9 @@ class ProjectFileWatcher(
                 watchForChanges()
             }
 
-            info("📁 Started file watcher for project: $projectRoot")
+            debug("📁 Started file watcher for project: $projectRoot")
         } catch (e: Exception) {
-            info("❌ Failed to start file watcher: ${e.message}")
-            debug(e)
+            debug("❌ Failed to start file watcher: ${e.message}", e)
         }
     }
 
@@ -97,34 +99,32 @@ class ProjectFileWatcher(
             watchKeys.clear()
             watchService?.close()
             watchService = null
-            info("📁 Stopped file watcher for project: $projectRoot")
+            debug("📁 Stopped file watcher for project: $projectRoot")
         } catch (e: Exception) {
-            info("⚠️ Error stopping file watcher: ${e.message}")
-            debug(e)
+            debug("⚠️ Error stopping file watcher: ${e.message}", e)
         }
     }
 
-    /**
-     * Registers a directory and all its subdirectories for watching.
-     */
     private fun registerDirectoryTree(start: Path) {
-        Files.walkFileTree(
-            start,
-            object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    if (shouldSkipDirectory(dir)) {
-                        return FileVisitResult.SKIP_SUBTREE
+        try {
+            Files.walkFileTree(
+                start,
+                object : SimpleFileVisitor<Path>() {
+                    override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        if (shouldSkipDirectory(dir)) {
+                            return FileVisitResult.SKIP_SUBTREE
+                        }
+                        registerDirectory(dir)
+                        return FileVisitResult.CONTINUE
                     }
-                    registerDirectory(dir)
-                    return FileVisitResult.CONTINUE
-                }
-            },
-        )
+                },
+            )
+            debug("📁 Registered directory tree: $start (${watchKeys.size} total directories)")
+        } catch (e: Exception) {
+            debug("Error registering directory tree $start: ${e.message}", e)
+        }
     }
 
-    /**
-     * Registers a single directory for watching.
-     */
     private fun registerDirectory(dir: Path) {
         try {
             val ws = watchService ?: return
@@ -135,14 +135,12 @@ class ProjectFileWatcher(
                 StandardWatchEventKinds.ENTRY_DELETE,
             )
             watchKeys[watchKey] = dir
+            debug("📁 Registered directory: $dir")
         } catch (e: Exception) {
             debug("Failed to register directory for watching: $dir - ${e.message}")
         }
     }
 
-    /**
-     * Main watching loop that processes file system events.
-     */
     private suspend fun watchForChanges() {
         val ws = watchService ?: return
 
@@ -157,9 +155,6 @@ class ProjectFileWatcher(
         }
     }
 
-    /**
-     * Gets the next watch key from the watch service, handling interruptions gracefully.
-     */
     private suspend fun getNextWatchKey(ws: WatchService): WatchKey? = try {
         withContext(Dispatchers.IO) {
             ws.take()
@@ -172,9 +167,6 @@ class ProjectFileWatcher(
         null
     }
 
-    /**
-     * Processes events for a single watch key.
-     */
     private suspend fun processWatchKeyEvents(watchKey: WatchKey) {
         val dir = watchKeys[watchKey] ?: return
 
@@ -191,16 +183,15 @@ class ProjectFileWatcher(
                 val fileName = (event as WatchEvent<Path>).context()
                 val filePath = dir.resolve(fileName)
 
-                // Handle the file change
-                handleFileChange(kind, filePath)
-
-                // If a new directory was created, register it for watching
                 if (kind == StandardWatchEventKinds.ENTRY_CREATE &&
                     Files.isDirectory(filePath) &&
                     !shouldSkipDirectory(filePath)
                 ) {
+                    debug("📁 Registering new directory for watching: $filePath")
                     registerDirectoryTree(filePath)
                 }
+
+                handleFileChange(kind, filePath)
             }
 
             val valid = watchKey.reset()
@@ -228,15 +219,15 @@ class ProjectFileWatcher(
         try {
             when (kind) {
                 StandardWatchEventKinds.ENTRY_CREATE -> {
-                    info("📄 File created: $relativePath")
+                    debug("📄 File created: $relativePath")
                     indexSingleFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_MODIFY -> {
-                    info("📝 File modified: $relativePath")
+                    debug("📝 File modified: $relativePath")
                     reindexFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_DELETE -> {
-                    info("🗑️ File deleted: $relativePath")
+                    debug("🗑️ File deleted: $relativePath")
                     removeFileFromIndexAsync(relativePath)
                 }
             }
@@ -246,38 +237,25 @@ class ProjectFileWatcher(
         }
     }
 
-    /**
-     * Asynchronously indexes a single file.
-     */
     private suspend fun indexSingleFileAsync(filePath: Path, relativePath: String) {
         withContext(Dispatchers.IO) {
             indexer.indexSingleFile(filePath, relativePath)
         }
     }
 
-    /**
-     * Asynchronously re-indexes a file by removing old entries and creating new ones.
-     */
     private suspend fun reindexFileAsync(filePath: Path, relativePath: String) {
         withContext(Dispatchers.IO) {
-            // Remove old entries and re-index
             indexer.removeFileFromIndex(relativePath)
             indexer.indexSingleFile(filePath, relativePath)
         }
     }
 
-    /**
-     * Asynchronously removes a file from the index.
-     */
     private suspend fun removeFileFromIndexAsync(relativePath: String) {
         withContext(Dispatchers.IO) {
             indexer.removeFileFromIndex(relativePath)
         }
     }
 
-    /**
-     * Checks if a file should be indexed based on its extension and other criteria.
-     */
     private fun isIndexableFile(path: Path): Boolean {
         if (!path.isRegularFile()) return false
 
@@ -288,21 +266,13 @@ class ProjectFileWatcher(
         return extension in supportedExtensions
     }
 
-    /**
-     * Checks if a directory should be skipped from watching.
-     */
     private fun shouldSkipDirectory(dir: Path): Boolean {
         val dirName = dir.name
 
         // Skip hidden directories
         if (dirName.startsWith(".")) return true
 
-        // Skip common build/output directories
-        val skipDirs = setOf(
-            "build", "target", "dist", "out", "bin", "node_modules", "__pycache__",
-            ".gradle", ".mvn", ".idea", ".vscode", ".git", ".svn", ".hg",
-        )
-
-        return dirName in skipDirs
+        // Use pre-processed skip directory names from AppConfig (computed once at startup)
+        return dirName in AppConfig.indexing.skipDirectoryNames
     }
 }

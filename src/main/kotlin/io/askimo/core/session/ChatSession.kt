@@ -23,9 +23,9 @@ data class ChatMessage(
 
 data class ConversationSummary(
     val sessionId: String,
-    val keyFacts: Map<String, String>, // Structured key-value facts
+    val keyFacts: Map<String, String>,
     val mainTopics: List<String>,
-    val recentContext: String, // Recent conversation flow
+    val recentContext: String,
     val lastSummarizedMessageId: String,
     val createdAt: LocalDateTime,
 )

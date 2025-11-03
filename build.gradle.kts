@@ -1,6 +1,8 @@
+import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Properties
 
 plugins {
     application
@@ -9,6 +11,25 @@ plugins {
     alias(libs.plugins.graalvm.native)
     alias(libs.plugins.spotless)
     alias(libs.plugins.shadow)
+}
+
+// Function to load environment variables from .env file
+fun loadEnvFile(): Map<String, String> {
+    val envFile = File(rootProject.projectDir, ".env")
+    val envVars = mutableMapOf<String, String>()
+
+    if (envFile.exists()) {
+        val props = Properties()
+        envFile.inputStream().use { props.load(it) }
+        props.forEach { key, value ->
+            envVars[key.toString()] = value.toString()
+        }
+        println("📁 Loaded ${envVars.size} environment variables from .env file")
+    } else {
+        println("ℹ️  No .env file found, skipping environment variable loading")
+    }
+
+    return envVars
 }
 
 group = "io.askimo"
@@ -43,15 +64,46 @@ dependencies {
     testImplementation(libs.testcontainers.junit.jupiter)
 }
 
+val traceAgent = (findProperty("traceAgent") as String?) == "true"
+
 tasks.test {
     useJUnitPlatform {
         excludeTags("native")
     }
 
-    jvmArgs =
-        listOf(
+    // Load environment variables from .env file if it exists
+    val envVars = loadEnvFile()
+    envVars.forEach { (key, value) ->
+        environment(key, value)
+    }
+
+    jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
+
+    if (traceAgent) {
+        val mergeDir = "$projectDir/src/main/resources/META-INF/native-image"
+        val accessFilter = "$projectDir/src/main/resources/graal-access-filter.json"
+        val callerFilter = "$projectDir/src/main/resources/graal-caller-filter.json"
+        val outDir =
+            layout.buildDirectory
+                .dir("graal-agent")
+                .get()
+                .asFile
+
+        jvmArgs(
             "-XX:+EnableDynamicAgentLoading",
+            "-agentlib:native-image-agent=" +
+                "config-output-dir=$outDir," +
+                "access-filter-file=$accessFilter," +
+                "caller-filter-file=$callerFilter",
         )
+
+        doFirst {
+            println("🔎 Graal tracing agent ON")
+            println("   Merge -> $mergeDir")
+            println("   Filters: access=$accessFilter ; caller=$callerFilter")
+        }
+        finalizedBy("syncGraalMetadata")
+    }
 }
 
 kotlin {
@@ -125,38 +177,11 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
-val traceAgent = (findProperty("traceAgent") as String?) == "true"
-
 tasks.register<Sync>("syncGraalMetadata") {
-    from("$buildDir/graal-agent")
+    from(layout.buildDirectory.dir("graal-agent"))
     include("**/*-config.json")
     exclude("**/agent-extracted-predefined-classes/**", "**/predefined-classes-*.json")
     into("src/main/resources/META-INF/native-image")
-}
-
-tasks.test {
-    useJUnitPlatform()
-
-    if (traceAgent) {
-        val mergeDir = "$projectDir/src/main/resources/META-INF/native-image"
-        val accessFilter = "$projectDir/src/main/resources/graal-access-filter.json"
-        val callerFilter = "$projectDir/src/main/resources/graal-caller-filter.json"
-        val outDir = "$buildDir/graal-agent"
-
-        jvmArgs(
-            "-agentlib:native-image-agent=" +
-                "config-output-dir=$outDir," +
-                "access-filter-file=$accessFilter," +
-                "caller-filter-file=$callerFilter",
-        )
-
-        doFirst {
-            println("🔎 Graal tracing agent ON")
-            println("   Merge -> $mergeDir")
-            println("   Filters: access=$accessFilter ; caller=$callerFilter")
-        }
-        finalizedBy("syncGraalMetadata")
-    }
 }
 
 graalvmNative {

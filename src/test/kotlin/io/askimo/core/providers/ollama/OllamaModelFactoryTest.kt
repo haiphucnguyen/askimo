@@ -6,6 +6,7 @@ package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -23,36 +24,40 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class OllamaModelFactoryTest {
     @Test
-    @DisplayName("OllamaModelFactory can stream responses from tinyllama via Testcontainers Ollama")
+    @DisplayName("OllamaModelFactory can stream responses from qwen2.5:0.5b via Testcontainers Ollama")
     fun canCreateChatServiceAndStream() {
         val ollama = SharedOllama.container
+
+        assertTrue(ollama.isRunning, "Ollama container should be running")
+
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
         val baseUrl = "http://$host:$port"
 
-        ollama.execInContainer("ollama", "pull", "tinyllama:latest")
+        println("Ollama container running at: $baseUrl")
+
+        SharedOllama.ensureModelPulled("qwen2.5:0.5b")
 
         val settings = OllamaSettings(baseUrl = baseUrl)
-
         val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         val chatService: ChatService =
             OllamaModelFactory().create(
-                model = "tinyllama:latest",
+                model = "qwen2.5:0.5b",
                 settings = settings,
                 memory = memory,
                 retrievalAugmentor = null,
             )
 
         val prompt = "Reply with a single short word."
+        println("Sending prompt: '$prompt'")
 
-        val result = StringBuilder()
-        val stream = chatService.sendMessageStreaming(prompt)
-        stream.onPartialResponse { token -> result.append(token) }
-        stream.onError { error -> throw error }
-        stream.start()
-        val output = result.toString().trim()
+        val output = chatService.sendStreamingMessageWithCallback(prompt) { token ->
+            print(token)
+        }.trim()
 
-        assertTrue(output.isBlank(), "Expected a non-empty response from tinyllama, but got blank")
+        println("\nFinal output: '$output'")
+
+        assertTrue(output.isNotBlank(), "Expected a non-empty response from qwen2.5:0.5b, but got blank: '$output'")
     }
 }

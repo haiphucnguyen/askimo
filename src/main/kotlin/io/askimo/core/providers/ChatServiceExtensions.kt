@@ -16,7 +16,7 @@ import java.util.concurrent.CountDownLatch
  * @param onToken Optional callback function that is invoked for each token received from the model
  * @return The complete response from the language model as a string
  */
-fun ChatService.sendMessage(
+fun ChatService.sendStreamingMessageWithCallback(
     prompt: String,
     onToken: (String) -> Unit = {},
 ): String {

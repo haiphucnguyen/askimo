@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo-dark.svg">
-    <img alt="Askimo - AI at your command line." src="public/askimo-logo.svg">
+    <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo.svg">
   </picture>
 </p>
 
@@ -23,18 +23,51 @@
 
 # Askimo
 
-Askimo is a command-line assistant that talks with LLMs - from online providers like OpenAI, X AI, Gemini to local models like Ollama.
-> Askimo - AI for your workflows, with the freedom to choose any provider.
+Askimo is a **provider-agnostic AI toolkit** that brings powerful AI capabilities to your command line, automation workflows, and development processes. From chatting with LLMs to building intelligent RAG-enabled projects, Askimo works with any provider - OpenAI, X AI, Gemini, or local models like Ollama.
+
+> **AI for your workflows, with the freedom to choose any provider.**
 
 ## Why Askimo?
 
-* Switch providers anytime – Talk to OpenAI, Gemini, X AI, or Ollama with the same commands.
+**🔄 Provider Freedom**  
+Switch between OpenAI, Gemini, X AI, or Ollama with the same commands. No vendor lock-in as the AI landscape evolves.
 
-* Automation-first – Pipe files, logs, or command output into Askimo and let AI handle the rest.
+**🚀 Automation-First Design**  
+Built for DevOps and automation workflows. Pipe files, logs, or command output into Askimo and let AI handle analysis, transformation, and decision-making.
 
-* Your choice of interface – Use the CLI if you love the terminal, or the web UI if you prefer a browser.
+**🧠 RAG-Enabled Projects**  
+Create intelligent project workspaces with built-in vector search (pgvector). Your AI assistant knows your codebase, documentation, and project context.
 
-* No lock-in – Designed to stay provider-neutral so you can change models as the AI landscape evolves.
+**📋 Reusable Recipes**  
+Build and share parameterized AI workflows. Create templates for code reviews, log analysis, documentation generation, and more.
+
+**⚡ Dual Interface**  
+Choose your workflow: interactive chat for exploration, or non-interactive mode perfect for scripts, CI/CD pipelines, and automation.
+
+**🔌 Extensible Platform**  
+Add custom providers, commands, and integrations. Askimo grows with your team's needs.
+
+## Key Capabilities
+
+### 💬 AI Chat
+- Interactive conversations with multiple AI providers
+
+### 🧠 Knowledge Management
+- **RAG-enabled projects** with automatic document indexing
+- **Vector search** powered by PostgreSQL + pgvector
+- **Project workspaces** that give AI context about your codebase
+- **Contextual responses** based on your project's files and documentation
+
+### 🚀 Automation & DevOps
+- **Pipeline-friendly** non-interactive mode for CI/CD integration
+- **Recipe system** for reusable, parameterized AI workflows
+- **Log analysis** and system monitoring with AI insights
+- **Stdin/stdout** support for seamless integration with existing tools
+
+### 🔧 Platform Features
+- **Provider-agnostic** architecture (OpenAI, Gemini, X AI, Ollama)
+- **Extensible** plugin system for custom providers and commands
+- **Configuration management** with per-provider parameter tuning
 
 ## Demo
 

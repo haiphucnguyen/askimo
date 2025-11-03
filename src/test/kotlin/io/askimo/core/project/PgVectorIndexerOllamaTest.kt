@@ -33,7 +33,6 @@ import kotlin.io.path.writeText
 @TestInstance(Lifecycle.PER_CLASS)
 class PgVectorIndexerOllamaTest {
     companion object {
-        // Use a pgvector-enabled Postgres image
         class PgVectorPostgres(
             image: String,
         ) : PostgreSQLContainer<PgVectorPostgres>(image)
@@ -62,7 +61,6 @@ class PgVectorIndexerOllamaTest {
         System.setProperty("OLLAMA_URL", baseUrl)
         System.setProperty("OLLAMA_EMBED_MODEL", "jina/jina-embeddings-v2-small-en:latest")
 
-        // Configure Postgres connection for PgVectorIndexer
         val pgHost = postgres.host
         val pgPort = postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
         val jdbcUrl = "jdbc:postgresql://$pgHost:$pgPort/${postgres.databaseName}"
@@ -71,7 +69,6 @@ class PgVectorIndexerOllamaTest {
         System.setProperty("ASKIMO_PG_PASS", postgres.password)
         AppConfig.reload()
 
-        // Create a small temp project with a couple of indexable files
         val file1 = tmp.resolve("hello.kt")
         Files.createDirectories(file1.parent)
         file1.writeText(
@@ -99,11 +96,9 @@ class PgVectorIndexerOllamaTest {
         val count = indexer.indexProject(tmp)
         assertEquals(2, count, "Expected to index exactly 2 files")
 
-        // Ensure embed works
         val vec = indexer.embed("hello world from test")
         assertFalse(vec.isEmpty(), "Embedding vector should not be empty")
 
-        // Similarity search for a token present in file1
         val query = indexer.embed("greeting function in kotlin")
         val results = indexer.similaritySearch(query, 2)
         assertTrue(results.isNotEmpty(), "Expected at least one search result")

@@ -35,24 +35,3 @@ interface ChatService {
      */
     fun sendMessage(@UserMessage prompt: String): String
 }
-
-/**
- * Extension function that sends a chat message and calls the onToken callback for each token.
- *
- * @param prompt The user message to send
- * @param onToken Callback function called for each token as it's generated
- * @return The complete response from the AI
- */
-fun ChatService.sendMessageStreaming(prompt: String, onToken: (String) -> Unit = {}): String {
-    val result = StringBuilder()
-    sendMessageStreaming(prompt)
-        .onPartialResponse { token ->
-            onToken(token)
-            result.append(token)
-        }
-        .onError { error ->
-            throw error
-        }
-        .start()
-    return result.toString()
-}

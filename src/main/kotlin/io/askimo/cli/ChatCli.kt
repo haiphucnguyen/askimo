@@ -31,7 +31,7 @@ import io.askimo.cli.commands.StopWatcherCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
-import io.askimo.core.providers.sendMessage
+import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.recipes.RecipeExecutor
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
@@ -291,7 +291,7 @@ private fun sendChatMessage(
     val promptWithContext = session.prepareContextAndGetPrompt(prompt)
 
     // Stream the response directly for real-time display
-    val output = session.getChatService().sendMessage(promptWithContext) { token ->
+    val output = session.getChatService().sendStreamingMessageWithCallback(promptWithContext) { token ->
         if (firstTokenSeen.compareAndSet(false, true)) {
             indicator?.stopWithElapsed()
             actualTerminal.flush()

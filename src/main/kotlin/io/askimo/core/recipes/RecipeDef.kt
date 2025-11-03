@@ -45,7 +45,6 @@ data class RecipeDef(
  */
 data class VarCall(
     val tool: String,
-    // List<Any>/Map<String,Any>/String
     val args: Any? = null,
 )
 
