@@ -150,6 +150,7 @@ All commands work in both modes - just use `:command` for interactive or `--comm
 | Interactive Mode    | Non-Interactive Mode     | Description                                                                                                 | Example Usage                                      |
 |-------------------|--------------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
 | `:help`           | `--help`                 | Show all available commands                                                                                 | `:help` or `askimo --help`                       |
+| `:version`        | `--version`              | Show detailed version and build information                                                                 | `:version` or `askimo --version`                 |
 | N/A               | `-p, --prompt`           | Send a single chat message without entering interactive mode (supports stdin)                              | `askimo -p "Hello"` or `echo "code" \| askimo -p "Explain"`  |
 | `:set-param`      | `--set-param`            | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
 | `:params`         | `--params`               | View current session parameters                                                                             | `:params` or `askimo --params`                   |

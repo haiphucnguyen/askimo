@@ -364,14 +364,14 @@ class ChatSessionRepository {
     }
 
     private fun generateTitle(firstMessage: String): String {
-        // Simple title generation - take first 50 chars or first sentence
+        // Simple title generation - take first 100 chars or first sentence
         val cleaned = firstMessage.trim().replace("\n", " ")
         return when {
-            cleaned.length <= 50 -> cleaned
+            cleaned.length <= 100 -> cleaned
             cleaned.contains(". ") -> cleaned.substringBefore(". ") + "."
             cleaned.contains("? ") -> cleaned.substringBefore("? ") + "?"
             cleaned.contains("! ") -> cleaned.substringBefore("! ") + "!"
-            else -> cleaned.take(47) + "..."
+            else -> cleaned.take(97) + "..."
         }
     }
 

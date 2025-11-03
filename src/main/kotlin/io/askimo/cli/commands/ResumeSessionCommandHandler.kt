@@ -25,13 +25,13 @@ class ResumeSessionCommandHandler(private val session: Session) : CommandHandler
 
         if (success) {
             info("✅ Resumed chat session: $sessionId")
-            val messages = session.chatSessionRepository.getMessages(sessionId).takeLast(3)
+            val messages = session.chatSessionRepository.getMessages(sessionId)
             if (messages.isNotEmpty()) {
-                info("\n📝 Recent messages:")
+                info("\n📝 All conversation history:")
                 messages.forEach { msg ->
                     val prefix = if (msg.role == MessageRole.USER) "You" else "Assistant"
-                    val preview = msg.content.take(100)
-                    info("$prefix: $preview${if (msg.content.length > 100) "..." else ""}")
+                    info("$prefix: ${msg.content}")
+                    info("-".repeat(40))
                 }
             }
         } else {

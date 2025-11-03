@@ -29,6 +29,7 @@ import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.StopWatcherCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
+import io.askimo.cli.commands.VersionDisplayCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.sendStreamingMessageWithCallback
@@ -40,24 +41,20 @@ import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import org.jline.keymap.KeyMap
+import org.jline.reader.EOFError
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
+import org.jline.reader.ParsedLine
+import org.jline.reader.Parser.ParseContext
 import org.jline.reader.Reference
-import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
-import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 
 fun main(args: Array<String>) {
-    if (args.any { it == "--version" || it == "-v" || it == "-V" }) {
-        printFullVersionInfo()
-        return
-    }
-
     val session = SessionFactory.createSession()
 
     // Add shutdown hook to gracefully close database connections
@@ -74,6 +71,7 @@ fun main(args: Array<String>) {
             ConfigCommandHandler(session),
             ParamsCommandHandler(session),
             SetParamCommandHandler(session),
+            VersionDisplayCommandHandler(),
             ListProvidersCommandHandler(),
             SetProviderCommandHandler(session),
             ModelsCommandHandler(session),
@@ -154,8 +152,18 @@ fun main(args: Array<String>) {
                     .system(true)
                     .build()
 
-            // Setup parser and completer
-            val parser = DefaultParser()
+            // Setup parser with multi-line support
+            val parser = object : DefaultParser() {
+                override fun isEscapeChar(ch: Char): Boolean = ch == '\\'
+
+                override fun parse(line: String, cursor: Int, context: ParseContext?): ParsedLine {
+                    // Check if line ends with backslash (continuation)
+                    if (context == ParseContext.ACCEPT_LINE && line.trimEnd().endsWith("\\")) {
+                        throw EOFError(-1, -1, "Line continuation")
+                    }
+                    return super.parse(line, cursor, context)
+                }
+            }
 
             val completer =
                 AggregateCompleter(
@@ -170,47 +178,23 @@ fun main(args: Array<String>) {
                     .variable(LineReader.COMPLETION_STYLE_LIST_SELECTION, "fg:blue")
                     .variable(LineReader.LIST_MAX, 5)
                     .variable(LineReader.COMPLETION_STYLE_STARTING, "")
+                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
                     .completer(completer)
                     .build()
 
-            // Is this a "real" terminal with raw mode & cursor addressing?
-            val supportsRaw = terminal.getBooleanCapability(InfoCmp.Capability.cursor_address)
-
-            // --- Key bindings ---
-            // Get the main keymap
+            // Get the main keymap for history search bindings
             @Suppress("UNCHECKED_CAST")
             val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
 
-            if (supportsRaw) {
-                val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
-                // --- Secondary prompt style ---
-                reader.setVariable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
-
-                // --- Widget for newline ---
-                reader.widgets["insert-newline"] =
-                    Widget {
-                        reader.buffer.write("\n")
-                        reader.callWidget(LineReader.REDRAW_LINE)
-                        reader.callWidget(LineReader.REDISPLAY)
-                        true
-                    }
-
-                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\r") // CR (Ctrl-M / many terms)
-                mainMap.bind(Reference(LineReader.ACCEPT_LINE), "\n") // LF (some terms)
-                mainMap.bind(Reference("insert-newline"), KeyMap.ctrl('J')) // Ctrl+J
-                terminal.writer().println("💡 Tip: Ctrl+J for newline, Enter to send.")
-            } else {
-                terminal.writer().println(
-                    "💡 Limited console detected. Enter submits. " +
-                        "Use Alt+Enter for a newline, or enable 'Emulate terminal in output console' in your Run config.",
-                )
-            }
-
+            // Setup history search bindings
             mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
             mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
 
+            // Display banner and version
+            displayBanner()
+
             terminal.writer().println("askimo> Ask anything. Type :help for commands.")
-            terminal.writer().println("💡 Tip 1: Press Ctrl+J for a new line, Enter to send.")
+            terminal.writer().println("💡 Tip 1: End line with \\ for multi-line, Enter to send.")
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
@@ -376,19 +360,27 @@ private fun buildPrompt(
     }
 }
 
-private fun printFullVersionInfo() {
-    val a = VersionInfo
-    info(
-        """
-        ${a.name} ${a.version}
-        Author: ${a.author}
-        Built: ${a.buildDate}
-        License: ${a.license}
-        Homepage: ${a.homepage}
-        Build JDK: ${a.buildJdk}
-        Runtime: ${a.runtimeVm} (${a.runtimeVersion})
-        """.trimIndent(),
-    )
+private fun displayBanner() {
+    try {
+        val bannerText = object {}::class.java.getResourceAsStream("/banner.txt")?.use { stream ->
+            stream.bufferedReader().readText()
+        } ?: run {
+            "Welcome to Askimo CLI"
+        }
+
+        println(bannerText)
+        println()
+
+        val version = VersionInfo
+        println("${version.name} ${version.version}")
+        println()
+
+    } catch (_: Exception) {
+        println("Welcome to Askimo CLI")
+        val version = VersionInfo
+        println("${version.name} ${version.version}")
+        println()
+    }
 }
 
 private fun Array<String>.getFlagValue(vararg flags: String): String? {
