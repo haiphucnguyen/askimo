@@ -8,6 +8,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider.OPEN_AI
@@ -53,6 +54,18 @@ class OpenAiModelFactory : ChatModelFactory {
                     if (supportsSampling(model)) {
                         val s = samplingFor(settings.presets.style)
                         temperature(s.temperature).topP(s.topP)
+                    }
+                    // Add proxy configuration if enabled
+                    if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
+                        baseUrl("${AppConfig.proxy.url}/openai/v1")
+                        // Add proxy authentication header and OpenAI API key if tokens are provided
+                        val headers = mutableMapOf<String, String>()
+                        if (AppConfig.proxy.authToken.isNotBlank()) {
+                            headers["X-Proxy-Auth"] = AppConfig.proxy.authToken
+                        }
+                        // Include OpenAI API key in Authorization header for proxy forwarding
+                        headers["Authorization"] = "Bearer ${safeApiKey(settings.apiKey)}"
+                        customHeaders(headers)
                     }
                 }.build()
 

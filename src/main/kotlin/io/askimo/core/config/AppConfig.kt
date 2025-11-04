@@ -146,6 +146,12 @@ data class ChatConfig(
     val summarizationThreshold: Int = 50,
 )
 
+data class ProxyConfig(
+    val enabled: Boolean = false,
+    val url: String = "",
+    val authToken: String = "",
+)
+
 data class AppConfigData(
     val pgvector: PgVectorConfig = PgVectorConfig(),
     val embedding: EmbeddingConfig = EmbeddingConfig(),
@@ -155,11 +161,6 @@ data class AppConfigData(
     val chat: ChatConfig = ChatConfig(),
 )
 
-/**
- * Singleton accessor:
- *   AppConfig.pgVector.url
- *   AppConfig.embedding.max_chars_per_chunk
- */
 object AppConfig {
     val pgVector: PgVectorConfig get() = delegate.pgvector
     val embedding: EmbeddingConfig get() = delegate.embedding
@@ -167,6 +168,8 @@ object AppConfig {
     val throttle: ThrottleConfig get() = delegate.throttle
     val indexing: IndexingConfig get() = delegate.indexing
     val chat: ChatConfig get() = delegate.chat
+
+    val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
 
     @Volatile private var cached: AppConfigData? = null
 
@@ -373,4 +376,11 @@ object AppConfig {
             )
         return AppConfigData(pg, emb, r, t, idx, chat)
     }
+
+    /** Load proxy configuration from environment variables only - never persisted to file */
+    private fun loadProxyFromEnv(): ProxyConfig = ProxyConfig(
+        enabled = System.getenv("ASKIMO_PROXY_ENABLED")?.toBoolean() ?: false,
+        url = System.getenv("ASKIMO_PROXY_URL") ?: "",
+        authToken = System.getenv("ASKIMO_PROXY_AUTH_TOKEN") ?: "",
+    )
 }
