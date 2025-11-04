@@ -17,38 +17,37 @@ import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import java.time.Duration
 
 class OllamaModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> =
-        try {
-            val process =
-                ProcessBuilder("ollama", "list")
-                    .redirectErrorStream(true)
-                    .start()
+    override fun availableModels(settings: ProviderSettings): List<String> = try {
+        val process =
+            ProcessBuilder("ollama", "list")
+                .redirectErrorStream(true)
+                .start()
 
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
 
-            // Parse lines like:
-            // llama2 7B   4.3 GB
-            // mistral 7B 4.1 GB
-            output
-                .lines()
-                .drop(1) // skip header
-                .mapNotNull { line ->
-                    line.trim().split("\\s+".toRegex()).firstOrNull()
-                }.filter { it.isNotBlank() }
-                .distinct()
-        } catch (e: Exception) {
-            info("⚠️ Failed to fetch models from Ollama: ${e.message}")
-            debug(e)
-            emptyList()
-        }
+        // Parse lines like:
+        // llama2 7B   4.3 GB
+        // mistral 7B 4.1 GB
+        output
+            .lines()
+            .drop(1) // skip header
+            .mapNotNull { line ->
+                line.trim().split("\\s+".toRegex()).firstOrNull()
+            }.filter { it.isNotBlank() }
+            .distinct()
+    } catch (e: Exception) {
+        info("⚠️ Failed to fetch models from Ollama: ${e.message}")
+        debug(e)
+        emptyList()
+    }
 
-    override fun defaultSettings(): ProviderSettings =
-        OllamaSettings(
-            baseUrl = "http://localhost:11434", // default Ollama endpoint
-        )
+    override fun defaultSettings(): ProviderSettings = OllamaSettings(
+        baseUrl = "http://localhost:11434", // default Ollama endpoint
+    )
 
     override fun create(
         model: String,
@@ -65,9 +64,11 @@ class OllamaModelFactory : ChatModelFactory {
                 .builder()
                 .baseUrl("${settings.baseUrl}/v1")
                 .modelName(model)
+                .timeout(Duration.ofMinutes(5))
                 .apply {
                     val s = samplingFor(settings.presets.style)
-                    temperature(s.temperature).topP(s.topP)
+                    temperature(s.temperature)
+                    topP(s.topP)
                 }.build()
 
         val builder =

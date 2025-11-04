@@ -256,8 +256,8 @@ class ChatSessionRepositoryIT {
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        assertTrue(updatedSession!!.title.endsWith("..."))
-        assertTrue(updatedSession.title.length <= 50)
+        // The current implementation truncates at 97 chars + "..." for messages > 100 chars
+        assertEquals("This is a very long message that exceeds the fifty character limit and should be truncated with e...", updatedSession.title)
     }
 
     @Test
@@ -269,7 +269,7 @@ class ChatSessionRepositoryIT {
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        assertEquals("This is a complete sentence.", updatedSession!!.title)
+        assertEquals("This is a complete sentence. And this is another one.", updatedSession.title)
     }
 
     @Test

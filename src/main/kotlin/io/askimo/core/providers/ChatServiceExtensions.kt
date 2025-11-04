@@ -4,6 +4,8 @@
  */
 package io.askimo.core.providers
 
+import io.askimo.core.util.RetryPresets
+import io.askimo.core.util.RetryUtils
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -19,9 +21,10 @@ import java.util.concurrent.CountDownLatch
 fun ChatService.sendStreamingMessageWithCallback(
     prompt: String,
     onToken: (String) -> Unit = {},
-): String {
+): String = RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
     val sb = StringBuilder()
     val done = CountDownLatch(1)
+    var errorOccurred = false
 
     sendMessageStreaming(prompt)
         .onPartialResponse { chunk ->
@@ -30,11 +33,24 @@ fun ChatService.sendStreamingMessageWithCallback(
         }.onCompleteResponse {
             done.countDown()
         }.onError { e ->
+            errorOccurred = true
             e.printStackTrace()
             onToken("\n[error] ${e.message ?: "unknown error"}\n")
             done.countDown()
         }.start()
 
     done.await()
-    return sb.toString()
+
+    val result = sb.toString()
+
+    // If we got an error during streaming or empty result, throw to trigger retry
+    if (errorOccurred) {
+        throw RuntimeException("Streaming error occurred")
+    }
+
+    if (result.trim().isEmpty()) {
+        throw IllegalStateException("Model returned empty streaming response")
+    }
+
+    result
 }

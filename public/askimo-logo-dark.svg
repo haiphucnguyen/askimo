@@ -20,6 +20,6 @@
   <!-- Text -->
   <g font-family="Inter, Segoe UI, DejaVu Sans, Helvetica Neue, Arial, sans-serif" text-anchor="middle">
     <text x="640" y="420" font-size="86" font-weight="700" fill="#FFFFFF">Askimo</text>
-    <text x="640" y="482" font-size="44" font-weight="500" fill="#C9D1D9">One CLI, any AI.</text>
+    <text x="640" y="482" font-size="44" font-weight="500" fill="#C9D1D9">One CLI to Talk, Think, and Automate.</text>
   </g>
 </svg>

@@ -40,6 +40,8 @@ import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
+import io.askimo.core.util.RetryPresets
+import io.askimo.core.util.RetryUtils
 import org.jline.keymap.KeyMap
 import org.jline.reader.EOFError
 import org.jline.reader.LineReader
@@ -433,8 +435,11 @@ private fun runYamlCommand(
             tools = toolRegistry,
         )
 
-    executor.run(
-        name = name,
-        opts = RecipeExecutor.RunOpts(overrides = overrides, externalArgs = externalArgs),
-    )
+    // Use retry utility for transient errors
+    RetryUtils.retry(RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
+        executor.run(
+            name = name,
+            opts = RecipeExecutor.RunOpts(overrides = overrides, externalArgs = externalArgs),
+        )
+    }
 }
