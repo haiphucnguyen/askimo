@@ -110,10 +110,16 @@ class SecureSessionManagerTest {
 
         // Save the session (this should store the API key securely)
         val savedSession = secureSessionManager.saveSecureSession(sessionParams)
+        val savedSettings = savedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
+
+        // Verify the key was replaced with a placeholder during save
+        assertTrue(
+            savedSettings.apiKey == "***keychain***" || savedSettings.apiKey.startsWith("encrypted:"),
+            "API key should be replaced with placeholder after save"
+        )
 
         // Load the session (this should retrieve the API key)
         val loadedSession = secureSessionManager.loadSecureSession(savedSession)
-
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
 
         // The loaded API key should match the original

@@ -6,6 +6,7 @@ package io.askimo.core.security
 
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.SessionParams
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.warn
@@ -24,11 +25,13 @@ class SecureSessionManager {
      * Loads session parameters and populates API keys from secure storage.
      */
     fun loadSecureSession(sessionParams: SessionParams): SessionParams {
-        // Clone the session params to avoid modifying the original
-        val secureParams =
-            sessionParams.copy(
-                providerSettings = sessionParams.providerSettings.toMutableMap(),
-            )
+        // Clone the session params with deep copy of provider settings
+        val secureParams = sessionParams.copy(
+            models = sessionParams.models.toMutableMap(),
+            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
+                deepCopyProviderSettings(provider, settings)
+            }.toMutableMap()
+        )
 
         // Load API keys from secure storage for each provider
         secureParams.providerSettings.forEach { (provider, settings) ->
@@ -44,11 +47,13 @@ class SecureSessionManager {
      * Saves session parameters, storing API keys securely and removing them from the session file.
      */
     fun saveSecureSession(sessionParams: SessionParams): SessionParams {
-        // Clone the session params
-        val sanitizedParams =
-            sessionParams.copy(
-                providerSettings = sessionParams.providerSettings.toMutableMap(),
-            )
+        // Clone the session params with deep copy of provider settings
+        val sanitizedParams = sessionParams.copy(
+            models = sessionParams.models.toMutableMap(),
+            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
+                deepCopyProviderSettings(provider, settings)
+            }.toMutableMap()
+        )
 
         // Store API keys securely and replace them with placeholders
         sanitizedParams.providerSettings.forEach { (provider, settings) ->
@@ -172,6 +177,35 @@ class SecureSessionManager {
     private fun isActualApiKey(apiKey: String): Boolean = apiKey.isNotBlank() &&
         apiKey != KEYCHAIN_API_KEY_PLACEHOLDER &&
         !apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
+
+    /**
+     * Creates a deep copy of provider settings to avoid shared mutable state.
+     */
+    private fun deepCopyProviderSettings(provider: ModelProvider, settings: ProviderSettings): ProviderSettings {
+        return when (provider) {
+            ModelProvider.OPENAI -> {
+                val openAiSettings = settings as io.askimo.core.providers.openai.OpenAiSettings
+                openAiSettings.copy()
+            }
+            ModelProvider.GEMINI -> {
+                val geminiSettings = settings as io.askimo.core.providers.gemini.GeminiSettings
+                geminiSettings.copy()
+            }
+            ModelProvider.XAI -> {
+                val xaiSettings = settings as io.askimo.core.providers.xai.XAiSettings
+                xaiSettings.copy()
+            }
+            ModelProvider.ANTHROPIC -> {
+                val anthropicSettings = settings as io.askimo.core.providers.anthropic.AnthropicSettings
+                anthropicSettings.copy()
+            }
+            ModelProvider.OLLAMA -> {
+                val ollamaSettings = settings as io.askimo.core.providers.ollama.OllamaSettings
+                ollamaSettings.copy()
+            }
+            ModelProvider.UNKNOWN -> settings // Unknown settings, return as-is
+        }
+    }
 
     data class MigrationResult(
         val results: Map<ModelProvider, SecureApiKeyManager.StorageResult>,
