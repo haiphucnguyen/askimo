@@ -18,14 +18,14 @@ enum class ModelProvider {
     /**
      * Represents OpenAI's models like GPT-3.5, GPT-4, etc.
      */
-    @SerialName("OPEN_AI")
-    OPEN_AI,
+    @SerialName("OPENAI")
+    OPENAI,
 
     /**
      * Represents XAI's models like grok-3, grok3-mini, etc.
      */
-    @SerialName("X_AI")
-    X_AI,
+    @SerialName("XAI")
+    XAI,
 
     /**
      * Represents Gemini's models like gemini-2.5-flash, gemini-2.5-pro, etc.

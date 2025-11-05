@@ -10,7 +10,7 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ModelProvider.X_AI
+import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
@@ -31,7 +31,7 @@ class XAiModelFactory : ChatModelFactory {
         return fetchModels(
             apiKey = apiKey,
             url = url,
-            providerName = X_AI,
+            providerName = XAI,
         )
     }
 
@@ -44,7 +44,7 @@ class XAiModelFactory : ChatModelFactory {
         retrievalAugmentor: RetrievalAugmentor?,
     ): ChatService {
         require(settings is XAiSettings) {
-            "Invalid settings type for X_AI: ${settings::class.simpleName}"
+            "Invalid settings type for XAI: ${settings::class.simpleName}"
         }
 
         val chatModel =

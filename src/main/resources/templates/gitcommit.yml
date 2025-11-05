@@ -12,7 +12,7 @@ allowedTools:
 vars:
   diff:
     tool: stagedDiff
-    args: ["--no-color", "--unified=0"]
+    args: ["--no-color", "--unified=0", "--diff-algorithm=minimal"]
   status:
     tool: status
   branch:

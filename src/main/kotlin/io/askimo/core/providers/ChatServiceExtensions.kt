@@ -25,6 +25,8 @@ fun ChatService.sendStreamingMessageWithCallback(
     val sb = StringBuilder()
     val done = CountDownLatch(1)
     var errorOccurred = false
+    var isConfigurationError = false
+    var capturedError: Throwable? = null
 
     sendMessageStreaming(prompt)
         .onPartialResponse { chunk ->
@@ -34,8 +36,61 @@ fun ChatService.sendStreamingMessageWithCallback(
             done.countDown()
         }.onError { e ->
             errorOccurred = true
-            e.printStackTrace()
-            onToken("\n[error] ${e.message ?: "unknown error"}\n")
+            capturedError = e
+
+            val errorMessage = e.message ?: ""
+            val isModelError = errorMessage.contains("model is required") ||
+                errorMessage.contains("No model provided") ||
+                errorMessage.contains("model not found") ||
+                errorMessage.contains("invalid model")
+
+            val isApiKeyError = errorMessage.contains("api key") ||
+                errorMessage.contains("authentication") ||
+                errorMessage.contains("unauthorized") ||
+                errorMessage.contains("invalid API key") ||
+                errorMessage.contains("Incorrect API key provided") ||
+                errorMessage.contains("invalid_api_key") ||
+                e is dev.langchain4j.exception.AuthenticationException
+
+            if (isModelError || isApiKeyError) {
+                isConfigurationError = true
+                val helpMessage = when {
+                    isModelError -> """
+                        ⚠️  Model configuration required!
+
+                        It looks like you haven't selected a model yet. Please configure your setup:
+
+                        1. Set a provider: :set-provider openai
+                        2. Check available models: :models
+                        3. Select a model from the list
+                    """.trimIndent()
+
+                    isApiKeyError -> """
+                        ⚠️  API key configuration required!
+
+                        Your API key is missing or invalid. Please configure it:
+
+                        Interactive mode: :set-param api_key YOUR_API_KEY
+                        Command line: --set-param api_key YOUR_API_KEY
+                    """.trimIndent()
+
+                    else -> """
+                        ⚠️  Configuration required!
+
+                        Please set up your AI provider first:
+                        :set-provider openai
+                    """.trimIndent()
+                }
+
+                sb.append(helpMessage)
+                onToken(helpMessage)
+            } else {
+                // For other errors, show the original error message
+                val errorMsg = "\n[error] ${e.message ?: "unknown error"}\n"
+                sb.append(errorMsg)
+                onToken(errorMsg)
+            }
+
             done.countDown()
         }.start()
 
@@ -43,9 +98,13 @@ fun ChatService.sendStreamingMessageWithCallback(
 
     val result = sb.toString()
 
-    // If we got an error during streaming or empty result, throw to trigger retry
+    if (isConfigurationError) {
+        return@retry result
+    }
+
     if (errorOccurred) {
-        throw RuntimeException("Streaming error occurred")
+        val errorDetails = capturedError?.message ?: "Unknown streaming error"
+        throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
     }
 
     if (result.trim().isEmpty()) {

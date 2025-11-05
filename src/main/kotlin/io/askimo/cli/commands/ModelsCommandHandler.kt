@@ -5,7 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.providers.ModelProvider.OLLAMA
-import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.info
@@ -56,7 +56,7 @@ class ModelsCommandHandler(
                         """.trimIndent(),
                     )
                 }
-                OPEN_AI -> {
+                OPENAI -> {
                     info(
                         """
                         💡 One possible reason is that you haven't provided your OpenAI API key yet.

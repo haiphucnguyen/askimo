@@ -69,7 +69,6 @@ class SecureSessionManager {
 
         sessionParams.providerSettings.forEach { (provider, settings) ->
             if (settings is HasApiKey && settings.apiKey.isNotBlank()) {
-                // Skip if already using secure storage
                 if (isUsingSecureStorage(settings.apiKey)) {
                     return@forEach
                 }
@@ -86,7 +85,6 @@ class SecureSessionManager {
                     warn("Failed to migrate API key for ${provider.name} to secure storage")
                 } else {
                     debug("Migrated API key for ${provider.name} to ${result.method.name}")
-                    // Update the settings to use placeholder
                     updateApiKeyPlaceholder(settings, result.method)
                 }
             }
@@ -168,14 +166,12 @@ class SecureSessionManager {
             }
     }
 
-    private fun isUsingSecureStorage(apiKey: String): Boolean =
-        apiKey == KEYCHAIN_API_KEY_PLACEHOLDER ||
-            apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
+    private fun isUsingSecureStorage(apiKey: String): Boolean = apiKey == KEYCHAIN_API_KEY_PLACEHOLDER ||
+        apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
 
-    private fun isActualApiKey(apiKey: String): Boolean =
-        apiKey.isNotBlank() &&
-            apiKey != KEYCHAIN_API_KEY_PLACEHOLDER &&
-            !apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
+    private fun isActualApiKey(apiKey: String): Boolean = apiKey.isNotBlank() &&
+        apiKey != KEYCHAIN_API_KEY_PLACEHOLDER &&
+        !apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
 
     data class MigrationResult(
         val results: Map<ModelProvider, SecureApiKeyManager.StorageResult>,

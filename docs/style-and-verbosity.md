@@ -57,7 +57,7 @@ askmimo> :set-param verbosity short
 Check current values:
 ```bash
 askimo> :params
-Provider : open_ai
+Provider : openai
 Model    : gpt-4o
 
 Parameters (current values):

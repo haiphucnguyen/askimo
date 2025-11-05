@@ -27,16 +27,13 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
     fun setUp() {
         handler = ListRecipesCommandHandler()
 
-        // Use AskimoHome's test override instead of manipulating system properties
         testBaseScope = AskimoHome.withTestBase(tempHome.resolve(".askimo"))
 
-        // Create recipes directory using AskimoHome
         recipesDir = AskimoHome.recipesDir()
     }
 
     @AfterEach
     fun tearDown() {
-        // Clean up the test base override
         testBaseScope.close()
     }
 
@@ -65,7 +62,6 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with empty recipes directory shows info message`() {
-        // Create directory but don't add any recipes
         Files.createDirectories(recipesDir)
 
         val parsedLine = mockParsedLine(":recipes")
@@ -187,7 +183,6 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
     @Test
     fun `handle with recipe names containing spaces`() {
         Files.createDirectories(recipesDir)
-        // Note: File names with spaces are valid on most file systems
         Files.writeString(recipesDir.resolve("my recipe.yml"), "name: test")
 
         val parsedLine = mockParsedLine(":recipes")
@@ -268,9 +263,6 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         // Only .yml (lowercase) should be recognized
         assertTrue(output.contains("lowercase"))
-        // Behavior may vary based on file system case sensitivity
-        // On case-insensitive systems, all might be listed
-        // On case-sensitive systems, only lowercase.yml should be listed
     }
 
     @Test
@@ -320,7 +312,6 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
         handler.handle(parsedLine)
 
         val output = getOutput()
-        // Count should be 3, not 4
         assertTrue(output.contains("📦 Registered recipes (3)"))
     }
 }

@@ -284,30 +284,9 @@ object LocalFsTools {
      * - "search_failed": Path validation, permission, or pattern errors
      */
     @Tool(
-        """
-        Search for files using flexible pattern matching. The AI should use this tool when users ask about specific files, classes, modules, or components.
-
-        Supports multiple search strategies:
-        - Exact filename matching: "MyFile" finds "MyFile.txt", "MyFile.json", etc.
-        - Partial name matching: "Vector" finds "PgVectorIndexer.kt", "VectorUtils.py"
-        - Traditional glob patterns: "*.md", "test/**/*.py"
-        - Any naming convention: CamelCase, snake_case, kebab-case, etc.
-
-        Parameters:
-        - path (string): Directory to search (use "." for current project)
-        - glob (string): Search term, filename, or glob pattern
-        - recursive (boolean, default true): Search subdirectories for better discovery
-        - includeHidden (boolean, default false): Include hidden files
-        - smartMatch (boolean, default true): Enable intelligent pattern expansion
-
-        Returns: {ok: true, files: [string], count: number, patterns: [string], searchPath: string}
-
-        Example usage for AI:
-        - User asks "find PgVectorIndexer" → use searchFilesByGlob(".", "PgVectorIndexer")
-        - User asks "show me SessionManager" → use searchFilesByGlob(".", "SessionManager")
-        - User asks "where is database helper" → use searchFilesByGlob(".", "database")
-        - User asks "responsibility of MyClass" → use searchFilesByGlob(".", "MyClass")
-        """,
+        "Search for files by name/pattern with smart matching. " +
+            "Params: path, glob, recursive?(true), includeHidden?(false), smartMatch?(true). " +
+            "Returns: {ok, files, count, patterns, searchPath}",
     )
     fun searchFilesByGlob(
         path: String,

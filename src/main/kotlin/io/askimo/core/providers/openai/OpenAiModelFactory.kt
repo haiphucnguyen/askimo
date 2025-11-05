@@ -11,7 +11,7 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
@@ -29,7 +29,7 @@ class OpenAiModelFactory : ChatModelFactory {
         return fetchModels(
             apiKey = apiKey,
             url = "https://api.openai.com/v1/models",
-            providerName = OPEN_AI,
+            providerName = OPENAI,
         )
     }
 

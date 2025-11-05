@@ -246,10 +246,15 @@ class CreateRecipeCommandHandler : CommandHandler {
         }
 
         val dst = targetDir.resolve("${def.name}.yml")
-        if (Files.exists(dst)) {
+        val fileExists = Files.exists(dst)
+        if (fileExists) {
             info("⚠️ Recipe '${def.name}' already exists at $dst")
-            info("   Delete it first or choose a different name.")
-            return
+            info("Do you want to overwrite it? (y/n): ")
+            val response = readLine()?.trim()?.lowercase()
+            if (response != "y" && response != "yes") {
+                info("Operation cancelled. Choose a different name or delete the existing recipe first.")
+                return
+            }
         }
 
         val yamlOut =
@@ -268,7 +273,8 @@ class CreateRecipeCommandHandler : CommandHandler {
             return
         }
 
-        info("✅ Registered recipe '${def.name}' at $dst")
+        val action = if (fileExists) "Updated" else "Registered"
+        info("✅ $action recipe '${def.name}' at $dst")
         info("➡  Run: askimo -r ${def.name} <arguments>")
     }
 

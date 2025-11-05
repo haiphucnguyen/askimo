@@ -25,16 +25,16 @@ class HelpCommandHandler : CommandHandler {
         this.commands = commands
     }
 
-    override fun handle(line: ParsedLine) {
-        // Detect if this is non-interactive mode by checking if the line contains "--help"
-        isNonInteractiveMode = line.line().contains("--help")
+    fun setNonInteractiveMode(nonInteractive: Boolean) {
+        this.isNonInteractiveMode = nonInteractive
+    }
 
+    override fun handle(line: ParsedLine) {
         val modeText = if (isNonInteractiveMode) "non-interactive" else "interactive"
-        val prefix = if (isNonInteractiveMode) "--" else ":"
 
         info("Available commands ($modeText mode):\n")
 
-        commands.sortedBy { it.keyword }.forEach { handler ->
+        commands.forEach { handler ->
             val commandName = if (isNonInteractiveMode) {
                 "--" + handler.keyword.removePrefix(":")
             } else {
@@ -52,7 +52,16 @@ class HelpCommandHandler : CommandHandler {
     }
 
     private fun formatCommand(commandName: String, description: String) {
-        val lines = description.split('\n')
+        // Replace interactive examples with non-interactive ones when in non-interactive mode
+        val adjustedDescription = if (isNonInteractiveMode) {
+            description.replace(Regex(":([a-z-]+)")) { matchResult ->
+                "--${matchResult.groupValues[1]}"
+            }
+        } else {
+            description
+        }
+
+        val lines = adjustedDescription.split('\n')
         val mainDescription = lines[0]
         val additionalLines = lines.drop(1)
 

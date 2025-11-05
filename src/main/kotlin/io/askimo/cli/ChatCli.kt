@@ -6,7 +6,6 @@ package io.askimo.cli
 
 import io.askimo.cli.autocompleter.CliCommandCompleter
 import io.askimo.cli.commands.AgentCommandHandler
-import io.askimo.cli.commands.ApiKeySecurityCommandHandler
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
@@ -15,7 +14,6 @@ import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
-import io.askimo.cli.commands.FileWatcherStatusCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
@@ -27,20 +25,21 @@ import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.ResumeSessionCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
-import io.askimo.cli.commands.StopWatcherCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.commands.VersionDisplayCommandHandler
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.core.recipes.DefaultRecipeInitializer
 import io.askimo.core.recipes.RecipeExecutor
+import io.askimo.core.recipes.RecipeExecutor.RunOpts
 import io.askimo.core.recipes.RecipeRegistry
 import io.askimo.core.recipes.ToolRegistry
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
-import io.askimo.core.util.RetryPresets
+import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
 import org.jline.keymap.KeyMap
 import org.jline.reader.EOFError
@@ -53,10 +52,14 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.AggregateCompleter
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
+import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 
 fun main(args: Array<String>) {
+    // Initialize default templates on startup
+    DefaultRecipeInitializer.initializeDefaultTemplates()
+
     val session = SessionFactory.createSession()
 
     // Add shutdown hook to gracefully close database connections
@@ -66,33 +69,20 @@ fun main(args: Array<String>) {
         },
     )
 
-    // Create all command handlers once
+    // Create command handlers for non-interactive mode (excluding interactive-only commands)
     val commandHandlers: List<CommandHandler> =
         listOf(
             HelpCommandHandler(),
             ConfigCommandHandler(session),
-            ParamsCommandHandler(session),
-            SetParamCommandHandler(session),
-            VersionDisplayCommandHandler(),
             ListProvidersCommandHandler(),
             SetProviderCommandHandler(session),
             ModelsCommandHandler(session),
-            CopyCommandHandler(session),
-            ClearMemoryCommandHandler(session),
-            CreateProjectCommandHandler(session),
-            ListProjectsCommandHandler(),
-            UseProjectCommandHandler(session),
-            DeleteProjectCommandHandler(),
-            FileWatcherStatusCommandHandler(),
-            StopWatcherCommandHandler(),
+            ParamsCommandHandler(session),
+            SetParamCommandHandler(session),
             CreateRecipeCommandHandler(),
-            DeleteRecipeCommandHandler(),
             ListRecipesCommandHandler(),
-            AgentCommandHandler(session),
-            ApiKeySecurityCommandHandler(session),
-            NewSessionCommandHandler(session),
-            ListSessionsCommandHandler(),
-            ResumeSessionCommandHandler(session),
+            DeleteRecipeCommandHandler(),
+            VersionDisplayCommandHandler(),
         )
 
     // Helper function to convert interactive keyword to non-interactive flag
@@ -106,6 +96,11 @@ fun main(args: Array<String>) {
         val flag = keywordToFlag(handler.keyword)
 
         if (args.any { it == flag }) {
+            // Special handling for help command to set non-interactive mode
+            if (handler is HelpCommandHandler) {
+                handler.setNonInteractiveMode(true)
+            }
+
             // Check if command takes arguments
             val flagArgs = NonInteractiveCommandParser.extractFlagArguments(args, flag)
             if (flagArgs != null && flagArgs.isNotEmpty()) {
@@ -154,6 +149,10 @@ fun main(args: Array<String>) {
                     .system(true)
                     .build()
 
+            // Clear the terminal screen when entering interactive mode
+            terminal.puts(InfoCmp.Capability.clear_screen)
+            terminal.flush()
+
             // Setup parser with multi-line support
             val parser = object : DefaultParser() {
                 override fun isEscapeChar(ch: Char): Boolean = ch == '\\'
@@ -200,7 +199,21 @@ fun main(args: Array<String>) {
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
-            val interactiveCommandHandlers = commandHandlers
+            // Create command handlers for interactive mode (includes all commands)
+            val interactiveCommandHandlers: List<CommandHandler> = commandHandlers + listOf(
+                CopyCommandHandler(session),
+                ClearMemoryCommandHandler(session),
+                ListProjectsCommandHandler(),
+                CreateProjectCommandHandler(session),
+                UseProjectCommandHandler(session),
+                DeleteProjectCommandHandler(),
+//                FileWatcherStatusCommandHandler(),
+//                StopWatcherCommandHandler(),
+                ListSessionsCommandHandler(),
+                NewSessionCommandHandler(session),
+                ResumeSessionCommandHandler(session),
+                AgentCommandHandler(session),
+            )
 
             (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
 
@@ -374,12 +387,14 @@ private fun displayBanner() {
         println()
 
         val version = VersionInfo
-        println("${version.name} ${version.version}")
+        println("Author: ${version.author}")
+        println("Version: ${version.version}")
         println()
     } catch (_: Exception) {
         println("Welcome to Askimo CLI")
         val version = VersionInfo
-        println("${version.name} ${version.version}")
+        println("Author: ${version.author}")
+        println("Version: ${version.version}")
         println()
     }
 }
@@ -424,7 +439,7 @@ private fun runYamlCommand(
         if (def.allowedTools.isEmpty()) {
             ToolRegistry.defaults()
         } else {
-            info("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
+            debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
             ToolRegistry.defaults(allow = def.allowedTools.toSet())
         }
 
@@ -435,11 +450,10 @@ private fun runYamlCommand(
             tools = toolRegistry,
         )
 
-    // Use retry utility for transient errors
-    RetryUtils.retry(RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
+    RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
         executor.run(
             name = name,
-            opts = RecipeExecutor.RunOpts(overrides = overrides, externalArgs = externalArgs),
+            opts = RunOpts(overrides = overrides, externalArgs = externalArgs),
         )
     }
 }

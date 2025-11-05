@@ -28,7 +28,7 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle clears memory for active provider and model`() {
-        val provider = ModelProvider.OPEN_AI
+        val provider = ModelProvider.OPENAI
         val modelName = "gpt-4"
         val params = mock<SessionParams>()
 
@@ -46,7 +46,7 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
         // Verify console output
         val output = getOutput()
         assertTrue(output.contains("🧹 Chat memory cleared"))
-        assertTrue(output.contains("OPEN_AI"))
+        assertTrue(output.contains("OPENAI"))
         assertTrue(output.contains("gpt-4"))
     }
 

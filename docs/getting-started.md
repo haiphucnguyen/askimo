@@ -43,7 +43,7 @@ If `:models` is empty, pull one with `ollama pull <name>` and try again.
 1. Get an API key → https://platform.openai.com/api-keys
 2. Configure Askimo and chat:
 ```bash
-askimo> :set-provider open_ai
+askimo> :set-provider openai
 askimo> :set-param api_key sk-...
 askimo> :models          # e.g., gpt-4o, gpt-4o-mini
 askimo> "Explain Redis caching in simple terms."
@@ -67,7 +67,7 @@ askimo> "Give me five CLI productivity tips."
 1. Get an API key → https://x.ai
 2. Configure and chat:
 ```bash
-askimo> :set-provider x_ai
+askimo> :set-provider xai
 askimo> :set-param api_key <your-xai-key>
 askimo> :models                         # e.g., grok-2, grok-2-mini (examples)
 askimo> :set-param model grok-3-mini

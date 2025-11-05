@@ -4,11 +4,14 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.recipes.RecipeDef
+import io.askimo.core.util.Yaml.yamlMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -200,12 +203,12 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with real gitcommit template preserves vars`() {
-        // Use the real template shipped with the repo
+        // Use the real template shipped with the repo (now in src/main/resources)
         val templatePath =
-            java.nio.file.Paths
-                .get(System.getProperty("user.dir"), "templates", "gitcommit.yml")
+            Paths
+                .get(System.getProperty("user.dir"), "src", "main", "resources", "templates", "gitcommit.yml")
         assertTrue(
-            java.nio.file.Files
+            Files
                 .exists(templatePath),
         )
 
@@ -229,10 +232,10 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
 
         // Parse back to ensure vars made it through
         val def =
-            io.askimo.core.util.Yaml.yamlMapper.readValue(
-                java.nio.file.Files
+            yamlMapper.readValue(
+                Files
                     .readString(recipeFile),
-                io.askimo.core.recipes.RecipeDef::class.java,
+                RecipeDef::class.java,
             )
         assertTrue(def.vars.containsKey("diff"))
         assertTrue(def.vars.containsKey("status"))

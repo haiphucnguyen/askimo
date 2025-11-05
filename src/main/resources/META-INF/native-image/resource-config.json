@@ -5,7 +5,13 @@
         "pattern": "\\QMETA-INF/maven/org.xerial/sqlite-jdbc/pom.properties\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/com.fasterxml.jackson.databind.Module\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.http.client.HttpClientBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.model.anthropic.internal.client.AnthropicClientBuilderFactory\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.internal.spi.OpenAiClientBuilderFactory\\E"
@@ -30,6 +36,9 @@
       },
       {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.guardrail.config.OutputGuardrailsConfigBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.json.JsonCodecFactory\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.spi.observability.AiServiceListenerRegistrarFactory\\E"
@@ -209,6 +218,12 @@
         "pattern": "\\Qorg/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib\\E"
       },
       {
+        "pattern": "\\Qtemplates/gitcommit.yml\\E"
+      },
+      {
+        "pattern": "\\Qtemplates/summarize.yml\\E"
+      },
+      {
         "pattern": "\\Qtestcontainers.properties\\E"
       },
       {
@@ -216,6 +231,12 @@
       },
       {
         "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/nfkc.nrm\\E"
+      },
+      {
+        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/uprops.icu\\E"
+      },
+      {
+        "pattern": "java.base:\\Qsun/net/idn/uidna.spp\\E"
       }
     ]
   },

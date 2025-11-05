@@ -30,7 +30,7 @@ Askimo is a **provider-agnostic AI toolkit** that brings powerful AI capabilitie
 ## Why Askimo?
 
 **🔄 Provider Freedom**  
-Switch between OpenAI, Gemini, X AI, or Ollama with the same commands. No vendor lock-in as the AI landscape evolves.
+Switch between OpenAI, Gemini, X AI, Anthropic, or Ollama with the same commands. No vendor lock-in as the AI landscape evolves.
 
 **🚀 Automation-First Design**  
 Built for DevOps and automation workflows. Pipe files, logs, or command output into Askimo and let AI handle analysis, transformation, and decision-making.
@@ -117,7 +117,7 @@ Run commands directly from the command line:
 ```bash
 askimo --help
 askimo --list-providers
-askimo --set-provider open_ai
+askimo --set-provider openai
 echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
 ```
 
@@ -175,7 +175,7 @@ All commands work in both modes - just use `:command` for interactive or `--comm
 ```bash
 $ askimo
 askimo> :providers
-askimo> :set-provider open_ai  
+askimo> :set-provider openai  
 askimo> :config
 askimo> What is TypeScript?
 ```
@@ -183,7 +183,7 @@ askimo> What is TypeScript?
 **Non-Interactive Mode:**
 ```bash
 $ askimo --providers
-$ askimo --set-provider open_ai
+$ askimo --set-provider openai
 $ askimo --config
 $ askimo -p "What is TypeScript?"
 $ echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"

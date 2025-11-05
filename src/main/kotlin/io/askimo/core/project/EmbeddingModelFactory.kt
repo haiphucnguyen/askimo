@@ -11,9 +11,9 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ModelProvider.OLLAMA
-import io.askimo.core.providers.ModelProvider.OPEN_AI
+import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.UNKNOWN
-import io.askimo.core.providers.ModelProvider.X_AI
+import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
@@ -30,7 +30,7 @@ private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
 private val warnedOllamaOnce = AtomicBoolean(false)
 
 fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider) {
-    OPEN_AI -> {
+    OPENAI -> {
         val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
         val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
 
@@ -40,7 +40,7 @@ fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider)
             .build()
     }
 
-    ANTHROPIC, GEMINI, X_AI -> {
+    ANTHROPIC, GEMINI, XAI -> {
         noteOllamaRequired(provider)
         buildOllamaEmbeddingModel()
     }

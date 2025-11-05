@@ -11,7 +11,10 @@ import java.nio.charset.StandardCharsets
 
 class GitTools {
     @Tool("Unified diff of staged changes (git diff --cached)")
-    fun stagedDiff(args: List<String> = listOf("--no-color", "--unified=0")): String = exec(listOf("git", "diff", "--cached") + args)
+    fun stagedDiff(args: List<String> = listOf("--no-color", "--unified=0", "--diff-algorithm=minimal")): String {
+        val fullDiff = exec(listOf("git", "diff", "--cached") + args)
+        return preprocessDiff(fullDiff)
+    }
 
     @Tool("Concise git status (-sb)")
     fun status(): String = exec(listOf("git", "status", "-sb"))
@@ -44,6 +47,82 @@ class GitTools {
             }
 
         return execWithStdinOrThrow(cmd, message)
+    }
+
+    private fun preprocessDiff(diff: String): String {
+        val lines = diff.lines()
+        val result = mutableListOf<String>()
+        var currentFile: String? = null
+        var isNewFile = false
+        var isDeletedFile = false
+        var addedLines = 0
+        var deletedLines = 0
+        val contentLines = mutableListOf<String>()
+
+        fun flushCurrentFile() {
+            currentFile?.let { file ->
+                when {
+                    isNewFile -> result.add("new file: $file")
+                    isDeletedFile -> result.add("deleted file: $file")
+                    else -> {
+                        result.add("$file (+$addedLines -$deletedLines)")
+                        // For modified files, include some context but limit to 20 lines
+                        if (contentLines.size <= 20) {
+                            result.addAll(contentLines)
+                        } else {
+                            result.addAll(contentLines.take(10))
+                            result.add("... (${contentLines.size - 20} lines omitted) ...")
+                            result.addAll(contentLines.takeLast(10))
+                        }
+                    }
+                }
+            }
+        }
+
+        for (line in lines) {
+            when {
+                line.startsWith("diff --git") -> {
+                    flushCurrentFile()
+
+                    // Extract filename from "diff --git a/file b/file"
+                    currentFile = line.substringAfter("b/").takeIf { it.isNotBlank() }
+                    isNewFile = false
+                    isDeletedFile = false
+                    addedLines = 0
+                    deletedLines = 0
+                    contentLines.clear()
+                    contentLines.add(line)
+                }
+                line.startsWith("new file mode") -> {
+                    isNewFile = true
+                }
+                line.startsWith("deleted file mode") -> {
+                    isDeletedFile = true
+                }
+                line.startsWith("index ") || line.startsWith("---") || line.startsWith("+++") -> {
+                    if (!isNewFile && !isDeletedFile) contentLines.add(line)
+                }
+                line.startsWith("@@") -> {
+                    if (!isNewFile && !isDeletedFile) contentLines.add(line)
+                }
+                line.startsWith("+") && !line.startsWith("+++") -> {
+                    addedLines++
+                    if (!isNewFile && !isDeletedFile) contentLines.add(line)
+                }
+                line.startsWith("-") && !line.startsWith("---") -> {
+                    deletedLines++
+                    if (!isNewFile && !isDeletedFile) contentLines.add(line)
+                }
+                line.isNotBlank() -> {
+                    if (!isNewFile && !isDeletedFile) contentLines.add(line)
+                }
+            }
+        }
+
+        // Flush the last file
+        flushCurrentFile()
+
+        return result.joinToString("\n")
     }
 
     private fun exec(cmd: List<String>): String {

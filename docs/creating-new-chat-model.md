@@ -47,7 +47,7 @@ First, add your provider to the `ModelProvider` enum in `io.askimo.core.provider
 ```kotlin
 @Serializable
 enum class ModelProvider {
-    @SerialName("OPEN_AI") OPEN_AI,
+    @SerialName("OPENAI") OPENAI,
     @SerialName("OLLAMA") OLLAMA,
     @SerialName("YOUR_PROVIDER") YOUR_PROVIDER,  // Add your provider here
     @SerialName("UNKNOWN") UNKNOWN,

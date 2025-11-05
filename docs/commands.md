@@ -76,7 +76,7 @@ Display the current session parameters, including:
 **Example:**
 ```bash
 > :params --list
-Available parameter keys for gpt-4o (OPEN_AI):
+Available parameter keys for gpt-4o (OPENAI):
   model (String) – Model name to use (e.g., gpt-4, llama3)
   style (Enum(precise|balanced|creative)) – Output style (determinism vs. creativity)
   verbosity (Enum(short|normal|long)) – Controls response length/cost
@@ -121,7 +121,7 @@ Display the current Askimo configuration values.
 ```bash
 > :config
 🔧 Current configuration:
-  Provider:    OPEN_AI
+  Provider:    OPENAI
   Model:       gpt-4o
   Settings:
     apiKey:      sk-pr***

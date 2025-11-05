@@ -47,7 +47,7 @@ For handling common Ollama and LangChain4j issues:
 ```kotlin
 import io.askimo.core.util.RetryPresets
 
-RetryUtils.retry(RetryPresets.OLLAMA_TRANSIENT_ERRORS) {
+RetryUtils.retry(RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
     // Recipe execution or model operations
     executeRecipe()
 }

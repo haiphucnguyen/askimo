@@ -46,7 +46,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with OpenAI provider shows models or helpful message`() {
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -56,8 +56,8 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         // Without a valid API key, OpenAI might return no models
         assertTrue(
-            output.contains("Available models for provider 'open_ai'") ||
-                output.contains("⚠️ No models available for provider: open_ai"),
+            output.contains("Available models for provider 'openai'") ||
+                output.contains("⚠️ No models available for provider: openai"),
         )
         // Should always show the usage hint
         assertTrue(output.contains("💡 Use `:set-param model <modelName>` to choose"))
@@ -65,7 +65,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with OpenAI and no API key shows helpful guidance`() {
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -151,7 +151,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with xAI provider shows models or helpful message`() {
-        whenever(params.currentProvider) doReturn ModelProvider.X_AI
+        whenever(params.currentProvider) doReturn ModelProvider.XAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -160,8 +160,8 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
         val output = getOutput()
         assertTrue(
-            output.contains("Available models for provider 'x_ai'") ||
-                output.contains("⚠️ No models available for provider: x_ai"),
+            output.contains("Available models for provider 'xai'") ||
+                output.contains("⚠️ No models available for provider: xai"),
         )
         assertTrue(output.contains("💡 Use `:set-param model <modelName>` to choose"))
     }
@@ -180,7 +180,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle always shows usage hint`() {
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -197,7 +197,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle shows provider name in lowercase`() {
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -206,7 +206,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
         val output = getOutput()
         // Provider name should be lowercase in output
-        assertTrue(output.contains("open_ai"))
+        assertTrue(output.contains("openai"))
     }
 
     @Test
@@ -231,11 +231,11 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
     fun `handle with different providers shows correct provider names`() {
         val testCases =
             listOf(
-                ModelProvider.OPEN_AI to "open_ai",
+                ModelProvider.OPENAI to "openai",
                 ModelProvider.OLLAMA to "ollama",
                 ModelProvider.ANTHROPIC to "anthropic",
                 ModelProvider.GEMINI to "gemini",
-                ModelProvider.X_AI to "x_ai",
+                ModelProvider.XAI to "xai",
             )
 
         testCases.forEach { (provider, expectedName) ->
@@ -275,7 +275,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle shows emoji in output`() {
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
         whenever(params.providerSettings) doReturn mutableMapOf()
 
         val parsedLine = mockParsedLine(":models")
@@ -325,7 +325,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
 
         // Reset and test OpenAI guidance
         testOut.reset()
-        whenever(params.currentProvider) doReturn ModelProvider.OPEN_AI
+        whenever(params.currentProvider) doReturn ModelProvider.OPENAI
 
         parsedLine = mockParsedLine(":models")
         handler.handle(parsedLine)

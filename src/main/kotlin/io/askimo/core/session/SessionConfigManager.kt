@@ -11,7 +11,8 @@ import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 
 /**
  * Manages the persistence of session configuration with secure API key storage.
@@ -87,8 +88,8 @@ object SessionConfigManager {
             Files
                 .newBufferedWriter(
                     configPath,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING,
+                    CREATE,
+                    TRUNCATE_EXISTING,
                 ).use {
                     it.write(appJson.encodeToString(sanitizedParams))
                 }

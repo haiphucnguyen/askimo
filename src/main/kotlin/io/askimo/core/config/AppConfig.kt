@@ -31,8 +31,8 @@ data class PgVectorConfig(
 )
 
 data class EmbeddingConfig(
-    val maxCharsPerChunk: Int = 4000,
-    val chunkOverlap: Int = 200,
+    val maxCharsPerChunk: Int = 1500,
+    val chunkOverlap: Int = 150,
     val preferredDim: Int? = null,
 )
 

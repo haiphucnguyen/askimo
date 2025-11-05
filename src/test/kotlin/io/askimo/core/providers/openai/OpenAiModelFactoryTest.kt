@@ -22,27 +22,75 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class OpenAiModelFactoryTest {
 
-    @Test
-    @DisplayName("OpenAiModelFactory can stream responses from OpenAI API")
-    fun canCreateChatServiceAndStream() {
+    private fun createChatService(): ChatService {
         val apiKey = System.getenv("OPENAI_API_KEY")
             ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
 
         val settings = OpenAiSettings(apiKey = apiKey)
         val memory = MessageWindowChatMemory.withMaxMessages(10)
 
-        val chatService: ChatService =
-            OpenAiModelFactory().create(
-                model = "gpt-3.5-turbo",
-                settings = settings,
-                memory = memory,
-                retrievalAugmentor = null,
-            )
+        return OpenAiModelFactory().create(
+            model = "gpt-3.5-turbo",
+            settings = settings,
+            memory = memory,
+            retrievalAugmentor = null,
+        )
+    }
+
+    private fun sendPromptAndGetResponse(chatService: ChatService, prompt: String): String {
+        println("Sending prompt: '$prompt'")
+
+        val output = chatService.sendStreamingMessageWithCallback(prompt) { _ ->
+            print(".")
+        }.trim()
+
+        println("\nFinal output: '$output'")
+        return output
+    }
+
+    @Test
+    @DisplayName("OpenAiModelFactory can stream responses from OpenAI API")
+    fun canCreateChatServiceAndStream() {
+        val chatService = createChatService()
 
         val prompt = "Reply with a single short word."
-        val output = chatService.sendStreamingMessageWithCallback(prompt) { _ -> }.trim()
+        val output = sendPromptAndGetResponse(chatService, prompt)
 
         assertTrue(output.isNotBlank(), "Expected a non-empty response from OpenAI, but got blank: '$output'")
+    }
+
+    @Test
+    @DisplayName("OpenAI can call LocalFsTools countEntries function")
+    fun canCallCountEntriesTool() {
+        val chatService = createChatService()
+
+        // Prompt that should trigger the countEntries tool call
+        val prompt = "Use the countEntries tool to count files and directories in the current directory (\".\"). Give me the file count, directory count, and total size."
+
+        val output = sendPromptAndGetResponse(chatService, prompt)
+
+        // Verify that the AI actually used the tool and returned meaningful results
+        assertTrue(output.isNotBlank(), "Expected a non-empty response from OpenAI, but got blank: '$output'")
+
+        println("Analyzing output for tool usage indicators...")
+        println("Output length: ${output.length}")
+
+        // Check if the response contains indicators that the tool was called successfully
+        val outputLower = output.lowercase()
+        val hasFileInfo = outputLower.contains("file") || outputLower.contains("directory") || outputLower.contains("dir")
+        val hasCountInfo = outputLower.contains("count") || outputLower.matches(".*\\d+.*".toRegex())
+        val hasByteInfo = outputLower.contains("byte") || outputLower.contains("size")
+
+        println("Has file info: $hasFileInfo")
+        println("Has count info: $hasCountInfo")
+        println("Has byte info: $hasByteInfo")
+
+        val toolWasCalled = hasFileInfo || hasCountInfo || hasByteInfo
+
+        assertTrue(
+            toolWasCalled,
+            "Expected response to contain file/directory count information indicating tool was called, but got: '$output'",
+        )
     }
 
     @Test

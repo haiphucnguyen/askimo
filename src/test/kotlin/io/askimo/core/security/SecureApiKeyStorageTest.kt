@@ -36,7 +36,7 @@ class SecureApiKeyStorageTest {
         secureSessionManager = SecureSessionManager()
 
         // Clean up any existing test keys
-        KeychainManager.removeApiKey("open_ai")
+        KeychainManager.removeApiKey("openai")
 
         // Clean up encryption key file if it exists (now points to test directory)
         val keyPath = AskimoHome.encryptionKeyFile()
@@ -56,15 +56,15 @@ class SecureApiKeyStorageTest {
         // Create a session with a plain text API key
         val sessionParams = SessionParams()
         val openAiSettings = OpenAiSettings(apiKey = "sk-test-api-key-12345")
-        sessionParams.providerSettings[ModelProvider.OPEN_AI] = openAiSettings
+        sessionParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
 
         // Migrate to secure storage
         val migrationResult = secureSessionManager.migrateExistingApiKeys(sessionParams)
 
         // Verify migration was attempted
-        assertTrue(migrationResult.results.containsKey(ModelProvider.OPEN_AI))
+        assertTrue(migrationResult.results.containsKey(ModelProvider.OPENAI))
 
-        val result = migrationResult.results[ModelProvider.OPEN_AI]!!
+        val result = migrationResult.results[ModelProvider.OPENAI]!!
         assertTrue(result.success)
 
         // The API key should now be replaced with a placeholder or encrypted
@@ -80,16 +80,16 @@ class SecureApiKeyStorageTest {
         // Create a session with placeholder API key
         val sessionParams = SessionParams()
         val openAiSettings = OpenAiSettings(apiKey = "***keychain***")
-        sessionParams.providerSettings[ModelProvider.OPEN_AI] = openAiSettings
+        sessionParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
 
         // Store a key in keychain using the correct provider name
-        KeychainManager.storeApiKey("open_ai", "sk-actual-key-from-keychain")
+        KeychainManager.storeApiKey("openai", "sk-actual-key-from-keychain")
 
         // Load the secure session
         val secureSession = secureSessionManager.loadSecureSession(sessionParams)
 
         // The key should be loaded from keychain, not remain as placeholder
-        val loadedSettings = secureSession.providerSettings[ModelProvider.OPEN_AI] as OpenAiSettings
+        val loadedSettings = secureSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
         assertEquals("sk-actual-key-from-keychain", loadedSettings.apiKey)
     }
 
