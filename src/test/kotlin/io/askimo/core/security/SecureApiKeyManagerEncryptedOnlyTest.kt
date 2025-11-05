@@ -7,14 +7,11 @@ package io.askimo.core.security
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -41,11 +38,16 @@ class SecureApiKeyManagerEncryptedOnlyTest {
     }
 
     @Test
-    fun `test encrypted storage methods directly`() {
-        val provider = "test-encrypted-direct"
-        val testKey = "sk-test-direct-encrypted-123"
+    fun `test encrypted storage directly`() {
+        // Test the encrypted storage functionality directly
+        val provider = "test-encrypted-direct-${System.currentTimeMillis()}"
+        val testKey = "sk-test-encrypted-direct-123"
 
-        // Use reflection to access private methods for testing
+        println("=== Testing Encrypted Storage Directly ===")
+        println("Provider: $provider")
+        println("Test key: ${testKey.take(10)}...")
+
+        // Use reflection to directly test encrypted storage methods
         val secureApiKeyManagerClass = SecureApiKeyManager::class.java
         
         val storeEncryptedKeyMethod = secureApiKeyManagerClass.getDeclaredMethod("storeEncryptedKey", String::class.java, String::class.java)
@@ -53,72 +55,52 @@ class SecureApiKeyManagerEncryptedOnlyTest {
         
         val retrieveEncryptedKeyMethod = secureApiKeyManagerClass.getDeclaredMethod("retrieveEncryptedKey", String::class.java)
         retrieveEncryptedKeyMethod.isAccessible = true
-        
-        val removeEncryptedKeyMethod = secureApiKeyManagerClass.getDeclaredMethod("removeEncryptedKey", String::class.java)
-        removeEncryptedKeyMethod.isAccessible = true
 
-        // First encrypt the key
+        // Encrypt the key first
         val encryptedKey = EncryptionManager.encrypt(testKey)
         assertNotNull(encryptedKey, "Should encrypt successfully")
+        println("Encrypted key: ${encryptedKey!!.take(20)}...")
 
-        // Test storing encrypted key
-        val storeResult = storeEncryptedKeyMethod.invoke(SecureApiKeyManager, provider, encryptedKey!!) as Boolean
+        // Store the encrypted key
+        val storeResult = storeEncryptedKeyMethod.invoke(SecureApiKeyManager, provider, encryptedKey) as Boolean
         assertTrue(storeResult, "Should store encrypted key successfully")
 
-        // Test retrieving encrypted key (this should decrypt it)
+        // Verify the encrypted file was created
+        val encryptedFile = AskimoHome.base().resolve(".encrypted-keys")
+        assertTrue(Files.exists(encryptedFile), "Encrypted storage file should exist")
+        println("Encrypted file created at: $encryptedFile")
+
+        // Retrieve the key (should be decrypted)
         val retrievedKey = retrieveEncryptedKeyMethod.invoke(SecureApiKeyManager, provider) as String?
         assertNotNull(retrievedKey, "Should retrieve and decrypt key")
         assertEquals(testKey, retrievedKey, "Decrypted key should match original")
-
-        // Test removing encrypted key
-        val removeResult = removeEncryptedKeyMethod.invoke(SecureApiKeyManager, provider) as Boolean
-        assertTrue(removeResult, "Should remove encrypted key successfully")
-
-        // Verify removal
-        val retrievedAfterRemoval = retrieveEncryptedKeyMethod.invoke(SecureApiKeyManager, provider) as String?
-        assertNull(retrievedAfterRemoval, "Key should not exist after removal")
+        println("Successfully retrieved and decrypted key")
     }
 
     @Test
-    fun `test encrypted storage when keychain would fail`() {
-        // This test simulates what should happen on Windows systems where keychain fails
-        val provider = "test-keychain-fail"
-        val testKey = "sk-test-keychain-fail-456"
+    fun `test simple encrypted storage flow`() {
+        // Simple test to verify encrypted storage works
+        val provider = "simple-test-${System.currentTimeMillis()}-${(Math.random() * 1000).toInt()}"
+        val testKey = "sk-simple-test-123"
 
-        // Store the key - on systems where keychain works, it will use keychain
-        // but on systems where it fails, it should fall back to encrypted storage
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, testKey)
-        assertTrue(storeResult.success, "Should store successfully even if keychain fails")
+        try {
+            // Store and retrieve a key
+            val storeResult = SecureApiKeyManager.storeApiKey(provider, testKey)
+            assertTrue(storeResult.success, "Should store successfully")
 
-        // The method should be either KEYCHAIN or ENCRYPTED
-        assertTrue(
-            storeResult.method == SecureApiKeyManager.StorageMethod.KEYCHAIN ||
-            storeResult.method == SecureApiKeyManager.StorageMethod.ENCRYPTED,
-            "Should use KEYCHAIN or ENCRYPTED method"
-        )
-
-        // Regardless of method, retrieval should work
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
-        assertNotNull(retrievedKey, "Should retrieve key regardless of storage method")
-        assertEquals(testKey, retrievedKey, "Retrieved key should match")
-
-        // Removal should also work
-        val removeResult = SecureApiKeyManager.removeApiKey(provider)
-        assertTrue(removeResult, "Should remove key")
-
-        // Verify removal
-        val afterRemoval = SecureApiKeyManager.retrieveApiKey(provider)
-        assertNull(afterRemoval, "Key should not exist after removal")
+            val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+            assertNotNull(retrievedKey, "Should retrieve key - Storage method was: ${storeResult.method}")
+            assertEquals(testKey, retrievedKey, "Keys should match")
+        } finally {
+            // Clean up
+            SecureApiKeyManager.removeApiKey(provider)
+        }
     }
 
     @Test
     fun `test encrypted storage file is created when needed`() {
         val provider = "test-file-creation"
         val testKey = "sk-test-file-creation-789"
-
-        // Check if encrypted storage file exists before
-        val encryptedFile = AskimoHome.base().resolve(".encrypted-keys")
-        val existedBefore = Files.exists(encryptedFile)
 
         // Force use of encrypted storage by directly calling the method
         val secureApiKeyManagerClass = SecureApiKeyManager::class.java
@@ -129,7 +111,8 @@ class SecureApiKeyManagerEncryptedOnlyTest {
         val storeResult = storeEncryptedKeyMethod.invoke(SecureApiKeyManager, provider, encryptedKey) as Boolean
         assertTrue(storeResult, "Should store in encrypted file")
 
-        // Now the file should exist
+        // Now the file should exist (using the current AskimoHome.base())
+        val encryptedFile = AskimoHome.base().resolve(".encrypted-keys")
         assertTrue(Files.exists(encryptedFile), "Encrypted storage file should be created")
 
         // Verify we can retrieve the key

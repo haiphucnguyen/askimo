@@ -19,7 +19,7 @@ import java.util.Properties
  * Provides warnings when API keys are stored insecurely.
  */
 object SecureApiKeyManager {
-    private val encryptedStorageFile: Path by lazy { AskimoHome.base().resolve(".encrypted-keys") }
+    private fun encryptedStorageFile(): Path = AskimoHome.base().resolve(".encrypted-keys")
 
     enum class StorageMethod {
         KEYCHAIN,
@@ -169,8 +169,9 @@ object SecureApiKeyManager {
      */
     private fun loadEncryptedStorage(): Properties {
         val properties = Properties()
-        if (Files.exists(encryptedStorageFile)) {
-            Files.newInputStream(encryptedStorageFile).use { input ->
+        val storageFile = encryptedStorageFile()
+        if (Files.exists(storageFile)) {
+            Files.newInputStream(storageFile).use { input ->
                 properties.load(input)
             }
         }
@@ -181,17 +182,18 @@ object SecureApiKeyManager {
      * Saves the encrypted storage properties file with restrictive permissions.
      */
     private fun saveEncryptedStorage(properties: Properties) {
+        val storageFile = encryptedStorageFile()
         // Create directory if it doesn't exist
-        Files.createDirectories(encryptedStorageFile.parent)
+        Files.createDirectories(storageFile.parent)
 
         // Save the properties
-        Files.newOutputStream(encryptedStorageFile).use { output ->
+        Files.newOutputStream(storageFile).use { output ->
             properties.store(output, "Encrypted API Keys - Do Not Edit")
         }
 
         // Set restrictive permissions (owner only)
         try {
-            val file = encryptedStorageFile.toFile()
+            val file = storageFile.toFile()
             file.setReadable(false, false)
             file.setWritable(false, false)
             file.setExecutable(false, false)

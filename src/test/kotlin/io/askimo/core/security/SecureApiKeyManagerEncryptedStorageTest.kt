@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.nio.file.Files
@@ -20,6 +21,13 @@ class SecureApiKeyManagerEncryptedStorageTest {
 
     private lateinit var testBaseScope: AskimoHome.TestBaseScope
     private lateinit var testDir: Path
+
+    @BeforeEach
+    fun setUp() {
+        // Set up isolated test environment for each test
+        testDir = Files.createTempDirectory("askimo-test")
+        testBaseScope = AskimoHome.withTestBase(testDir)
+    }
 
     @AfterEach
     fun tearDown() {
@@ -34,15 +42,9 @@ class SecureApiKeyManagerEncryptedStorageTest {
 
     @Test
     fun `test encrypted storage when keychain fails`() {
-        // Set up isolated test environment
-        testDir = Files.createTempDirectory("askimo-test")
-        testBaseScope = AskimoHome.withTestBase(testDir)
-
-        val provider = "test-provider-encrypted"
+        val provider = "test-provider-encrypted-${System.currentTimeMillis()}"
         val testKey = "sk-test-encrypted-key-12345"
 
-        // First, let's test the direct encrypted storage methods
-        // by examining what happens when keychain is unavailable
 
         // On systems where keychain might not work (like CI environments),
         // the SecureApiKeyManager should fall back to encrypted storage
@@ -65,11 +67,7 @@ class SecureApiKeyManagerEncryptedStorageTest {
 
     @Test
     fun `test encrypted storage file creation and structure`() {
-        // Set up isolated test environment
-        testDir = Files.createTempDirectory("askimo-test")
-        testBaseScope = AskimoHome.withTestBase(testDir)
-
-        val provider = "test-provider-file"
+        val provider = "test-provider-file-${System.currentTimeMillis()}"
         val testKey = "sk-test-file-key-67890"
 
         // Store a key to trigger file creation
@@ -101,42 +99,54 @@ class SecureApiKeyManagerEncryptedStorageTest {
 
     @Test
     fun `test multiple providers in encrypted storage`() {
-        // Set up isolated test environment
-        testDir = Files.createTempDirectory("askimo-test")
-        testBaseScope = AskimoHome.withTestBase(testDir)
-
+        val timestamp = System.currentTimeMillis()
         val providers = listOf(
-            "openai" to "sk-openai-key-123",
-            "anthropic" to "sk-ant-key-456",
-            "gemini" to "ai-gemini-key-789"
+            "openai-${timestamp}" to "sk-openai-key-123",
+            "anthropic-${timestamp}" to "sk-ant-key-456",
+            "gemini-${timestamp}" to "ai-gemini-key-789"
         )
+
+        println("=== Multiple Providers Test ===")
+        println("Test directory: $testDir")
+        println("AskimoHome base: ${AskimoHome.base()}")
 
         // Store multiple keys
         providers.forEach { (provider, key) ->
+            println("Storing key for provider: $provider")
             val result = SecureApiKeyManager.storeApiKey(provider, key)
+            println("Store result for $provider: $result")
             assertTrue(result.success, "Should store $provider key successfully")
+        }
+
+        // Check if encrypted file was created
+        val encryptedFile = AskimoHome.base().resolve(".encrypted-keys")
+        println("Encrypted file exists: ${Files.exists(encryptedFile)}")
+        if (Files.exists(encryptedFile)) {
+            println("Encrypted file path: $encryptedFile")
         }
 
         // Retrieve and verify all keys
         providers.forEach { (provider, expectedKey) ->
+            println("Retrieving key for provider: $provider")
             val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+            println("Retrieved key for $provider: ${if (retrievedKey != null) "***found***" else "null"}")
             assertNotNull(retrievedKey, "Should retrieve $provider key")
             assertEquals(expectedKey, retrievedKey, "$provider key should match")
         }
 
         // Remove one key and verify others remain
-        val removeResult = SecureApiKeyManager.removeApiKey("openai")
+        val removeResult = SecureApiKeyManager.removeApiKey("openai-${timestamp}")
         assertTrue(removeResult, "Should remove openai key")
 
         // Verify openai key is gone
-        val openaiKey = SecureApiKeyManager.retrieveApiKey("openai")
+        val openaiKey = SecureApiKeyManager.retrieveApiKey("openai-${timestamp}")
         assertNull(openaiKey, "OpenAI key should be removed")
 
         // Verify other keys still exist
-        val anthropicKey = SecureApiKeyManager.retrieveApiKey("anthropic")
+        val anthropicKey = SecureApiKeyManager.retrieveApiKey("anthropic-${timestamp}")
         assertEquals("sk-ant-key-456", anthropicKey, "Anthropic key should still exist")
 
-        val geminiKey = SecureApiKeyManager.retrieveApiKey("gemini")
+        val geminiKey = SecureApiKeyManager.retrieveApiKey("gemini-${timestamp}")
         assertEquals("ai-gemini-key-789", geminiKey, "Gemini key should still exist")
     }
 }
