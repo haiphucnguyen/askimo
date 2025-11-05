@@ -154,78 +154,100 @@ object KeychainManager {
     ): Boolean {
         // Try secret-tool first (libsecret)
         if (isCommandAvailable("secret-tool")) {
-            val process =
-                ProcessBuilder(
-                    "secret-tool",
-                    "store",
-                    "--label",
-                    "Askimo API Key for $provider",
-                    "service",
-                    SERVICE_NAME,
-                    "account",
-                    "askimo-$provider",
-                ).start()
+            try {
+                val process =
+                    ProcessBuilder(
+                        "secret-tool",
+                        "store",
+                        "--label",
+                        "Askimo API Key for $provider",
+                        "service",
+                        SERVICE_NAME,
+                        "account",
+                        "askimo-$provider",
+                    ).start()
 
-            process.outputStream.bufferedWriter().use { writer ->
-                writer.write(apiKey)
-                writer.flush()
+                process.outputStream.bufferedWriter().use { writer ->
+                    writer.write(apiKey)
+                    writer.flush()
+                }
+
+                val exitCode = process.waitFor()
+                return exitCode == 0
+            } catch (e: Exception) {
+                debug("Failed to store API key with secret-tool: ${e.message}")
+                return false
             }
-
-            val exitCode = process.waitFor()
-            return exitCode == 0
         }
 
         // Fallback to gnome-keyring if available
         if (isCommandAvailable("gnome-keyring-daemon")) {
             // Implementation for gnome-keyring would go here
             // For now, return false to use encrypted fallback
+            debug("gnome-keyring-daemon available but not implemented")
+            return false
         }
 
+        debug("No Linux keyring implementation available (secret-tool not found)")
         return false
     }
 
     private fun retrieveLinuxKeyring(provider: String): String? {
         if (isCommandAvailable("secret-tool")) {
-            val process =
-                ProcessBuilder(
-                    "secret-tool",
-                    "lookup",
-                    "service",
-                    SERVICE_NAME,
-                    "account",
-                    "askimo-$provider",
-                ).start()
+            try {
+                val process =
+                    ProcessBuilder(
+                        "secret-tool",
+                        "lookup",
+                        "service",
+                        SERVICE_NAME,
+                        "account",
+                        "askimo-$provider",
+                    ).start()
 
-            val exitCode = process.waitFor()
-            return if (exitCode == 0) {
-                process.inputStream
-                    .bufferedReader()
-                    .readText()
-                    .trim()
-            } else {
-                null
+                val exitCode = process.waitFor()
+                return if (exitCode == 0) {
+                    process.inputStream
+                        .bufferedReader()
+                        .readText()
+                        .trim()
+                        .takeIf { it.isNotBlank() }
+                } else {
+                    debug("secret-tool lookup failed with exit code $exitCode for provider $provider")
+                    null
+                }
+            } catch (e: Exception) {
+                debug("Failed to retrieve API key with secret-tool: ${e.message}")
+                return null
             }
         }
 
+        debug("secret-tool not available for retrieving API key")
         return null
     }
 
     private fun removeLinuxKeyring(provider: String): Boolean {
         if (isCommandAvailable("secret-tool")) {
-            val process =
-                ProcessBuilder(
-                    "secret-tool",
-                    "clear",
-                    "service",
-                    SERVICE_NAME,
-                    "account",
-                    "askimo-$provider",
-                ).start()
+            try {
+                val process =
+                    ProcessBuilder(
+                        "secret-tool",
+                        "clear",
+                        "service",
+                        SERVICE_NAME,
+                        "account",
+                        "askimo-$provider",
+                    ).start()
 
-            val exitCode = process.waitFor()
-            return exitCode == 0
+                val exitCode = process.waitFor()
+                return exitCode == 0
+            } catch (e: Exception) {
+                debug("Failed to remove API key with secret-tool: ${e.message}")
+                return false
+            }
         }
 
+        debug("secret-tool not available for removing API key")
         return false
     }
 
@@ -234,55 +256,121 @@ object KeychainManager {
         apiKey: String,
     ): Boolean {
         val target = "$SERVICE_NAME:askimo-$provider"
-        val process =
-            ProcessBuilder(
-                "cmdkey",
-                "/generic:$target",
-                "/user:askimo",
-                "/pass:$apiKey",
-            ).start()
+
+        // Use PowerShell to store in Windows Credential Manager
+        val powershellScript = """
+            try {
+                [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime] | Out-Null
+                ${'$'}vault = New-Object Windows.Security.Credentials.PasswordVault
+                
+                # Remove existing credential if it exists
+                try {
+                    ${'$'}existing = ${'$'}vault.Retrieve("$target", "askimo")
+                    ${'$'}vault.Remove(${'$'}existing)
+                } catch {
+                    # Credential doesn't exist, which is fine
+                }
+                
+                # Add new credential
+                ${'$'}cred = New-Object Windows.Security.Credentials.PasswordCredential
+                ${'$'}cred.Resource = "$target"
+                ${'$'}cred.UserName = "askimo"
+                ${'$'}cred.Password = "$apiKey"
+                ${'$'}vault.Add(${'$'}cred)
+                
+                Write-Output "Success"
+            } catch {
+                Write-Error ${'$'}_.Exception.Message
+                exit 1
+            }
+        """.trimIndent()
+
+        val process = ProcessBuilder(
+            "powershell.exe",
+            "-WindowStyle", "Hidden",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", powershellScript
+        ).start()
 
         val exitCode = process.waitFor()
         return exitCode == 0
     }
 
     private fun retrieveWindowsCredentialManager(provider: String): String? {
-        // Windows implementation will use a native solution using the Windows Data Protection API (DPAPI)
-        // via a helper executable to avoid complex credential access from PowerShell
-        
+        // Windows cmdkey cannot retrieve passwords, only store/delete them
+        // We need to use PowerShell with Windows Credential Manager API
         val target = "$SERVICE_NAME:askimo-$provider"
+
+        // Use PowerShell to retrieve the credential
+        val powershellScript = """
+            try {
+                [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime] | Out-Null
+                ${'$'}vault = New-Object Windows.Security.Credentials.PasswordVault
+                ${'$'}cred = ${'$'}vault.Retrieve("$target", "askimo")
+                ${'$'}cred.RetrievePassword()
+                Write-Output ${'$'}cred.Password
+            } catch {
+                # Credential not found or error occurred
+                exit 1
+            }
+        """.trimIndent()
+
         val process = ProcessBuilder(
-            "cmdkey",
-            "/list:$target"
+            "powershell.exe",
+            "-WindowStyle", "Hidden",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", powershellScript
         ).start()
         
-        val output = process.inputStream.bufferedReader().readText()
+        val output = process.inputStream.bufferedReader().readText().trim()
         val exitCode = process.waitFor()
         
-        if (exitCode != 0) {
-            return null
+        return if (exitCode == 0 && output.isNotBlank()) {
+            output
+        } else {
+            // Fallback: check if credential exists using cmdkey
+            val checkProcess = ProcessBuilder("cmdkey", "/list:$target").start()
+            val checkExitCode = checkProcess.waitFor()
+
+            if (checkExitCode == 0) {
+                // Credential exists but we can't retrieve it
+                // This is a limitation of cmdkey - it can store but not retrieve
+                // For tests on Windows, we'll need to use a different approach
+                debug("Credential exists in Windows Credential Manager but cannot be retrieved via cmdkey")
+            }
+            null
         }
-        
-        // Parse the cmdkey output to find the stored password
-        // Sample output format:
-        //    Target: askimo-cli:askimo-openai
-        //    Type: Generic
-        //    User: askimo
-        //    Password: ****
-        val match = """(?s).*Target:\s*$target.*?Password:\s*([^\r\n]*)""".toRegex().find(output)
-        return match?.groupValues?.get(1)?.takeIf { it != "****" }
     }
 
     private fun removeWindowsCredentialManager(provider: String): Boolean {
         val target = "$SERVICE_NAME:askimo-$provider"
-        val process =
-            ProcessBuilder(
-                "cmdkey",
-                "/delete:$target",
-            ).start()
 
+        // Use PowerShell to remove from Windows Credential Manager
+        val powershellScript = """
+            try {
+                [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime] | Out-Null
+                ${'$'}vault = New-Object Windows.Security.Credentials.PasswordVault
+                ${'$'}cred = ${'$'}vault.Retrieve("$target", "askimo")
+                ${'$'}vault.Remove(${'$'}cred)
+                Write-Output "Success"
+            } catch {
+                # Credential not found or already removed
+                Write-Output "NotFound"
+            }
+        """.trimIndent()
+
+        val process = ProcessBuilder(
+            "powershell.exe",
+            "-WindowStyle", "Hidden",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", powershellScript
+        ).start()
+
+        val output = process.inputStream.bufferedReader().readText().trim()
         val exitCode = process.waitFor()
-        return exitCode == 0
+
+        // Return true if removed successfully or if credential didn't exist
+        return exitCode == 0 && (output.contains("Success") || output.contains("NotFound"))
     }
 
     private fun getOperatingSystem(): OperatingSystem {

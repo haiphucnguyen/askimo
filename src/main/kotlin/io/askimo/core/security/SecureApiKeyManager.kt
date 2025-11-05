@@ -74,9 +74,11 @@ object SecureApiKeyManager {
         // Try keychain first
         KeychainManager.retrieveApiKey(provider)?.let { return it }
 
-        // Try to find encrypted version in legacy storage
-        // This would require integration with the existing session storage
-        // For now, return null to indicate not found in secure storage
+        // Note: Encrypted storage fallback is handled by SecureSessionManager
+        // during session loading, not here. This method only handles keychain retrieval.
+        // The encrypted fallback requires access to the session configuration which
+        // is not available at this layer.
+
         return null
     }
 
