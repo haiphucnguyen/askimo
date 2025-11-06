@@ -4,8 +4,10 @@
  */
 package io.askimo.core.recipes
 
+import io.askimo.tools.fs.LocalFsTools
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -16,6 +18,11 @@ import kotlin.test.assertTrue
 class ToolRegistryTest {
     @TempDir
     lateinit var tempDir: Path
+
+    @BeforeEach
+    fun setUp() {
+        LocalFsTools.setTestRoot(tempDir)
+    }
 
     @Test
     fun `defaults include git and io tools with expected keys`() {
@@ -53,7 +60,7 @@ class ToolRegistryTest {
             assertThrows(IllegalStateException::class.java) {
                 reg.invoke("missing", null)
             }
-        // Error message should include available keys
+
         assertContains(ex.message ?: "", "Tool not found or not allowed: missing")
         assertContains(ex.message ?: "", "Available:")
         assertContains(ex.message ?: "", "writeFile")
@@ -76,6 +83,6 @@ class ToolRegistryTest {
         val missingPath = tempDir.resolve("missing.txt").toAbsolutePath().toString()
 
         val result = reg.invoke("readFile", arrayOf(missingPath)) as String
-        assertTrue(result.startsWith("Error: File not found"))
+        assertTrue(result.startsWith("Error: Path not found"))
     }
 }

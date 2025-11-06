@@ -525,7 +525,7 @@ class LocalFsToolsTest {
 
         // Test reading non-existent file
         val result2 = LocalFsTools.readFile(tmp.resolve("nonexistent.txt").toString())
-        assertTrue(result2.startsWith("Error: File not found"))
+        assertTrue(result2.startsWith("Error: Path not found"))
 
         // Test reading directory instead of file
         val dir = tmp.resolve("directory").apply { createDirectories() }

@@ -1,0 +1,41 @@
+name: http_access_analyze
+version: 1
+description: "Analyze HTTP access logs and generate a summary report"
+
+allowedTools:
+  - readFile
+  - writeFile
+
+vars:
+  log_content:
+    tool: readFile
+    args: ["{{arg1}}"]
+
+system: |
+  You are a log analysis expert. Analyze the HTTP access log data and generate a comprehensive summary report.
+  
+  Your analysis should include:
+  1. Total number of requests
+  2. Status code distribution (200, 404, 500, etc.)
+  3. Most frequently accessed endpoints
+  4. Error rate percentage
+  5. Top IP addresses by request count
+  6. Any suspicious patterns or anomalies
+  
+  Output MUST be a well-formatted markdown report.
+
+userTemplate: |
+  Analyze the following HTTP access log:
+  
+  ====BEGIN_LOG====
+  {{log_content}}
+  ====END_LOG====
+
+postActions:
+  - call:
+      tool: writeFile
+      args:
+        path: "{{arg2}}"
+        content: "{{output}}"
+
+defaults: {}

@@ -35,14 +35,19 @@ object LocalFsTools {
 
     private fun expandHome(raw: String): Path = AskimoHome.expandTilde(raw)
 
-    /** Resolve "~" and relative paths (relative to CWD), normalize, and ensure under allowedRoot. */
-    private fun resolveAndGuard(raw: String): Path {
+    /**
+     * Resolve "~" and relative paths (relative to CWD), normalize, and ensure under allowedRoot.
+     * @param requireExists if true, validates that the path exists and is readable (for read operations)
+     */
+    private fun resolveAndGuard(raw: String, requireExists: Boolean = true): Path {
         val p0 = expandHome(raw)
         val abs = if (p0.isAbsolute) p0 else cwd.resolve(p0)
         val norm = abs.normalize().toAbsolutePath()
         require(norm.startsWith(allowedRoot)) { "Path escapes allowed root: $norm" }
-        require(Files.exists(norm)) { "Path not found: $norm" }
-        require(Files.isReadable(norm)) { "Path not readable: $norm" }
+        if (requireExists) {
+            require(Files.exists(norm)) { "Path not found: $norm" }
+            require(Files.isReadable(norm)) { "Path not readable: $norm" }
+        }
         return norm
     }
 
@@ -724,22 +729,29 @@ object LocalFsTools {
         path: String,
         content: String,
     ): String {
-        val p = Paths.get(path)
-        Files.createDirectories(p.toAbsolutePath().parent)
-        Files.writeString(p, content)
-        return "wrote:\n${p.toAbsolutePath()}"
+        try {
+            val p = resolveAndGuard(path, requireExists = false)
+            p.parent?.let { Files.createDirectories(it) }
+            Files.writeString(p, content)
+            return "wrote:\n${p.toAbsolutePath()}"
+        } catch (e: Exception) {
+            return "Error writing file: ${e::class.simpleName}: ${e.message}\nPath: $path\nCWD: $cwd"
+        }
     }
 
     @Tool("Read text file from path")
     fun readFile(path: String): String {
-        val p = Paths.get(path)
-        if (!Files.exists(p)) {
-            return "Error: File not found at $path"
+        return try {
+            val p = resolveAndGuard(path)
+            if (!Files.isRegularFile(p)) {
+                return "Error: Path is not a regular file: $path"
+            }
+            Files.readString(p)
+        } catch (e: IllegalArgumentException) {
+            "Error: ${e.message}"
+        } catch (e: Exception) {
+            "Error: ${e::class.simpleName}: ${e.message}"
         }
-        if (!Files.isRegularFile(p)) {
-            return "Error: Path is not a regular file: $path"
-        }
-        return Files.readString(p)
     }
 
     /**

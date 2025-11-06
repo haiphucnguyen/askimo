@@ -2130,6 +2130,16 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.providers.HasApiKey",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.providers.ProviderSettings",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.providers.anthropic.AnthropicModelFactoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2386,7 +2396,8 @@
       {
         "name": "invoke works for IoTools writeFile using array args",
         "parameterTypes": []
-      }
+      },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -2602,6 +2613,12 @@
     ]
   },
   {
+    "name": "io.askimo.core.security.SecureApiKeyStorageTest$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.security.SecureSessionManagerTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2615,6 +2632,7 @@
       { "name": "testCorruptedEncryptedApiKey", "parameterTypes": [] },
       { "name": "testEmptySessionParams", "parameterTypes": [] },
       { "name": "testEncryptedApiKeyHandling", "parameterTypes": [] },
+      { "name": "testKeychainOperationsDirectly", "parameterTypes": [] },
       { "name": "testKeychainPlaceholderHandling", "parameterTypes": [] },
       { "name": "testLoadSessionWithEmptyApiKeys", "parameterTypes": [] },
       { "name": "testMigrateExistingApiKeys", "parameterTypes": [] },
@@ -2626,6 +2644,54 @@
       { "name": "testSessionParamsCopyBehavior", "parameterTypes": [] },
       { "name": "testSkipMigrationForSecureKeys", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "io.askimo.core.security.TestModelProvider",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestProviderSettings",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestProviderSettings$$serializer",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestProviderSettings$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestSecureSessionManager",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestSecureSessionManager$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestSecureSessionManager$MigrationResult",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.TestSecureSessionManager$WhenMappings",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.core.session.ChatSessionRepositoryIT",
@@ -2881,7 +2947,8 @@
     "name": "java.io.Serializable",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.AutoCloseable",
@@ -2932,7 +2999,9 @@
   },
   {
     "name": "java.lang.Comparable",
-    "queryAllDeclaredMethods": true
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.Double",
@@ -2942,7 +3011,9 @@
   },
   {
     "name": "java.lang.Enum",
-    "queryAllDeclaredMethods": true
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.Exception",
@@ -3127,7 +3198,9 @@
   },
   {
     "name": "java.lang.constant.Constable",
-    "queryAllDeclaredMethods": true
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.constant.ConstantDesc",
@@ -3862,6 +3935,26 @@
     ]
   },
   {
+    "name": "kotlinx.serialization.DeserializationStrategy",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlinx.serialization.KSerializer",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlinx.serialization.SerializationStrategy",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlinx.serialization.internal.GeneratedSerializer",
+    "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "org.jline.reader.ParsedLine",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3878,7 +3971,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$VfPSvkHA",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$bf7ZmqYD",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
