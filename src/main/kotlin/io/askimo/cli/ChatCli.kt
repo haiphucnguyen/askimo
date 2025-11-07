@@ -19,6 +19,7 @@ import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ListRecipesCommandHandler
 import io.askimo.cli.commands.ListSessionsCommandHandler
+import io.askimo.cli.commands.ListToolsCommandHandler
 import io.askimo.cli.commands.ModelsCommandHandler
 import io.askimo.cli.commands.NewSessionCommandHandler
 import io.askimo.cli.commands.ParamsCommandHandler
@@ -69,8 +70,8 @@ fun main(args: Array<String>) {
         },
     )
 
-    // Create command handlers for non-interactive mode (excluding interactive-only commands)
-    val commandHandlers: List<CommandHandler> =
+    // Shared command handlers available in both modes
+    val sharedCommandHandlers: List<CommandHandler> =
         listOf(
             HelpCommandHandler(),
             ConfigCommandHandler(session),
@@ -79,20 +80,25 @@ fun main(args: Array<String>) {
             ModelsCommandHandler(session),
             ParamsCommandHandler(session),
             SetParamCommandHandler(session),
-            CreateRecipeCommandHandler(),
-            ListRecipesCommandHandler(),
-            DeleteRecipeCommandHandler(),
+            ListToolsCommandHandler(),
             VersionDisplayCommandHandler(),
         )
+
+    // Non-interactive mode command handlers (shared + non-interactive only)
+    val nonInteractiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
+        CreateRecipeCommandHandler(),
+        ListRecipesCommandHandler(),
+        DeleteRecipeCommandHandler(),
+    )
 
     // Helper function to convert interactive keyword to non-interactive flag
     fun keywordToFlag(keyword: String): String = "--" + keyword.removePrefix(":")
 
-    // Set up help command with all available commands for both interactive and non-interactive modes
-    (commandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(commandHandlers)
+    // Set up help command with non-interactive commands
+    (nonInteractiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(nonInteractiveCommandHandlers)
 
     // Check for non-interactive commands
-    for (handler in commandHandlers) {
+    for (handler in nonInteractiveCommandHandlers) {
         val flag = keywordToFlag(handler.keyword)
 
         if (args.any { it == flag }) {
@@ -199,8 +205,8 @@ fun main(args: Array<String>) {
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
-            // Create command handlers for interactive mode (includes all commands)
-            val interactiveCommandHandlers: List<CommandHandler> = commandHandlers + listOf(
+            // Create command handlers for interactive mode (shared + interactive-only commands)
+            val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
                 CopyCommandHandler(session),
                 ClearMemoryCommandHandler(session),
                 ListProjectsCommandHandler(),

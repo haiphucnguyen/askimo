@@ -143,55 +143,9 @@ git diff | askimo -p "Summarize these changes"
 ls -la | askimo -p "Explain these file permissions"
 ```
 
-### 📋 Command Reference
+### 📋 Command Reference & Quick Example
 
-All commands work in both modes - just use `:command` for interactive or `--command` for non-interactive:
-
-| Interactive Mode    | Non-Interactive Mode     | Description                                                                                                 | Example Usage                                      |
-|-------------------|--------------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
-| `:help`           | `--help`                 | Show all available commands                                                                                 | `:help` or `askimo --help`                       |
-| `:version`        | `--version`              | Show detailed version and build information                                                                 | `:version` or `askimo --version`                 |
-| N/A               | `-p, --prompt`           | Send a single chat message without entering interactive mode (supports stdin)                              | `askimo -p "Hello"` or `echo "code" \| askimo -p "Explain"`  |
-| `:set-param`      | `--set-param`            | Set a parameter for the current provider                                                                    | `:set-param style creative`                       |
-| `:params`         | `--params`               | View current session parameters                                                                             | `:params` or `askimo --params`                   |
-| `:config`         | `--config`               | Show the current provider, model, and settings                                                              | `:config` or `askimo --config`                   |
-| `:providers`      | `--providers`            | List all supported AI providers                                                                             | `:providers` or `askimo --providers`             |
-| `:set-provider`   | `--set-provider`         | Switch to a different AI provider                                                                           | `:set-provider ollama` or `askimo --set-provider ollama` |
-| `:models`         | `--models`               | List available models for the current provider                                                              | `:models` or `askimo --models`                   |
-| `:copy`           | `--copy`                 | Copy the last response to the clipboard                                                                     | `:copy`                                           |
-| `:clear`          | `--clear`                | Clear the chat history for the current session                                                              | `:clear`                                          |
-| `:create-project` | `--create-project`       | Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder                      | `:create-project -n myapp -d /path/to/folder`     |
-| `:projects`       | `--projects`             | List all saved Askimo projects                                                                              | `:projects` or `askimo --projects`               |
-| `:use-project`    | `--use-project`          | Activate a saved project (sets scope and enables RAG)                                                       | `:use-project myapp`                             |
-| `:delete-project` | `--delete-project`       | Delete a saved project: removes it from ~/.askimo/projects.json and drops its pgvector embedding table. Use `--all` to delete all projects      | `:delete-project myapp` or `:delete-project --all`                           |
-| `:create-recipe`  | `--create-recipe`        | Create a provider-agnostic recipe from a YAML template                                                      | `:create-recipe myrecipe --template recipe.yml` or `askimo --create-recipe myrecipe --template recipe.yml` |
-| `:recipes`        | `--recipes`              | List all registered recipes in ~/.askimo/recipes                                                            | `:recipes` or `askimo --recipes`                 |
-| `:delete-recipe`  | `--delete-recipe`        | Delete a registered recipe from ~/.askimo/recipes. Use `--all` to delete all recipes                                                           | `:delete-recipe myrecipe` or `:delete-recipe --all`                         |
-| `:exit`           | N/A                      | Exit the Askimo REPL (interactive mode only)                                                                | `:exit`                                           |
-
-### 💡 Quick Examples
-
-**Interactive Mode:**
-```bash
-$ askimo
-askimo> :providers
-askimo> :set-provider openai  
-askimo> :config
-askimo> What is TypeScript?
-```
-
-**Non-Interactive Mode:**
-```bash
-$ askimo --providers
-$ askimo --set-provider openai
-$ askimo --config
-$ askimo -p "What is TypeScript?"
-$ echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
-```
-
-➡ **[View the full command reference »](docs/commands.md)**  
-Includes detailed usage, options, and examples for each command.
-
+Askimo supports a rich set of commands for both interactive and non-interactive usage. For a full list of commands, usage details, and examples, please refer to [docs/commands.md](docs/commands.md).
 
 > 💡 Note: Some providers (such as OpenAI, X AI, etc.) require an API key.  
 > Make sure you create and configure the appropriate key from your provider’s account dashboard before using them.

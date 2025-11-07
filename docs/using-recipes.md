@@ -8,13 +8,88 @@ description: Learn how to create, list, delete, and run recipes in Askimo CLI us
 
 Recipes are a key feature of Askimo, designed to automate repetitive tasks and enable advanced customization. With recipes, you can define reusable workflows, create custom prompts, and parameterize both system and user messages to fit your needs.
 
+> **Important:** Recipe management and execution commands (create, list, delete, run) are **only available in non-interactive mode** using CLI flags (`--create-recipe`, `--recipes`, `--delete-recipe`, `-r`).
+
 ## Why Use Recipes?
-- **Automate Repetitive Tasks:** Recipes let you save time by automating common actions, such as summarizing files, generating commit messages, or extracting information from documents.
-- **Custom Prompts and Parameters:** You can create recipes with parameters, allowing users to customize the behavior, input, and output of each recipe. This makes recipes highly flexible for different scenarios.
-- **Consistent Workflows:** Recipes ensure that tasks are performed consistently, following your preferred format and rules.
+- **Automate Repetitive Tasks:** Save time by automating common actions, such as summarizing files, generating commit messages, or extracting information from documents.
+- **Custom Prompts and Parameters:** Recipes can have parameters, allowing users to customize behavior, input, and output.
+- **Consistent Workflows:** Ensure tasks are performed consistently, following your preferred format and rules.
+
+## Quick Reference: Recipe Operations
+
+| Operation           | Non-Interactive Mode         |
+|---------------------|------------------------------|
+| Create recipe       | ✅ `askimo --create-recipe`   |
+| List recipes        | ✅ `askimo --recipes`         |
+| Delete recipe       | ✅ `askimo --delete-recipe`   |
+| Run recipe          | ✅ `askimo -r recipe args`    |
+
+## Recipe Document Format
+
+A recipe in Askimo is defined in a YAML file with the following sections:
+
+- `name`: Unique identifier for the recipe.
+- `version`: (Optional) Recipe version number.
+- `description`: Short summary of what the recipe does.
+- `allowedTools`: (Optional) List of tool names the recipe is allowed to use. If omitted, all tools are allowed.
+- `vars`: (Optional) Variables computed using tools, often referencing external arguments.
+- `system`: Instructions or context for the AI (system prompt).
+- `userTemplate`: The main user prompt, can reference variables and external arguments.
+- `postActions`: (Optional) Actions to perform after the main recipe execution.
+
+### Section Explanations
+
+#### `name`
+A unique string to identify your recipe. Used to run the recipe from CLI or REPL.
+
+#### `version`
+(Optional) Integer or string to track changes to your recipe.
+
+#### `description`
+A short summary of the recipe's purpose. Shown in listings and help.
+
+#### `allowedTools`
+(Optional) List of tool names the recipe can use. If omitted or empty, all tools are allowed. See the next section for details.
+
+#### `vars`
+(Optional) Define variables that are computed before running the recipe. Each variable uses a tool and arguments. Arguments can reference external parameters (see below).
+
+#### `system`
+System prompt for the AI, setting context, rules, or persona.
+
+#### `userTemplate`
+Main user prompt, can reference variables and external arguments.
+
+#### `postActions`
+(Optional) List of actions to perform after the main recipe execution (e.g., save output).
+
+---
+
+## External Arguments (`arg1`, `arg2`, ...)
+
+When you run a recipe, you can pass external arguments from the CLI. These are referenced in the recipe as `{{arg1}}`, `{{arg2}}`, etc. The mapping is positional:
+
+- `arg1` = first argument after the recipe name
+- `arg2` = second argument, and so on
+
+**Example:**
+```bash
+askimo -r summarize README.md
+```
+- `arg1` will be `README.md`
+
+In your recipe YAML, you can use `{{arg1}}` in `vars`, `system`, or `userTemplate`:
+```yaml
+vars:
+  file_content:
+    tool: readFile
+    args: ["{{arg1}}"]
+```
 
 ## Tool Access Control (`allowedTools`)
 By default, a recipe has access to ALL built‑in tools. You only need to specify `allowedTools:` when you want to restrict what the recipe may call.
+You can view all available tools at any time by running:
+- Non-interactive mode: `askimo --tools`
 
 Ways to allow all tools:
 - Omit the `allowedTools` field entirely.
@@ -28,19 +103,15 @@ allowedTools:
 ```
 This limits the recipe to just those tools; any attempt to use others will fail with an error.
 
-Built‑in tool names available when unrestricted:
-- Git: `stagedDiff`, `status`, `branch`, `commit`
-- Filesystem: `writeFile`, `readFile` (plus additional internal FS/search utilities if present in future releases)
+> Note: Tool names are the Kotlin method names (e.g. `writeFile`). If new tools are added you'll see them in `askimo --tools` or error messages listing available tools.
 
-> Note: Tool names are the Kotlin method names (e.g. `writeFile`). If new tools are added you'll see them in `:help` or error messages listing available tools.
-
-## Example: Custom Summarization Recipe (No Restrictions)
-Suppose you frequently need to summarize different files. This recipe leaves tooling unrestricted (no `allowedTools` field):
+## Complete Example Recipe
 
 ```yaml
 name: summarize
 version: 1
 description: "Summarize the content of a file concisely"
+allowedTools: [] # All tools allowed (can omit this line)
 vars:
   file_content:
     tool: readFile
@@ -58,109 +129,79 @@ userTemplate: |
 postActions: []
 ```
 
-Run it:
+**Usage:**
+```bash
+askimo -r summarize README.md
 ```
-summarize README.md
-```
-You can further customize the `system` message to change the writing style, or the `userTemplate` to adjust the prompt format.
+- `arg1` is `README.md`, used in `vars` and `userTemplate`.
 
 ## Parameterization and Customization
 Recipes support parameters using the `{{argN}}` syntax, which allows users to pass arguments when running the recipe. These parameters can be used in any section, including `vars`, `system`, and `userTemplate`.
 
-**Example: Custom Commit Message Recipe (Restricted Tools)**
+**Example: Custom File Search Recipe (Restricted Tools)**
 ```yaml
-name: gitCommit
-version: 5
-description: "Generate a Conventional Commit message from staged changes"
+name: searchFiles
+version: 2
+description: "Search for files by pattern in a directory"
 allowedTools:
-  - stagedDiff
-  - status
-  - branch
-  - commit
+  - searchFilesByGlob
 vars:
-  diff:
-    tool: stagedDiff
-    args: ["--no-color", "--unified=0"]
+  results:
+    tool: searchFilesByGlob
+    args: ["{{arg1}}", "{{arg2}}"]
 system: |
-  You are a senior engineer writing Conventional Commit messages.
-  Please use the following style: {{arg1}}
+  You are a helpful assistant. List all files in the directory {{arg1}} matching the pattern {{arg2}}.
 userTemplate: |
-  Current branch: {{branch}}
-  Repo status:
-  {{status}}
+  Directory: {{arg1}}
+  Pattern: {{arg2}}
+  Results:
+  {{results}}
 postActions: []
 ```
-Run it:
+
+**Usage:**
+```bash
+askimo -r searchFiles /projects "*.md"
 ```
-gitCommit "feat(scope): summary"
-```
+- `arg1` is `/projects`
+- `arg2` is `*.md`
 
 ## Customizing System and User Messages
 - **System Message:** Sets the context, rules, or persona for the AI. You can make this dynamic by including parameters (e.g., `{{arg1}}`).
 - **User Template:** Defines the main prompt, which can also use parameters and variables for maximum flexibility.
 
-## Practical Scenarios
-- **Project Onboarding:** Create a recipe to generate onboarding documentation for new team members.
-- **Code Review:** Automate code review summaries by passing file paths and review criteria as parameters.
-- **Data Extraction:** Build recipes to extract and format data from logs or reports, customizing the output format.
-
-## Recipe Commands
-
-### 1. Create a Recipe
-Use the `:create-recipe` command to register a new recipe from a YAML template.
-
-**Syntax:**
-```
-:create-recipe <path-to-yaml>
-```
-**Example:**
-```
-:create-recipe templates/gitcommit.yml
-```
-This registers the recipe for future use.
-
-### 2. List Recipes
-Use the `:recipes` command to list all registered recipes.
-
-**Syntax:**
-```
-:recipes
-```
-**Example Output:**
-```
-> :recipes
-summarize
-gitCommit
+## Recipe Management Commands (Non-Interactive Only)
+Recipe management commands (create, list, delete) are **only available in non-interactive mode**:
+```bash
+# Create a recipe
+$ askimo --create-recipe myrecipe -f templates/myrecipe.yml
+# List all recipes
+$ askimo --recipes
+# Delete a recipe
+$ askimo --delete-recipe myrecipe
 ```
 
-### 3. Delete a Recipe
-Use the `:delete-recipe` command to remove a recipe.
-
-**Syntax:**
-```
-:delete-recipe <recipe-name>
-```
-**Example:**
-```
-:delete-recipe summarize
+## Recipe Execution (Non-Interactive Only)
+You can run a recipe using non-interactive mode, passing any number of arguments:
+```bash
+askimo -r <recipe_name> <arg1> <arg2> ... <argN>
 ```
 
-### 4. Run a Recipe
-You can run a recipe using the CLI. Recipes are executed via the `RecipeExecutor` and can be invoked from `ChatCli`.
-
-**Syntax:**
+**Examples:**
+If your recipe expects one argument:
+```bash
+askimo -r summarize README.md
 ```
-<recipe-name> <arguments>
+- `arg1` is `README.md`
+If your recipe expects two arguments:
+```bash
+askimo -r searchFiles /projects "*.md"
 ```
-**Example:**
-```
-summarize README.md
-```
-This runs the `summarize` recipe on the specified file.
+- `arg1` is `/projects`
+- `arg2` is `*.md`
 
 ## Recipe Template Example
 Here’s a simplified example from `gitcommit.yml` (with explicit restriction):
-
 ```yaml
 name: gitCommit
 description: "Generate a Conventional Commit message from staged changes"
@@ -180,61 +221,45 @@ userTemplate: |
 ```
 
 ## Recipe YAML Template Structure
+A recipe YAML file consists of several key sections. Here is a concrete example using `summarize.yml`:
 
-A recipe YAML file consists of several key sections:
-
-### `vars`
-Defines variables that are computed or fetched before running the recipe. Each variable specifies a tool and arguments. These variables can be referenced in other sections.
-
-**Example:**
 ```yaml
+name: summarize                # Unique identifier for the recipe
+version: 1                     # (Optional) Recipe version number
+description: "Summarize the content of a file concisely"  # Short summary
+allowedTools:
+  - readFile                   # Restrict to only readFile tool
 vars:
-  file_content:
-    tool: readFile
-    args: ["{{arg1}}"]
-```
-This example (from `summarize.yml`) sets `file_content` to the result of reading a file whose path is provided as an argument.
-
-### `system`
-Provides system instructions or context for the AI. This is typically a prompt that sets the role, rules, or output format.
-
-**Example:**
-```yaml
+  file_content:                # Variable computed before running the recipe
+    tool: readFile             # Uses the readFile tool
+    args: ["{{arg1}}"]         # Uses the first external argument
 system: |
-  You are a senior engineer writing Conventional Commit messages.
-  Output MUST be plain text only suitable for `git commit -F -`.
-```
-This example (from `gitcommit.yml`) instructs the AI to act as a commit message writer and specifies output requirements.
-
-### `userTemplate`
-Defines the user-facing prompt, often referencing variables. This is what the AI sees as the main task or question.
-
-**Example:**
-```yaml
+  You are an expert technical writer.
+  Summarize the following file content in a concise and precise way.
+  Output MUST be plain text only.
 userTemplate: |
   File path: {{arg1}}
   Content:
   ====BEGIN====
   {{file_content}}
   ====END====
+postActions: []                # (Optional) Actions after execution
 ```
-This example (from `summarize.yml`) presents the file content to the AI for summarization.
 
-### `postActions`
-Specifies actions to perform after the main recipe execution, such as saving output or triggering another tool. This section is optional and can be an empty list if not needed.
+**Section breakdown:**
+- `name`, `version`, `description`: Metadata for the recipe
+- `allowedTools`: Restricts which tools can be used
+- `vars`: Defines variables using tools and arguments
+- `system`: Sets the AI's context and instructions
+- `userTemplate`: Main prompt, can reference variables and arguments
+- `postActions`: Actions after main execution (empty in this example)
 
-**Example:**
-```yaml
-postActions: []
-```
-This example shows no post-actions are defined. You could add actions like saving the result to a file or running a follow-up command.
+## Default Bundled Recipes
 
----
+Askimo comes bundled with several default recipes, including `gitcommit` and `summarize`. These are available out-of-the-box in every Askimo distribution.
 
-Refer to the `templates/gitcommit.yml` and `templates/summarize.yml` files for more advanced examples and inspiration.
+- You can view the default recipe templates at:
+  [src/main/resources/templates](https://github.com/haiphucnguyen/askimo/tree/main/src/main/resources/templates)
 
-## Best Practices
-- Store your recipes in `~/.askimo/recipes` for easy access.
-- Use descriptive names and document the purpose of each recipe in the YAML.
-- Only add `allowedTools` when you need to sandbox a recipe.
-- Refer to `gitcommit.yml` and `summarize.yml` in the `templates/` folder for inspiration.
+- For more advanced and custom examples, see:
+  [samples/recipes](https://github.com/haiphucnguyen/askimo/tree/main/samples/recipes)
