@@ -216,10 +216,12 @@ jobs:
     needs: [ release ]
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Install jq
+        # curl & awk available by default; install jq explicitly
         run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Collect release assets & checksums
         id: meta
         env:
@@ -227,95 +229,140 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          VERSION_PLAIN="${TAG#v}"
+          TAG="${GITHUB_REF_NAME}"                # e.g. v0.4.0
+          VERSION_PLAIN="${TAG#v}"                # e.g. 0.4.0
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
           JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+
           ARM_NAME="askimo-${TAG}-darwin-arm64.tar.gz"
           AMD_NAME="askimo-${TAG}-darwin-amd64.tar.gz"
-          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+
           ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
           AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
           SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
-          if [ -z "$SHA_URL" ] || [ -z "$ARM_URL" ]; then
+
+          if [ -z "${SHA_URL:-}" ] || [ -z "${ARM_URL:-}" ]; then
             echo "Release missing SHA256SUMS.txt or macOS arm64 tarball." >&2
+            echo "Assets present:" >&2
             echo "$JSON" | jq -r '.assets[]?.name' >&2
             exit 1
           fi
+
           curl -sSL -o SHA256SUMS.txt "$SHA_URL"
-          ARM_SHA="$(grep "  $ARM_NAME" SHA256SUMS.txt | awk '{print $1}')"
+
+          # Quote/escape dots in grep pattern to avoid partial matches
+          ARM_SHA="$(grep -E "  ${ARM_NAME//./\\.}$" SHA256SUMS.txt | awk '{print $1}')"
           AMD_SHA=""
-          if [ -n "$AMD_URL" ]; then
-            AMD_SHA="$(grep "  $AMD_NAME" SHA256SUMS.txt | awk '{print $1}')"
+          if [ -n "${AMD_URL:-}" ]; then
+            AMD_SHA="$(grep -E "  ${AMD_NAME//./\\.}$" SHA256SUMS.txt | awk '{print $1}')"
           fi
-          echo "tag=$TAG"                     >> $GITHUB_OUTPUT
-          echo "version_plain=$VERSION_PLAIN" >> $GITHUB_OUTPUT
-          echo "arm_url=$ARM_URL"             >> $GITHUB_OUTPUT
-          echo "arm_sha=$ARM_SHA"             >> $GITHUB_OUTPUT
-          echo "amd_url=$AMD_URL"             >> $GITHUB_OUTPUT
-          echo "amd_sha=$AMD_SHA"             >> $GITHUB_OUTPUT
+
+          if [ -z "${ARM_SHA:-}" ]; then
+            echo "Could not find ARM sha in SHA256SUMS.txt" >&2
+            exit 1
+          fi
+
+          {
+            echo "tag=$TAG"
+            echo "version_plain=$VERSION_PLAIN"
+            echo "arm_url=$ARM_URL"
+            echo "arm_sha=$ARM_SHA"
+            echo "amd_url=$AMD_URL"
+            echo "amd_sha=$AMD_SHA"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Checkout tap repo
         uses: actions/checkout@v4
         with:
-          repository: haiphucnguyen/homebrew-askimo
+          repository: ${{ vars.TAP_REPO || 'haiphucnguyen/homebrew-askimo' }}
           token: ${{ secrets.TAP_PUSH_TOKEN }}
           path: tap
           fetch-depth: 0
+
       - name: Write formula into tap
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p tap/Formula
+
+          VERSION="${{ steps.meta.outputs.version_plain }}"
+          ARM_URL="${{ steps.meta.outputs.arm_url }}"
+          ARM_SHA="${{ steps.meta.outputs.arm_sha }}"
+          AMD_URL="${{ steps.meta.outputs.amd_url }}"
+          AMD_SHA="${{ steps.meta.outputs.amd_sha }}"
+
+          # Build the Ruby formula (well-formed, with optional Intel stanza)
           cat > tap/Formula/askimo.rb <<'RUBY'
-            class Askimo < Formula
+          # typed: false
+          # frozen_string_literal: true
+
+          class Askimo < Formula
             desc "AI-powered terminal assistant for multiple LLM providers"
             homepage "https://github.com/haiphucnguyen/askimo"
-            version "VERSION_PLACEHOLDER"
             license "Apache-2.0"
-          
+            
             on_macos do
+          RUBY
+          
+          cat >> tap/Formula/askimo.rb <<RUBY
               on_arm do
-                url "ARM_URL_PLACEHOLDER"
-                sha256 "ARM_SHA_PLACEHOLDER"
+                version "${VERSION}"
+                url "${ARM_URL}"
+                sha256 "${ARM_SHA}"
               end
-            end
+          RUBY
           
+          if [ -n "${AMD_URL}" ] && [ -n "${AMD_SHA}" ]; then
+          cat >> tap/Formula/askimo.rb <<RUBY
+              
+              on_intel do
+                version "${VERSION}"
+                url "${AMD_URL}"
+                sha256 "${AMD_SHA}"
+              end
+          RUBY
+          fi
+          
+          cat >> tap/Formula/askimo.rb <<'RUBY'
+            end
+            
             def install
-              candidates = [
-                "bin/askimo",
-                "./bin/askimo",
-                Dir["*/bin/askimo"].first,
-                "askimo",
-                Dir["*/askimo"].first
-              ].compact
-              path = candidates.find { |p| p && File.exist?(p) }
-              odie "askimo binary not found; archive contained: #{Dir['**/*'][0,30].join(', ')}" unless path
-              bin.install path => "askimo"
+              # Expect the tarball to contain a single binary named "askimo"
+              bin.install "bin/askimo"
             end
-          
+            
             test do
               output = shell_output("#{bin}/askimo --version")
               assert_match "askimo", output.downcase
             end
+          end
           RUBY
-          sed -i "s|VERSION_PLACEHOLDER|${{ steps.meta.outputs.version_plain }}|g" tap/Formula/askimo.rb
-          sed -i "s|ARM_URL_PLACEHOLDER|${{ steps.meta.outputs.arm_url }}|g" tap/Formula/askimo.rb
-          sed -i "s|ARM_SHA_PLACEHOLDER|${{ steps.meta.outputs.arm_sha }}|g" tap/Formula/askimo.rb
+          
           echo "==== tap/Formula/askimo.rb ===="
           cat tap/Formula/askimo.rb
-      - name: Commit & push to tap repo (single-commit history)
+          
+          # Syntax check catches missing 'end' and other structure errors
+          ruby -c tap/Formula/askimo.rb
+
+      - name: Commit & push to tap repo
         working-directory: tap
         env:
-          GIT_AUTHOR_NAME: github-actions
-          GIT_AUTHOR_EMAIL: actions@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions
-          GIT_COMMITTER_EMAIL: actions@users.noreply.github.com
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+        shell: bash
         run: |
           set -euo pipefail
-          git rm -r --cached . >/dev/null 2>&1 || true
           git add Formula/askimo.rb
-          git commit -m "askimo ${GITHUB_REF_NAME}" || echo "No changes"
-          CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-          git push --force origin "$CURRENT_BRANCH"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "askimo ${{ steps.meta.outputs.version_plain }}: update formula for ${{ steps.meta.outputs.tag }}"
+            # Push to the current branch (usually main)
+            git push
+          fi
+
   scoop:
     name: Publish Scoop manifest (Windows)
     if: startsWith(github.ref, 'refs/tags/')
