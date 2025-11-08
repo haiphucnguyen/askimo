@@ -136,19 +136,31 @@ class ProjectFileWatcherTest {
     fun `file modification triggers re-indexing`() = runBlocking {
         // Given: A running watcher
         fileWatcher.startWatching()
-        delay(2000) // Allow extra time for watcher to start
+        delay(3000) // Extended delay for watcher to start on macOS
 
         // Create a file first
         val existingFile = tempDir.resolve("existing.kt")
         existingFile.writeText("class Existing {}")
-        delay(2000) // Allow extra time for creation event
 
-        // When: Modifying the file
+        // Wait for creation event to be fully processed
+        delay(3000)
+
+        // Verify creation was indexed
+        verify(mockIndexer, timeout(10000).atLeastOnce()).indexSingleFile(any(), eq("existing.kt"))
+
+        // When: Modifying the file with a more substantial change
+        // Use multiple writes to ensure filesystem event is triggered
         existingFile.writeText("class Existing { fun modified() {} }")
-        delay(2000) // Allow extra time for modification event
+        delay(500)
+        existingFile.writeText("class Existing { fun modified() { println(\"test\") } }")
 
-        // Then: Indexer should index for creation, then remove and re-index for modification
-        verify(mockIndexer, timeout(8000).atLeast(2)).indexSingleFile(any(), eq("existing.kt"))
+        // Allow generous time for modification events on macOS
+        delay(5000)
+
+        // Then: On modification, indexer should remove and re-index
+        // Note: Total indexSingleFile calls should be at least 2 (creation + modification)
+        // but we verify them separately for better diagnostics
+        verify(mockIndexer, timeout(12000).atLeast(2)).indexSingleFile(any(), eq("existing.kt"))
         verify(mockIndexer, timeout(8000).atLeastOnce()).removeFileFromIndex(eq("existing.kt"))
     }
 
