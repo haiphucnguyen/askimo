@@ -284,14 +284,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p tap/Formula
-
+          
           VERSION="${{ steps.meta.outputs.version_plain }}"
           ARM_URL="${{ steps.meta.outputs.arm_url }}"
           ARM_SHA="${{ steps.meta.outputs.arm_sha }}"
           AMD_URL="${{ steps.meta.outputs.amd_url }}"
           AMD_SHA="${{ steps.meta.outputs.amd_sha }}"
-
-          # Build the Ruby formula (well-formed, with optional Intel stanza)
+          
+          # 1) Header
           cat > tap/Formula/askimo.rb <<'RUBY'
           # typed: false
           # frozen_string_literal: true
@@ -304,6 +304,7 @@ jobs:
             on_macos do
           RUBY
           
+          # 2) ARM stanza (required)
           cat >> tap/Formula/askimo.rb <<RUBY
               on_arm do
                 version "${VERSION}"
@@ -312,6 +313,7 @@ jobs:
               end
           RUBY
           
+          # 3) Optional Intel stanza
           if [ -n "${AMD_URL}" ] && [ -n "${AMD_SHA}" ]; then
           cat >> tap/Formula/askimo.rb <<RUBY
               
@@ -323,6 +325,7 @@ jobs:
           RUBY
           fi
           
+          # 4) Footer (ALWAYS append this block)
           cat >> tap/Formula/askimo.rb <<'RUBY'
             end
             
@@ -339,11 +342,10 @@ jobs:
           RUBY
           
           echo "==== tap/Formula/askimo.rb ===="
-          cat tap/Formula/askimo.rb
+          nl -ba tap/Formula/askimo.rb
           
-          # Syntax check catches missing 'end' and other structure errors
+          # 5) Catch structure errors early (like missing 'end')
           ruby -c tap/Formula/askimo.rb
-
       - name: Commit & push to tap repo
         working-directory: tap
         env:
