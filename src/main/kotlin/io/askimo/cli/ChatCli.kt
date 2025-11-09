@@ -28,6 +28,7 @@ import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.commands.VersionDisplayCommandHandler
+import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.providers.sendStreamingMessageWithCallback
@@ -97,7 +98,14 @@ fun main(args: Array<String>) {
     // Set up help command with non-interactive commands
     (nonInteractiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(nonInteractiveCommandHandlers)
 
-    // Check for non-interactive commands
+    // Check for composite command (multiple non-interactive commands)
+    if (CompositeCommandExecutor.hasMultipleCommands(args, nonInteractiveCommandHandlers)) {
+        val commandHandlerMap = nonInteractiveCommandHandlers.associateBy { keywordToFlag(it.keyword) }
+        CompositeCommandExecutor.executeCommands(args, commandHandlerMap)
+        return
+    }
+
+    // Check for single non-interactive commands
     for (handler in nonInteractiveCommandHandlers) {
         val flag = keywordToFlag(handler.keyword)
 

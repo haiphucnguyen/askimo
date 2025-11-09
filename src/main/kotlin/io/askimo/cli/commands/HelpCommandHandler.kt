@@ -45,6 +45,8 @@ class HelpCommandHandler : CommandHandler {
         }
 
         if (isNonInteractiveMode) {
+            info("\n💡 Multiple commands can be combined in a single invocation:")
+            info("   Example: askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4")
             info("\nFor interactive mode, run 'askimo' without arguments and use ':command' format.")
         } else {
             info("\nFor non-interactive mode, use 'askimo --command' format from command line.")

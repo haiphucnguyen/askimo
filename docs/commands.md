@@ -28,6 +28,25 @@ askimo --models
 askimo --tools
 ```
 
+#### 🔗 Composite Commands
+You can combine multiple non-interactive commands in a single invocation. Commands are executed in the order they appear:
+
+```bash
+# Configure provider and multiple parameters at once
+askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4
+
+# Set provider and check available models
+askimo --set-provider ollama --models
+
+# Configure multiple parameters
+askimo --set-param temperature 0.7 --set-param max_tokens 2000
+
+# Combine informational commands
+askimo --list-providers --list-tools --version
+```
+
+This is especially useful for scripting and automation, allowing you to configure the entire environment with a single command.
+
 ## Available Commands
 
 ### Commands Available in BOTH Modes
