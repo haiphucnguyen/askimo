@@ -14,7 +14,12 @@ class RecipeRegistry(
 ) {
     fun load(name: String): RecipeDef {
         val file = baseDir.resolve("$name.yml")
-        require(Files.exists(file)) { "Recipe not found: $file" }
+        if (!Files.exists(file)) {
+            throw RecipeNotFoundException(
+                "Recipe '$name' not found.\n" +
+                    "💡 Use '--recipes' to list all available recipes.",
+            )
+        }
         return Files
             .newBufferedReader(file)
             .use { yamlMapper.readValue(it, RecipeDef::class.java) }
@@ -23,3 +28,9 @@ class RecipeRegistry(
 }
 
 private fun RecipeDef.fixWhenField(): RecipeDef = this
+
+/**
+ * Exception thrown when a recipe is not found in the registry.
+ */
+class RecipeNotFoundException(message: String) : RuntimeException(message)
+

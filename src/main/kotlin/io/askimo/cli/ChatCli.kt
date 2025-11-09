@@ -41,6 +41,7 @@ import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
+import io.askimo.core.util.Logger.warn
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
 import org.jline.keymap.KeyMap
@@ -143,7 +144,11 @@ fun main(args: Array<String>) {
                 } else {
                     emptyList()
                 }
-            runYamlCommand(session, cliCommandName, overrides, externalArgs)
+            try {
+                runYamlCommand(session, cliCommandName, overrides, externalArgs)
+            } catch (e: io.askimo.core.recipes.RecipeNotFoundException) {
+                warn(e.message ?: "Recipe not found")
+            }
             return
         }
 
