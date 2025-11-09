@@ -4,6 +4,7 @@ description: "Summarize the content of a file concisely"
 
 allowedTools:
   - readFile
+  - print
 
 vars:
   file_content:
@@ -22,6 +23,9 @@ userTemplate: |
   {{file_content}}
   ====END====
 
-postActions: []
+postActions:
+  - call:
+      tool: print
+      args: ["{{output}}"]
 
 defaults: {}

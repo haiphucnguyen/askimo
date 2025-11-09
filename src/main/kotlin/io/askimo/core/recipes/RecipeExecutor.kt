@@ -8,6 +8,7 @@ import io.askimo.cli.LoadingIndicator
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.Logger.info
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -79,7 +80,6 @@ class RecipeExecutor(
         indicator?.start()
 
         val firstTokenSeen = AtomicBoolean(false)
-
         val output =
             session
                 .getChatService()

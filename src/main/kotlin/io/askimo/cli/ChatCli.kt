@@ -449,7 +449,7 @@ private fun runYamlCommand(
     overrides: Map<String, String>,
     externalArgs: List<String> = emptyList(),
 ) {
-    info("🚀 Running recipe '$name'…")
+    info("🚀 Running recipe '$name' with arguments $externalArgs…")
 
     val registry = RecipeRegistry()
     // Load once to inspect allowedTools (empty ⇒ all tools)

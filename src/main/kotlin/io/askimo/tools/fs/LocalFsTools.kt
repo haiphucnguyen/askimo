@@ -724,6 +724,12 @@ object LocalFsTools {
         }
     }
 
+    @Tool("Print text to standard output")
+    fun print(text: String): String {
+        println(text)
+        return "printed"
+    }
+
     @Tool("Write text file to path")
     fun writeFile(
         path: String,
