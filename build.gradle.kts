@@ -206,6 +206,7 @@ graalvmNative {
                 ),
             )
             resources.autodetect()
+            configurationFileDirectories.from(file("src/main/resources/META-INF/native-image"))
         }
     }
 }
