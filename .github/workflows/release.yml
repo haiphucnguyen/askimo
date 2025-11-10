@@ -39,19 +39,19 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
-      # Generate metadata first, then compile (arm runner)
+      # Generate metadata first, then compile
       - name: Generate Graal metadata (Linux/macOS)
         if: runner.os != 'Windows'
         env:
           DISABLE_DOCKER_TESTS: ${{ runner.os == 'macOS' && 'true' || 'false' }}
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -PtraceAgent=true clean test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean test
 
       - name: Generate Graal metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true -PtraceAgent=true clean test
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true clean test
 
       - name: Upload test report
         if: always()
@@ -84,6 +84,45 @@ jobs:
           echo "out_dir=$OUT_DIR" >> $GITHUB_OUTPUT
           echo "Found: $BIN"
 
+      # NEW: smoke check (POSIX)
+      - name: Smoke check
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="${{ steps.paths.outputs.bin }}"
+          chmod +x "$BIN" || true
+          echo "Running: $BIN --version"
+          # Capture output and exit code
+          set +e
+          OUT="$("$BIN" --version 2>&1)"; CODE=$?
+          set -e
+          echo "----- output -----"
+          echo "$OUT"
+          echo "------------------"
+          # Fail if non-zero OR if output shows Graal proxy/reflection error
+          if [[ $CODE -ne 0 ]] || echo "$OUT" | grep -qiE 'MissingReflectionRegistrationError|NoSuchMethodError|ClassNotFoundException|Exception in thread'; then
+            echo "Smoke check failed (code=$CODE)."
+            exit 1
+          fi
+
+      # NEW: smoke check (Windows)
+      - name: Smoke check
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = "${{ steps.paths.outputs.bin }}"
+          Write-Host "Running: $bin --version"
+          $output = & $bin --version 2>&1
+          $code = $LASTEXITCODE
+          Write-Host "----- output -----"
+          Write-Host $output
+          Write-Host "------------------"
+          if ($code -ne 0 -or ($output -match 'MissingReflectionRegistrationError|NoSuchMethodError|ClassNotFoundException|Exception in thread')) {
+            Write-Error "Smoke check failed (code=$code)."
+            exit 1
+          }
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -91,6 +130,7 @@ jobs:
           path: ${{ steps.paths.outputs.bin }}
           if-no-files-found: error
           retention-days: 14
+
 
   # NEW: native arm64 build on hosted ARM runner
   native-arm:
@@ -111,7 +151,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Generate Graal metadata (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true -PtraceAgent=true clean test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean test
 
       - name: Build native image (arm64)
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
@@ -124,6 +164,25 @@ jobs:
           BIN="$(ls "$OUT_DIR"/* | head -n 1)"
           echo "bin=$BIN" >> $GITHUB_OUTPUT
           echo "Found: $BIN"
+
+      # NEW: smoke check
+      - name: Smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="${{ steps.arm_paths.outputs.bin }}"
+          chmod +x "$BIN" || true
+          echo "Running: $BIN --version"
+          set +e
+          OUT="$("$BIN" --version 2>&1)"; CODE=$?
+          set -e
+          echo "----- output -----"
+          echo "$OUT"
+          echo "------------------"
+          if [[ $CODE -ne 0 ]] || echo "$OUT" | grep -qiE 'MissingReflectionRegistrationError|NoSuchMethodError|ClassNotFoundException|Exception in thread'; then
+            echo "Smoke check failed (code=$CODE)."
+            exit 1
+          fi
 
       - name: Upload arm64 artifact
         uses: actions/upload-artifact@v4

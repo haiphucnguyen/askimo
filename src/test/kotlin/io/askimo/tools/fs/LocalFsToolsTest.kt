@@ -26,6 +26,12 @@ class LocalFsToolsTest {
     fun cleanup() {
         // Clean up any background processes after each test to prevent Windows file locking issues
         LocalFsTools.cleanupBackgroundProcesses()
+
+        // On Windows, give the OS extra time to release file handles before JUnit tries to delete temp directory
+        // This prevents intermittent "The process cannot access the file" errors
+        if (System.getProperty("os.name").lowercase().contains("windows")) {
+            Thread.sleep(200)
+        }
     }
 
     @Test

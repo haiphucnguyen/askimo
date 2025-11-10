@@ -470,9 +470,15 @@ object LocalFsTools {
                 )
             }
 
-            val output = process.inputStream.bufferedReader().readText()
-            val error = process.errorStream.bufferedReader().readText()
+            // Read streams using 'use' to ensure they are closed properly (important for Windows)
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            val error = process.errorStream.bufferedReader().use { it.readText() }
             val exitCode = process.waitFor()
+
+            // Explicitly close output stream to prevent Windows file handle leaks
+            try {
+                process.outputStream.close()
+            } catch (e: Exception) { /* ignore */ }
 
             mapOf(
                 "ok" to true,
@@ -546,6 +552,11 @@ object LocalFsTools {
                 } catch (e: Exception) {
                     -1 // Default exit code if we can't get the real one
                 }
+
+                // Explicitly close output stream to release file handles
+                try {
+                    process.outputStream.close()
+                } catch (e: Exception) { /* ignore */ }
 
                 mapOf(
                     "ok" to true,
@@ -779,23 +790,44 @@ object LocalFsTools {
                 if (process.isAlive) {
                     // First try graceful termination
                     process.destroy()
-                    // Wait a bit for graceful shutdown
-                    val terminated = process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS)
+                    // Wait longer for graceful shutdown (increased timeout for Windows)
+                    val terminated = process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)
                     if (!terminated) {
                         // Force kill if it doesn't terminate gracefully
                         process.destroyForcibly()
+                        // Wait for force kill to complete
+                        process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
                     }
                 }
-                // Close all streams to release file handles
+
+                // Drain any remaining data from streams before closing (important for Windows)
+                // This prevents buffered data from keeping file handles open
                 try {
-                    process.inputStream.close()
+                    process.inputStream.use { stream ->
+                        val buffer = ByteArray(8192)
+                        while (stream.available() > 0) {
+                            stream.read(buffer)
+                        }
+                    }
                 } catch (e: Exception) { /* ignore */ }
+
                 try {
-                    process.errorStream.close()
+                    process.errorStream.use { stream ->
+                        val buffer = ByteArray(8192)
+                        while (stream.available() > 0) {
+                            stream.read(buffer)
+                        }
+                    }
                 } catch (e: Exception) { /* ignore */ }
+
                 try {
                     process.outputStream.close()
                 } catch (e: Exception) { /* ignore */ }
+
+                // Give Windows a moment to release file handles
+                if (System.getProperty("os.name").lowercase().contains("windows")) {
+                    Thread.sleep(100)
+                }
             } catch (e: Exception) {
                 // Ignore cleanup errors
             }
