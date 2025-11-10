@@ -156,8 +156,8 @@ jobs:
           if [[ -n "${MAC_DIR:-}" ]]; then
             BIN=$(ls "$MAC_DIR"/* | head -n1)
             chmod +x "$BIN"
-            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-darwin-arm64.tar.gz" bin
+            TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
+            tar -C "$TMPDIR" -czf "askimo-${VERSION}-darwin-arm64.tar.gz" askimo
             files+=("askimo-${VERSION}-darwin-arm64.tar.gz")
           fi
 
@@ -166,8 +166,8 @@ jobs:
           if [[ -n "${LIN_AMD_DIR:-}" ]]; then
             BIN=$(ls "$LIN_AMD_DIR"/* | head -n1)
             chmod +x "$BIN"
-            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-x64.tar.gz" bin
+            TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
+            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-x64.tar.gz" askimo
             files+=("askimo-${VERSION}-linux-x64.tar.gz")
           fi
 
@@ -176,8 +176,8 @@ jobs:
           if [[ -n "${LIN_ARM_DIR:-}" ]]; then
             BIN=$(ls "$LIN_ARM_DIR"/* | head -n1)
             chmod +x "$BIN"
-            TMPDIR="$(mktemp -d)"; mkdir -p "$TMPDIR/bin"; cp "$BIN" "$TMPDIR/bin/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-arm64.tar.gz" bin
+            TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
+            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-arm64.tar.gz" askimo
             files+=("askimo-${VERSION}-linux-arm64.tar.gz")
           fi
 
@@ -189,7 +189,7 @@ jobs:
             files+=("askimo-${VERSION}-windows-x64.zip")
           fi
 
-          if ((${#files[@]})); then
+          if (( ${#files[@]} )); then
             shasum -a 256 "${files[@]}" > SHA256SUMS.txt
             files+=("SHA256SUMS.txt")
           fi
@@ -331,7 +331,7 @@ jobs:
             
             def install
               # Expect the tarball to contain a single binary named "askimo"
-              bin.install "bin/askimo"
+              bin.install "askimo"
             end
             
             test do
