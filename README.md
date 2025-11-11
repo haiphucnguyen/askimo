@@ -59,11 +59,11 @@ Add custom providers, commands, and integrations. Askimo grows with your team's 
 
 **Summarizing files, generating commit messages, and integrating with Git**
 
-[![Askimo Demo 1](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo1.gif)](https://askimo.chat/videos/demo1.mp4)
+[![Askimo Demo 1](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo1.gif)](https://askimo.chat)
 
 **Chatting with multiple AI providers**
 
-[![Askimo Demo 2](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo2.gif)](https://askimo.chat/videos/demo2.mp4)
+[![Askimo Demo 2](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo2.gif)](https://askimo.chat)
 
 ---
 
