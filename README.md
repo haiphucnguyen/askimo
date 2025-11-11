@@ -71,11 +71,11 @@ Add custom providers, commands, and integrations. Askimo grows with your team's 
 
 ## Demo
 
-* Piping commands & switching providers in Askimo
+* Summarizing files, generating commit messages, and integrating seamlessly with Git.
 
 ![Demo](public/demo1.gif)
 
-* Interacting with the local file system in Askimo
+* Communicate seamlessly with multiple AI providers and large language models.
 
 ![Demo](public/demo2.gif)
 
