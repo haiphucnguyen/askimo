@@ -26,9 +26,15 @@ class OpenAiModelFactory : ChatModelFactory {
             (settings as? OpenAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
                 ?: return emptyList()
 
+        val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
+            "${AppConfig.proxy.url}/openai"
+        } else {
+            "https://api.openai.com"
+        }
+
         return fetchModels(
             apiKey = apiKey,
-            url = "https://api.openai.com/v1/models",
+            url = "$baseUrl/v1/models",
             providerName = OPENAI,
         )
     }

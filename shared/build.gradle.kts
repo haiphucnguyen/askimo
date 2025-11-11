@@ -11,12 +11,11 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.langchain4j)
-    implementation(libs.langchain4j.open.ai)
-    implementation(libs.langchain4j.ollama)
-    implementation(libs.langchain4j.google.ai.gemini)
-    implementation(libs.langchain4j.anthropic)
-    implementation(libs.commonmark)
+    api(libs.langchain4j)
+    api(libs.langchain4j.open.ai)
+    api(libs.langchain4j.ollama)
+    api(libs.langchain4j.google.ai.gemini)
+    api(libs.langchain4j.anthropic)
     implementation(libs.kotlinx.serialization.json.jvm)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.postgresql)

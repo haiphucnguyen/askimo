@@ -7,6 +7,7 @@ package io.askimo.core.project
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
+import io.askimo.core.config.AppConfig
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
 import io.askimo.core.providers.ModelProvider.GEMINI
@@ -34,8 +35,14 @@ fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider)
         val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
         val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
 
+        val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
+            "${AppConfig.proxy.url}/openai"
+        } else {
+            "https://api.openai.com"
+        }
         OpenAiEmbeddingModelBuilder()
             .apiKey(safeApiKey(openAiKey))
+            .baseUrl(baseUrl)
             .modelName(modelName)
             .build()
     }

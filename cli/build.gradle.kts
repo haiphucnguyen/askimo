@@ -187,6 +187,7 @@ graalvmNative {
 
     binaries {
         named("main") {
+            imageName.set("askimo")
             javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 
             buildArgs.addAll(

@@ -44,37 +44,37 @@ jobs:
         if: runner.os != 'Windows'
         env:
           DISABLE_DOCKER_TESTS: ${{ runner.os == 'macOS' && 'true' || 'false' }}
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean :cli:test
 
       - name: Generate Graal metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true clean test
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true clean :cli:test
 
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report-${{ github.job }}-${{ runner.os }}-attempt${{ github.run_attempt }}
-          path: build/reports/tests/test
+          path: cli/build/reports/tests/test
           retention-days: 7
 
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :cli:nativeCompile
 
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true nativeCompile
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true :cli:nativeCompile
 
       - name: Locate native binary path
         id: paths
         shell: bash
         run: |
-          OUT_DIR="build/native/nativeCompile"
+          OUT_DIR="cli/build/native/nativeCompile"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             BIN="$(ls "$OUT_DIR"/*.exe)"
           else
@@ -151,16 +151,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Generate Graal metadata (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean :cli:test
 
       - name: Build native image (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :cli:nativeCompile
 
       - name: Locate native binary path
         id: arm_paths
         shell: bash
         run: |
-          OUT_DIR="build/native/nativeCompile"
+          OUT_DIR="cli/build/native/nativeCompile"
           BIN="$(ls "$OUT_DIR"/* | head -n 1)"
           echo "bin=$BIN" >> $GITHUB_OUTPUT
           echo "Found: $BIN"
