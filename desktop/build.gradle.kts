@@ -19,6 +19,7 @@ dependencies {
     implementation(compose.materialIconsExtended)
     implementation(project(":shared"))
     implementation(libs.commonmark)
+    implementation(libs.commonmark.ext.gfm.tables)
     testImplementation(kotlin("test"))
 }
 

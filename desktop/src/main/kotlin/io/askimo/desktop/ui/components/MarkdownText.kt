@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -75,8 +76,10 @@ private fun renderNode(node: Node) {
 
 @Composable
 private fun renderParagraph(paragraph: Paragraph) {
+    val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
     Text(
-        text = buildInlineContent(paragraph),
+        text = buildInlineContent(paragraph, inlineCodeBg),
         style = MaterialTheme.typography.bodyLarge,
         modifier = Modifier
             .fillMaxWidth()
@@ -86,6 +89,8 @@ private fun renderParagraph(paragraph: Paragraph) {
 
 @Composable
 private fun renderHeading(heading: Heading) {
+    val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
     val style = when (heading.level) {
         1 -> MaterialTheme.typography.headlineLarge
         2 -> MaterialTheme.typography.headlineMedium
@@ -96,7 +101,7 @@ private fun renderHeading(heading: Heading) {
     }
 
     Text(
-        text = buildInlineContent(heading),
+        text = buildInlineContent(heading, inlineCodeBg),
         style = style,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
@@ -107,6 +112,8 @@ private fun renderHeading(heading: Heading) {
 
 @Composable
 private fun renderBulletList(list: BulletList) {
+    val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
     Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)) {
         var item = list.firstChild
         while (item != null) {
@@ -114,7 +121,7 @@ private fun renderBulletList(list: BulletList) {
                 Text(
                     text = buildAnnotatedString {
                         append("• ")
-                        append(buildInlineContent(item))
+                        append(buildInlineContent(item, inlineCodeBg))
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(vertical = 2.dp),
@@ -127,6 +134,8 @@ private fun renderBulletList(list: BulletList) {
 
 @Composable
 private fun renderOrderedList(list: OrderedList) {
+    val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
     Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)) {
         var item = list.firstChild
 
@@ -137,7 +146,7 @@ private fun renderOrderedList(list: OrderedList) {
                 Text(
                     text = buildAnnotatedString {
                         append("$index. ")
-                        append(buildInlineContent(item))
+                        append(buildInlineContent(item, inlineCodeBg))
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(vertical = 2.dp),
@@ -151,13 +160,32 @@ private fun renderOrderedList(list: OrderedList) {
 
 @Composable
 private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
+    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
+    val isDark = backgroundColor.luminance() < 0.5
+
+    // Get language from the info string (e.g., "kotlin", "java", "python")
+    val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
+
+    // Choose theme based on background luminance
+    val theme = if (isDark) {
+        CodeHighlighter.darkTheme()
+    } else {
+        CodeHighlighter.lightTheme()
+    }
+
+    // Apply syntax highlighting
+    val highlightedCode = CodeHighlighter.highlight(
+        code = codeBlock.literal,
+        language = language,
+        theme = theme,
+    )
+
     Text(
-        text = codeBlock.literal,
-        fontFamily = FontFamily.Monospace,
+        text = highlightedCode,
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(backgroundColor)
             .padding(12.dp)
             .horizontalScroll(rememberScrollState()),
     )
@@ -176,34 +204,37 @@ private fun renderBlockQuote(blockQuote: BlockQuote) {
     }
 }
 
-private fun buildInlineContent(node: Node): androidx.compose.ui.text.AnnotatedString = buildAnnotatedString {
+private fun buildInlineContent(
+    node: Node,
+    inlineCodeBg: androidx.compose.ui.graphics.Color,
+): androidx.compose.ui.text.AnnotatedString = buildAnnotatedString {
     var child = node.firstChild
     while (child != null) {
         when (child) {
             is MarkdownText -> append(child.literal)
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(buildInlineContent(child))
+                    append(buildInlineContent(child, inlineCodeBg))
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(buildInlineContent(child))
+                    append(buildInlineContent(child, inlineCodeBg))
                 }
             }
             is Code -> {
                 withStyle(
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
-                        background = androidx.compose.ui.graphics.Color.LightGray.copy(alpha = 0.3f),
+                        background = inlineCodeBg,
                     ),
                 ) {
                     append(child.literal)
                 }
             }
             is HardLineBreak, is SoftLineBreak -> append("\n")
-            is Paragraph -> append(buildInlineContent(child))
-            else -> append(buildInlineContent(child))
+            is Paragraph -> append(buildInlineContent(child, inlineCodeBg))
+            else -> append(buildInlineContent(child, inlineCodeBg))
         }
         child = child.next
     }

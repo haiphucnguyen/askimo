@@ -60,6 +60,14 @@ class ChatSessionService(
     fun getSessionById(sessionId: String): ChatSession? = repository.getSession(sessionId)
 
     /**
+     * Delete a session and all its related data.
+     *
+     * @param sessionId The ID of the session to delete
+     * @return true if the session was deleted, false if it didn't exist
+     */
+    fun deleteSession(sessionId: String): Boolean = repository.deleteSession(sessionId)
+
+    /**
      * Close the repository connection.
      */
     fun close() {

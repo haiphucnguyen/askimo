@@ -370,4 +370,177 @@ class ChatSessionRepositoryIT {
         assertEquals(complexSummary.mainTopics, retrievedSummary.mainTopics)
         assertEquals(complexSummary.recentContext, retrievedSummary.recentContext)
     }
+
+    @Test
+    fun `should delete session successfully`() {
+        val session = repository.createSession("Session to Delete")
+
+        val deleted = repository.deleteSession(session.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+    }
+
+    @Test
+    fun `should return false when deleting non-existent session`() {
+        val deleted = repository.deleteSession("non-existent-session-id")
+
+        assertEquals(false, deleted)
+    }
+
+    @Test
+    fun `should delete session and all its messages`() {
+        val session = repository.createSession("Session with Messages")
+        repository.addMessage(session.id, MessageRole.USER, "Message 1")
+        repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
+        repository.addMessage(session.id, MessageRole.USER, "Message 2")
+
+        assertEquals(3, repository.getMessageCount(session.id))
+
+        val deleted = repository.deleteSession(session.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+        assertEquals(0, repository.getMessageCount(session.id))
+        assertTrue(repository.getMessages(session.id).isEmpty())
+    }
+
+    @Test
+    fun `should delete session and its conversation summary`() {
+        val session = repository.createSession("Session with Summary")
+        val message = repository.addMessage(session.id, MessageRole.USER, "Test message")
+
+        val summary = ConversationSummary(
+            sessionId = session.id,
+            keyFacts = mapOf("topic" to "testing"),
+            mainTopics = listOf("unit testing"),
+            recentContext = "Test context",
+            lastSummarizedMessageId = message.id,
+            createdAt = LocalDateTime.now(),
+        )
+
+        repository.saveSummary(summary)
+        assertNotNull(repository.getConversationSummary(session.id))
+
+        val deleted = repository.deleteSession(session.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+        assertNull(repository.getConversationSummary(session.id))
+    }
+
+    @Test
+    fun `should delete session with all related data`() {
+        val session = repository.createSession("Complete Session")
+        repository.addMessage(session.id, MessageRole.USER, "Message 1")
+        val message2 = repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
+
+        val summary = ConversationSummary(
+            sessionId = session.id,
+            keyFacts = mapOf("key" to "value"),
+            mainTopics = listOf("topic1", "topic2"),
+            recentContext = "Context",
+            lastSummarizedMessageId = message2.id,
+            createdAt = LocalDateTime.now(),
+        )
+        repository.saveSummary(summary)
+
+        // Verify everything exists
+        assertNotNull(repository.getSession(session.id))
+        assertEquals(2, repository.getMessageCount(session.id))
+        assertNotNull(repository.getConversationSummary(session.id))
+
+        // Delete session
+        val deleted = repository.deleteSession(session.id)
+
+        // Verify everything is gone
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+        assertEquals(0, repository.getMessageCount(session.id))
+        assertTrue(repository.getMessages(session.id).isEmpty())
+        assertNull(repository.getConversationSummary(session.id))
+    }
+
+    @Test
+    fun `should not affect other sessions when deleting one`() {
+        val session1 = repository.createSession("Session 1")
+        val session2 = repository.createSession("Session 2")
+        repository.addMessage(session1.id, MessageRole.USER, "Message in session 1")
+        repository.addMessage(session2.id, MessageRole.USER, "Message in session 2")
+
+        val deleted = repository.deleteSession(session1.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session1.id))
+        assertNotNull(repository.getSession(session2.id))
+        assertEquals(0, repository.getMessageCount(session1.id))
+        assertEquals(1, repository.getMessageCount(session2.id))
+    }
+
+    @Test
+    fun `should handle deletion of session with no messages`() {
+        val session = repository.createSession("Empty Session")
+
+        assertEquals(0, repository.getMessageCount(session.id))
+
+        val deleted = repository.deleteSession(session.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+    }
+
+    @Test
+    fun `should handle deletion of session with no summary`() {
+        val session = repository.createSession("Session without Summary")
+        repository.addMessage(session.id, MessageRole.USER, "Message")
+
+        assertNull(repository.getConversationSummary(session.id))
+
+        val deleted = repository.deleteSession(session.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getSession(session.id))
+    }
+
+    @Test
+    fun `should delete multiple sessions independently`() {
+        val session1 = repository.createSession("Session 1")
+        val session2 = repository.createSession("Session 2")
+        val session3 = repository.createSession("Session 3")
+
+        assertEquals(3, repository.getAllSessions().size)
+
+        assertTrue(repository.deleteSession(session1.id))
+        assertEquals(2, repository.getAllSessions().size)
+        assertNull(repository.getSession(session1.id))
+        assertNotNull(repository.getSession(session2.id))
+        assertNotNull(repository.getSession(session3.id))
+
+        assertTrue(repository.deleteSession(session3.id))
+        assertEquals(1, repository.getAllSessions().size)
+        assertNull(repository.getSession(session3.id))
+        assertNotNull(repository.getSession(session2.id))
+
+        assertTrue(repository.deleteSession(session2.id))
+        assertEquals(0, repository.getAllSessions().size)
+        assertNull(repository.getSession(session2.id))
+    }
+
+    @Test
+    fun `should maintain database integrity after deletion`() {
+        val session1 = repository.createSession("Session 1")
+        val session2 = repository.createSession("Session 2")
+        repository.addMessage(session1.id, MessageRole.USER, "Message 1")
+        repository.addMessage(session2.id, MessageRole.USER, "Message 2")
+
+        repository.deleteSession(session1.id)
+
+        // Verify we can still create new sessions and add messages
+        val session3 = repository.createSession("Session 3")
+        assertNotNull(session3)
+
+        val newMessage = repository.addMessage(session2.id, MessageRole.USER, "Another message")
+        assertNotNull(newMessage)
+        assertEquals(2, repository.getMessageCount(session2.id))
+    }
 }

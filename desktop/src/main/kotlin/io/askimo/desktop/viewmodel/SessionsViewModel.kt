@@ -119,4 +119,25 @@ class SessionsViewModel(
     fun clearError() {
         errorMessage = null
     }
+
+    /**
+     * Delete a session and refresh the list.
+     */
+    fun deleteSession(sessionId: String) {
+        scope.launch {
+            try {
+                val deleted = withContext(Dispatchers.IO) {
+                    sessionService.deleteSession(sessionId)
+                }
+                if (deleted) {
+                    // Refresh the current page
+                    refresh()
+                } else {
+                    errorMessage = "Session not found"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Error deleting session: ${e.message}"
+            }
+        }
+    }
 }

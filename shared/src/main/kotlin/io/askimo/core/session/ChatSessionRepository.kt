@@ -391,6 +391,54 @@ class ChatSessionRepository {
     }
 
     /**
+     * Delete a chat session and all its related data (messages and summaries)
+     */
+    fun deleteSession(sessionId: String): Boolean {
+        dataSource.connection.use { conn ->
+            conn.autoCommit = false
+            try {
+                // Delete conversation summaries
+                conn.prepareStatement(
+                    """
+                    DELETE FROM conversation_summaries WHERE session_id = ?
+                """,
+                ).use { stmt ->
+                    stmt.setString(1, sessionId)
+                    stmt.executeUpdate()
+                }
+
+                // Delete chat messages
+                conn.prepareStatement(
+                    """
+                    DELETE FROM chat_messages WHERE session_id = ?
+                """,
+                ).use { stmt ->
+                    stmt.setString(1, sessionId)
+                    stmt.executeUpdate()
+                }
+
+                // Delete the session itself
+                val rowsAffected = conn.prepareStatement(
+                    """
+                    DELETE FROM chat_sessions WHERE id = ?
+                """,
+                ).use { stmt ->
+                    stmt.setString(1, sessionId)
+                    stmt.executeUpdate()
+                }
+
+                conn.commit()
+                return rowsAffected > 0
+            } catch (e: Exception) {
+                conn.rollback()
+                throw e
+            } finally {
+                conn.autoCommit = true
+            }
+        }
+    }
+
+    /**
      * Gracefully close the connection pool when the application shuts down
      */
     fun close() {
