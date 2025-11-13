@@ -4,63 +4,46 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.session.ChatSession
-import io.askimo.core.session.ChatSessionRepository
+import io.askimo.core.session.ChatSessionService
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 import java.time.format.DateTimeFormatter
-import kotlin.math.ceil
-import kotlin.math.min
 
 class ListSessionsCommandHandler : CommandHandler {
     override val keyword = ":sessions"
     override val description = "List all chat sessions with pagination (:sessions [page])"
 
-    private val repository = ChatSessionRepository()
+    private val sessionService = ChatSessionService()
     private val sessionsPerPage = 10
 
     override fun handle(line: ParsedLine) {
-        val sessions = repository.getAllSessions()
+        // Parse page number from command if provided
+        val args = line.words()
+        val requestedPage = if (args.size >= 2) args[1].toIntOrNull() ?: 1 else 1
 
-        if (sessions.isEmpty()) {
+        val pagedSessions = sessionService.getSessionsPaged(requestedPage, sessionsPerPage)
+
+        if (pagedSessions.isEmpty) {
             info("No chat sessions found.")
             info("💡 Start a new conversation to create your first session!")
             return
         }
 
-        // Sort sessions by most recently updated first
-        val sortedSessions = sessions.sortedByDescending { it.updatedAt }
-        val totalPages = ceil(sortedSessions.size.toDouble() / sessionsPerPage).toInt()
-
-        var currentPage = 1
-
-        // Parse page number from command if provided
-        val args = line.words()
-        if (args.size >= 2) {
-            val requestedPage = args[1].toIntOrNull()
-            if (requestedPage != null && requestedPage in 1..totalPages) {
-                currentPage = requestedPage
-            } else if (requestedPage != null) {
-                info("❌ Invalid page number. Valid range: 1-$totalPages")
-                return
-            } else {
-                info("❌ Invalid page number format. Use: :sessions [page_number]")
-                return
-            }
+        if (requestedPage != pagedSessions.currentPage) {
+            info("❌ Invalid page number. Valid range: 1-${pagedSessions.totalPages}")
+            return
         }
 
-        displaySessionsPage(sortedSessions, currentPage, totalPages)
+        displaySessionsPage(pagedSessions)
     }
 
-    private fun displaySessionsPage(sessions: List<ChatSession>, currentPage: Int, totalPages: Int) {
-        val startIndex = (currentPage - 1) * sessionsPerPage
-        val endIndex = min(startIndex + sessionsPerPage, sessions.size)
-        val pageSessions = sessions.subList(startIndex, endIndex)
+    private fun displaySessionsPage(pagedSessions: io.askimo.core.session.PagedSessions) {
+        val startIndex = (pagedSessions.currentPage - 1) * pagedSessions.pageSize
 
-        info("📋 Chat Sessions (Page $currentPage of $totalPages)")
+        info("📋 Chat Sessions (Page ${pagedSessions.currentPage} of ${pagedSessions.totalPages})")
         info("=".repeat(60))
 
-        pageSessions.forEachIndexed { index, session ->
+        pagedSessions.sessions.forEachIndexed { index, session ->
             val globalIndex = startIndex + index + 1
             val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
 
@@ -73,14 +56,14 @@ class ListSessionsCommandHandler : CommandHandler {
 
         info("💡 Tip: Use ':resume-session <session-id>' to resume any session")
 
-        if (totalPages > 1) {
+        if (pagedSessions.totalPages > 1) {
             val navigationHints = mutableListOf<String>()
 
-            if (currentPage > 1) {
-                navigationHints.add(":sessions ${currentPage - 1} (previous)")
+            if (pagedSessions.hasPreviousPage) {
+                navigationHints.add(":sessions ${pagedSessions.currentPage - 1} (previous)")
             }
-            if (currentPage < totalPages) {
-                navigationHints.add(":sessions ${currentPage + 1} (next)")
+            if (pagedSessions.hasNextPage) {
+                navigationHints.add(":sessions ${pagedSessions.currentPage + 1} (next)")
             }
 
             info("📖 Navigation: ${navigationHints.joinToString(" | ")}")

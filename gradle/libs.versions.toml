@@ -18,6 +18,7 @@ shadow = "9.0.1"
 graalvmSvm = "25.0.1"
 sqlite = "3.50.3.0"
 hikaricp = "7.0.2"
+compose = "1.7.1"
 
 [libraries]
 # JLine
@@ -72,3 +73,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-plugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

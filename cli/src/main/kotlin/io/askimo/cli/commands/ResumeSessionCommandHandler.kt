@@ -6,12 +6,15 @@ package io.askimo.cli.commands
 
 import io.askimo.core.session.MessageRole
 import io.askimo.core.session.Session
+import io.askimo.core.session.SessionResumeService
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
 
 class ResumeSessionCommandHandler(private val session: Session) : CommandHandler {
     override val keyword = ":resume-session"
     override val description = "Resume a chat session by ID"
+
+    private val resumeService = SessionResumeService(session)
 
     override fun handle(line: ParsedLine) {
         val args = line.words()
@@ -21,21 +24,20 @@ class ResumeSessionCommandHandler(private val session: Session) : CommandHandler
         }
 
         val sessionId = args[1]
-        val success = session.resumeChatSession(sessionId)
+        val result = resumeService.resumeSession(sessionId)
 
-        if (success) {
+        if (result.success) {
             info("✅ Resumed chat session: $sessionId")
-            val messages = session.chatSessionRepository.getMessages(sessionId)
-            if (messages.isNotEmpty()) {
+            if (result.messages.isNotEmpty()) {
                 info("\n📝 All conversation history:")
-                messages.forEach { msg ->
+                result.messages.forEach { msg ->
                     val prefix = if (msg.role == MessageRole.USER) "You" else "Assistant"
                     info("$prefix: ${msg.content}")
                     info("-".repeat(40))
                 }
             }
         } else {
-            info("❌ Session not found: $sessionId")
+            info("❌ ${result.errorMessage}")
         }
     }
 }

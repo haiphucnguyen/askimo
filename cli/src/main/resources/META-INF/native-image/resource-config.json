@@ -11,9 +11,6 @@
         "pattern": "\\QMETA-INF/services/dev.langchain4j.http.client.HttpClientBuilderFactory\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/dev.langchain4j.model.anthropic.internal.client.AnthropicClientBuilderFactory\\E"
-      },
-      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.internal.spi.OpenAiClientBuilderFactory\\E"
       },
       {
@@ -231,12 +228,6 @@
       },
       {
         "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/nfkc.nrm\\E"
-      },
-      {
-        "pattern": "java.base:\\Qjdk/internal/icu/impl/data/icudt72b/uprops.icu\\E"
-      },
-      {
-        "pattern": "java.base:\\Qsun/net/idn/uidna.spp\\E"
       }
     ]
   },

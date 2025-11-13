@@ -5,6 +5,7 @@
 package io.askimo.cli.recipes
 
 import dev.langchain4j.agent.tool.Tool
+import io.askimo.core.util.Logger.debug
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import java.lang.Double
@@ -12,6 +13,8 @@ import java.lang.Float
 import java.lang.Long
 import java.lang.reflect.Method
 import kotlin.collections.get
+import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.jvm.javaMethod
 
 class ToolRegistry private constructor(
     private val annotated: Map<String, Pair<Any, Method>>,
@@ -93,12 +96,20 @@ class ToolRegistry private constructor(
                 }
             }
             is Map<*, *> -> {
-                val params = m.parameters
-                val callArgs = Array<Any?>(params.size) { null }
-                for (i in params.indices) {
-                    val p = params[i]
-                    val raw = args[p.name]
-                    callArgs[i] = coerce(raw, p.type)
+                // Use Kotlin reflection to get actual parameter names
+                val kFunction = target::class.declaredFunctions.find { it.javaMethod == m }
+                requireNotNull(kFunction) {
+                    "Could not find Kotlin function for ${m.name}. " +
+                        "Ensure the method is compiled with Kotlin and metadata is preserved."
+                }
+
+                val callArgs = Array<Any?>(kFunction.parameters.size - 1) { null } // -1 for 'this' parameter
+                kFunction.parameters.drop(1).forEachIndexed { i, kParam ->
+                    val paramName = kParam.name
+                        ?: error("Parameter name is null for parameter at index $i in ${m.name}")
+                    val raw = args[paramName]
+                    debug("Resolving parameter '$paramName' with value: $raw")
+                    callArgs[i] = coerce(raw, m.parameters[i].type)
                 }
                 m.invoke(target, *callArgs)
             }
