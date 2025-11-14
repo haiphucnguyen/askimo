@@ -5,6 +5,16 @@
 package io.askimo.core.session
 
 /**
+ * Result of resuming a chat session.
+ */
+data class ResumeSessionResult(
+    val success: Boolean,
+    val sessionId: String,
+    val messages: List<ChatMessage> = emptyList(),
+    val errorMessage: String? = null,
+)
+
+/**
  * Service for managing chat sessions with common logic shared between CLI and desktop.
  *
  * This service provides operations for listing, sorting, and paginating chat sessions
@@ -66,6 +76,32 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean = repository.deleteSession(sessionId)
+
+    /**
+     * Resume a chat session by ID and return the result with messages.
+     *
+     * @param session The current Session instance to resume into
+     * @param sessionId The ID of the session to resume
+     * @return ResumeSessionResult containing success status, messages, and any error
+     */
+    fun resumeSession(session: Session, sessionId: String): ResumeSessionResult {
+        val success = session.resumeChatSession(sessionId)
+
+        return if (success) {
+            val messages = repository.getMessages(sessionId)
+            ResumeSessionResult(
+                success = true,
+                sessionId = sessionId,
+                messages = messages,
+            )
+        } else {
+            ResumeSessionResult(
+                success = false,
+                sessionId = sessionId,
+                errorMessage = "Session not found: $sessionId",
+            )
+        }
+    }
 
     /**
      * Close the repository connection.

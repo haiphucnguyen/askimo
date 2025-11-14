@@ -211,13 +211,16 @@ fun sidebar(
                     painter = painterResource("/images/askimo_64.png"),
                     contentDescription = "Askimo",
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
-                IconButton(onClick = onToggleExpand) {
+                IconButton(
+                    onClick = onToggleExpand,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardDoubleArrowLeft,
                         contentDescription = "Collapse sidebar",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -234,7 +237,9 @@ fun sidebar(
                     label = { Text("New Chat") },
                     selected = false,
                     onClick = onNewChat,
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // Sessions (Collapsible)
@@ -253,7 +258,9 @@ fun sidebar(
                             contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
                         )
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // Sessions list (collapsible content)
@@ -291,7 +298,9 @@ fun sidebar(
                                     },
                                     selected = false,
                                     onClick = onNavigateToSessions,
-                                    modifier = Modifier.padding(vertical = 2.dp),
+                                    modifier = Modifier
+                                        .padding(vertical = 2.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand),
                                 )
                             }
                         }
@@ -304,7 +313,9 @@ fun sidebar(
                     label = { Text("Settings") },
                     selected = currentView == View.SETTINGS,
                     onClick = onNavigateToSettings,
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // About
@@ -313,7 +324,9 @@ fun sidebar(
                     label = { Text("About") },
                     selected = currentView == View.ABOUT,
                     onClick = onNavigateToAbout,
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
                 )
             }
         }
@@ -335,11 +348,14 @@ fun sidebar(
                 modifier = Modifier.padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                IconButton(onClick = onToggleExpand) {
+                IconButton(
+                    onClick = onToggleExpand,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardDoubleArrowRight,
                         contentDescription = "Expand sidebar",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -357,6 +373,7 @@ fun sidebar(
                     label = null,
                     selected = false,
                     onClick = onNewChat,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // Sessions
@@ -365,6 +382,7 @@ fun sidebar(
                     label = null,
                     selected = currentView == View.SESSIONS,
                     onClick = onNavigateToSessions,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // Settings
@@ -373,6 +391,7 @@ fun sidebar(
                     label = null,
                     selected = currentView == View.SETTINGS,
                     onClick = onNavigateToSettings,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
 
                 // About
@@ -381,6 +400,7 @@ fun sidebar(
                     label = null,
                     selected = currentView == View.ABOUT,
                     onClick = onNavigateToAbout,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
             }
         }

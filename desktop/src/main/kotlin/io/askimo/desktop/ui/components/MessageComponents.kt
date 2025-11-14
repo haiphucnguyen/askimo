@@ -35,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -131,7 +133,7 @@ fun messageBubble(message: ChatMessage) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy message",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                     }

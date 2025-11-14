@@ -7,8 +7,8 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
-import io.askimo.core.session.SessionResumeService
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.service.ChatService
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +42,7 @@ class ChatViewModel(
     var currentResponse by mutableStateOf("")
         private set
 
-    private val resumeService = SessionResumeService(chatService.getSession())
+    private val sessionService = ChatSessionService()
 
     /**
      * Send a message to the AI.
@@ -105,7 +105,7 @@ class ChatViewModel(
                 errorMessage = null
 
                 val result = withContext(Dispatchers.IO) {
-                    resumeService.resumeSession(sessionId)
+                    sessionService.resumeSession(chatService.getSession(), sessionId)
                 }
 
                 if (result.success) {

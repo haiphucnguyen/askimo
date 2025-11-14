@@ -28,7 +28,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -202,6 +204,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .pointerHoverIcon(PointerIcon.Hand)
             .onPointerEvent(PointerEventType.Enter) { isHovered = true }
             .onPointerEvent(PointerEventType.Exit) { isHovered = false },
     ) {
@@ -253,7 +256,7 @@ private fun renderBlockQuote(blockQuote: BlockQuote) {
 private fun buildInlineContent(
     node: Node,
     inlineCodeBg: androidx.compose.ui.graphics.Color,
-): androidx.compose.ui.text.AnnotatedString = buildAnnotatedString {
+): AnnotatedString = buildAnnotatedString {
     var child = node.firstChild
     while (child != null) {
         when (child) {

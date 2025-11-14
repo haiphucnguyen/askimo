@@ -14,6 +14,7 @@ import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
 import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
+import io.askimo.cli.commands.DeleteSessionCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
 import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
@@ -231,6 +232,7 @@ fun main(args: Array<String>) {
                 ListSessionsCommandHandler(),
                 NewSessionCommandHandler(session),
                 ResumeSessionCommandHandler(session),
+                DeleteSessionCommandHandler(),
                 AgentCommandHandler(session),
             )
 
