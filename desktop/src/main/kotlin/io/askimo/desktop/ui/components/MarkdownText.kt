@@ -6,15 +6,31 @@ package io.askimo.desktop.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -158,10 +174,13 @@ private fun renderOrderedList(list: OrderedList) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
     val isDark = backgroundColor.luminance() < 0.5
+    val clipboardManager = LocalClipboardManager.current
+    var isHovered by remember { mutableStateOf(false) }
 
     // Get language from the info string (e.g., "kotlin", "java", "python")
     val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
@@ -180,15 +199,42 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
         theme = theme,
     )
 
-    Text(
-        text = highlightedCode,
-        style = MaterialTheme.typography.bodyMedium,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(backgroundColor)
-            .padding(12.dp)
-            .horizontalScroll(rememberScrollState()),
-    )
+            .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+    ) {
+        Text(
+            text = highlightedCode,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(backgroundColor)
+                .padding(12.dp)
+                .horizontalScroll(rememberScrollState()),
+        )
+
+        // Copy button (shown on hover)
+        if (isHovered) {
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(codeBlock.literal))
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(32.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy code",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable

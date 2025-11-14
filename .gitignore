@@ -47,3 +47,4 @@ Gemfile.lock
 ### Environment variables ###
 .env
 
+cloudflare-worker-openai-proxy.js

@@ -31,8 +31,6 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,15 +55,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
-import io.askimo.desktop.service.ThemePreferences
 import io.askimo.desktop.ui.theme.DarkColorScheme
-import io.askimo.desktop.ui.theme.LightColorScheme
 import io.askimo.desktop.ui.views.aboutView
 import io.askimo.desktop.ui.views.chatView
 import io.askimo.desktop.ui.views.sessionsView
@@ -73,7 +69,6 @@ import io.askimo.desktop.ui.views.settingsView
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import kotlinx.coroutines.launch
-import java.awt.Toolkit
 
 fun main() = application {
     Window(
@@ -89,7 +84,7 @@ fun main() = application {
 @Composable
 @Preview
 fun app() {
-    var inputText by remember { mutableStateOf("") }
+    var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var currentView by remember { mutableStateOf(View.CHAT) }
     var isDrawerPinned by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
@@ -99,14 +94,15 @@ fun app() {
     // Create ViewModels
     val chatViewModel = remember { ChatViewModel(scope = scope) }
     val sessionsViewModel = remember { SessionsViewModel(scope = scope) }
+    val settingsViewModel = remember { io.askimo.desktop.viewmodel.SettingsViewModel(scope = scope) }
 
     // Theme state
-    val themeMode by ThemePreferences.themeMode.collectAsState()
+    val themeMode by io.askimo.desktop.service.ThemePreferences.themeMode.collectAsState()
 
     // Determine if system is in dark mode
     val isSystemInDarkMode = remember {
         try {
-            val toolkit = Toolkit.getDefaultToolkit()
+            val toolkit = java.awt.Toolkit.getDefaultToolkit()
             val isDark = toolkit.getDesktopProperty("awt.color.darkMode") == true
             isDark
         } catch (e: Exception) {
@@ -116,12 +112,12 @@ fun app() {
 
     // Calculate actual dark mode based on theme preference
     val useDarkMode = when (themeMode) {
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-        ThemeMode.SYSTEM -> isSystemInDarkMode
+        io.askimo.desktop.model.ThemeMode.LIGHT -> false
+        io.askimo.desktop.model.ThemeMode.DARK -> true
+        io.askimo.desktop.model.ThemeMode.SYSTEM -> isSystemInDarkMode
     }
 
-    val colorScheme = if (useDarkMode) DarkColorScheme else LightColorScheme
+    val colorScheme = if (useDarkMode) DarkColorScheme else io.askimo.desktop.ui.theme.LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
@@ -137,7 +133,7 @@ fun app() {
                     onTogglePin = { isDrawerPinned = false },
                     onNewChat = {
                         chatViewModel.clearChat()
-                        inputText = ""
+                        inputText = TextFieldValue("")
                         currentView = View.CHAT
                     },
                     onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
@@ -158,11 +154,12 @@ fun app() {
                     currentView = currentView,
                     chatViewModel = chatViewModel,
                     sessionsViewModel = sessionsViewModel,
+                    settingsViewModel = settingsViewModel,
                     inputText = inputText,
                     onInputTextChange = { inputText = it },
                     onSendMessage = { message ->
                         chatViewModel.sendMessage(message)
-                        inputText = ""
+                        inputText = TextFieldValue("")
                     },
                     onToggleDrawer = { isDrawerPinned = !isDrawerPinned },
                     onResumeSession = { sessionId ->
@@ -186,7 +183,7 @@ fun app() {
                         onTogglePin = { isDrawerPinned = true },
                         onNewChat = {
                             chatViewModel.clearChat()
-                            inputText = ""
+                            inputText = TextFieldValue("")
                             currentView = View.CHAT
                             scope.launch { drawerState.close() }
                         },
@@ -218,11 +215,12 @@ fun app() {
                     currentView = currentView,
                     chatViewModel = chatViewModel,
                     sessionsViewModel = sessionsViewModel,
+                    settingsViewModel = settingsViewModel,
                     inputText = inputText,
                     onInputTextChange = { inputText = it },
                     onSendMessage = { message ->
                         chatViewModel.sendMessage(message)
-                        inputText = ""
+                        inputText = TextFieldValue("")
                     },
                     onToggleDrawer = {
                         scope.launch {
@@ -532,8 +530,9 @@ fun mainContent(
     currentView: View,
     chatViewModel: ChatViewModel,
     sessionsViewModel: SessionsViewModel,
-    inputText: String,
-    onInputTextChange: (String) -> Unit,
+    settingsViewModel: io.askimo.desktop.viewmodel.SettingsViewModel,
+    inputText: TextFieldValue,
+    onInputTextChange: (TextFieldValue) -> Unit,
     onSendMessage: (String) -> Unit,
     onToggleDrawer: () -> Unit,
     onResumeSession: (String) -> Unit,
@@ -579,6 +578,7 @@ fun mainContent(
                 modifier = Modifier.padding(padding),
             )
             View.SETTINGS -> settingsView(
+                viewModel = settingsViewModel,
                 modifier = Modifier.padding(padding),
             )
             View.ABOUT -> aboutView(
@@ -596,63 +596,64 @@ private fun sessionItemWithMenu(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NavigationDrawerItem(
-                icon = null,
-                label = {
-                    Text(
-                        text = session.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                    )
-                },
-                selected = false,
-                onClick = { onResumeSession(session.id) },
+        NavigationDrawerItem(
+            icon = null,
+            label = {
+                Text(
+                    text = session.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
+            },
+            selected = false,
+            onClick = { onResumeSession(session.id) },
+            modifier = Modifier
+                .weight(1f)
+                .pointerHoverIcon(PointerIcon.Hand),
+        )
+
+        // Three-dot menu button with dropdown
+        Box {
+            IconButton(
+                onClick = { showMenu = true },
                 modifier = Modifier
-                    .weight(1f)
+                    .padding(0.dp)
                     .pointerHoverIcon(PointerIcon.Hand),
-            )
-
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
+            ) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(0.dp),
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        modifier = Modifier.padding(0.dp),
-                    )
-                }
+                )
+            }
 
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            showMenu = false
-                            onDeleteSession(session.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                    )
-                }
+            androidx.compose.material3.DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+            ) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Delete") },
+                    onClick = {
+                        showMenu = false
+                        onDeleteSession(session.id)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                )
+                // Future menu items can be added here
             }
         }
     }

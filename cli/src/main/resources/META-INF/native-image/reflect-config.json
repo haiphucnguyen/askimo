@@ -81,6 +81,9 @@
     "name": "[Lorg.testcontainers.shaded.com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;"
   },
   {
+    "name": "[Lsun.security.pkcs.SignerInfo;"
+  },
+  {
     "name": "android.os.Build"
   },
   {
@@ -797,6 +800,10 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "com.sun.crypto.provider.HmacCore$HmacSHA384",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA1",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -834,6 +841,411 @@
   {
     "name": "com.zaxxer.hikari.pool.PoolEntry",
     "fields": [{ "name": "state" }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicContent",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicCreateMessageRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getCustomParameters", "parameterTypes": [] },
+      { "name": "getMaxTokens", "parameterTypes": [] },
+      { "name": "getMessages", "parameterTypes": [] },
+      { "name": "getMetadata", "parameterTypes": [] },
+      { "name": "getModel", "parameterTypes": [] },
+      { "name": "getStopSequences", "parameterTypes": [] },
+      { "name": "getSystem", "parameterTypes": [] },
+      { "name": "getTemperature", "parameterTypes": [] },
+      { "name": "getThinking", "parameterTypes": [] },
+      { "name": "getToolChoice", "parameterTypes": [] },
+      { "name": "getTools", "parameterTypes": [] },
+      { "name": "getTopK", "parameterTypes": [] },
+      { "name": "getTopP", "parameterTypes": [] },
+      { "name": "isStream", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicDelta",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessageContent",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicResponseMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicRole",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "methods": [{ "name": "serialize", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicStreamingData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTextContent",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicToolSchema",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicUsage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiAttributionSourceId",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiBlob",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiBlockReason",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiCandidate",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "dev.langchain4j.model.googleai.GeminiContent",
+          "dev.langchain4j.model.googleai.GeminiFinishReason",
+          "java.util.List",
+          "dev.langchain4j.model.googleai.GeminiCitationMetadata",
+          "java.lang.Integer",
+          "java.util.List",
+          "java.lang.Integer"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiCitationMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiCitationSource",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiCodeExecutionResult",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.util.List", "java.lang.String"]
+      },
+      { "name": "getParts", "parameterTypes": [] },
+      { "name": "getRole", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiExecutableCode",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiFileData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiFinishReason",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiFunctionCall",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.String", "java.util.Map"]
+      },
+      { "name": "getArgs", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiFunctionDeclaration",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getParameters", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiFunctionResponse",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getResponse", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "cachedContent", "parameterTypes": [] },
+      { "name": "contents", "parameterTypes": [] },
+      { "name": "generationConfig", "parameterTypes": [] },
+      { "name": "safetySettings", "parameterTypes": [] },
+      { "name": "systemInstruction", "parameterTypes": [] },
+      { "name": "toolConfig", "parameterTypes": [] },
+      { "name": "tools", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.List",
+          "dev.langchain4j.model.googleai.GeminiPromptFeedback",
+          "dev.langchain4j.model.googleai.GeminiUsageMetadata"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerationConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "candidateCount", "parameterTypes": [] },
+      { "name": "enableEnhancedCivicAnswers", "parameterTypes": [] },
+      { "name": "frequencyPenalty", "parameterTypes": [] },
+      { "name": "logprobs", "parameterTypes": [] },
+      { "name": "maxOutputTokens", "parameterTypes": [] },
+      { "name": "presencePenalty", "parameterTypes": [] },
+      { "name": "responseLogprobs", "parameterTypes": [] },
+      { "name": "responseMimeType", "parameterTypes": [] },
+      { "name": "responseSchema", "parameterTypes": [] },
+      { "name": "seed", "parameterTypes": [] },
+      { "name": "stopSequences", "parameterTypes": [] },
+      { "name": "temperature", "parameterTypes": [] },
+      { "name": "thinkingConfig", "parameterTypes": [] },
+      { "name": "topK", "parameterTypes": [] },
+      { "name": "topP", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGroundingAttribution",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGroundingPassageId",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiHarmBlockThreshold",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiHarmCategory",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiLanguage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiOutcome",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiPart",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "dev.langchain4j.model.googleai.GeminiBlob",
+          "dev.langchain4j.model.googleai.GeminiFunctionCall",
+          "dev.langchain4j.model.googleai.GeminiFunctionResponse",
+          "dev.langchain4j.model.googleai.GeminiFileData",
+          "dev.langchain4j.model.googleai.GeminiExecutableCode",
+          "dev.langchain4j.model.googleai.GeminiCodeExecutionResult",
+          "java.lang.Boolean",
+          "java.lang.String"
+        ]
+      },
+      { "name": "getCodeExecutionResult", "parameterTypes": [] },
+      { "name": "getExecutableCode", "parameterTypes": [] },
+      { "name": "getFileData", "parameterTypes": [] },
+      { "name": "getFunctionCall", "parameterTypes": [] },
+      { "name": "getFunctionResponse", "parameterTypes": [] },
+      { "name": "getInlineData", "parameterTypes": [] },
+      { "name": "getText", "parameterTypes": [] },
+      { "name": "getThoughtSignature", "parameterTypes": [] },
+      { "name": "isThought", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiPromptFeedback",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiSafetyRating",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiSafetySetting",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiSchema",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getAnyOf", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getFormat", "parameterTypes": [] },
+      { "name": "getItems", "parameterTypes": [] },
+      { "name": "getMaxItems", "parameterTypes": [] },
+      { "name": "getNullable", "parameterTypes": [] },
+      { "name": "getProperties", "parameterTypes": [] },
+      { "name": "getRequired", "parameterTypes": [] },
+      { "name": "getType", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiSemanticRetrieverChunk",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiTool",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getCodeExecution", "parameterTypes": [] },
+      { "name": "getFunctionDeclarations", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiType",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiUsageMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.Integer",
+          "java.lang.Integer",
+          "java.lang.Integer",
+          "java.lang.Integer"
+        ]
+      }
+    ]
   },
   {
     "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
@@ -903,6 +1315,7 @@
       { "name": "created", "parameterTypes": ["java.lang.Long"] },
       { "name": "id", "parameterTypes": ["java.lang.String"] },
       { "name": "model", "parameterTypes": ["java.lang.String"] },
+      { "name": "serviceTier", "parameterTypes": ["java.lang.String"] },
       { "name": "systemFingerprint", "parameterTypes": ["java.lang.String"] },
       {
         "name": "usage",
@@ -1014,13 +1427,23 @@
     "name": "dev.langchain4j.model.openai.internal.shared.CompletionTokensDetails$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "build", "parameterTypes": [] },
+      { "name": "reasoningTokens", "parameterTypes": ["java.lang.Integer"] }
+    ]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.shared.PromptTokensDetails$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "build", "parameterTypes": [] },
+      { "name": "cachedTokens", "parameterTypes": ["java.lang.Integer"] }
+    ]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.shared.StreamOptions",
@@ -1037,7 +1460,19 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "build", "parameterTypes": [] },
       { "name": "completionTokens", "parameterTypes": ["java.lang.Integer"] },
+      {
+        "name": "completionTokensDetails",
+        "parameterTypes": [
+          "dev.langchain4j.model.openai.internal.shared.CompletionTokensDetails"
+        ]
+      },
       { "name": "promptTokens", "parameterTypes": ["java.lang.Integer"] },
+      {
+        "name": "promptTokensDetails",
+        "parameterTypes": [
+          "dev.langchain4j.model.openai.internal.shared.PromptTokensDetails"
+        ]
+      },
       { "name": "totalTokens", "parameterTypes": ["java.lang.Integer"] }
     ]
   },
@@ -1855,7 +2290,13 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "availableModelsReturnsKnownModels", "parameterTypes": [] },
+      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
+      { "name": "defaultSettingsTest", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.providers.gemini.GeminiModelFactoryTest",
@@ -1863,7 +2304,17 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "availableModelsReturnsEmptyListWithoutApiKey",
+        "parameterTypes": []
+      },
+      { "name": "canCallCountEntriesTool", "parameterTypes": [] },
+      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
+      { "name": "defaultSettingsTest", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.providers.ollama.OllamaModelFactoryTest",
@@ -1884,7 +2335,17 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "availableModelsReturnsEmptyListWithoutApiKey",
+        "parameterTypes": []
+      },
+      { "name": "canCallCountEntriesTool", "parameterTypes": [] },
+      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
+      { "name": "defaultSettingsTest", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.providers.xai.XAiModelFactoryTest",
@@ -1892,7 +2353,17 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "availableModelsReturnsEmptyListWithoutApiKey",
+        "parameterTypes": []
+      },
+      { "name": "canCallCountEntriesTool", "parameterTypes": [] },
+      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
+      { "name": "defaultSettingsTest", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.recipes.DefaultRecipeInitializerTest",
@@ -2381,6 +2852,23 @@
         "parameterTypes": []
       },
       {
+        "name": "should delete multiple sessions independently",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete session and all its messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete session and its conversation summary",
+        "parameterTypes": []
+      },
+      { "name": "should delete session successfully", "parameterTypes": [] },
+      {
+        "name": "should delete session with all related data",
+        "parameterTypes": []
+      },
+      {
         "name": "should generate and update session title",
         "parameterTypes": []
       },
@@ -2401,6 +2889,14 @@
         "parameterTypes": []
       },
       {
+        "name": "should handle deletion of session with no messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle deletion of session with no summary",
+        "parameterTypes": []
+      },
+      {
         "name": "should handle different message roles correctly",
         "parameterTypes": []
       },
@@ -2408,6 +2904,14 @@
       { "name": "should handle empty sessions list", "parameterTypes": [] },
       {
         "name": "should limit recent messages correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should maintain database integrity after deletion",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not affect other sessions when deleting one",
         "parameterTypes": []
       },
       {
@@ -2420,6 +2924,10 @@
       },
       {
         "name": "should retrieve recent messages in chronological order",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when deleting non-existent session",
         "parameterTypes": []
       },
       {
@@ -2764,6 +3272,11 @@
     ]
   },
   {
+    "name": "java.lang.Record",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "java.lang.Runtime",
     "methods": [{ "name": "version", "parameterTypes": [] }]
   },
@@ -3053,6 +3566,13 @@
     ]
   },
   {
+    "name": "java.lang.reflect.RecordComponent",
+    "methods": [
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getType", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "java.lang.reflect.TypeVariable",
     "methods": [{ "name": "getAnnotatedBounds", "parameterTypes": [] }]
   },
@@ -3092,6 +3612,18 @@
     "name": "java.security.SecureRandomParameters"
   },
   {
+    "name": "java.security.interfaces.ECPrivateKey"
+  },
+  {
+    "name": "java.security.interfaces.ECPublicKey"
+  },
+  {
+    "name": "java.security.interfaces.RSAPrivateKey"
+  },
+  {
+    "name": "java.security.interfaces.RSAPublicKey"
+  },
+  {
     "name": "java.sql.Date"
   },
   {
@@ -3100,6 +3632,21 @@
   },
   {
     "name": "java.sql.Timestamp"
+  },
+  {
+    "name": "java.util.AbstractCollection",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.AbstractList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.AbstractMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.util.ArrayList",
@@ -3111,6 +3658,18 @@
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.Collections$EmptyList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "java.util.Collections$EmptyMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Collections$UnmodifiableCollection",
@@ -3138,12 +3697,48 @@
     "name": "java.util.Comparator"
   },
   {
+    "name": "java.util.Date"
+  },
+  {
     "name": "java.util.HashMap",
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.HashSet"
+  },
+  {
+    "name": "java.util.ImmutableCollections$AbstractImmutableCollection",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.ImmutableCollections$AbstractImmutableList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.ImmutableCollections$AbstractImmutableMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.ImmutableCollections$List12",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "java.util.ImmutableCollections$ListN",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "java.util.ImmutableCollections$Map1",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Iterator"
@@ -3554,7 +4149,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$9NFN7jSM",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$OPgsl8Zf",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -3597,6 +4192,14 @@
   },
   {
     "name": "sun.security.provider.DSA$SHA256withDSA",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.provider.JavaKeyStore$DualFormatJKS",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.provider.JavaKeyStore$JKS",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -3648,6 +4251,10 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "sun.security.provider.certpath.PKIXCertPathValidator",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "sun.security.rsa.PSSParameters",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -3664,6 +4271,10 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "sun.security.rsa.RSASignature$SHA256withRSA",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "sun.security.ssl.KeyManagerFactoryImpl$SunX509",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -3674,6 +4285,9 @@
   {
     "name": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.util.ObjectIdentifier"
   },
   {
     "name": "sun.security.x509.AuthorityInfoAccessExtension",
@@ -3710,6 +4324,9 @@
         "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
       }
     ]
+  },
+  {
+    "name": "sun.security.x509.CertificateExtensions"
   },
   {
     "name": "sun.security.x509.CertificatePoliciesExtension",
@@ -3749,6 +4366,15 @@
   },
   {
     "name": "sun.security.x509.PrivateKeyUsageExtension",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.Boolean", "java.lang.Object"]
+      }
+    ]
+  },
+  {
+    "name": "sun.security.x509.SubjectAlternativeNameExtension",
     "methods": [
       {
         "name": "<init>",

@@ -18,7 +18,7 @@ shadow = "9.0.1"
 graalvmSvm = "25.0.1"
 sqlite = "3.50.3.0"
 hikaricp = "7.0.2"
-compose = "1.7.1"
+compose = "1.9.3"
 
 [libraries]
 # JLine

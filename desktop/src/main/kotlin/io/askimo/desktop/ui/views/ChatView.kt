@@ -30,6 +30,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.ui.components.messageList
@@ -37,8 +39,8 @@ import io.askimo.desktop.ui.components.messageList
 @Composable
 fun chatView(
     messages: List<ChatMessage>,
-    inputText: String,
-    onInputTextChange: (String) -> Unit,
+    inputText: TextFieldValue,
+    onInputTextChange: (TextFieldValue) -> Unit,
     onSendMessage: (String) -> Unit,
     isLoading: Boolean = false,
     errorMessage: String? = null,
@@ -82,17 +84,25 @@ fun chatView(
                     .weight(1f)
                     .onPreviewKeyEvent { keyEvent ->
                         // Handle Enter key to send message (without Shift)
-                        // Shift+Enter adds a new line (default behavior)
+                        // Shift+Enter adds a new line
                         if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyDown) {
-                            if (!keyEvent.isShiftPressed) {
-                                // Enter without Shift: send message
-                                if (inputText.isNotBlank() && !isLoading) {
-                                    onSendMessage(inputText)
-                                }
+                            if (keyEvent.isShiftPressed) {
+                                // Shift+Enter: add new line manually and move cursor
+                                val newText = inputText.text + "\n"
+                                val newCursorPosition = newText.length
+                                onInputTextChange(
+                                    TextFieldValue(
+                                        text = newText,
+                                        selection = TextRange(newCursorPosition),
+                                    ),
+                                )
                                 true // consume the event
                             } else {
-                                // Shift+Enter: allow default behavior (new line)
-                                false // don't consume, let it add new line
+                                // Enter without Shift: send message
+                                if (inputText.text.isNotBlank() && !isLoading) {
+                                    onSendMessage(inputText.text)
+                                }
+                                true // consume the event
                             }
                         } else {
                             false // don't consume other key events
@@ -117,11 +127,11 @@ fun chatView(
             } else {
                 IconButton(
                     onClick = {
-                        if (inputText.isNotBlank()) {
-                            onSendMessage(inputText)
+                        if (inputText.text.isNotBlank()) {
+                            onSendMessage(inputText.text)
                         }
                     },
-                    enabled = inputText.isNotBlank(),
+                    enabled = inputText.text.isNotBlank(),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                 }
