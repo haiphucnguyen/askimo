@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-group = "io.askimo"
-version = "0.2.0"
+group = rootProject.group
+version = rootProject.version
 
 repositories {
     mavenCentral()

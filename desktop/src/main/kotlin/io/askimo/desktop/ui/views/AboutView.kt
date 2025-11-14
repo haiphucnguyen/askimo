@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.askimo.core.VersionInfo
 
 @Composable
 fun aboutView(modifier: Modifier = Modifier) {
@@ -39,12 +40,17 @@ fun aboutView(modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Askimo Desktop",
+                    text = VersionInfo.name,
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Text(
-                    text = "Version 1.0.0",
+                    text = "Version ${VersionInfo.version}",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Build Date: ${VersionInfo.buildDate}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -80,11 +86,11 @@ fun aboutView(modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "Apache License 2.0",
+                    text = VersionInfo.license,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "Copyright (c) 2025 Hai Nguyen",
+                    text = "Copyright (c) 2025 ${VersionInfo.author}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

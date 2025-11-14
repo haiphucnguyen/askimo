@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.graal
+package io.askimo.cli.graal
 
 import io.askimo.core.config.AppConfigData
 import io.askimo.core.config.ChatConfig

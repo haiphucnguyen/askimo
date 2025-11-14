@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,25 +26,17 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowLeft
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,8 +46,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -68,10 +64,18 @@ import io.askimo.desktop.ui.views.sessionsView
 import io.askimo.desktop.ui.views.settingsView
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
-import kotlinx.coroutines.launch
+import org.jetbrains.skia.Image
 
 fun main() = application {
+    val icon = BitmapPainter(
+        Image.makeFromEncoded(
+            object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
+                ?: throw IllegalStateException("Icon not found"),
+        ).toComposeImageBitmap(),
+    )
+
     Window(
+        icon = icon,
         onCloseRequest = ::exitApplication,
         title = "Askimo Desktop",
         state = rememberWindowState(width = 800.dp, height = 600.dp),
@@ -80,15 +84,13 @@ fun main() = application {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
 fun app() {
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var currentView by remember { mutableStateOf(View.CHAT) }
-    var isDrawerPinned by remember { mutableStateOf(true) }
+    var isSidebarExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // Create ViewModels
@@ -122,134 +124,61 @@ fun app() {
     MaterialTheme(
         colorScheme = colorScheme,
     ) {
-        if (isDrawerPinned) {
-            // Pinned mode: Use Row layout with permanent sidebar
-            Row(modifier = Modifier.fillMaxSize()) {
-                // Sidebar
-                permanentSidebar(
-                    currentView = currentView,
-                    isSessionsExpanded = isSessionsExpanded,
-                    sessionsViewModel = sessionsViewModel,
-                    onTogglePin = { isDrawerPinned = false },
-                    onNewChat = {
-                        chatViewModel.clearChat()
-                        inputText = TextFieldValue("")
-                        currentView = View.CHAT
-                    },
-                    onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                    onNavigateToSessions = { currentView = View.SESSIONS },
-                    onResumeSession = { sessionId ->
-                        chatViewModel.resumeSession(sessionId)
-                        currentView = View.CHAT
-                    },
-                    onDeleteSession = { sessionId ->
-                        sessionsViewModel.deleteSession(sessionId)
-                    },
-                    onNavigateToSettings = { currentView = View.SETTINGS },
-                    onNavigateToAbout = { currentView = View.ABOUT },
-                )
-
-                // Main content
-                mainContent(
-                    currentView = currentView,
-                    chatViewModel = chatViewModel,
-                    sessionsViewModel = sessionsViewModel,
-                    settingsViewModel = settingsViewModel,
-                    inputText = inputText,
-                    onInputTextChange = { inputText = it },
-                    onSendMessage = { message ->
-                        chatViewModel.sendMessage(message)
-                        inputText = TextFieldValue("")
-                    },
-                    onToggleDrawer = { isDrawerPinned = !isDrawerPinned },
-                    onResumeSession = { sessionId ->
-                        chatViewModel.resumeSession(sessionId)
-                        currentView = View.CHAT
-                    },
-                )
-            }
-        } else {
-            // Unpinned mode: Use ModalNavigationDrawer
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                gesturesEnabled = true,
-                drawerContent = {
-                    drawerContent(
-                        currentView = currentView,
-                        isDrawerPinned = false,
-                        isSessionsExpanded = isSessionsExpanded,
-                        sessionsViewModel = sessionsViewModel,
-                        chatViewModel = chatViewModel,
-                        onTogglePin = { isDrawerPinned = true },
-                        onNewChat = {
-                            chatViewModel.clearChat()
-                            inputText = TextFieldValue("")
-                            currentView = View.CHAT
-                            scope.launch { drawerState.close() }
-                        },
-                        onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                        onNavigateToSessions = {
-                            currentView = View.SESSIONS
-                            scope.launch { drawerState.close() }
-                        },
-                        onResumeSession = { sessionId ->
-                            chatViewModel.resumeSession(sessionId)
-                            currentView = View.CHAT
-                            scope.launch { drawerState.close() }
-                        },
-                        onDeleteSession = { sessionId ->
-                            sessionsViewModel.deleteSession(sessionId)
-                        },
-                        onNavigateToSettings = {
-                            currentView = View.SETTINGS
-                            scope.launch { drawerState.close() }
-                        },
-                        onNavigateToAbout = {
-                            currentView = View.ABOUT
-                            scope.launch { drawerState.close() }
-                        },
-                    )
+        // Always show sidebar in expanded or collapsed mode
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Sidebar (expanded or collapsed)
+            sidebar(
+                isExpanded = isSidebarExpanded,
+                currentView = currentView,
+                isSessionsExpanded = isSessionsExpanded,
+                sessionsViewModel = sessionsViewModel,
+                onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
+                onNewChat = {
+                    chatViewModel.clearChat()
+                    inputText = TextFieldValue("")
+                    currentView = View.CHAT
                 },
-            ) {
-                mainContent(
-                    currentView = currentView,
-                    chatViewModel = chatViewModel,
-                    sessionsViewModel = sessionsViewModel,
-                    settingsViewModel = settingsViewModel,
-                    inputText = inputText,
-                    onInputTextChange = { inputText = it },
-                    onSendMessage = { message ->
-                        chatViewModel.sendMessage(message)
-                        inputText = TextFieldValue("")
-                    },
-                    onToggleDrawer = {
-                        scope.launch {
-                            if (drawerState.isClosed) {
-                                drawerState.open()
-                            } else {
-                                drawerState.close()
-                            }
-                        }
-                    },
-                    onResumeSession = { sessionId ->
-                        chatViewModel.resumeSession(sessionId)
-                        currentView = View.CHAT
-                    },
-                )
-            }
+                onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
+                onNavigateToSessions = { currentView = View.SESSIONS },
+                onResumeSession = { sessionId ->
+                    chatViewModel.resumeSession(sessionId)
+                    currentView = View.CHAT
+                },
+                onDeleteSession = { sessionId ->
+                    sessionsViewModel.deleteSession(sessionId)
+                },
+                onNavigateToSettings = { currentView = View.SETTINGS },
+                onNavigateToAbout = { currentView = View.ABOUT },
+            )
+
+            // Main content
+            mainContent(
+                currentView = currentView,
+                chatViewModel = chatViewModel,
+                sessionsViewModel = sessionsViewModel,
+                settingsViewModel = settingsViewModel,
+                inputText = inputText,
+                onInputTextChange = { inputText = it },
+                onSendMessage = { message ->
+                    chatViewModel.sendMessage(message)
+                    inputText = TextFieldValue("")
+                },
+                onResumeSession = { sessionId ->
+                    chatViewModel.resumeSession(sessionId)
+                    currentView = View.CHAT
+                },
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun drawerContent(
+fun sidebar(
+    isExpanded: Boolean,
     currentView: View,
-    isDrawerPinned: Boolean,
     isSessionsExpanded: Boolean,
     sessionsViewModel: SessionsViewModel,
-    chatViewModel: ChatViewModel,
-    onTogglePin: () -> Unit,
+    onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleSessions: () -> Unit,
     onNavigateToSessions: () -> Unit,
@@ -258,273 +187,206 @@ fun drawerContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
 ) {
-    ModalDrawerSheet {
-        // Header with title and pin button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Askimo",
-                style = MaterialTheme.typography.titleLarge,
-            )
-            IconButton(onClick = onTogglePin) {
-                Icon(
-                    imageVector = if (isDrawerPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                    contentDescription = if (isDrawerPinned) "Unpin sidebar" else "Pin sidebar",
-                    tint = if (isDrawerPinned) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-        }
-        HorizontalDivider()
-
+    if (isExpanded) {
+        // Expanded sidebar with full text
         Column(
             modifier = Modifier
-                .padding(vertical = 8.dp)
-                .verticalScroll(rememberScrollState()),
+                .width(280.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surface)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                ),
         ) {
-            // New Chat
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                label = { Text("New Chat") },
-                selected = false,
-                onClick = onNewChat,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-
-            // Sessions (Collapsible)
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.History, contentDescription = null) },
-                label = { Text("Sessions") },
-                selected = currentView == View.SESSIONS,
-                onClick = onToggleSessions,
-                badge = {
-                    Icon(
-                        imageVector = if (isSessionsExpanded) {
-                            Icons.Default.ExpandLess
-                        } else {
-                            Icons.Default.ExpandMore
-                        },
-                        contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
-                    )
-                },
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-
-            // Sessions list (collapsible content)
-            if (isSessionsExpanded) {
-                Column(
-                    modifier = Modifier.padding(start = 32.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-                ) {
-                    if (sessionsViewModel.recentSessions.isEmpty()) {
-                        Text(
-                            text = "No sessions yet",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    } else {
-                        sessionsViewModel.recentSessions.forEach { session ->
-                            sessionItemWithMenu(
-                                session = session,
-                                onResumeSession = onResumeSession,
-                                onDeleteSession = onDeleteSession,
-                            )
-                        }
-
-                        // Show More button if there are more than 10 sessions
-                        if (sessionsViewModel.totalSessionCount > 10) {
-                            NavigationDrawerItem(
-                                icon = null,
-                                label = {
-                                    Text(
-                                        text = "More...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                },
-                                selected = false,
-                                onClick = onNavigateToSessions,
-                                modifier = Modifier.padding(vertical = 2.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Settings
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                label = { Text("Settings") },
-                selected = currentView == View.SETTINGS,
-                onClick = onNavigateToSettings,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-
-            // About
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                label = { Text("About") },
-                selected = currentView == View.ABOUT,
-                onClick = onNavigateToAbout,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun permanentSidebar(
-    currentView: View,
-    isSessionsExpanded: Boolean,
-    sessionsViewModel: SessionsViewModel,
-    onTogglePin: () -> Unit,
-    onNewChat: () -> Unit,
-    onToggleSessions: () -> Unit,
-    onNavigateToSessions: () -> Unit,
-    onResumeSession: (String) -> Unit,
-    onDeleteSession: (String) -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .width(280.dp)
-            .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant,
-            ),
-    ) {
-        // Header with title and pin button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Askimo",
-                style = MaterialTheme.typography.titleLarge,
-            )
-            IconButton(onClick = onTogglePin) {
+            // Header with logo and collapse button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(
-                    imageVector = Icons.Filled.PushPin,
-                    contentDescription = "Unpin sidebar",
+                    painter = painterResource("/images/askimo_64.png"),
+                    contentDescription = "Askimo",
+                    modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
-            }
-        }
-        HorizontalDivider()
-
-        Column(
-            modifier = Modifier
-                .padding(vertical = 8.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // New Chat
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                label = { Text("New Chat") },
-                selected = false,
-                onClick = onNewChat,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-
-            // Sessions (Collapsible)
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.History, contentDescription = null) },
-                label = { Text("Sessions") },
-                selected = currentView == View.SESSIONS,
-                onClick = onToggleSessions,
-                badge = {
+                IconButton(onClick = onToggleExpand) {
                     Icon(
-                        imageVector = if (isSessionsExpanded) {
-                            Icons.Default.ExpandLess
-                        } else {
-                            Icons.Default.ExpandMore
-                        },
-                        contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
+                        imageVector = Icons.Filled.KeyboardDoubleArrowLeft,
+                        contentDescription = "Collapse sidebar",
+                        tint = MaterialTheme.colorScheme.primary,
                     )
-                },
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
+                }
+            }
+            HorizontalDivider()
 
-            // Sessions list (collapsible content)
-            if (isSessionsExpanded) {
-                Column(
-                    modifier = Modifier.padding(start = 32.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-                ) {
-                    if (sessionsViewModel.recentSessions.isEmpty()) {
-                        Text(
-                            text = "No sessions yet",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // New Chat
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    label = { Text("New Chat") },
+                    selected = false,
+                    onClick = onNewChat,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+
+                // Sessions (Collapsible)
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.History, contentDescription = null) },
+                    label = { Text("Sessions") },
+                    selected = currentView == View.SESSIONS,
+                    onClick = onToggleSessions,
+                    badge = {
+                        Icon(
+                            imageVector = if (isSessionsExpanded) {
+                                Icons.Default.ExpandLess
+                            } else {
+                                Icons.Default.ExpandMore
+                            },
+                            contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
                         )
-                    } else {
-                        sessionsViewModel.recentSessions.forEach { session ->
-                            sessionItemWithMenu(
-                                session = session,
-                                onResumeSession = onResumeSession,
-                                onDeleteSession = onDeleteSession,
-                            )
-                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
 
-                        // Show More button if there are more than 10 sessions
-                        if (sessionsViewModel.totalSessionCount > 10) {
-                            NavigationDrawerItem(
-                                icon = null,
-                                label = {
-                                    Text(
-                                        text = "More...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                },
-                                selected = false,
-                                onClick = onNavigateToSessions,
-                                modifier = Modifier.padding(vertical = 2.dp),
+                // Sessions list (collapsible content)
+                if (isSessionsExpanded) {
+                    Column(
+                        modifier = Modifier.padding(start = 32.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                    ) {
+                        if (sessionsViewModel.recentSessions.isEmpty()) {
+                            Text(
+                                text = "No sessions yet",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
+                        } else {
+                            sessionsViewModel.recentSessions.forEach { session ->
+                                sessionItemWithMenu(
+                                    session = session,
+                                    onResumeSession = onResumeSession,
+                                    onDeleteSession = onDeleteSession,
+                                )
+                            }
+
+                            // Show More button if there are more than 10 sessions
+                            if (sessionsViewModel.totalSessionCount > 10) {
+                                NavigationDrawerItem(
+                                    icon = null,
+                                    label = {
+                                        Text(
+                                            text = "More...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    },
+                                    selected = false,
+                                    onClick = onNavigateToSessions,
+                                    modifier = Modifier.padding(vertical = 2.dp),
+                                )
+                            }
                         }
                     }
                 }
+
+                // Settings
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Settings") },
+                    selected = currentView == View.SETTINGS,
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+
+                // About
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    label = { Text("About") },
+                    selected = currentView == View.ABOUT,
+                    onClick = onNavigateToAbout,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
             }
+        }
+    } else {
+        // Collapsed sidebar with icons only
+        Column(
+            modifier = Modifier
+                .width(72.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surface)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Header with expand button only
+            Column(
+                modifier = Modifier.padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                IconButton(onClick = onToggleExpand) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardDoubleArrowRight,
+                        contentDescription = "Expand sidebar",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            HorizontalDivider()
 
-            // Settings
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                label = { Text("Settings") },
-                selected = currentView == View.SETTINGS,
-                onClick = onNavigateToSettings,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
+            Column(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // New Chat
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Add, contentDescription = "New Chat") },
+                    label = null,
+                    selected = false,
+                    onClick = onNewChat,
+                )
 
-            // About
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                label = { Text("About") },
-                selected = currentView == View.ABOUT,
-                onClick = onNavigateToAbout,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
+                // Sessions
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.History, contentDescription = "Sessions") },
+                    label = null,
+                    selected = currentView == View.SESSIONS,
+                    onClick = onNavigateToSessions,
+                )
+
+                // Settings
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    label = null,
+                    selected = currentView == View.SETTINGS,
+                    onClick = onNavigateToSettings,
+                )
+
+                // About
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Info, contentDescription = "About") },
+                    label = null,
+                    selected = currentView == View.ABOUT,
+                    onClick = onNavigateToAbout,
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun mainContent(
     currentView: View,
@@ -534,34 +396,13 @@ fun mainContent(
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
     onSendMessage: (String) -> Unit,
-    onToggleDrawer: () -> Unit,
     onResumeSession: (String) -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when (currentView) {
-                            View.CHAT, View.NEW_CHAT -> "Askimo Desktop"
-                            View.SESSIONS -> "Sessions"
-                            View.SETTINGS -> "Settings"
-                            View.ABOUT -> "About"
-                        },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onToggleDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-            )
-        },
-    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
         when (currentView) {
             View.CHAT, View.NEW_CHAT -> chatView(
                 messages = chatViewModel.messages,
@@ -570,19 +411,19 @@ fun mainContent(
                 onSendMessage = onSendMessage,
                 isLoading = chatViewModel.isLoading,
                 errorMessage = chatViewModel.errorMessage,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.fillMaxSize(),
             )
             View.SESSIONS -> sessionsView(
                 viewModel = sessionsViewModel,
                 onResumeSession = onResumeSession,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.fillMaxSize(),
             )
             View.SETTINGS -> settingsView(
                 viewModel = settingsViewModel,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.fillMaxSize(),
             )
             View.ABOUT -> aboutView(
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

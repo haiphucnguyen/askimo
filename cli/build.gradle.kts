@@ -11,8 +11,8 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-group = "io.askimo"
-version = "0.2.0"
+group = rootProject.group
+version = rootProject.version
 
 repositories {
     mavenCentral()
@@ -122,9 +122,9 @@ sourceSets {
     }
 }
 
-val author = "Hai Nguyen"
-val licenseId = "Apache 2"
-val homepage = "https://github.com/haiphucnguyen/askimo"
+val author = property("author") as String
+val licenseId = property("licenseId") as String
+val homepage = property("homepage") as String
 
 val aboutDir = layout.buildDirectory.dir("generated-resources/about")
 val aboutFile = aboutDir.map { it.file("about.properties") }
@@ -188,7 +188,7 @@ graalvmNative {
                     "-J-Xmx8g",
                     "--enable-url-protocols=https",
                     "--report-unsupported-elements-at-runtime",
-                    "--features=io.askimo.core.graal.AskimoFeature",
+                    "--features=io.askimo.cli.graal.AskimoFeature",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
                     "--initialize-at-run-time=kotlinx.coroutines,kotlin.coroutines,io.askimo.core.project.ProjectFileWatcher",
                     "--allow-incomplete-classpath",

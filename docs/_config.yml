@@ -4,8 +4,8 @@ remote_theme: just-the-docs/just-the-docs
 color_scheme: light
 url: https://haiphucnguyen.github.io
 
-#logo: /assets/images/askimo-logo-64.png
-favicon_ico: /assets/images/askimo-favicon.ico
+
+favicon_ico: /assets/images/favicon.ico
 search_enabled: true
 aux_links:
   "GitHub Repo":

@@ -1,25 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="Askimo - AI at your command line.">
-  <title>Askimo - AI at your command line.</title>
-  <rect width="100%" height="100%" fill="#FFFFFF"/>
-  <!-- Logo group -->
-  <g stroke="#000000" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Chat bubble body -->
-    <rect x="460" y="120" width="360" height="220" rx="24" ry="24"/>
-    <!-- Chat bubble tail -->
-    <polygon points="460,260 430,300 460,300" fill="#FFFFFF" stroke="#000000"/>
-  </g>
-
-  <!-- Streaming dots inside bubble -->
-  <circle cx="560" cy="230" r="8" fill="#000000"/>
-  <circle cx="590" cy="230" r="8" fill="#000000"/>
-  <circle cx="620" cy="230" r="8" fill="#000000"/>
-
-  <!-- CLI caret '>' as a green triangle -->
-  <polygon points="410,220 360,200 360,240" fill="#35C184"/>
-
-  <!-- Text -->
-  <g font-family="Inter, Segoe UI, DejaVu Sans, Helvetica Neue, Arial, sans-serif" text-anchor="middle">
-    <text x="640" y="420" font-size="86" font-weight="700" fill="#000000">Askimo</text>
-    <text x="640" y="482" font-size="44" font-weight="500" fill="#505050">One CLI to Talk, Think, and Automate.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="121,291 507,64 890,282 903,731 515,963 116,719" />
+    <path d="M254 395 L344 507" />
+    <path d="M257 620 L341 520" />
+    <path d="M361 560 L456 560" />
+    <circle cx="665" cy="509" r="79" />
+    <circle cx="529" cy="397" r="39" />
+    <path d="M665 509 L529 397" />
+    <circle cx="797" cy="625" r="39" />
+    <path d="M665 509 L797 625" />
+    <circle cx="667" cy="307" r="37" />
+    <path d="M665 509 L667 307" />
+    <circle cx="529" cy="625" r="35" />
+    <path d="M665 509 L529 625" />
+    <circle cx="671" cy="715" r="35" />
+    <path d="M665 509 L671 715" />
+    <circle cx="805" cy="409" r="34" />
+    <path d="M665 509 L805 409" />
   </g>
 </svg>

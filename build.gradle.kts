@@ -6,8 +6,8 @@ plugins {
     alias(libs.plugins.shadow) apply false
 }
 
-group = "io.askimo"
-version = "0.2.0"
+group = property("projectGroup") as String
+version = property("projectVersion") as String
 
 extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true
 
