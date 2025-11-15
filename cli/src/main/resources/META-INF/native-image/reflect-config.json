@@ -2969,7 +2969,10 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["io.askimo.core.session.SessionParams"]
+        "parameterTypes": [
+          "io.askimo.core.session.SessionParams",
+          "io.askimo.core.session.SessionMode"
+        ]
       },
       { "name": "getActiveProvider", "parameterTypes": [] },
       { "name": "getLastResponse", "parameterTypes": [] },
@@ -4156,7 +4159,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$CNFHc7xN",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$RuTXl0bd",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -83,9 +83,11 @@ data class Scope(
  *
  * @property params The parameters that configure this session, including the current provider, model name,
  *                  and provider-specific settings
+ * @property mode The execution mode indicating how the user is running the application
  */
 class Session(
     val params: SessionParams,
+    val mode: SessionMode = SessionMode.CLI_INTERACTIVE,
 ) {
     private val memoryMap = mutableMapOf<String, ChatMemory>()
 
@@ -295,23 +297,43 @@ class Session(
     }
 
     /**
-     * Starts a new chat session and makes it the current active session.
+     * Starts a new chat session.
+     * Only persists session for CLI_INTERACTIVE and DESKTOP modes.
      *
      * @return The newly created ChatSession
      */
     fun startNewChatSession(): ChatSession {
-        val session = chatSessionRepository.createSession("New Chat")
+        val session = when (mode) {
+            SessionMode.CLI_INTERACTIVE, SessionMode.DESKTOP -> {
+                // Persist session to database for interactive modes
+                chatSessionRepository.createSession("New Chat")
+            }
+            SessionMode.CLI_PROMPT -> {
+                // Create in-memory only session for non-interactive mode
+                ChatSession(
+                    id = "temp-${System.currentTimeMillis()}",
+                    title = "Temporary Session",
+                    createdAt = LocalDateTime.now(),
+                    updatedAt = LocalDateTime.now(),
+                )
+            }
+        }
         currentChatSession = session
         return session
     }
 
     /**
      * Resumes an existing chat session by ID.
+     * Only available for CLI_INTERACTIVE and DESKTOP modes.
      *
      * @param sessionId The ID of the session to resume
      * @return true if the session was found and resumed, false otherwise
      */
     fun resumeChatSession(sessionId: String): Boolean {
+        if (mode == SessionMode.CLI_PROMPT) {
+            return false
+        }
+
         val session = chatSessionRepository.getSession(sessionId)
         return if (session != null) {
             currentChatSession = session
@@ -323,11 +345,17 @@ class Session(
 
     /**
      * Adds a message to the current chat session.
+     * Only persists messages for CLI_INTERACTIVE and DESKTOP modes.
      *
      * @param role The role of the message sender ([MessageRole.USER] or [MessageRole.ASSISTANT])
      * @param content The content of the message
      */
     fun addChatMessage(role: MessageRole, content: String) {
+        // Skip persistence for CLI_PROMPT mode
+        if (mode == SessionMode.CLI_PROMPT) {
+            return
+        }
+
         currentChatSession?.let { session ->
             chatSessionRepository.addMessage(session.id, role, content)
 
@@ -342,9 +370,15 @@ class Session(
     }
 
     /**
-     * Gets intelligent context for the current session including summary + recent messages
+     * Gets intelligent context for the current session including summary + recent messages.
+     * For CLI_PROMPT mode, returns empty list since no context is persisted.
      */
     fun getContextForSession(): List<ChatMessage> {
+        // No context for non-interactive CLI mode
+        if (mode == SessionMode.CLI_PROMPT) {
+            return emptyList()
+        }
+
         val sessionId = currentChatSession?.id ?: return emptyList()
         val contextMessages = mutableListOf<ChatMessage>()
 
@@ -476,6 +510,11 @@ class Session(
     }
 
     private fun triggerSummarizationIfNeeded() {
+        // No summarization needed for non-interactive CLI mode
+        if (mode == SessionMode.CLI_PROMPT) {
+            return
+        }
+
         val sessionId = currentChatSession?.id ?: return
         val messageCount = chatSessionRepository.getMessageCount(sessionId)
 

@@ -15,6 +15,7 @@ import io.askimo.core.session.ProviderService
 import io.askimo.core.session.ProviderTestResult
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
+import io.askimo.core.session.SessionMode
 import io.askimo.core.session.getConfigInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ import kotlinx.coroutines.withContext
 class SettingsViewModel(
     private val scope: CoroutineScope,
 ) {
-    private val session: Session = SessionFactory.createSession()
+    private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
 
     var provider by mutableStateOf<ModelProvider?>(null)
         private set

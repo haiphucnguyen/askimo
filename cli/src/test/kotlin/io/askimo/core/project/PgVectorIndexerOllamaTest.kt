@@ -86,7 +86,7 @@ class PgVectorIndexerOllamaTest {
             """.trimIndent(),
         )
 
-        val session = Session(SessionParams(currentProvider = OLLAMA))
+        val session = Session(SessionParams(currentProvider = OLLAMA), io.askimo.core.session.SessionMode.CLI_PROMPT)
         val indexer =
             PgVectorIndexer(
                 projectId = "pgvector-indexer-test",

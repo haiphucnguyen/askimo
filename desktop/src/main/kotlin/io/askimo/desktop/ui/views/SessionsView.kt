@@ -70,7 +70,10 @@ fun sessionsView(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
             )
-            IconButton(onClick = { viewModel.refresh() }) {
+            IconButton(
+                onClick = { viewModel.refresh() },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            ) {
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh sessions",
@@ -231,6 +234,7 @@ private fun sessionCard(
             Box {
                 IconButton(
                     onClick = { showMenu = true },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Icon(
                         Icons.Default.MoreVert,
@@ -256,6 +260,7 @@ private fun sessionCard(
                                 tint = MaterialTheme.colorScheme.error,
                             )
                         },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }
@@ -280,6 +285,7 @@ private fun paginationControls(
         IconButton(
             onClick = onPrevious,
             enabled = hasPrevious,
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
         ) {
             Icon(
                 Icons.Default.ChevronLeft,
@@ -298,6 +304,7 @@ private fun paginationControls(
         IconButton(
             onClick = onNext,
             enabled = hasNext,
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
         ) {
             Icon(
                 Icons.Default.ChevronRight,

@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
+import io.askimo.core.session.SessionConfigInfo
+import io.askimo.core.session.getConfigInfo
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.service.ChatService
@@ -254,4 +256,11 @@ class ChatViewModel(
     fun clearError() {
         errorMessage = null
     }
+
+    /**
+     * Get the current session configuration info (provider and model).
+     *
+     * @return SessionConfigInfo containing provider, model, and settings description
+     */
+    fun getSessionConfigInfo(): SessionConfigInfo = chatService.getSession().getConfigInfo()
 }

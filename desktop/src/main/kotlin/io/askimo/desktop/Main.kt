@@ -77,7 +77,7 @@ fun main() = application {
     Window(
         icon = icon,
         onCloseRequest = ::exitApplication,
-        title = "Askimo Desktop",
+        title = "Askimo",
         state = rememberWindowState(width = 800.dp, height = 600.dp),
     ) {
         app()
@@ -176,6 +176,7 @@ fun app() {
                 },
                 attachments = attachments,
                 onAttachmentsChange = { attachments = it },
+                onNavigateToSettings = { currentView = View.SETTINGS },
             )
         }
     }
@@ -428,6 +429,7 @@ fun mainContent(
     onResumeSession: (String) -> Unit,
     attachments: List<io.askimo.desktop.model.FileAttachment>,
     onAttachmentsChange: (List<io.askimo.desktop.model.FileAttachment>) -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -435,21 +437,27 @@ fun mainContent(
             .background(MaterialTheme.colorScheme.background),
     ) {
         when (currentView) {
-            View.CHAT, View.NEW_CHAT -> chatView(
-                messages = chatViewModel.messages,
-                inputText = inputText,
-                onInputTextChange = onInputTextChange,
-                onSendMessage = onSendMessage,
-                onStopResponse = { chatViewModel.cancelResponse() },
-                isLoading = chatViewModel.isLoading,
-                isThinking = chatViewModel.isThinking,
-                thinkingElapsedSeconds = chatViewModel.thinkingElapsedSeconds,
-                spinnerFrame = chatViewModel.getSpinnerFrame(),
-                errorMessage = chatViewModel.errorMessage,
-                attachments = attachments,
-                onAttachmentsChange = onAttachmentsChange,
-                modifier = Modifier.fillMaxSize(),
-            )
+            View.CHAT, View.NEW_CHAT -> {
+                val configInfo = chatViewModel.getSessionConfigInfo()
+                chatView(
+                    messages = chatViewModel.messages,
+                    inputText = inputText,
+                    onInputTextChange = onInputTextChange,
+                    onSendMessage = onSendMessage,
+                    onStopResponse = { chatViewModel.cancelResponse() },
+                    isLoading = chatViewModel.isLoading,
+                    isThinking = chatViewModel.isThinking,
+                    thinkingElapsedSeconds = chatViewModel.thinkingElapsedSeconds,
+                    spinnerFrame = chatViewModel.getSpinnerFrame(),
+                    errorMessage = chatViewModel.errorMessage,
+                    attachments = attachments,
+                    onAttachmentsChange = onAttachmentsChange,
+                    provider = configInfo.provider.name,
+                    model = configInfo.model,
+                    onNavigateToSettings = onNavigateToSettings,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             View.SESSIONS -> sessionsView(
                 viewModel = sessionsViewModel,
                 onResumeSession = onResumeSession,

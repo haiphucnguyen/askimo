@@ -40,6 +40,7 @@ import io.askimo.core.VersionInfo
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
+import io.askimo.core.session.SessionMode
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.Logger.warn
@@ -61,10 +62,15 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 
 fun main(args: Array<String>) {
-    // Initialize default templates on startup
     DefaultRecipeInitializer.initializeDefaultTemplates()
 
-    val session = SessionFactory.createSession()
+    // Determine the execution mode based on arguments
+    val mode = when {
+        args.isNotEmpty() -> SessionMode.CLI_PROMPT
+        else -> SessionMode.CLI_INTERACTIVE
+    }
+
+    val session = SessionFactory.createSession(mode = mode)
 
     // Add shutdown hook to gracefully close database connections
     Runtime.getRuntime().addShutdownHook(
@@ -451,30 +457,39 @@ private fun runYamlCommand(
     overrides: Map<String, String>,
     externalArgs: List<String> = emptyList(),
 ) {
-    info("🚀 Running recipe '$name' with arguments $externalArgs…")
+    val terminal = TerminalBuilder.builder().system(true).build()
+    val argsText = if (externalArgs.isNotEmpty()) " with arguments $externalArgs" else ""
+    val indicator = LoadingIndicator(terminal, "Running recipe '$name'$argsText…", "Recipe completed").apply { start() }
 
-    val registry = RecipeRegistry()
-    // Load once to inspect allowedTools (empty ⇒ all tools)
-    val def = registry.load(name)
-    val toolRegistry =
-        if (def.allowedTools.isEmpty()) {
-            ToolRegistry.defaults()
-        } else {
-            debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
-            ToolRegistry.defaults(allow = def.allowedTools.toSet())
+    try {
+        val registry = RecipeRegistry()
+        // Load once to inspect allowedTools (empty ⇒ all tools)
+        val def = registry.load(name)
+        val toolRegistry =
+            if (def.allowedTools.isEmpty()) {
+                ToolRegistry.defaults()
+            } else {
+                debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
+                ToolRegistry.defaults(allow = def.allowedTools.toSet())
+            }
+
+        val executor =
+            RecipeExecutor(
+                session = session,
+                registry = registry,
+                tools = toolRegistry,
+            )
+
+        RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
+            executor.run(
+                name = name,
+                opts = RunOpts(overrides = overrides, externalArgs = externalArgs),
+            )
         }
 
-    val executor =
-        RecipeExecutor(
-            session = session,
-            registry = registry,
-            tools = toolRegistry,
-        )
-
-    RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
-        executor.run(
-            name = name,
-            opts = RunOpts(overrides = overrides, externalArgs = externalArgs),
-        )
+        indicator.stopWithElapsed()
+    } catch (e: Exception) {
+        indicator.stopWithElapsed()
+        throw e
     }
 }

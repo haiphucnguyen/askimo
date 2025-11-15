@@ -7,6 +7,7 @@ package io.askimo.desktop.service
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
+import io.askimo.core.session.SessionMode
 import io.askimo.desktop.model.ChatMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +21,7 @@ import kotlinx.coroutines.withContext
  * handling session management and message streaming without JLine dependencies.
  */
 class ChatService {
-    private val session: Session = SessionFactory.createSession()
+    private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
 
     init {
         // Add shutdown hook to gracefully close database connections

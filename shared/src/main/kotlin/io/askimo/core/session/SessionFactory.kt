@@ -26,40 +26,45 @@ object SessionFactory {
      * Create (or reuse) a Session.
      * - Reuses cached if params are equal to the cached session's params and forceReload == false.
      * - Otherwise builds a new Session and caches it.
+     *
+     * @param params The session parameters to use
+     * @param mode The execution mode (CLI_PROMPT, CLI_INTERACTIVE, or DESKTOP)
+     * @param forceReload Whether to force reload the session even if params match
      */
     fun createSession(
         params: SessionParams = SessionConfigManager.load(),
+        mode: SessionMode = SessionMode.CLI_INTERACTIVE,
         forceReload: Boolean = false,
     ): Session {
         if (!forceReload) {
             val existing = cached
-            if (existing != null && existing.params == params) return existing
+            if (existing != null && existing.params == params && existing.mode == mode) return existing
         }
 
         return synchronized(this) {
             if (!forceReload) {
                 val again = cached
-                if (again != null && again.params == params) return@synchronized again
+                if (again != null && again.params == params && again.mode == mode) return@synchronized again
             }
-            val fresh = buildSession(params)
+            val fresh = buildSession(params, mode)
             cached = fresh
             fresh
         }
     }
 
     /** Persist params, then (re)build and cache a fresh Session from them. */
-    fun reconfigure(params: SessionParams): Session {
+    fun reconfigure(params: SessionParams, mode: SessionMode = SessionMode.CLI_INTERACTIVE): Session {
         SessionConfigManager.save(params)
-        return createSession(params, forceReload = true)
+        return createSession(params, mode, forceReload = true)
     }
 
     /** Reload params from disk and rebuild the cached session. */
-    fun reloadFromDisk(): Session = createSession(SessionConfigManager.load(), forceReload = true)
+    fun reloadFromDisk(mode: SessionMode = SessionMode.CLI_INTERACTIVE): Session = createSession(SessionConfigManager.load(), mode, forceReload = true)
 
-    private fun buildSession(params: SessionParams): Session {
-        debug("Building session with params: $params")
+    private fun buildSession(params: SessionParams, mode: SessionMode): Session {
+        debug("Building session with params: $params, mode: $mode")
 
-        val session = Session(params)
+        val session = Session(params, mode)
         val provider = session.params.currentProvider
         val modelName = session.params.getModel(provider)
 
