@@ -582,7 +582,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -2559,6 +2560,12 @@
     ]
   },
   {
+    "name": "io.askimo.core.recipes.ToolRegistryTestKt",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.security.EncryptionManagerTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4149,7 +4156,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$9tuOJmBI",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$CNFHc7xN",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

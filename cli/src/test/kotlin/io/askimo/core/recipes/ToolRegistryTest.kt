@@ -7,6 +7,12 @@ package io.askimo.core.recipes
 import dev.langchain4j.agent.tool.Tool
 import io.askimo.cli.recipes.ToolRegistry
 import io.askimo.tools.fs.LocalFsTools
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
@@ -16,6 +22,47 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
+
+// Helper to parse JSON tool responses
+private val json = Json { ignoreUnknownKeys = true }
+
+private fun parseToolResponse(jsonString: String): Map<String, Any?> {
+    val element = json.parseToJsonElement(jsonString).jsonObject
+    val result = mutableMapOf<String, Any?>()
+
+    result["success"] = element["success"]?.jsonPrimitive?.boolean
+    result["output"] = element["output"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+    result["error"] = element["error"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+
+    // Parse metadata if present
+    val metadata = element["metadata"]
+    if (metadata != null && metadata !is JsonNull) {
+        val metadataObj = metadata.jsonObject
+        metadataObj.forEach { (key, value) ->
+            result[key] = parseJsonValue(value)
+        }
+    }
+
+    return result
+}
+
+private fun parseJsonValue(value: kotlinx.serialization.json.JsonElement): Any? = when (value) {
+    is JsonNull -> null
+    is JsonPrimitive -> {
+        when {
+            value.isString -> value.content
+            value.content == "true" -> true
+            value.content == "false" -> false
+            else -> value.content.toLongOrNull() ?: value.content.toDoubleOrNull() ?: value.content
+        }
+    }
+    is kotlinx.serialization.json.JsonArray -> {
+        value.map { parseJsonValue(it) }
+    }
+    is kotlinx.serialization.json.JsonObject -> {
+        value.mapValues { (_, v) -> parseJsonValue(v) }
+    }
+}
 
 class TestTools {
     @Tool("No parameters")
@@ -85,7 +132,8 @@ class ToolRegistryTest {
         val target = tempDir.resolve("out.txt").toAbsolutePath().toString()
 
         val result = reg.invoke("writeFile", arrayOf(target, "hello world")) as String
-        assertTrue(result.contains("wrote:"))
+        val parsed = parseToolResponse(result)
+        assertEquals(true, parsed["success"], "writeFile should succeed")
         assertTrue(Files.exists(Path.of(target)))
         assertEquals("hello world", Files.readString(Path.of(target)))
     }
@@ -97,7 +145,9 @@ class ToolRegistryTest {
         Files.writeString(Path.of(target), "sample content")
 
         val result = reg.invoke("readFile", arrayOf(target)) as String
-        assertEquals("sample content", result)
+        val parsed = parseToolResponse(result)
+        assertEquals(true, parsed["success"], "readFile should succeed")
+        assertEquals("sample content", parsed["content"], "Content should be in metadata.content")
     }
 
     // ========== Null Args Tests ==========
@@ -242,7 +292,13 @@ class ToolRegistryTest {
         val missingPath = tempDir.resolve("missing.txt").toAbsolutePath().toString()
 
         val result = reg.invoke("readFile", arrayOf(missingPath)) as String
-        assertTrue(result.startsWith("Error: Path not found"))
+        val parsed = parseToolResponse(result)
+        assertEquals(false, parsed["success"], "readFile should fail for missing file")
+        val errorMsg = (parsed["error"] as? String ?: "").lowercase()
+        assertTrue(
+            errorMsg.contains("path not found") || errorMsg.contains("not found"),
+            "Error should indicate file not found",
+        )
     }
 
     // ========== Integration Tests ==========

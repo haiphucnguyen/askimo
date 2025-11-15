@@ -92,6 +92,7 @@ fun settingsView(
             Text(
                 text = "Settings",
                 style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             HorizontalDivider()
 
@@ -99,6 +100,7 @@ fun settingsView(
             Text(
                 text = "Chat Configuration",
                 style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
             )
 
@@ -129,6 +131,7 @@ fun settingsView(
                             Text(
                                 text = viewModel.provider?.name ?: "Not set",
                                 style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         Button(
@@ -157,6 +160,7 @@ fun settingsView(
                             Text(
                                 text = viewModel.model,
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         Button(
@@ -189,6 +193,7 @@ fun settingsView(
                                     Text(
                                         text = setting,
                                         style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
@@ -208,12 +213,14 @@ fun settingsView(
             Text(
                 text = "Appearance",
                 style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
             )
 
             Text(
                 text = "Theme",
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
             )
 

@@ -69,7 +69,7 @@ import org.jetbrains.skia.Image
 fun main() = application {
     val icon = BitmapPainter(
         Image.makeFromEncoded(
-            object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
+            object {}.javaClass.getResourceAsStream("/images/askimo_linux_512.png")?.readBytes()
                 ?: throw IllegalStateException("Icon not found"),
         ).toComposeImageBitmap(),
     )
@@ -91,12 +91,18 @@ fun app() {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
+    var attachments by remember { mutableStateOf(listOf<io.askimo.desktop.model.FileAttachment>()) }
     val scope = rememberCoroutineScope()
 
     // Create ViewModels
     val chatViewModel = remember { ChatViewModel(scope = scope) }
     val sessionsViewModel = remember { SessionsViewModel(scope = scope) }
     val settingsViewModel = remember { io.askimo.desktop.viewmodel.SettingsViewModel(scope = scope) }
+
+    // Set up callback to refresh sessions list when a message is complete
+    chatViewModel.setOnMessageCompleteCallback {
+        sessionsViewModel.loadRecentSessions()
+    }
 
     // Theme state
     val themeMode by io.askimo.desktop.service.ThemePreferences.themeMode.collectAsState()
@@ -159,14 +165,17 @@ fun app() {
                 settingsViewModel = settingsViewModel,
                 inputText = inputText,
                 onInputTextChange = { inputText = it },
-                onSendMessage = { message ->
-                    chatViewModel.sendMessage(message)
+                onSendMessage = { message, fileAttachments ->
+                    chatViewModel.sendMessage(message, fileAttachments)
                     inputText = TextFieldValue("")
+                    attachments = emptyList()
                 },
                 onResumeSession = { sessionId ->
                     chatViewModel.resumeSession(sessionId)
                     currentView = View.CHAT
                 },
+                attachments = attachments,
+                onAttachmentsChange = { attachments = it },
             )
         }
     }
@@ -415,8 +424,10 @@ fun mainContent(
     settingsViewModel: io.askimo.desktop.viewmodel.SettingsViewModel,
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
-    onSendMessage: (String) -> Unit,
+    onSendMessage: (String, List<io.askimo.desktop.model.FileAttachment>) -> Unit,
     onResumeSession: (String) -> Unit,
+    attachments: List<io.askimo.desktop.model.FileAttachment>,
+    onAttachmentsChange: (List<io.askimo.desktop.model.FileAttachment>) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -431,6 +442,8 @@ fun mainContent(
                 onSendMessage = onSendMessage,
                 isLoading = chatViewModel.isLoading,
                 errorMessage = chatViewModel.errorMessage,
+                attachments = attachments,
+                onAttachmentsChange = onAttachmentsChange,
                 modifier = Modifier.fillMaxSize(),
             )
             View.SESSIONS -> sessionsView(

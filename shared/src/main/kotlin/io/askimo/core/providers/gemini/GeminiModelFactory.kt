@@ -77,6 +77,20 @@ class GeminiModelFactory : ChatModelFactory {
                         • Never refuse general questions by claiming you can only use tools.
                         • When using tools, call the most specific LocalFsTools function that matches the request.
 
+                        Tool response format:
+                        • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
+                        • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data
+                        • success=false: Tool failed, check "error" for reason
+                        • Always check the "success" field before using "output"
+                        • If success=false, inform the user about the error from the "error" field
+                        • When success=true, extract data from "metadata" field for detailed information
+
+                        Tool execution guidelines:
+                        • Parse the tool response JSON before responding to user
+                        • If success=true: Use the output and metadata to answer user's question
+                        • If success=false: Explain what went wrong using the error message
+                        • Never assume tool success without checking the response
+
                         Fallback policy:
                         • If the user asks about local resources but no matching tool is available (e.g. "delete pdf files"),
                           do not reject the request. Instead, provide safe, generic guidance on how they could do it

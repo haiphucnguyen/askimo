@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,29 +93,40 @@ fun messageBubble(message: ChatMessage) {
                 Card(
                     modifier = Modifier.widthIn(max = maxBubbleWidth),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (message.isUser) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.secondaryContainer
-                        },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ),
                 ) {
-                    if (message.isUser) {
-                        // User messages: plain text with selection enabled
-                        SelectionContainer {
-                            Text(
-                                text = message.content,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                    Column {
+                        // Show file attachments if any
+                        if (message.attachments.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                message.attachments.forEach { attachment ->
+                                    fileAttachmentChip(attachment)
+                                }
+                            }
                         }
-                    } else {
-                        // AI messages: markdown rendering with selection enabled
-                        SelectionContainer {
-                            markdownText(
-                                markdown = message.content,
-                                modifier = Modifier.padding(12.dp),
-                            )
+
+                        // Show message content
+                        if (message.isUser) {
+                            // User messages: plain text with selection enabled
+                            SelectionContainer {
+                                Text(
+                                    text = message.content,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        } else {
+                            // AI messages: markdown rendering with selection enabled
+                            SelectionContainer {
+                                markdownText(
+                                    markdown = message.content,
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -141,4 +153,45 @@ fun messageBubble(message: ChatMessage) {
             }
         }
     }
+}
+
+@Composable
+private fun fileAttachmentChip(attachment: io.askimo.desktop.model.FileAttachment) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AttachFile,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = attachment.fileName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = formatFileSize(attachment.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
+private fun formatFileSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> "${bytes / (1024 * 1024)} MB"
 }

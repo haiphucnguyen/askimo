@@ -10,7 +10,9 @@ import androidx.compose.runtime.setValue
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
 import io.askimo.desktop.model.ChatMessage
+import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.service.ChatService
+import io.askimo.desktop.util.constructMessageWithAttachments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
@@ -44,12 +46,23 @@ class ChatViewModel(
 
     private val sessionService = ChatSessionService()
 
+    private var onMessageComplete: (() -> Unit)? = null
+
+    /**
+     * Set a callback to be invoked when a message exchange is complete.
+     * This is useful for refreshing the sessions list after the first message.
+     */
+    fun setOnMessageCompleteCallback(callback: (() -> Unit)?) {
+        onMessageComplete = callback
+    }
+
     /**
      * Send a message to the AI.
      *
      * @param message The user's message
+     * @param attachments Optional list of file attachments
      */
-    fun sendMessage(message: String) {
+    fun sendMessage(message: String, attachments: List<FileAttachment> = emptyList()) {
         if (message.isBlank() || isLoading) return
 
         // Clear any previous error
@@ -57,12 +70,19 @@ class ChatViewModel(
         isLoading = true
         currentResponse = ""
 
-        // Add user message to the list
-        messages = messages + ChatMessage(content = message, isUser = true)
+        // Add user message to the list (for display purposes)
+        messages = messages + ChatMessage(
+            content = message,
+            isUser = true,
+            attachments = attachments,
+        )
+
+        // Construct the full message with attachments for AI
+        val fullMessage = constructMessageWithAttachments(message, attachments)
 
         scope.launch {
             try {
-                chatService.sendMessage(message)
+                chatService.sendMessage(fullMessage)
                     .catch { exception ->
                         errorMessage = "Error: ${exception.message}"
                         isLoading = false
@@ -83,6 +103,9 @@ class ChatViewModel(
                             }
 
                             isLoading = false
+
+                            // Notify that message exchange is complete (for refreshing sidebar)
+                            onMessageComplete?.invoke()
                         }
                     }
             } catch (e: Exception) {
@@ -131,11 +154,15 @@ class ChatViewModel(
 
     /**
      * Clear all messages and start a new chat.
+     * Note: A new session will be created automatically when the first message is sent.
      */
     fun clearChat() {
         messages = listOf()
         errorMessage = null
         currentResponse = ""
+
+        // Clear the current session and memory
+        chatService.getSession().currentChatSession = null
         chatService.clearMemory()
     }
 

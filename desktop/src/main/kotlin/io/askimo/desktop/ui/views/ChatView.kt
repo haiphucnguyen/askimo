@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.ui.views
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,9 +12,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -37,16 +43,86 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.model.ChatMessage
+import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.ui.components.messageList
+
+// Helper function for file size formatting
+private fun formatFileSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> "${bytes / (1024 * 1024)} MB"
+}
+
+// File attachment item composable
+@Composable
+private fun fileAttachmentItem(
+    attachment: FileAttachment,
+    onRemove: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Column {
+                    Text(
+                        text = attachment.fileName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatFileSize(attachment.size),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    )
+                }
+            }
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier
+                    .size(24.dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove attachment",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun chatView(
     messages: List<ChatMessage>,
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
-    onSendMessage: (String) -> Unit,
+    onSendMessage: (String, List<FileAttachment>) -> Unit,
     isLoading: Boolean = false,
     errorMessage: String? = null,
+    attachments: List<FileAttachment> = emptyList(),
+    onAttachmentsChange: (List<FileAttachment>) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -74,74 +150,137 @@ fun chatView(
         HorizontalDivider()
 
         // Input area
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = onInputTextChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .onPreviewKeyEvent { keyEvent ->
-                        // Handle Enter key to send message (without Shift)
-                        // Shift+Enter adds a new line
-                        if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyDown) {
-                            if (keyEvent.isShiftPressed) {
-                                // Shift+Enter: add new line manually and move cursor
-                                val newText = inputText.text + "\n"
-                                val newCursorPosition = newText.length
-                                onInputTextChange(
-                                    TextFieldValue(
-                                        text = newText,
-                                        selection = TextRange(newCursorPosition),
-                                    ),
-                                )
-                                true // consume the event
-                            } else {
-                                // Enter without Shift: send message
-                                if (inputText.text.isNotBlank() && !isLoading) {
-                                    onSendMessage(inputText.text)
-                                }
-                                true // consume the event
-                            }
-                        } else {
-                            false // don't consume other key events
-                        }
-                    },
-                placeholder = { Text("Type your message... (Enter to send, Shift+Enter for new line)") },
-                maxLines = 5,
-                isError = errorMessage != null,
-                supportingText = if (errorMessage != null) {
-                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                } else {
-                    null
-                },
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            if (isLoading) {
-                CircularProgressIndicator(
+            // File attachments display
+            if (attachments.isNotEmpty()) {
+                Column(
                     modifier = Modifier
-                        .padding(12.dp)
-                        .width(24.dp),
-                )
-            } else {
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    attachments.forEach { attachment ->
+                        fileAttachmentItem(
+                            attachment = attachment,
+                            onRemove = {
+                                onAttachmentsChange(attachments - attachment)
+                            },
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Attach file button
                 IconButton(
                     onClick = {
-                        if (inputText.text.isNotBlank()) {
-                            onSendMessage(inputText.text)
+                        // Open file picker
+                        val fileChooser =
+                            java.awt.FileDialog(null as java.awt.Frame?, "Select File", java.awt.FileDialog.LOAD)
+                        fileChooser.isVisible = true
+                        val selectedFile = fileChooser.file
+                        val selectedDir = fileChooser.directory
+                        if (selectedFile != null && selectedDir != null) {
+                            val file = java.io.File(selectedDir, selectedFile)
+                            try {
+                                val content = file.readText()
+                                val attachment = FileAttachment(
+                                    fileName = file.name,
+                                    content = content,
+                                    mimeType = file.extension,
+                                    size = file.length(),
+                                )
+                                onAttachmentsChange(attachments + attachment)
+                            } catch (e: Exception) {
+                                // Handle error - file too large or unreadable
+                                println("Error reading file: ${e.message}")
+                            }
                         }
                     },
-                    enabled = inputText.text.isNotBlank(),
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    ),
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                    Icon(
+                        Icons.Default.AttachFile,
+                        contentDescription = "Attach file",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = onInputTextChange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .onPreviewKeyEvent { keyEvent ->
+                            // Handle Enter key to send message (without Shift)
+                            // Shift+Enter adds a new line
+                            if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyDown) {
+                                if (keyEvent.isShiftPressed) {
+                                    // Shift+Enter: insert new line at cursor position
+                                    val cursorPosition = inputText.selection.start
+                                    val textBeforeCursor = inputText.text.substring(0, cursorPosition)
+                                    val textAfterCursor = inputText.text.substring(cursorPosition)
+                                    val newText = textBeforeCursor + "\n" + textAfterCursor
+                                    val newCursorPosition = cursorPosition + 1
+                                    onInputTextChange(
+                                        TextFieldValue(
+                                            text = newText,
+                                            selection = TextRange(newCursorPosition),
+                                        ),
+                                    )
+                                    true // consume the event
+                                } else {
+                                    // Enter without Shift: send message
+                                    if (inputText.text.isNotBlank() && !isLoading) {
+                                        onSendMessage(inputText.text, attachments)
+                                    }
+                                    true // consume the event
+                                }
+                            } else {
+                                false // don't consume other key events
+                            }
+                        },
+                    placeholder = { Text("Type your message... (Enter to send, Shift+Enter for new line)") },
+                    maxLines = 5,
+                    isError = errorMessage != null,
+                    supportingText = if (errorMessage != null) {
+                        { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                    } else {
+                        null
+                    },
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .width(24.dp),
+                    )
+                } else {
+                    IconButton(
+                        onClick = {
+                            if (inputText.text.isNotBlank()) {
+                                onSendMessage(inputText.text, attachments)
+                            }
+                        },
+                        enabled = inputText.text.isNotBlank(),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        ),
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                    }
                 }
             }
         }

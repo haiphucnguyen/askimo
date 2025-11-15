@@ -66,30 +66,6 @@ class ChatService {
     }
 
     /**
-     * Send a message and get the complete response (non-streaming).
-     *
-     * @param userMessage The message from the user
-     * @return The complete AI response
-     */
-    suspend fun sendMessageSync(userMessage: String): String = withContext(Dispatchers.IO) {
-        // Prepare context and get the prompt to use
-        val promptWithContext = session.prepareContextAndGetPrompt(userMessage)
-
-        // Get the response
-        val fullResponse = session.getChatService().sendStreamingMessageWithCallback(promptWithContext) { _ ->
-            // No-op for non-streaming
-        }
-
-        // Save the AI response to session
-        session.saveAiResponse(fullResponse)
-
-        // Update last response
-        session.lastResponse = fullResponse
-
-        fullResponse
-    }
-
-    /**
      * Clear the conversation memory.
      */
     fun clearMemory() {

@@ -6,6 +6,7 @@ package io.askimo.tools.fs
 
 import dev.langchain4j.agent.tool.Tool
 import io.askimo.core.util.AskimoHome
+import io.askimo.tools.ToolResponseBuilder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -91,45 +92,87 @@ object LocalFsTools {
         """
     Count files and directories in a folder.
     Params: path (string), recursive (optional, default false), includeHidden (optional, default false).
-    Returns: { ok: true, path, files, dirs, bytes }
+    Returns: { success: true, output: string, metadata: { path, files, dirs, bytes, human } }
     """,
     )
     fun countEntries(
         path: String,
         recursive: Boolean? = false,
         includeHidden: Boolean? = false,
-    ): Map<String, Any?> {
-        val dir = safeDir(path)
-        val rec = recursive == true
-        val include = includeHidden == true
+    ): String {
+        return try {
+            val dir = safeDir(path)
+            val rec = recursive == true
+            val include = includeHidden == true
 
-        var files = 0L
-        var dirs = 0L
-        var bytes = 0L
+            var files = 0L
+            var dirs = 0L
+            var bytes = 0L
 
-        val maxDepth = if (rec) Int.MAX_VALUE else 1
-        Files.walk(dir, maxDepth).use { stream ->
-            stream.forEach { p ->
-                if (p == dir) return@forEach // don't count the root
-                if (!include && isHidden(p)) return@forEach
-                when {
-                    p.isDirectory() -> dirs++
-                    p.isRegularFile() -> {
-                        files++
-                        bytes += runCatching { Files.size(p) }.getOrDefault(0L)
+            if (rec) {
+                // For recursive, we need to manually walk to avoid entering hidden directories
+                fun walkDir(current: Path) {
+                    try {
+                        Files.list(current).use { stream ->
+                            stream.forEach { p ->
+                                if (!include && isHidden(p)) return@forEach
+                                when {
+                                    p.isDirectory() -> {
+                                        dirs++
+                                        walkDir(p) // Recurse into non-hidden directories
+                                    }
+                                    p.isRegularFile() -> {
+                                        files++
+                                        bytes += runCatching { Files.size(p) }.getOrDefault(0L)
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Skip directories we can't read
+                    }
+                }
+                walkDir(dir)
+            } else {
+                // Non-recursive: just list immediate children
+                Files.list(dir).use { stream ->
+                    stream.forEach { p ->
+                        if (!include && isHidden(p)) return@forEach
+                        when {
+                            p.isDirectory() -> dirs++
+                            p.isRegularFile() -> {
+                                files++
+                                bytes += runCatching { Files.size(p) }.getOrDefault(0L)
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        return mapOf(
-            "ok" to true,
-            "path" to dir.toString(),
-            "files" to files,
-            "dirs" to dirs,
-            "bytes" to bytes,
-            "human" to humanReadable(bytes),
-        )
+            val human = humanReadable(bytes)
+            ToolResponseBuilder.successWithData(
+                output = "Found $files files and $dirs directories ($human)",
+                data =
+                mapOf(
+                    "path" to dir.toString(),
+                    "files" to files,
+                    "dirs" to dirs,
+                    "bytes" to bytes,
+                    "human" to human,
+                    "recursive" to rec,
+                    "includeHidden" to include,
+                ),
+            )
+        } catch (e: Exception) {
+            ToolResponseBuilder.failure(
+                error = "Failed to count entries: ${e.message}",
+                metadata =
+                ToolResponseBuilder.metadata(
+                    "path" to path,
+                    "exception" to (e::class.simpleName ?: "Exception"),
+                ),
+            )
+        }
     }
 
     /**
@@ -158,7 +201,7 @@ object LocalFsTools {
     @Tool(
         """List or count files in a directory by type. Use either 'category' (video|image|audio|doc|archive) OR 'extensions' (e.g., ["pdf","png"] or "pdf,png").
        Parameters: path, category?, extensions?, recursive?(false), limit?(200), cursor?
-       Returns: {count, files, nextCursor, directory}""",
+       Returns: { success: true, output: string, metadata: {count, files, nextCursor, directory} }""",
     )
     fun filesByType(
         path: String,
@@ -167,7 +210,7 @@ object LocalFsTools {
         recursive: Boolean? = false,
         limit: Int? = 200,
         cursor: String? = null,
-    ): Map<String, Any?> {
+    ): String = try {
         val dir = safeDir(path)
         val extSet: Set<String> =
             when {
@@ -194,11 +237,28 @@ object LocalFsTools {
         val page = if (start < allMatches.size) allMatches.subList(start, end) else emptyList()
         val next = if (end < allMatches.size) end.toString() else null
 
-        return mapOf(
-            "directory" to dir.toString(),
-            "count" to allMatches.size,
-            "files" to page,
-            "nextCursor" to next,
+        val filterDesc = category ?: extensions ?: "custom"
+        ToolResponseBuilder.successWithData(
+            output = "Found ${allMatches.size} files matching $filterDesc in ${dir.fileName}",
+            data =
+            ToolResponseBuilder.metadata(
+                "directory" to dir.toString(),
+                "count" to allMatches.size,
+                "files" to page,
+                "nextCursor" to (next ?: ""),
+                "hasMore" to (next != null),
+            ),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to list files: ${e.message}",
+            metadata =
+            ToolResponseBuilder.metadata(
+                "path" to path,
+                "category" to (category ?: ""),
+                "extensions" to (extensions ?: ""),
+                "exception" to (e::class.simpleName ?: "Exception"),
+            ),
         )
     }
 
@@ -228,14 +288,14 @@ object LocalFsTools {
             "Use either 'extensions' (e.g., [\"pdf\"] or \"pdf\") or 'category' (video|image|audio|doc|archive). " +
             "If both are provided, EXTENSIONS TAKE PRECEDENCE. " +
             "Params: path, extensions?, category?, recursive?(false). " +
-            "Returns: {count, bytes, human, matchedExtensions, directory}",
+            "Returns: { success: true, output: string, metadata: {count, bytes, human, matchedExtensions, directory} }",
     )
     fun totalSizeByType(
         path: String,
         extensions: String? = null,
         category: String? = null,
         recursive: Boolean? = false,
-    ): Map<String, Any> {
+    ): String = try {
         val dir = safeDir(path)
         val extSet: Set<String> =
             when {
@@ -259,12 +319,29 @@ object LocalFsTools {
                 }
             }
         }
-        return mapOf(
-            "directory" to dir.toString(),
-            "count" to count,
-            "bytes" to bytes,
-            "human" to humanReadable(bytes),
-            "matchedExtensions" to extSet,
+        val human = humanReadable(bytes)
+        val filterDesc = extensions ?: category ?: "custom"
+        ToolResponseBuilder.successWithData(
+            output = "Found $count files ($human) matching $filterDesc",
+            data =
+            mapOf(
+                "directory" to dir.toString(),
+                "count" to count,
+                "bytes" to bytes,
+                "human" to human,
+                "matchedExtensions" to extSet,
+            ),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to calculate size: ${e.message}",
+            metadata =
+            ToolResponseBuilder.metadata(
+                "path" to path,
+                "extensions" to (extensions ?: ""),
+                "category" to (category ?: ""),
+                "exception" to (e::class.simpleName ?: "Exception"),
+            ),
         )
     }
 
@@ -293,7 +370,7 @@ object LocalFsTools {
     @Tool(
         "Search for files by name/pattern with smart matching. " +
             "Params: path, glob, recursive?(true), includeHidden?(false), smartMatch?(true). " +
-            "Returns: {ok, files, count, patterns, searchPath}",
+            "Returns: { success: true, output: string, metadata: {files, count, patterns, searchPath} }",
     )
     fun searchFilesByGlob(
         path: String,
@@ -301,7 +378,7 @@ object LocalFsTools {
         recursive: Boolean? = true,
         includeHidden: Boolean? = false,
         smartMatch: Boolean? = true,
-    ): Map<String, Any?> {
+    ): String {
         return try {
             val dir = safeDir(path)
             val rec = recursive != false
@@ -370,18 +447,29 @@ object LocalFsTools {
                 .sortedByDescending { it.value }
                 .map { it.key }
 
-            mapOf(
-                "ok" to true,
-                "path" to dir.toString(),
-                "searchPath" to dir.toString(),
-                "glob" to glob,
-                "patterns" to patterns,
-                "files" to sortedFiles,
-                "count" to sortedFiles.size,
-                "smartMatch" to smart,
+            ToolResponseBuilder.successWithData(
+                output = "Found ${sortedFiles.size} files matching '$glob'",
+                data =
+                mapOf(
+                    "path" to dir.toString(),
+                    "searchPath" to dir.toString(),
+                    "glob" to glob,
+                    "patterns" to patterns,
+                    "files" to sortedFiles,
+                    "count" to sortedFiles.size,
+                    "smartMatch" to smart,
+                ),
             )
         } catch (e: Exception) {
-            err("search_failed", "${e::class.simpleName}: ${e.message}")
+            ToolResponseBuilder.failure(
+                error = "Search failed: ${e::class.simpleName}: ${e.message}",
+                metadata =
+                ToolResponseBuilder.metadata(
+                    "path" to path,
+                    "glob" to glob,
+                    "exception" to (e::class.simpleName ?: "Exception"),
+                ),
+            )
         }
     }
 
@@ -414,14 +502,14 @@ object LocalFsTools {
         "Run shell commands in a persistent terminal, preserving environment variables, working directory, and context. " +
             "Params: command (string), cwd (optional, string), env (optional, map), background (optional, boolean). " +
             "Supports chaining commands (e.g., 'cmd1 && cmd2'). Cross-platform compatible. " +
-            "Returns: {ok: true, output, error, exitCode, cwd, command} or {ok: false, error, message}.",
+            "Returns: { success: true/false, output: string, metadata: {output, error, exitCode, cwd, command} }",
     )
     fun runCommand(
         command: String,
         cwd: String? = null,
         env: Map<String, String>? = null,
         background: Boolean? = false,
-    ): Map<String, Any?> {
+    ): String {
         return try {
             val workDir =
                 if (cwd != null) {
@@ -463,12 +551,15 @@ object LocalFsTools {
             if (background == true) {
                 val pid = process.pid()
                 backgroundProcesses[pid] = BackgroundProcess(process, command, workDir.toString())
-                return mapOf(
-                    "ok" to true,
-                    "background" to true,
-                    "pid" to pid,
-                    "cwd" to workDir.toString(),
-                    "command" to command,
+                return ToolResponseBuilder.successWithData(
+                    output = "Started background process with PID $pid",
+                    data =
+                    mapOf(
+                        "background" to true,
+                        "pid" to pid,
+                        "cwd" to workDir.toString(),
+                        "command" to command,
+                    ),
                 )
             }
 
@@ -482,16 +573,42 @@ object LocalFsTools {
                 process.outputStream.close()
             } catch (e: Exception) { /* ignore */ }
 
-            mapOf(
-                "ok" to true,
-                "output" to output,
-                "error" to error,
-                "exitCode" to exitCode,
-                "cwd" to workDir.toString(),
-                "command" to command,
-            )
+            val success = exitCode == 0
+            if (success) {
+                ToolResponseBuilder.successWithData(
+                    output = "Command executed successfully" + if (output.isNotBlank()) ": $output" else "",
+                    data =
+                    mapOf(
+                        "output" to output,
+                        "error" to error,
+                        "exitCode" to exitCode,
+                        "cwd" to workDir.toString(),
+                        "command" to command,
+                    ),
+                )
+            } else {
+                ToolResponseBuilder.failure(
+                    error = "Command failed with exit code $exitCode" + if (error.isNotBlank()) ": $error" else "",
+                    metadata =
+                    mapOf(
+                        "output" to output,
+                        "error" to error,
+                        "exitCode" to exitCode,
+                        "cwd" to workDir.toString(),
+                        "command" to command,
+                    ),
+                )
+            }
         } catch (e: Exception) {
-            err("run_failed", "${e::class.simpleName}: ${e.message}")
+            ToolResponseBuilder.failure(
+                error = "Failed to run command: ${e::class.simpleName}: ${e.message}",
+                metadata =
+                ToolResponseBuilder.metadata(
+                    "command" to command,
+                    "cwd" to (cwd ?: ""),
+                    "exception" to (e::class.simpleName ?: "Exception"),
+                ),
+            )
         }
     }
 
@@ -517,9 +634,12 @@ object LocalFsTools {
             "Params: pid (long). " +
             "Returns: {ok: true, output, error, exitCode} or {ok: false, error, message}.",
     )
-    fun getCommandOutput(pid: Long): Map<String, Any?> {
+    fun getCommandOutput(pid: Long): String {
         return try {
-            val processInfo = backgroundProcesses[pid] ?: return err("not_found", "No background process with PID $pid")
+            val processInfo = backgroundProcesses[pid] ?: return ToolResponseBuilder.failure(
+                error = "not_found",
+                metadata = ToolResponseBuilder.metadata("pid" to pid, "message" to "No background process with PID $pid"),
+            )
             val process = processInfo.process
 
             // Check if the process is still running
@@ -527,11 +647,14 @@ object LocalFsTools {
 
             if (isAlive) {
                 // Process is still running, return empty output
-                mapOf(
-                    "ok" to true,
-                    "output" to "",
-                    "error" to "",
-                    "exitCode" to null,
+                ToolResponseBuilder.successWithData(
+                    output = "Process is still running",
+                    data = ToolResponseBuilder.metadata(
+                        "output" to "",
+                        "error" to "",
+                        "exitCode" to null,
+                        "running" to true,
+                    ),
                 )
             } else {
                 // Process has finished, read output and clean up
@@ -560,15 +683,21 @@ object LocalFsTools {
                     process.outputStream.close()
                 } catch (e: Exception) { /* ignore */ }
 
-                mapOf(
-                    "ok" to true,
-                    "output" to output,
-                    "error" to error,
-                    "exitCode" to exitCode,
+                ToolResponseBuilder.successWithData(
+                    output = "Process finished with exit code $exitCode",
+                    data = ToolResponseBuilder.metadata(
+                        "output" to output,
+                        "error" to error,
+                        "exitCode" to exitCode,
+                        "running" to false,
+                    ),
                 )
             }
         } catch (e: Exception) {
-            err("output_failed", "${e::class.simpleName}: ${e.message}")
+            ToolResponseBuilder.failure(
+                error = "Failed to get output: ${e::class.simpleName}: ${e.message}",
+                metadata = ToolResponseBuilder.metadata("pid" to pid, "exception" to (e::class.simpleName ?: "Exception")),
+            )
         }
     }
 
@@ -590,9 +719,9 @@ object LocalFsTools {
      */
     @Tool(
         "List all background processes started by runCommand. " +
-            "Returns: {ok: true, processes: [{pid, command, cwd, status, startTime}]} or {ok: false, error, message}.",
+            "Returns: { success: true, output: string, metadata: {processes: [{pid, command, cwd, status, startTime}], count} }",
     )
-    fun listBackgroundProcesses(): Map<String, Any?> = try {
+    fun listBackgroundProcesses(): String = try {
         val processes =
             backgroundProcesses.map { (pid, processInfo) ->
                 val isAlive = processInfo.process.isAlive
@@ -610,13 +739,18 @@ object LocalFsTools {
         // Clean up finished processes
         backgroundProcesses.entries.removeIf { !it.value.process.isAlive }
 
-        mapOf(
-            "ok" to true,
-            "processes" to processes,
-            "count" to processes.size,
+        ToolResponseBuilder.successWithData(
+            output = "Found ${processes.size} background processes",
+            data = ToolResponseBuilder.metadata(
+                "processes" to processes,
+                "count" to processes.size,
+            ),
         )
     } catch (e: Exception) {
-        err("list_failed", "${e::class.simpleName}: ${e.message}")
+        ToolResponseBuilder.failure(
+            error = "Failed to list processes: ${e::class.simpleName}: ${e.message}",
+            metadata = ToolResponseBuilder.metadata("exception" to (e::class.simpleName ?: "Exception")),
+        )
     }
 
     /**
@@ -652,7 +786,7 @@ object LocalFsTools {
             "Params: path (string), query (string), recursive (optional, default true), " +
             "filePattern (optional, glob pattern to filter files), caseSensitive (optional, default false), " +
             "maxResults (optional, default 100), includeLineNumbers (optional, default true). " +
-            "Returns: {ok: true, matches: [{file, line, lineNumber, content}], count, searchPath} or {ok: false, error, message}.",
+            "Returns: { success: true, output: string, metadata: {matches: [{file, line, lineNumber, content}], count, searchPath} }",
     )
     fun searchFileContent(
         path: String,
@@ -662,7 +796,7 @@ object LocalFsTools {
         caseSensitive: Boolean? = false,
         maxResults: Int? = 100,
         includeLineNumbers: Boolean? = true,
-    ): Map<String, Any?> {
+    ): String {
         return try {
             val dir = safeDir(path)
             val rec = recursive != false
@@ -724,38 +858,71 @@ object LocalFsTools {
                     }
             }
 
-            mapOf(
-                "ok" to true,
-                "matches" to matches,
-                "count" to matches.size,
-                "searchPath" to dir.toString(),
-                "query" to query,
-                "caseSensitive" to sensitive,
+            ToolResponseBuilder.successWithData(
+                output = "Found ${matches.size} matches for '$query'",
+                data =
+                mapOf(
+                    "matches" to matches,
+                    "count" to matches.size,
+                    "searchPath" to dir.toString(),
+                    "query" to query,
+                    "caseSensitive" to sensitive,
+                ),
             )
         } catch (e: Exception) {
-            err("search_content_failed", "${e::class.simpleName}: ${e.message}")
+            ToolResponseBuilder.failure(
+                error = "Search failed: ${e::class.simpleName}: ${e.message}",
+                metadata =
+                ToolResponseBuilder.metadata(
+                    "path" to path,
+                    "query" to query,
+                    "exception" to (e::class.simpleName ?: "Exception"),
+                ),
+            )
         }
     }
 
     @Tool("Print text to standard output")
-    fun print(text: String): String {
+    fun print(text: String): String = try {
         println(text)
-        return "printed"
+        ToolResponseBuilder.success(
+            output = "Printed text to output",
+            metadata = mapOf("length" to text.length, "lines" to text.lines().size),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to print: ${e.message}",
+            metadata = mapOf("exception" to (e::class.simpleName ?: "Exception")),
+        )
     }
 
     @Tool("Write text file to path")
     fun writeFile(
         path: String,
         content: String,
-    ): String {
-        try {
-            val p = resolveAndGuard(path, requireExists = false)
-            p.parent?.let { Files.createDirectories(it) }
-            Files.writeString(p, content)
-            return "wrote:\n${p.toAbsolutePath()}"
-        } catch (e: Exception) {
-            return "Error writing file: ${e::class.simpleName}: ${e.message}\nPath: $path\nCWD: $cwd"
-        }
+    ): String = try {
+        val p = resolveAndGuard(path, requireExists = false)
+        p.parent?.let { Files.createDirectories(it) }
+        Files.writeString(p, content)
+        ToolResponseBuilder.successWithData(
+            output = "Successfully wrote file: ${p.toAbsolutePath()}",
+            data =
+            mapOf(
+                "path" to p.toAbsolutePath().toString(),
+                "size" to content.length,
+                "lines" to content.lines().size,
+            ),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to write file: ${e::class.simpleName}: ${e.message}",
+            metadata =
+            ToolResponseBuilder.metadata(
+                "path" to path,
+                "cwd" to cwd.toString(),
+                "exception" to (e::class.simpleName ?: "Exception"),
+            ),
+        )
     }
 
     @Tool("Read text file from path")
@@ -763,13 +930,32 @@ object LocalFsTools {
         return try {
             val p = resolveAndGuard(path)
             if (!Files.isRegularFile(p)) {
-                return "Error: Path is not a regular file: $path"
+                return ToolResponseBuilder.failure(
+                    error = "Path is not a regular file: $path",
+                    metadata = mapOf("path" to path, "type" to "not_a_file"),
+                )
             }
-            Files.readString(p)
+            val content = Files.readString(p)
+            ToolResponseBuilder.successWithData(
+                output = "Successfully read file: ${p.toAbsolutePath()}",
+                data =
+                mapOf(
+                    "path" to p.toAbsolutePath().toString(),
+                    "content" to content,
+                    "size" to content.length,
+                    "lines" to content.lines().size,
+                ),
+            )
         } catch (e: IllegalArgumentException) {
-            "Error: ${e.message}"
+            ToolResponseBuilder.failure(
+                error = e.message ?: "Invalid argument",
+                metadata = mapOf("path" to path, "exception" to "IllegalArgumentException"),
+            )
         } catch (e: Exception) {
-            "Error: ${e::class.simpleName}: ${e.message}"
+            ToolResponseBuilder.failure(
+                error = "${e::class.simpleName}: ${e.message}",
+                metadata = mapOf("path" to path, "exception" to (e::class.simpleName ?: "Exception")),
+            )
         }
     }
 
