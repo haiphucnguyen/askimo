@@ -10,7 +10,7 @@ import io.askimo.core.session.SessionFactory
 import io.askimo.desktop.model.ChatMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 
 /**
@@ -37,9 +37,9 @@ class ChatService {
      * @param userMessage The message from the user
      * @return Flow of chat messages representing the streaming response
      */
-    suspend fun sendMessage(userMessage: String): Flow<ChatMessage> = flow {
+    fun sendMessage(userMessage: String): Flow<ChatMessage> = callbackFlow {
         // Emit the user message first
-        emit(ChatMessage(content = userMessage, isUser = true))
+        send(ChatMessage(content = userMessage, isUser = true))
 
         // Build response with streaming
         val responseBuilder = StringBuilder()
@@ -48,10 +48,11 @@ class ChatService {
             // Prepare context and get the prompt to use
             val promptWithContext = session.prepareContextAndGetPrompt(userMessage)
 
-            // Stream the response
+            // Stream the response with token-by-token emission
             val fullResponse = session.getChatService().sendStreamingMessageWithCallback(promptWithContext) { token ->
                 responseBuilder.append(token)
-                // Emit partial responses for streaming effect
+                // Send each token as it arrives for real-time streaming effect
+                trySend(ChatMessage(content = responseBuilder.toString(), isUser = false))
             }
 
             // Save the AI response to session
@@ -61,8 +62,8 @@ class ChatService {
             session.lastResponse = fullResponse
         }
 
-        // Emit the complete AI response
-        emit(ChatMessage(content = responseBuilder.toString(), isUser = false))
+        // Close the channel when done
+        close()
     }
 
     /**

@@ -27,8 +27,9 @@ fun aboutView(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "About Askimo Desktop",
+            text = "About",
             style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         HorizontalDivider()
 

@@ -18,9 +18,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -119,7 +119,11 @@ fun chatView(
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
     onSendMessage: (String, List<FileAttachment>) -> Unit,
+    onStopResponse: () -> Unit = {},
     isLoading: Boolean = false,
+    isThinking: Boolean = false,
+    thinkingElapsedSeconds: Int = 0,
+    spinnerFrame: Char = '⠋',
     errorMessage: String? = null,
     attachments: List<FileAttachment> = emptyList(),
     onAttachmentsChange: (List<FileAttachment>) -> Unit = {},
@@ -143,7 +147,12 @@ fun chatView(
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
-                messageList(messages = messages)
+                messageList(
+                    messages = messages,
+                    isThinking = isThinking,
+                    thinkingElapsedSeconds = thinkingElapsedSeconds,
+                    spinnerFrame = spinnerFrame,
+                )
             }
         }
 
@@ -259,26 +268,26 @@ fun chatView(
                     },
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .width(24.dp),
-                    )
-                } else {
-                    IconButton(
-                        onClick = {
-                            if (inputText.text.isNotBlank()) {
-                                onSendMessage(inputText.text, attachments)
-                            }
-                        },
-                        enabled = inputText.text.isNotBlank(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                        ),
-                    ) {
+
+                // Show stop button when loading, send button otherwise
+                IconButton(
+                    onClick = {
+                        if (isLoading) {
+                            onStopResponse()
+                        } else if (inputText.text.isNotBlank()) {
+                            onSendMessage(inputText.text, attachments)
+                        }
+                    },
+                    enabled = isLoading || inputText.text.isNotBlank(),
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (isLoading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    ),
+                ) {
+                    if (isLoading) {
+                        Icon(Icons.Default.Stop, contentDescription = "Stop")
+                    } else {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                     }
                 }

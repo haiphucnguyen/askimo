@@ -44,9 +44,24 @@ class ChatViewModel(
     var currentResponse by mutableStateOf("")
         private set
 
+    var isThinking by mutableStateOf(false)
+        private set
+
+    var thinkingElapsedSeconds by mutableStateOf(0)
+        private set
+
+    var thinkingFrameIndex by mutableStateOf(0)
+        private set
+
     private val sessionService = ChatSessionService()
 
     private var onMessageComplete: (() -> Unit)? = null
+    private var currentJob: kotlinx.coroutines.Job? = null
+    private var thinkingJob: kotlinx.coroutines.Job? = null
+    private var animationJob: kotlinx.coroutines.Job? = null
+
+    // Spinner frames matching CLI implementation
+    private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
 
     /**
      * Set a callback to be invoked when a message exchange is complete.
@@ -55,6 +70,11 @@ class ChatViewModel(
     fun setOnMessageCompleteCallback(callback: (() -> Unit)?) {
         onMessageComplete = callback
     }
+
+    /**
+     * Get the current spinner frame character for the thinking indicator.
+     */
+    fun getSpinnerFrame(): Char = spinnerFrames[thinkingFrameIndex % spinnerFrames.size]
 
     /**
      * Send a message to the AI.
@@ -69,6 +89,8 @@ class ChatViewModel(
         errorMessage = null
         isLoading = true
         currentResponse = ""
+        isThinking = true
+        thinkingElapsedSeconds = 0
 
         // Add user message to the list (for display purposes)
         messages = messages + ChatMessage(
@@ -77,18 +99,31 @@ class ChatViewModel(
             attachments = attachments,
         )
 
+        // Start thinking timer
+        startThinkingTimer()
+
         // Construct the full message with attachments for AI
         val fullMessage = constructMessageWithAttachments(message, attachments)
 
-        scope.launch {
+        currentJob = scope.launch {
+            var firstTokenReceived = false
             try {
                 chatService.sendMessage(fullMessage)
                     .catch { exception ->
                         errorMessage = "Error: ${exception.message}"
                         isLoading = false
+                        isThinking = false
+                        stopThinkingTimer()
                     }
                     .collect { chatMessage ->
                         if (!chatMessage.isUser) {
+                            // First token received - stop thinking indicator
+                            if (!firstTokenReceived) {
+                                firstTokenReceived = true
+                                isThinking = false
+                                stopThinkingTimer()
+                            }
+
                             // This is the AI response
                             currentResponse = chatMessage.content
 
@@ -108,11 +143,58 @@ class ChatViewModel(
                             onMessageComplete?.invoke()
                         }
                     }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Handle cancellation gracefully
+                isLoading = false
+                isThinking = false
+                stopThinkingTimer()
+                errorMessage = "Response cancelled"
             } catch (e: Exception) {
                 errorMessage = "Error: ${e.message}"
                 isLoading = false
+                isThinking = false
+                stopThinkingTimer()
             }
         }
+    }
+
+    /**
+     * Cancel the current AI response.
+     */
+    fun cancelResponse() {
+        currentJob?.cancel()
+        currentJob = null
+        isLoading = false
+        isThinking = false
+        stopThinkingTimer()
+    }
+
+    private fun startThinkingTimer() {
+        thinkingElapsedSeconds = 0
+        thinkingFrameIndex = 0
+
+        // Timer for elapsed seconds
+        thinkingJob = scope.launch {
+            while (isThinking) {
+                kotlinx.coroutines.delay(1000)
+                thinkingElapsedSeconds++
+            }
+        }
+
+        // Animation for spinner frames (200ms interval like CLI)
+        animationJob = scope.launch {
+            while (isThinking) {
+                kotlinx.coroutines.delay(200)
+                thinkingFrameIndex++
+            }
+        }
+    }
+
+    private fun stopThinkingTimer() {
+        thinkingJob?.cancel()
+        thinkingJob = null
+        animationJob?.cancel()
+        animationJob = null
     }
 
     /**

@@ -45,10 +45,15 @@ import androidx.compose.ui.unit.dp
 import io.askimo.desktop.model.ChatMessage
 
 @Composable
-fun messageList(messages: List<ChatMessage>) {
+fun messageList(
+    messages: List<ChatMessage>,
+    isThinking: Boolean = false,
+    thinkingElapsedSeconds: Int = 0,
+    spinnerFrame: Char = '⠋',
+) {
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, isThinking) {
         scrollState.animateScrollTo(scrollState.maxValue)
     }
 
@@ -60,6 +65,23 @@ fun messageList(messages: List<ChatMessage>) {
     ) {
         messages.forEach { message ->
             messageBubble(message)
+        }
+
+        // Show "Thinking..." indicator when AI is processing but hasn't returned first token
+        if (isThinking) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = "$spinnerFrame Thinking… (${thinkingElapsedSeconds}s)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
         }
     }
 }

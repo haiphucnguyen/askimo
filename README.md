@@ -1,7 +1,7 @@
 <p align="center">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo-dark.svg">
-        <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo.svg">
+        <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo.svg">
+        <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo-dark.svg">
       </picture>
 </p>
 

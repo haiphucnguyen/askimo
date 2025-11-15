@@ -68,9 +68,14 @@ fun sessionsView(
                 text = "Chat Sessions",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             IconButton(onClick = { viewModel.refresh() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh sessions")
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "Refresh sessions",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
 
@@ -230,6 +235,7 @@ private fun sessionCard(
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -275,12 +281,17 @@ private fun paginationControls(
             onClick = onPrevious,
             enabled = hasPrevious,
         ) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous page")
+            Icon(
+                Icons.Default.ChevronLeft,
+                contentDescription = "Previous page",
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
 
         Text(
             text = "Page $currentPage of $totalPages",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -288,7 +299,11 @@ private fun paginationControls(
             onClick = onNext,
             enabled = hasNext,
         ) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Next page")
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = "Next page",
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
