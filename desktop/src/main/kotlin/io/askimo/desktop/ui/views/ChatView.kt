@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -132,6 +133,16 @@ fun chatView(
     provider: String? = null,
     model: String? = null,
     onNavigateToSettings: () -> Unit = {},
+    hasMoreMessages: Boolean = false,
+    isLoadingPrevious: Boolean = false,
+    onLoadPrevious: () -> Unit = {},
+    isSearchMode: Boolean = false,
+    searchQuery: String = "",
+    searchResults: List<ChatMessage> = emptyList(),
+    isSearching: Boolean = false,
+    onSearch: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onJumpToMessage: (String, java.time.LocalDateTime) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -186,6 +197,74 @@ fun chatView(
             }
         }
 
+        // Search bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearch,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Search in conversation...") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClearSearch,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+            )
+        }
+
+        // Search mode indicator
+        if (isSearchMode) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (isSearching) {
+                            "Searching..."
+                        } else {
+                            "Found ${searchResults.size} result(s)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
+        }
+
         // Messages area
         Box(
             modifier = Modifier
@@ -193,20 +272,47 @@ fun chatView(
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-            if (messages.isEmpty()) {
-                Text(
-                    "Welcome to Askimo Desktop!\nStart a conversation by typing a message below.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
-                messageList(
-                    messages = messages,
-                    isThinking = isThinking,
-                    thinkingElapsedSeconds = thinkingElapsedSeconds,
-                    spinnerFrame = spinnerFrame,
-                )
+            when {
+                isSearchMode && searchResults.isEmpty() && !isSearching -> {
+                    Text(
+                        "No messages found matching \"$searchQuery\"",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+                isSearchMode -> {
+                    messageList(
+                        messages = searchResults,
+                        isThinking = false,
+                        thinkingElapsedSeconds = 0,
+                        spinnerFrame = spinnerFrame,
+                        hasMoreMessages = false,
+                        isLoadingPrevious = false,
+                        onLoadPrevious = {},
+                        searchQuery = searchQuery,
+                        onMessageClick = onJumpToMessage,
+                    )
+                }
+                messages.isEmpty() -> {
+                    Text(
+                        "Welcome to Askimo Desktop!\nStart a conversation by typing a message below.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+                else -> {
+                    messageList(
+                        messages = messages,
+                        isThinking = isThinking,
+                        thinkingElapsedSeconds = thinkingElapsedSeconds,
+                        spinnerFrame = spinnerFrame,
+                        hasMoreMessages = hasMoreMessages,
+                        isLoadingPrevious = isLoadingPrevious,
+                        onLoadPrevious = onLoadPrevious,
+                    )
+                }
             }
         }
 

@@ -8,6 +8,8 @@ data class ChatMessage(
     val content: String,
     val isUser: Boolean,
     val attachments: List<FileAttachment> = emptyList(),
+    val id: String? = null,
+    val timestamp: java.time.LocalDateTime? = null,
 )
 
 data class FileAttachment(

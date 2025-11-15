@@ -15,6 +15,7 @@ import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.session.SessionMode
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
@@ -42,6 +43,7 @@ class XAiModelFactory : ChatModelFactory {
         settings: ProviderSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
+        sessionMode: SessionMode,
     ): ChatService {
         require(settings is XAiSettings) {
             "Invalid settings type for XAI: ${settings::class.simpleName}"
@@ -65,7 +67,12 @@ class XAiModelFactory : ChatModelFactory {
                 .builder(ChatService::class.java)
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
-                .tools(LocalFsTools)
+                .apply {
+                    // Only enable tools for non-DESKTOP modes
+                    if (sessionMode != SessionMode.DESKTOP) {
+                        tools(LocalFsTools)
+                    }
+                }
                 .systemMessageProvider {
                     systemMessage(
                         """

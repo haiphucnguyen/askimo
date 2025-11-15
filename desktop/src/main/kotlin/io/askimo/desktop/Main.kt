@@ -5,8 +5,12 @@
 package io.askimo.desktop
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,8 +56,11 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -92,6 +101,7 @@ fun app() {
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
     var attachments by remember { mutableStateOf(listOf<io.askimo.desktop.model.FileAttachment>()) }
+    var sidebarWidth by remember { mutableStateOf(280.dp) }
     val scope = rememberCoroutineScope()
 
     // Create ViewModels
@@ -135,6 +145,7 @@ fun app() {
             // Sidebar (expanded or collapsed)
             sidebar(
                 isExpanded = isSidebarExpanded,
+                width = sidebarWidth,
                 currentView = currentView,
                 isSessionsExpanded = isSessionsExpanded,
                 sessionsViewModel = sessionsViewModel,
@@ -156,6 +167,45 @@ fun app() {
                 onNavigateToSettings = { currentView = View.SETTINGS },
                 onNavigateToAbout = { currentView = View.ABOUT },
             )
+
+            // Draggable divider
+            if (isSidebarExpanded) {
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .pointerHoverIcon(PointerIcon(java.awt.Cursor(java.awt.Cursor.E_RESIZE_CURSOR)))
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
+                                // Constrain width between 200dp and 500dp
+                                sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Visual grip indicator
+                    Column(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .fillMaxHeight(0.1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                    ) {
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .size(2.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        shape = CircleShape,
+                                    ),
+                            )
+                        }
+                    }
+                }
+            }
 
             // Main content
             mainContent(
@@ -185,6 +235,7 @@ fun app() {
 @Composable
 fun sidebar(
     isExpanded: Boolean,
+    width: androidx.compose.ui.unit.Dp,
     currentView: View,
     isSessionsExpanded: Boolean,
     sessionsViewModel: SessionsViewModel,
@@ -201,7 +252,7 @@ fun sidebar(
         // Expanded sidebar with full text
         Column(
             modifier = Modifier
-                .width(280.dp)
+                .width(width)
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surface)
                 .border(
@@ -455,6 +506,18 @@ fun mainContent(
                     provider = configInfo.provider.name,
                     model = configInfo.model,
                     onNavigateToSettings = onNavigateToSettings,
+                    hasMoreMessages = chatViewModel.hasMoreMessages,
+                    isLoadingPrevious = chatViewModel.isLoadingPrevious,
+                    onLoadPrevious = { chatViewModel.loadPreviousMessages() },
+                    isSearchMode = chatViewModel.isSearchMode,
+                    searchQuery = chatViewModel.searchQuery,
+                    searchResults = chatViewModel.searchResults,
+                    isSearching = chatViewModel.isSearching,
+                    onSearch = { query -> chatViewModel.searchMessages(query) },
+                    onClearSearch = { chatViewModel.clearSearch() },
+                    onJumpToMessage = { messageId, timestamp ->
+                        chatViewModel.jumpToMessage(messageId, timestamp)
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -474,6 +537,7 @@ fun mainContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun sessionItemWithMenu(
     session: io.askimo.core.session.ChatSession,
@@ -492,11 +556,34 @@ private fun sessionItemWithMenu(
         NavigationDrawerItem(
             icon = null,
             label = {
-                Text(
-                    text = session.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                )
+                TooltipArea(
+                    tooltip = {
+                        Surface(
+                            modifier = Modifier.padding(4.dp),
+                            color = MaterialTheme.colorScheme.inverseOnSurface,
+                            shape = MaterialTheme.shapes.small,
+                            shadowElevation = 4.dp,
+                        ) {
+                            Text(
+                                text = session.title,
+                                modifier = Modifier.padding(8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    },
+                    delayMillis = 500,
+                    tooltipPlacement = TooltipPlacement.CursorPoint(
+                        offset = DpOffset(0.dp, 16.dp),
+                    ),
+                ) {
+                    Text(
+                        text = session.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             },
             selected = false,
             onClick = { onResumeSession(session.id) },

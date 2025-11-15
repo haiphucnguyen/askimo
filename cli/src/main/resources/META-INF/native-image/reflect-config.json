@@ -2909,8 +2909,29 @@
       },
       { "name": "should handle empty messages list", "parameterTypes": [] },
       { "name": "should handle empty sessions list", "parameterTypes": [] },
+      { "name": "should handle large page sizes", "parameterTypes": [] },
+      {
+        "name": "should handle pagination with different message roles",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle pagination with exact page size",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle pagination with single message",
+        "parameterTypes": []
+      },
       {
         "name": "should limit recent messages correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should maintain chronological order in backward pagination",
+        "parameterTypes": []
+      },
+      {
+        "name": "should maintain chronological order in forward pagination",
         "parameterTypes": []
       },
       {
@@ -2919,6 +2940,34 @@
       },
       {
         "name": "should not affect other sessions when deleting one",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not duplicate messages across pages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages backward from end",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages backward with cursor",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages forward from start",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages forward with cursor",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate through entire message history backward",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate through entire message history forward",
         "parameterTypes": []
       },
       {
@@ -2934,7 +2983,19 @@
         "parameterTypes": []
       },
       {
+        "name": "should return empty list and null cursor for empty session",
+        "parameterTypes": []
+      },
+      {
         "name": "should return false when deleting non-existent session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null cursor when no more messages backward",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null cursor when no more messages forward",
         "parameterTypes": []
       },
       {
@@ -2957,6 +3018,7 @@
         "name": "should update session updated_at when adding message",
         "parameterTypes": []
       },
+      { "name": "should work with non-existent session", "parameterTypes": [] },
       { "name": "tearDown", "parameterTypes": [] }
     ]
   },
@@ -4159,7 +4221,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$RuTXl0bd",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$imKaWudI",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -240,7 +240,7 @@ class Session(
         }
 
         val memory = getOrCreateMemory(provider, modelName, settings)
-        val newModel = factory.create(modelName, settings, memory)
+        val newModel = factory.create(modelName, settings, memory, sessionMode = mode)
         setChatService(newModel)
         return newModel
     }
@@ -291,6 +291,7 @@ class Session(
                 settings = settings,
                 memory = memory,
                 retrievalAugmentor = rag,
+                sessionMode = mode,
             )
         info("RAG enabled for $model")
         setChatService(upgraded)

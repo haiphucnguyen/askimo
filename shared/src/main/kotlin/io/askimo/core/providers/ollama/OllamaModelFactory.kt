@@ -13,6 +13,7 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.session.SessionMode
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
@@ -54,6 +55,7 @@ class OllamaModelFactory : ChatModelFactory {
         settings: ProviderSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
+        sessionMode: SessionMode,
     ): ChatService {
         require(settings is OllamaSettings) {
             "Invalid settings type for Ollama: ${settings::class.simpleName}"
@@ -76,7 +78,12 @@ class OllamaModelFactory : ChatModelFactory {
                 .builder(ChatService::class.java)
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
-                .tools(LocalFsTools)
+                .apply {
+                    // Only enable tools for non-DESKTOP modes
+                    if (sessionMode != SessionMode.DESKTOP) {
+                        tools(LocalFsTools)
+                    }
+                }
                 .systemMessageProvider {
                     systemMessage(
                         """

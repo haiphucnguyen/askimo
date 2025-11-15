@@ -7,6 +7,7 @@ package io.askimo.core.project
 import io.askimo.core.config.AppConfig
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.session.Session
+import io.askimo.core.session.SessionMode
 import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -86,7 +87,7 @@ class PgVectorIndexerOllamaTest {
             """.trimIndent(),
         )
 
-        val session = Session(SessionParams(currentProvider = OLLAMA), io.askimo.core.session.SessionMode.CLI_PROMPT)
+        val session = Session(SessionParams(currentProvider = OLLAMA), SessionMode.CLI_PROMPT)
         val indexer =
             PgVectorIndexer(
                 projectId = "pgvector-indexer-test",

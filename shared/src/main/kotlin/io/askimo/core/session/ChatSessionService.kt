@@ -15,6 +15,18 @@ data class ResumeSessionResult(
 )
 
 /**
+ * Result of resuming a chat session with pagination.
+ */
+data class ResumeSessionPaginatedResult(
+    val success: Boolean,
+    val sessionId: String,
+    val messages: List<ChatMessage> = emptyList(),
+    val cursor: java.time.LocalDateTime? = null,
+    val hasMore: Boolean = false,
+    val errorMessage: String? = null,
+)
+
+/**
  * Service for managing chat sessions with common logic shared between CLI and desktop.
  *
  * This service provides operations for listing, sorting, and paginating chat sessions
@@ -102,6 +114,69 @@ class ChatSessionService(
             )
         }
     }
+
+    /**
+     * Resume a chat session by ID with paginated messages.
+     *
+     * @param session The current Session instance to resume into
+     * @param sessionId The ID of the session to resume
+     * @param limit The number of messages to load
+     * @return ResumeSessionPaginatedResult containing success status, messages, cursor, and any error
+     */
+    fun resumeSessionPaginated(session: Session, sessionId: String, limit: Int): ResumeSessionPaginatedResult {
+        val success = session.resumeChatSession(sessionId)
+
+        return if (success) {
+            // Get the most recent messages in backward direction (newest first)
+            val (messages, cursor) = repository.getMessagesPaginated(
+                sessionId = sessionId,
+                limit = limit,
+                cursor = null,
+                direction = "backward",
+            )
+            ResumeSessionPaginatedResult(
+                success = true,
+                sessionId = sessionId,
+                messages = messages,
+                cursor = cursor,
+                hasMore = cursor != null,
+            )
+        } else {
+            ResumeSessionPaginatedResult(
+                success = false,
+                sessionId = sessionId,
+                messages = emptyList(),
+                cursor = null,
+                hasMore = false,
+                errorMessage = "Session not found: $sessionId",
+            )
+        }
+    }
+
+    /**
+     * Load previous messages for a session using pagination.
+     *
+     * @param sessionId The ID of the session
+     * @param cursor The cursor to start from (timestamp of the oldest currently loaded message)
+     * @param limit The number of messages to load
+     * @return Pair of messages list and next cursor
+     */
+    fun loadPreviousMessages(sessionId: String, cursor: java.time.LocalDateTime, limit: Int): Pair<List<ChatMessage>, java.time.LocalDateTime?> = repository.getMessagesPaginated(
+        sessionId = sessionId,
+        limit = limit,
+        cursor = cursor,
+        direction = "backward",
+    )
+
+    /**
+     * Search messages in a session by content.
+     *
+     * @param sessionId The ID of the session to search in
+     * @param searchQuery The search query (case-insensitive)
+     * @param limit Maximum number of results to return
+     * @return List of messages matching the search query
+     */
+    fun searchMessages(sessionId: String, searchQuery: String, limit: Int = 100): List<ChatMessage> = repository.searchMessages(sessionId, searchQuery, limit)
 
     /**
      * Close the repository connection.

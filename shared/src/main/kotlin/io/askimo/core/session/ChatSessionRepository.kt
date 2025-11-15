@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.sql.DataSource
 
+const val SESSION_TITLE_MAX_LENGTH = 256
+
 class ChatSessionRepository {
     private val hikariDataSource: HikariDataSource by lazy {
         val dbPath = AskimoHome.base().resolve("chat_sessions.db").toString()
@@ -272,12 +274,162 @@ class ChatSessionRepository {
         return messages.reversed() // Return in chronological order
     }
 
+    /**
+     * Get messages with cursor-based pagination
+     * @param sessionId The session ID
+     * @param limit Number of messages to retrieve (default: 20)
+     * @param cursor The timestamp cursor for pagination. If null, starts from the beginning (oldest messages)
+     * @param direction Direction of pagination: "forward" (newer messages) or "backward" (older messages)
+     * @return A pair of messages list and the next cursor (null if no more messages)
+     */
+    fun getMessagesPaginated(
+        sessionId: String,
+        limit: Int = 20,
+        cursor: LocalDateTime? = null,
+        direction: String = "forward",
+    ): Pair<List<ChatMessage>, LocalDateTime?> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            val query = when {
+                cursor == null && direction == "forward" -> {
+                    // Start from the beginning (oldest messages)
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE session_id = ?
+                    ORDER BY created_at ASC
+                    LIMIT ?
+                    """
+                }
+                cursor == null && direction == "backward" -> {
+                    // Start from the end (newest messages)
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE session_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    """
+                }
+                direction == "forward" -> {
+                    // Get messages after the cursor (newer messages)
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE session_id = ? AND created_at > ?
+                    ORDER BY created_at ASC
+                    LIMIT ?
+                    """
+                }
+                else -> {
+                    // Get messages before the cursor (older messages)
+                    """
+                    SELECT id, session_id, role, content, created_at
+                    FROM chat_messages
+                    WHERE session_id = ? AND created_at < ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    """
+                }
+            }
+
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, sessionId)
+                if (cursor != null) {
+                    stmt.setString(2, cursor.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    stmt.setInt(3, limit + 1) // Fetch one extra to determine if there are more
+                } else {
+                    stmt.setInt(2, limit + 1) // Fetch one extra to determine if there are more
+                }
+
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                        ),
+                    )
+                }
+            }
+        }
+
+        // Check if there are more messages
+        val hasMore = messages.size > limit
+        val resultMessages = if (hasMore) messages.take(limit) else messages
+
+        // Reverse if we fetched in backward direction to maintain chronological order
+        val orderedMessages = if (direction == "backward") resultMessages.reversed() else resultMessages
+
+        // Calculate next cursor
+        val nextCursor = if (hasMore && orderedMessages.isNotEmpty()) {
+            if (direction == "forward") {
+                orderedMessages.last().createdAt
+            } else {
+                orderedMessages.first().createdAt
+            }
+        } else {
+            null
+        }
+
+        return Pair(orderedMessages, nextCursor)
+    }
+
     fun getMessageCount(sessionId: String): Int = dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM chat_messages WHERE session_id = ?").use { stmt ->
             stmt.setString(1, sessionId)
             val rs = stmt.executeQuery()
             if (rs.next()) rs.getInt(1) else 0
         }
+    }
+
+    /**
+     * Search messages in a session by content.
+     *
+     * @param sessionId The session ID to search in
+     * @param searchQuery The search query (case-insensitive)
+     * @param limit Maximum number of results to return
+     * @return List of messages matching the search query, ordered by creation time (newest first)
+     */
+    fun searchMessages(
+        sessionId: String,
+        searchQuery: String,
+        limit: Int = 100,
+    ): List<ChatMessage> {
+        if (searchQuery.isBlank()) return emptyList()
+
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at
+                FROM chat_messages
+                WHERE session_id = ? AND LOWER(content) LIKE LOWER(?)
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                stmt.setString(2, "%$searchQuery%")
+                stmt.setInt(3, limit)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages
     }
 
     fun getMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> {
@@ -364,14 +516,14 @@ class ChatSessionRepository {
     }
 
     private fun generateTitle(firstMessage: String): String {
-        // Simple title generation - take first 100 chars or first sentence
+        // Simple title generation - take first SESSION_TITLE_MAX_LENGTH chars or first sentence
         val cleaned = firstMessage.trim().replace("\n", " ")
         return when {
-            cleaned.length <= 100 -> cleaned
+            cleaned.length <= SESSION_TITLE_MAX_LENGTH -> cleaned
             cleaned.contains(". ") -> cleaned.substringBefore(". ") + "."
             cleaned.contains("? ") -> cleaned.substringBefore("? ") + "?"
             cleaned.contains("! ") -> cleaned.substringBefore("! ") + "!"
-            else -> cleaned.take(97) + "..."
+            else -> cleaned.take(SESSION_TITLE_MAX_LENGTH - 3) + "..."
         }
     }
 

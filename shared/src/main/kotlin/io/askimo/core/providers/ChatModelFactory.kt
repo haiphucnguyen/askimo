@@ -7,6 +7,7 @@ package io.askimo.core.providers
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
+import io.askimo.core.session.SessionMode
 
 /**
  * Factory interface for creating chat model instances for a specific AI provider.
@@ -37,6 +38,8 @@ interface ChatModelFactory {
      * @param retrievalAugmentor Optional retrieval-augmented generation (RAG) component.
      * If provided, the created chat service will use it to fetch and inject relevant context
      * into prompts during generation. Pass null to disable retrieval augmentation.
+     * @param sessionMode The execution mode indicating how the user is running the application.
+     * Tools are disabled for DESKTOP mode.
      * @return A configured ChatModel instance
      */
     fun create(
@@ -44,6 +47,7 @@ interface ChatModelFactory {
         settings: ProviderSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor? = null,
+        sessionMode: SessionMode = SessionMode.CLI_INTERACTIVE,
     ): ChatService
 
     /**

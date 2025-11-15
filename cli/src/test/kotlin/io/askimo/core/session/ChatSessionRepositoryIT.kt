@@ -250,14 +250,16 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should generate title with ellipsis for long messages`() {
         val session = repository.createSession("Temporary Title")
-        val longMessage = "This is a very long message that exceeds the fifty character limit and should be truncated with ellipsis"
+        // Create a message longer than SESSION_TITLE_MAX_LENGTH to test ellipsis
+        val longMessage = "a".repeat(SESSION_TITLE_MAX_LENGTH + 50)
 
         repository.generateAndUpdateTitle(session.id, longMessage)
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        // The current implementation truncates at 97 chars + "..." for messages > 100 chars
-        assertEquals("This is a very long message that exceeds the fifty character limit and should be truncated with e...", updatedSession.title)
+        // The implementation truncates at SESSION_TITLE_MAX_LENGTH - 3 chars and adds "..."
+        assertTrue(updatedSession.title.endsWith("..."))
+        assertEquals(SESSION_TITLE_MAX_LENGTH, updatedSession.title.length)
     }
 
     @Test
@@ -542,5 +544,421 @@ class ChatSessionRepositoryIT {
         val newMessage = repository.addMessage(session2.id, MessageRole.USER, "Another message")
         assertNotNull(newMessage)
         assertEquals(2, repository.getMessageCount(session2.id))
+    }
+
+    @Test
+    fun `should paginate messages forward from start`() {
+        val session = repository.createSession("Test Session")
+        repeat(10) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (messages, nextCursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(3, messages.size)
+        assertEquals("Message 0", messages[0].content)
+        assertEquals("Message 1", messages[1].content)
+        assertEquals("Message 2", messages[2].content)
+        assertNotNull(nextCursor)
+    }
+
+    @Test
+    fun `should paginate messages forward with cursor`() {
+        val session = repository.createSession("Test Session")
+        val messages = mutableListOf<ChatMessage>()
+        repeat(10) { i ->
+            messages.add(repository.addMessage(session.id, MessageRole.USER, "Message $i"))
+        }
+
+        val (firstPage, cursor1) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(3, firstPage.size)
+        assertNotNull(cursor1)
+
+        val (secondPage, cursor2) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = cursor1,
+            direction = "forward",
+        )
+
+        assertEquals(3, secondPage.size)
+        assertEquals("Message 3", secondPage[0].content)
+        assertEquals("Message 4", secondPage[1].content)
+        assertEquals("Message 5", secondPage[2].content)
+        assertNotNull(cursor2)
+    }
+
+    @Test
+    fun `should paginate messages backward from end`() {
+        val session = repository.createSession("Test Session")
+        repeat(10) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (messages, prevCursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "backward",
+        )
+
+        assertEquals(3, messages.size)
+        assertEquals("Message 7", messages[0].content) // Still in chronological order
+        assertEquals("Message 8", messages[1].content)
+        assertEquals("Message 9", messages[2].content)
+        assertNotNull(prevCursor)
+    }
+
+    @Test
+    fun `should paginate messages backward with cursor`() {
+        val session = repository.createSession("Test Session")
+        repeat(10) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (firstPage, cursor1) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "backward",
+        )
+
+        assertEquals(3, firstPage.size)
+        assertNotNull(cursor1)
+
+        val (secondPage, cursor2) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = cursor1,
+            direction = "backward",
+        )
+
+        assertEquals(3, secondPage.size)
+        assertEquals("Message 4", secondPage[0].content) // Still chronological
+        assertEquals("Message 5", secondPage[1].content)
+        assertEquals("Message 6", secondPage[2].content)
+        assertNotNull(cursor2)
+    }
+
+    @Test
+    fun `should return null cursor when no more messages forward`() {
+        val session = repository.createSession("Test Session")
+        repeat(5) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (firstPage, cursor1) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(3, firstPage.size)
+        assertNotNull(cursor1)
+
+        val (secondPage, cursor2) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = cursor1,
+            direction = "forward",
+        )
+
+        assertEquals(2, secondPage.size) // Only 2 messages left
+        assertEquals("Message 3", secondPage[0].content)
+        assertEquals("Message 4", secondPage[1].content)
+        assertNull(cursor2) // No more messages
+    }
+
+    @Test
+    fun `should return null cursor when no more messages backward`() {
+        val session = repository.createSession("Test Session")
+        repeat(5) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (firstPage, cursor1) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "backward",
+        )
+
+        assertEquals(3, firstPage.size)
+        assertNotNull(cursor1)
+
+        val (secondPage, cursor2) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = cursor1,
+            direction = "backward",
+        )
+
+        assertEquals(2, secondPage.size) // Only 2 messages left
+        assertEquals("Message 0", secondPage[0].content)
+        assertEquals("Message 1", secondPage[1].content)
+        assertNull(cursor2) // No more messages
+    }
+
+    @Test
+    fun `should handle pagination with exact page size`() {
+        val session = repository.createSession("Test Session")
+        repeat(6) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (firstPage, cursor1) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(3, firstPage.size)
+        assertNotNull(cursor1)
+
+        val (secondPage, cursor2) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = cursor1,
+            direction = "forward",
+        )
+
+        assertEquals(3, secondPage.size)
+        assertEquals("Message 3", secondPage[0].content)
+        assertEquals("Message 4", secondPage[1].content)
+        assertEquals("Message 5", secondPage[2].content)
+        assertNull(cursor2) // Exactly filled, no more messages
+    }
+
+    @Test
+    fun `should return empty list and null cursor for empty session`() {
+        val session = repository.createSession("Empty Session")
+
+        val (messages, cursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 10,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertTrue(messages.isEmpty())
+        assertNull(cursor)
+    }
+
+    @Test
+    fun `should maintain chronological order in forward pagination`() {
+        val session = repository.createSession("Test Session")
+        val timestamps = mutableListOf<LocalDateTime>()
+        repeat(10) { i ->
+            val message = repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            timestamps.add(message.createdAt)
+            Thread.sleep(1) // Ensure different timestamps
+        }
+
+        val (messages, _) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 5,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(5, messages.size)
+        for (i in 0 until messages.size - 1) {
+            assertTrue(
+                messages[i].createdAt.isBefore(messages[i + 1].createdAt) ||
+                    messages[i].createdAt.isEqual(messages[i + 1].createdAt),
+            )
+        }
+    }
+
+    @Test
+    fun `should maintain chronological order in backward pagination`() {
+        val session = repository.createSession("Test Session")
+        repeat(10) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            Thread.sleep(1) // Ensure different timestamps
+        }
+
+        val (messages, _) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 5,
+            cursor = null,
+            direction = "backward",
+        )
+
+        assertEquals(5, messages.size)
+        // Messages should still be in chronological order (oldest to newest)
+        for (i in 0 until messages.size - 1) {
+            assertTrue(
+                messages[i].createdAt.isBefore(messages[i + 1].createdAt) ||
+                    messages[i].createdAt.isEqual(messages[i + 1].createdAt),
+            )
+        }
+    }
+
+    @Test
+    fun `should handle pagination with different message roles`() {
+        val session = repository.createSession("Test Session")
+        repository.addMessage(session.id, MessageRole.SYSTEM, "System message")
+        repository.addMessage(session.id, MessageRole.USER, "User message 1")
+        repository.addMessage(session.id, MessageRole.ASSISTANT, "Assistant response 1")
+        repository.addMessage(session.id, MessageRole.USER, "User message 2")
+        repository.addMessage(session.id, MessageRole.ASSISTANT, "Assistant response 2")
+
+        val (messages, cursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 3,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(3, messages.size)
+        assertEquals(MessageRole.SYSTEM, messages[0].role)
+        assertEquals(MessageRole.USER, messages[1].role)
+        assertEquals(MessageRole.ASSISTANT, messages[2].role)
+        assertNotNull(cursor)
+    }
+
+    @Test
+    fun `should paginate through entire message history forward`() {
+        val session = repository.createSession("Test Session")
+        repeat(25) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val allMessages = mutableListOf<ChatMessage>()
+        var cursor: LocalDateTime? = null
+
+        // Paginate through all messages
+        do {
+            val (messages, nextCursor) = repository.getMessagesPaginated(
+                sessionId = session.id,
+                limit = 10,
+                cursor = cursor,
+                direction = "forward",
+            )
+            allMessages.addAll(messages)
+            cursor = nextCursor
+        } while (cursor != null)
+
+        assertEquals(25, allMessages.size)
+        for (i in 0 until 25) {
+            assertEquals("Message $i", allMessages[i].content)
+        }
+    }
+
+    @Test
+    fun `should paginate through entire message history backward`() {
+        val session = repository.createSession("Test Session")
+        repeat(25) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val allMessages = mutableListOf<ChatMessage>()
+        var cursor: LocalDateTime? = null
+
+        // Paginate through all messages backward
+        do {
+            val (messages, prevCursor) = repository.getMessagesPaginated(
+                sessionId = session.id,
+                limit = 10,
+                cursor = cursor,
+                direction = "backward",
+            )
+            // Add at the beginning since we're going backward
+            allMessages.addAll(0, messages)
+            cursor = prevCursor
+        } while (cursor != null)
+
+        assertEquals(25, allMessages.size)
+        for (i in 0 until 25) {
+            assertEquals("Message $i", allMessages[i].content)
+        }
+    }
+
+    @Test
+    fun `should handle pagination with single message`() {
+        val session = repository.createSession("Test Session")
+        repository.addMessage(session.id, MessageRole.USER, "Only message")
+
+        val (messages, cursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 10,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(1, messages.size)
+        assertEquals("Only message", messages[0].content)
+        assertNull(cursor) // No more messages
+    }
+
+    @Test
+    fun `should not duplicate messages across pages`() {
+        val session = repository.createSession("Test Session")
+        repeat(15) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val allMessageIds = mutableSetOf<String>()
+        var cursor: LocalDateTime? = null
+
+        // Collect all message IDs across pages
+        do {
+            val (messages, nextCursor) = repository.getMessagesPaginated(
+                sessionId = session.id,
+                limit = 5,
+                cursor = cursor,
+                direction = "forward",
+            )
+            messages.forEach { allMessageIds.add(it.id) }
+            cursor = nextCursor
+        } while (cursor != null)
+
+        // All IDs should be unique (no duplicates)
+        assertEquals(15, allMessageIds.size)
+    }
+
+    @Test
+    fun `should handle large page sizes`() {
+        val session = repository.createSession("Test Session")
+        repeat(10) { i ->
+            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+        }
+
+        val (messages, cursor) = repository.getMessagesPaginated(
+            sessionId = session.id,
+            limit = 100,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertEquals(10, messages.size) // Returns all available messages
+        assertNull(cursor) // No more messages
+    }
+
+    @Test
+    fun `should work with non-existent session`() {
+        val (messages, cursor) = repository.getMessagesPaginated(
+            sessionId = "non-existent-session",
+            limit = 10,
+            cursor = null,
+            direction = "forward",
+        )
+
+        assertTrue(messages.isEmpty())
+        assertNull(cursor)
     }
 }

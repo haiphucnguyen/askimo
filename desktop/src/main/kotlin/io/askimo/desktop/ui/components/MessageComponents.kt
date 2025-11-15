@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.model.ChatMessage
+import io.askimo.desktop.util.highlightSearchText
 
 @Composable
 fun messageList(
@@ -50,11 +52,33 @@ fun messageList(
     isThinking: Boolean = false,
     thinkingElapsedSeconds: Int = 0,
     spinnerFrame: Char = '⠋',
+    hasMoreMessages: Boolean = false,
+    isLoadingPrevious: Boolean = false,
+    onLoadPrevious: () -> Unit = {},
+    searchQuery: String = "",
+    onMessageClick: ((String, java.time.LocalDateTime) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
+    var shouldAutoScroll by remember { mutableStateOf(true) }
 
+    // Auto-scroll to bottom when new messages arrive or when thinking
     LaunchedEffect(messages.size, isThinking) {
-        scrollState.animateScrollTo(scrollState.maxValue)
+        if (shouldAutoScroll) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
+    // Detect when user scrolls to top to load previous messages
+    LaunchedEffect(scrollState.value) {
+        // Check if scrolled to top (within 100px threshold)
+        if (scrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
+            onLoadPrevious()
+        }
+
+        // Update shouldAutoScroll based on scroll position
+        // If user is near the bottom, enable auto-scroll
+        val isNearBottom = scrollState.value >= scrollState.maxValue - 200
+        shouldAutoScroll = isNearBottom
     }
 
     Column(
@@ -63,8 +87,29 @@ fun messageList(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Show loading indicator when loading previous messages
+        if (isLoadingPrevious) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = "Loading previous messages...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
+
         messages.forEach { message ->
-            messageBubble(message)
+            messageBubble(
+                message = message,
+                searchQuery = searchQuery,
+                onMessageClick = onMessageClick,
+            )
         }
 
         // Show "Thinking..." indicator when AI is processing but hasn't returned first token
@@ -88,9 +133,14 @@ fun messageList(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun messageBubble(message: ChatMessage) {
+fun messageBubble(
+    message: ChatMessage,
+    searchQuery: String = "",
+    onMessageClick: ((String, java.time.LocalDateTime) -> Unit)? = null,
+) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
+    val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // Dynamic width calculation based on available space
@@ -113,7 +163,19 @@ fun messageBubble(message: ChatMessage) {
                     .onPointerEvent(PointerEventType.Exit) { isHovered = false },
             ) {
                 Card(
-                    modifier = Modifier.widthIn(max = maxBubbleWidth),
+                    modifier = Modifier
+                        .widthIn(max = maxBubbleWidth)
+                        .then(
+                            if (isClickable) {
+                                Modifier
+                                    .clickable {
+                                        onMessageClick?.invoke(message.id!!, message.timestamp!!)
+                                    }
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ),
@@ -133,21 +195,46 @@ fun messageBubble(message: ChatMessage) {
 
                         // Show message content
                         if (message.isUser) {
-                            // User messages: plain text with selection enabled
+                            // User messages: plain text with selection enabled and optional highlighting
                             SelectionContainer {
-                                Text(
-                                    text = message.content,
-                                    modifier = Modifier.padding(12.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = highlightSearchText(
+                                            text = message.content,
+                                            query = searchQuery,
+                                            highlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                                        ),
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                } else {
+                                    Text(
+                                        text = message.content,
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
                             }
                         } else {
                             // AI messages: markdown rendering with selection enabled
+                            // Note: Highlighting in markdown is more complex, so we show plain text with highlighting if search is active
                             SelectionContainer {
-                                markdownText(
-                                    markdown = message.content,
-                                    modifier = Modifier.padding(12.dp),
-                                )
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = highlightSearchText(
+                                            text = message.content,
+                                            query = searchQuery,
+                                            highlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                                        ),
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                } else {
+                                    markdownText(
+                                        markdown = message.content,
+                                        modifier = Modifier.padding(12.dp),
+                                    )
+                                }
                             }
                         }
                     }
