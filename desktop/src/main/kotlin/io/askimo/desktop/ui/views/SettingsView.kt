@@ -859,6 +859,7 @@ private fun textFieldSetting(
                 null
             },
             singleLine = true,
+            colors = ComponentColors.outlinedTextFieldColors(),
         )
     }
 }
@@ -1002,6 +1003,7 @@ private fun providerSelectionDialog(
                                     Icon(Icons.Default.Edit, contentDescription = "Select provider")
                                 }
                             },
+                            colors = ComponentColors.outlinedTextFieldColors(),
                         )
 
                         DropdownMenu(
@@ -1091,6 +1093,7 @@ private fun providerSelectionDialog(
                                                 Icon(Icons.Default.Lock, contentDescription = "Password")
                                             }
                                         },
+                                        colors = ComponentColors.outlinedTextFieldColors(),
                                     )
                                 }
                                 is ProviderConfigField.BaseUrlField -> {
@@ -1100,6 +1103,7 @@ private fun providerSelectionDialog(
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true,
                                         placeholder = { Text("http://localhost:11434") },
+                                        colors = ComponentColors.outlinedTextFieldColors(),
                                     )
                                 }
                             }

@@ -5,12 +5,15 @@
 package io.askimo.desktop.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -40,6 +43,12 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import org.commonmark.ext.gfm.tables.TableBlock
+import org.commonmark.ext.gfm.tables.TableBody
+import org.commonmark.ext.gfm.tables.TableCell
+import org.commonmark.ext.gfm.tables.TableHead
+import org.commonmark.ext.gfm.tables.TableRow
+import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
 import org.commonmark.node.Code
@@ -67,7 +76,9 @@ fun markdownText(
     markdown: String,
     modifier: Modifier = Modifier,
 ) {
-    val parser = Parser.builder().build()
+    val parser = Parser.builder()
+        .extensions(listOf(TablesExtension.create()))
+        .build()
     val document = parser.parse(markdown)
 
     Column(modifier = modifier) {
@@ -86,6 +97,7 @@ private fun renderNode(node: Node) {
             is OrderedList -> renderOrderedList(child)
             is FencedCodeBlock -> renderCodeBlock(child)
             is BlockQuote -> renderBlockQuote(child)
+            is TableBlock -> renderTable(child)
             else -> renderNode(child)
         }
         child = child.next
@@ -255,6 +267,113 @@ private fun renderBlockQuote(blockQuote: BlockQuote) {
     ) {
         renderNode(blockQuote)
     }
+}
+
+@Composable
+private fun renderTable(table: TableBlock) {
+    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val minCellWidth = 150.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Column(
+            modifier = Modifier.border(1.dp, borderColor)
+        ) {
+            var child = table.firstChild
+            while (child != null) {
+                when (child) {
+                    is TableHead -> {
+                        // Render table header
+                        var headerRow = child.firstChild
+                        while (headerRow != null) {
+                            if (headerRow is TableRow) {
+                                Row(
+                                    modifier = Modifier.background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                ) {
+                                    var cell = headerRow.firstChild
+                                    while (cell != null) {
+                                        if (cell is TableCell) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .widthIn(min = minCellWidth)
+                                                    .border(1.dp, borderColor)
+                                                    .padding(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = extractCellText(cell),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                        }
+                                        cell = cell.next
+                                    }
+                                }
+                            }
+                            headerRow = headerRow.next
+                        }
+                    }
+                    is TableBody -> {
+                        // Render table body
+                        var bodyRow = child.firstChild
+                        while (bodyRow != null) {
+                            if (bodyRow is TableRow) {
+                                Row {
+                                    var cell = bodyRow.firstChild
+                                    while (cell != null) {
+                                        if (cell is TableCell) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .widthIn(min = minCellWidth)
+                                                    .border(1.dp, borderColor)
+                                                    .padding(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = extractCellText(cell),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                        }
+                                        cell = cell.next
+                                    }
+                                }
+                            }
+                            bodyRow = bodyRow.next
+                        }
+                    }
+                }
+                child = child.next
+            }
+        }
+    }
+}
+
+/**
+ * Extract plain text content from a table cell node.
+ */
+private fun extractCellText(node: Node): String {
+    val builder = StringBuilder()
+    var child = node.firstChild
+    while (child != null) {
+        when (child) {
+            is MarkdownText -> builder.append(child.literal)
+            is Paragraph -> builder.append(extractCellText(child))
+            is StrongEmphasis -> builder.append(extractCellText(child))
+            is Emphasis -> builder.append(extractCellText(child))
+            is Code -> builder.append(child.literal)
+            else -> builder.append(extractCellText(child))
+        }
+        child = child.next
+    }
+    return builder.toString()
 }
 
 private fun buildInlineContent(

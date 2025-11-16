@@ -51,6 +51,8 @@ class LoadingIndicator(
         val elapsed = (System.currentTimeMillis() - startTime) / 1000
         val w = terminal.writer()
         w.print("\r") // go to start of line
+        w.print(" ".repeat(80)) // clear the line
+        w.print("\r") // go back to start of line
         w.print("✓  $doneLabel in ${elapsed}s")
         w.println() // drop to next line so streamed tokens start cleanly
         w.flush()

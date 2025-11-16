@@ -44,6 +44,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +58,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -82,6 +82,37 @@ import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import org.jetbrains.skia.Image
 import java.awt.Cursor
+
+/**
+ * Detects if macOS is in dark mode by querying system defaults.
+ * This is more reliable than AWT properties which often return null.
+ */
+fun detectMacOSDarkMode(): Boolean {
+    return try {
+        // Check if we're on macOS
+        val osName = System.getProperty("os.name")
+        if (!osName.contains("Mac", ignoreCase = true)) {
+            return false
+        }
+
+        // Execute the defaults command to check AppleInterfaceStyle
+        val process = ProcessBuilder(
+            "defaults",
+            "read",
+            "-g",
+            "AppleInterfaceStyle"
+        ).start()
+
+        val result = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+
+        // If the command succeeds and returns "Dark", we're in dark mode
+        // If the command fails (exit code != 0), the key doesn't exist, meaning light mode
+        exitCode == 0 && result.equals("Dark", ignoreCase = true)
+    } catch (e: Exception) {
+        false
+    }
+}
 
 fun main() = application {
     val icon = BitmapPainter(
@@ -127,14 +158,13 @@ fun app() {
     val accentColor by ThemePreferences.accentColor.collectAsState()
     val fontSettings by ThemePreferences.fontSettings.collectAsState()
 
-    // Determine if system is in dark mode
-    val isSystemInDarkMode = remember {
-        try {
-            val toolkit = java.awt.Toolkit.getDefaultToolkit()
-            val isDark = toolkit.getDesktopProperty("awt.color.darkMode") == true
-            isDark
-        } catch (e: Exception) {
-            false // Default to light mode if we can't detect
+    // State to track system theme - detect when needed
+    var isSystemInDarkMode by remember { mutableStateOf(detectMacOSDarkMode()) }
+
+    // Detect system theme when switching to SYSTEM mode
+    LaunchedEffect(themeMode) {
+        if (themeMode == ThemeMode.SYSTEM) {
+            isSystemInDarkMode = detectMacOSDarkMode()
         }
     }
 
@@ -279,26 +309,41 @@ fun sidebar(
             modifier = Modifier
                 .width(width)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surface)
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                ),
+                .background(ComponentColors.sidebarSurfaceColor()),
         ) {
             // Header with logo and collapse button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(ComponentColors.sidebarHeaderColor())
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource("/images/askimo_64.png"),
-                    contentDescription = "Askimo",
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        painter = remember {
+                            BitmapPainter(
+                                Image.makeFromEncoded(
+                                    object {}.javaClass.getResourceAsStream("/images/askimo_64.png")?.readBytes()
+                                        ?: throw IllegalStateException("Icon not found"),
+                                ).toComposeImageBitmap(),
+                            )
+                        },
+                        contentDescription = "Askimo",
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Askimo AI",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 IconButton(
                     onClick = onToggleExpand,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -428,7 +473,7 @@ fun sidebar(
             modifier = Modifier
                 .width(72.dp)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(ComponentColors.sidebarSurfaceColor())
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -437,7 +482,10 @@ fun sidebar(
         ) {
             // Header with expand button only
             Column(
-                modifier = Modifier.padding(vertical = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(ComponentColors.sidebarHeaderColor())
+                    .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 IconButton(

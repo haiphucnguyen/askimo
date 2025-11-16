@@ -151,7 +151,10 @@ fun chatView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = ComponentColors.primaryCardColors(),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = ComponentColors.sidebarSurfaceColor(),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
             ) {
                 Row(
                     modifier = Modifier
@@ -167,7 +170,7 @@ fun chatView(
                         Text(
                             text = "Provider: $provider",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         VerticalDivider(
                             modifier = Modifier.size(width = 1.dp, height = 20.dp),
@@ -175,7 +178,7 @@ fun chatView(
                         Text(
                             text = "Model: $model",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     TextButton(
@@ -225,6 +228,7 @@ fun chatView(
                     }
                 },
                 singleLine = true,
+                colors = ComponentColors.outlinedTextFieldColors(),
             )
         }
 
@@ -417,6 +421,7 @@ fun chatView(
                     } else {
                         null
                     },
+                    colors = ComponentColors.outlinedTextFieldColors(),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
