@@ -98,7 +98,7 @@ private fun renderParagraph(paragraph: Paragraph) {
 
     Text(
         text = buildInlineContent(paragraph, inlineCodeBg),
-        style = MaterialTheme.typography.bodyLarge,
+        style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
@@ -141,7 +141,7 @@ private fun renderBulletList(list: BulletList) {
                         append("• ")
                         append(buildInlineContent(item, inlineCodeBg))
                     },
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 2.dp),
                 )
             }
@@ -166,7 +166,7 @@ private fun renderOrderedList(list: OrderedList) {
                         append("$index. ")
                         append(buildInlineContent(item, inlineCodeBg))
                     },
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 2.dp),
                 )
                 index++
@@ -179,7 +179,9 @@ private fun renderOrderedList(list: OrderedList) {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
-    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
+    // Use surface color for code blocks to ensure proper contrast with primaryContainer message background
+    // This provides better visual separation and respects the theme colors
+    val backgroundColor = MaterialTheme.colorScheme.surface
     val isDark = backgroundColor.luminance() < 0.5
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -211,6 +213,8 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
         Text(
             text = highlightedCode,
             style = MaterialTheme.typography.bodyMedium,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(backgroundColor)
@@ -233,7 +237,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Copy code",
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }

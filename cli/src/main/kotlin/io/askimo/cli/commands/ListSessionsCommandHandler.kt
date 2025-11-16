@@ -6,8 +6,8 @@ package io.askimo.cli.commands
 
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.util.Logger.info
+import io.askimo.core.util.TimeUtil
 import org.jline.reader.ParsedLine
-import java.time.format.DateTimeFormatter
 
 class ListSessionsCommandHandler : CommandHandler {
     override val keyword = ":sessions"
@@ -45,12 +45,11 @@ class ListSessionsCommandHandler : CommandHandler {
 
         pagedSessions.sessions.forEachIndexed { index, session ->
             val globalIndex = startIndex + index + 1
-            val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
 
             info("$globalIndex. ID: ${session.id}")
             info("   Title: ${session.title}")
-            info("   Created: ${session.createdAt.format(formatter)}")
-            info("   Updated: ${session.updatedAt.format(formatter)}")
+            info("   Created: ${TimeUtil.formatDisplay(session.createdAt)}")
+            info("   Updated: ${TimeUtil.formatDisplay(session.updatedAt)}")
             info("-".repeat(40))
         }
 

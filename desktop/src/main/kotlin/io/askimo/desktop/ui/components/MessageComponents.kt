@@ -177,7 +177,8 @@ fun messageBubble(
                             },
                         ),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
                 ) {
                     Column {
@@ -255,7 +256,7 @@ fun messageBubble(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy message",
                             modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
@@ -270,6 +271,7 @@ private fun fileAttachmentChip(attachment: io.askimo.desktop.model.FileAttachmen
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         Row(
@@ -292,7 +294,7 @@ private fun fileAttachmentChip(attachment: io.askimo.desktop.model.FileAttachmen
                 Text(
                     text = formatFileSize(attachment.size),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

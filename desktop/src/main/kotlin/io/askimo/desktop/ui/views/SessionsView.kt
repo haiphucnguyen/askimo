@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,8 +43,9 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.session.ChatSession
+import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.ui.theme.ComponentColors
 import io.askimo.desktop.viewmodel.SessionsViewModel
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun sessionsView(
@@ -68,7 +68,6 @@ fun sessionsView(
                 text = "Chat Sessions",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
             )
             IconButton(
                 onClick = { viewModel.refresh() },
@@ -77,7 +76,6 @@ fun sessionsView(
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh sessions",
-                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -92,6 +90,7 @@ fun sessionsView(
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
+
                 viewModel.errorMessage != null -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -111,6 +110,7 @@ fun sessionsView(
                         }
                     }
                 }
+
                 viewModel.pagedSessions?.isEmpty == true -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -120,15 +120,14 @@ fun sessionsView(
                         Text(
                             text = "No chat sessions found.",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "💡 Start a new conversation to create your first session!",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         // Sessions list
@@ -178,9 +177,7 @@ private fun sessionCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors = ComponentColors.bannerCardColors(),
     ) {
         Row(
             modifier = Modifier
@@ -201,31 +198,31 @@ private fun sessionCard(
                         text = session.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "ID: ${session.id}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        text = "Created: ${session.createdAt.format(formatter)}",
+                        text = "Created: ${TimeUtil.formatDisplay(session.createdAt)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Text(
-                        text = "Updated: ${session.updatedAt.format(formatter)}",
+                        text = "Updated: ${TimeUtil.formatDisplay(session.updatedAt)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
@@ -239,7 +236,7 @@ private fun sessionCard(
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
 
@@ -290,14 +287,12 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronLeft,
                 contentDescription = "Previous page",
-                tint = MaterialTheme.colorScheme.onBackground,
             )
         }
 
         Text(
             text = "Page $currentPage of $totalPages",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -309,7 +304,6 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = "Next page",
-                tint = MaterialTheme.colorScheme.onBackground,
             )
         }
     }

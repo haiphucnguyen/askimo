@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
+import io.askimo.desktop.ui.theme.ComponentColors
+import java.time.Year
 
 @Composable
 fun aboutView(modifier: Modifier = Modifier) {
@@ -35,6 +37,7 @@ fun aboutView(modifier: Modifier = Modifier) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            colors = ComponentColors.bannerCardColors(),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -43,22 +46,24 @@ fun aboutView(modifier: Modifier = Modifier) {
                 Text(
                     text = VersionInfo.name,
                     style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "Version ${VersionInfo.version}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "Build Date: ${VersionInfo.buildDate}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            colors = ComponentColors.bannerCardColors(),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -67,16 +72,19 @@ fun aboutView(modifier: Modifier = Modifier) {
                 Text(
                     text = "Description",
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "A modern desktop application for AI-powered conversations built with Kotlin and Compose Multiplatform.",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            colors = ComponentColors.bannerCardColors(),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -85,15 +93,17 @@ fun aboutView(modifier: Modifier = Modifier) {
                 Text(
                     text = "License",
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = VersionInfo.license,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
-                    text = "Copyright (c) 2025 ${VersionInfo.author}",
+                    text = "Copyright (c) ${Year.now().value} ${VersionInfo.author}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }

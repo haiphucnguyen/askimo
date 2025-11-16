@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.session.ChatSessionRepository
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
 import io.askimo.core.session.SessionConfigInfo
@@ -17,9 +18,14 @@ import io.askimo.desktop.service.ChatService
 import io.askimo.desktop.util.constructMessageWithAttachments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * ViewModel for managing chat state and interactions.
@@ -76,13 +82,14 @@ class ChatViewModel(
     private val sessionService = ChatSessionService()
 
     private var onMessageComplete: (() -> Unit)? = null
-    private var currentJob: kotlinx.coroutines.Job? = null
-    private var thinkingJob: kotlinx.coroutines.Job? = null
-    private var animationJob: kotlinx.coroutines.Job? = null
+    private var currentJob: Job? = null
+    private var thinkingJob: Job? = null
+    private var animationJob: Job? = null
 
     // Pagination state
     private var currentCursor: java.time.LocalDateTime? = null
-    private var currentSessionId: String? = null
+    private val _currentSessionId = MutableStateFlow<String?>(null)
+    val currentSessionId: StateFlow<String?> = _currentSessionId
 
     // Spinner frames matching CLI implementation
     private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
@@ -181,7 +188,7 @@ class ChatViewModel(
                             onMessageComplete?.invoke()
                         }
                     }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 // Handle cancellation gracefully
                 isLoading = false
                 isThinking = false
@@ -271,7 +278,7 @@ class ChatViewModel(
                     // Store pagination state
                     currentCursor = result.cursor
                     hasMoreMessages = result.hasMore
-                    currentSessionId = sessionId
+                    _currentSessionId.value = sessionId
                 } else {
                     errorMessage = result.errorMessage
                 }
@@ -290,7 +297,7 @@ class ChatViewModel(
      * Only loads if there are more messages available.
      */
     fun loadPreviousMessages() {
-        if (isLoadingPrevious || !hasMoreMessages || currentCursor == null || currentSessionId == null) {
+        if (isLoadingPrevious || !hasMoreMessages || currentCursor == null || _currentSessionId.value == null) {
             return
         }
 
@@ -300,7 +307,7 @@ class ChatViewModel(
 
                 val (previousMessages, nextCursor) = withContext(Dispatchers.IO) {
                     sessionService.loadPreviousMessages(
-                        currentSessionId!!,
+                        _currentSessionId.value!!,
                         currentCursor!!,
                         MESSAGE_PAGE_SIZE,
                     )
@@ -336,7 +343,7 @@ class ChatViewModel(
      * @param query The search query
      */
     fun searchMessages(query: String) {
-        if (currentSessionId == null) {
+        if (_currentSessionId.value == null) {
             return
         }
 
@@ -355,7 +362,7 @@ class ChatViewModel(
                 isSearchMode = true
 
                 val results = withContext(Dispatchers.IO) {
-                    sessionService.searchMessages(currentSessionId!!, query, 100)
+                    sessionService.searchMessages(_currentSessionId.value!!, query, 100)
                 }
 
                 // Convert to chat messages
@@ -399,8 +406,8 @@ class ChatViewModel(
      * @param messageId The ID of the message to jump to
      * @param messageTimestamp The timestamp of the message
      */
-    fun jumpToMessage(messageId: String, messageTimestamp: java.time.LocalDateTime) {
-        if (currentSessionId == null) return
+    fun jumpToMessage(messageId: String, messageTimestamp: LocalDateTime) {
+        if (_currentSessionId.value == null) return
 
         scope.launch {
             try {
@@ -415,7 +422,7 @@ class ChatViewModel(
 
                 val (beforeMessages, _) = withContext(Dispatchers.IO) {
                     sessionService.loadPreviousMessages(
-                        currentSessionId!!,
+                        _currentSessionId.value!!,
                         messageTimestamp,
                         halfPageSize,
                     )
@@ -423,9 +430,9 @@ class ChatViewModel(
 
                 val afterMessages = withContext(Dispatchers.IO) {
                     // Load messages after the target
-                    val repo = io.askimo.core.session.ChatSessionRepository()
+                    val repo = ChatSessionRepository()
                     val (after, _) = repo.getMessagesPaginated(
-                        sessionId = currentSessionId!!,
+                        sessionId = _currentSessionId.value!!,
                         limit = halfPageSize,
                         cursor = messageTimestamp,
                         direction = "forward",
@@ -435,8 +442,8 @@ class ChatViewModel(
 
                 // Get the target message itself
                 val allSessionMessages = withContext(Dispatchers.IO) {
-                    val repo = io.askimo.core.session.ChatSessionRepository()
-                    repo.getMessages(currentSessionId!!)
+                    val repo = ChatSessionRepository()
+                    repo.getMessages(_currentSessionId.value!!)
                 }
                 val targetMessage = allSessionMessages.find { it.id == messageId }
 
@@ -485,7 +492,7 @@ class ChatViewModel(
         // Reset pagination state
         currentCursor = null
         hasMoreMessages = false
-        currentSessionId = null
+        _currentSessionId.value = null
 
         // Clear search state
         clearSearch()
@@ -494,6 +501,11 @@ class ChatViewModel(
         chatService.getSession().currentChatSession = null
         chatService.clearMemory()
     }
+
+    /**
+     * Get the current session ID.
+     */
+    fun getCurrentSessionId(): String? = _currentSessionId.value
 
     /**
      * Clear the error message.

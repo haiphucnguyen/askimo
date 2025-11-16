@@ -4,9 +4,14 @@
  */
 package io.askimo.desktop.ui.theme
 
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import io.askimo.desktop.model.AccentColor
+import io.askimo.desktop.model.FontSettings
 
 // Light Theme Colors
 private val md_theme_light_primary = Color(0xFF006C4C)
@@ -133,3 +138,134 @@ val DarkColorScheme = darkColorScheme(
     outlineVariant = md_theme_dark_outlineVariant,
     scrim = md_theme_dark_scrim,
 )
+
+/**
+ * Creates a light color scheme with the specified accent color
+ */
+fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
+    val baseScheme = LightColorScheme
+    return baseScheme.copy(
+        primary = accentColor.lightColor,
+        primaryContainer = accentColor.lightColor.copy(alpha = 0.3f),
+        onPrimaryContainer = Color.Black,
+        secondaryContainer = accentColor.lightColor.copy(alpha = 0.15f), // Subtle banner background
+        onSecondaryContainer = Color.Black,
+        inversePrimary = accentColor.darkColor,
+        surfaceTint = accentColor.lightColor,
+    )
+}
+
+/**
+ * Creates a dark color scheme with the specified accent color
+ */
+fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
+    val baseScheme = DarkColorScheme
+    return baseScheme.copy(
+        primary = accentColor.darkColor,
+        primaryContainer = accentColor.darkColor.copy(alpha = 0.3f),
+        onPrimaryContainer = Color.White,
+        secondaryContainer = accentColor.darkColor.copy(alpha = 0.15f), // Subtle banner background
+        onSecondaryContainer = Color.White,
+        inversePrimary = accentColor.lightColor,
+        surfaceTint = accentColor.darkColor,
+    )
+}
+
+/**
+ * Maps font family names to predefined FontFamily types
+ * This provides basic font customization without requiring font file loading
+ */
+private fun loadFontFamily(fontName: String): FontFamily = when (fontName.lowercase()) {
+    // Monospace fonts
+    "monospace", "courier", "courier new", "consolas", "monaco", "menlo",
+    "dejavu sans mono", "lucida console",
+    -> FontFamily.Monospace
+
+    // Serif fonts
+    "serif", "times", "times new roman", "georgia", "palatino",
+    "garamond", "baskerville", "book antiqua",
+    -> FontFamily.Serif
+
+    // Cursive fonts
+    "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
+
+    // Default to SansSerif for all other fonts (Arial, Helvetica, Roboto, etc.)
+    else -> FontFamily.SansSerif
+}
+
+/**
+ * Creates a custom Typography based on font settings
+ */
+fun createCustomTypography(fontSettings: FontSettings): Typography {
+    val fontFamily = if (fontSettings.fontFamily == FontSettings.SYSTEM_DEFAULT) {
+        FontFamily.Default
+    } else {
+        loadFontFamily(fontSettings.fontFamily)
+    }
+
+    val scale = fontSettings.fontSize.scale
+    val baseTypography = Typography()
+
+    return Typography(
+        displayLarge = baseTypography.displayLarge.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.displayLarge.fontSize * scale,
+        ),
+        displayMedium = baseTypography.displayMedium.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.displayMedium.fontSize * scale,
+        ),
+        displaySmall = baseTypography.displaySmall.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.displaySmall.fontSize * scale,
+        ),
+        headlineLarge = baseTypography.headlineLarge.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.headlineLarge.fontSize * scale,
+        ),
+        headlineMedium = baseTypography.headlineMedium.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.headlineMedium.fontSize * scale,
+        ),
+        headlineSmall = baseTypography.headlineSmall.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.headlineSmall.fontSize * scale,
+        ),
+        titleLarge = baseTypography.titleLarge.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.titleLarge.fontSize * scale,
+        ),
+        titleMedium = baseTypography.titleMedium.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.titleMedium.fontSize * scale,
+        ),
+        titleSmall = baseTypography.titleSmall.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.titleSmall.fontSize * scale,
+        ),
+        bodyLarge = baseTypography.bodyLarge.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.bodyLarge.fontSize * scale,
+        ),
+        bodyMedium = baseTypography.bodyMedium.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.bodyMedium.fontSize * scale,
+        ),
+        bodySmall = baseTypography.bodySmall.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.bodySmall.fontSize * scale,
+        ),
+        labelLarge = baseTypography.labelLarge.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.labelLarge.fontSize * scale,
+        ),
+        labelMedium = baseTypography.labelMedium.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.labelMedium.fontSize * scale,
+        ),
+        labelSmall = baseTypography.labelSmall.copy(
+            fontFamily = fontFamily,
+            fontSize = baseTypography.labelSmall.fontSize * scale,
+        ),
+    )
+}

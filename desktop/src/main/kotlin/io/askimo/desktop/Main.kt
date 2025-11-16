@@ -65,15 +65,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.desktop.model.FileAttachment
+import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
-import io.askimo.desktop.ui.theme.DarkColorScheme
+import io.askimo.desktop.service.ThemePreferences
+import io.askimo.desktop.ui.theme.ComponentColors
+import io.askimo.desktop.ui.theme.createCustomTypography
+import io.askimo.desktop.ui.theme.getDarkColorScheme
+import io.askimo.desktop.ui.theme.getLightColorScheme
 import io.askimo.desktop.ui.views.aboutView
 import io.askimo.desktop.ui.views.chatView
 import io.askimo.desktop.ui.views.sessionsView
 import io.askimo.desktop.ui.views.settingsView
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
+import io.askimo.desktop.viewmodel.SettingsViewModel
 import org.jetbrains.skia.Image
+import java.awt.Cursor
 
 fun main() = application {
     val icon = BitmapPainter(
@@ -100,14 +108,14 @@ fun app() {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
-    var attachments by remember { mutableStateOf(listOf<io.askimo.desktop.model.FileAttachment>()) }
+    var attachments by remember { mutableStateOf(listOf<FileAttachment>()) }
     var sidebarWidth by remember { mutableStateOf(280.dp) }
     val scope = rememberCoroutineScope()
 
     // Create ViewModels
     val chatViewModel = remember { ChatViewModel(scope = scope) }
     val sessionsViewModel = remember { SessionsViewModel(scope = scope) }
-    val settingsViewModel = remember { io.askimo.desktop.viewmodel.SettingsViewModel(scope = scope) }
+    val settingsViewModel = remember { SettingsViewModel(scope = scope) }
 
     // Set up callback to refresh sessions list when a message is complete
     chatViewModel.setOnMessageCompleteCallback {
@@ -115,7 +123,9 @@ fun app() {
     }
 
     // Theme state
-    val themeMode by io.askimo.desktop.service.ThemePreferences.themeMode.collectAsState()
+    val themeMode by ThemePreferences.themeMode.collectAsState()
+    val accentColor by ThemePreferences.accentColor.collectAsState()
+    val fontSettings by ThemePreferences.fontSettings.collectAsState()
 
     // Determine if system is in dark mode
     val isSystemInDarkMode = remember {
@@ -130,18 +140,31 @@ fun app() {
 
     // Calculate actual dark mode based on theme preference
     val useDarkMode = when (themeMode) {
-        io.askimo.desktop.model.ThemeMode.LIGHT -> false
-        io.askimo.desktop.model.ThemeMode.DARK -> true
-        io.askimo.desktop.model.ThemeMode.SYSTEM -> isSystemInDarkMode
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkMode
     }
 
-    val colorScheme = if (useDarkMode) DarkColorScheme else io.askimo.desktop.ui.theme.LightColorScheme
+    val colorScheme = if (useDarkMode) {
+        getDarkColorScheme(accentColor)
+    } else {
+        getLightColorScheme(accentColor)
+    }
+
+    // Create custom typography based on font settings
+    val customTypography = remember(fontSettings) {
+        createCustomTypography(fontSettings)
+    }
 
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = customTypography,
     ) {
         // Always show sidebar in expanded or collapsed mode
         Row(modifier = Modifier.fillMaxSize()) {
+            // Observe current session ID
+            val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+
             // Sidebar (expanded or collapsed)
             sidebar(
                 isExpanded = isSidebarExpanded,
@@ -149,6 +172,7 @@ fun app() {
                 currentView = currentView,
                 isSessionsExpanded = isSessionsExpanded,
                 sessionsViewModel = sessionsViewModel,
+                currentSessionId = currentSessionId,
                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                 onNewChat = {
                     chatViewModel.clearChat()
@@ -175,7 +199,7 @@ fun app() {
                         .width(8.dp)
                         .fillMaxHeight()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .pointerHoverIcon(PointerIcon(java.awt.Cursor(java.awt.Cursor.E_RESIZE_CURSOR)))
+                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
@@ -239,6 +263,7 @@ fun sidebar(
     currentView: View,
     isSessionsExpanded: Boolean,
     sessionsViewModel: SessionsViewModel,
+    currentSessionId: String?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleSessions: () -> Unit,
@@ -301,6 +326,7 @@ fun sidebar(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationDrawerItemColors(),
                 )
 
                 // Sessions (Collapsible)
@@ -322,6 +348,7 @@ fun sidebar(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationDrawerItemColors(),
                 )
 
                 // Sessions list (collapsible content)
@@ -340,6 +367,7 @@ fun sidebar(
                             sessionsViewModel.recentSessions.forEach { session ->
                                 sessionItemWithMenu(
                                     session = session,
+                                    isSelected = session.id == currentSessionId,
                                     onResumeSession = onResumeSession,
                                     onDeleteSession = onDeleteSession,
                                 )
@@ -362,6 +390,7 @@ fun sidebar(
                                     modifier = Modifier
                                         .padding(vertical = 2.dp)
                                         .pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ComponentColors.navigationDrawerItemColors(),
                                 )
                             }
                         }
@@ -377,6 +406,7 @@ fun sidebar(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationDrawerItemColors(),
                 )
 
                 // About
@@ -388,6 +418,7 @@ fun sidebar(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationDrawerItemColors(),
                 )
             }
         }
@@ -435,6 +466,7 @@ fun sidebar(
                     selected = false,
                     onClick = onNewChat,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
                 )
 
                 // Sessions
@@ -444,6 +476,7 @@ fun sidebar(
                     selected = currentView == View.SESSIONS,
                     onClick = onNavigateToSessions,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
                 )
 
                 // Settings
@@ -453,6 +486,7 @@ fun sidebar(
                     selected = currentView == View.SETTINGS,
                     onClick = onNavigateToSettings,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
                 )
 
                 // About
@@ -462,6 +496,7 @@ fun sidebar(
                     selected = currentView == View.ABOUT,
                     onClick = onNavigateToAbout,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
                 )
             }
         }
@@ -473,13 +508,13 @@ fun mainContent(
     currentView: View,
     chatViewModel: ChatViewModel,
     sessionsViewModel: SessionsViewModel,
-    settingsViewModel: io.askimo.desktop.viewmodel.SettingsViewModel,
+    settingsViewModel: SettingsViewModel,
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
-    onSendMessage: (String, List<io.askimo.desktop.model.FileAttachment>) -> Unit,
+    onSendMessage: (String, List<FileAttachment>) -> Unit,
     onResumeSession: (String) -> Unit,
-    attachments: List<io.askimo.desktop.model.FileAttachment>,
-    onAttachmentsChange: (List<io.askimo.desktop.model.FileAttachment>) -> Unit,
+    attachments: List<FileAttachment>,
+    onAttachmentsChange: (List<FileAttachment>) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
     Box(
@@ -541,6 +576,7 @@ fun mainContent(
 @Composable
 private fun sessionItemWithMenu(
     session: io.askimo.core.session.ChatSession,
+    isSelected: Boolean,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
 ) {
@@ -585,11 +621,12 @@ private fun sessionItemWithMenu(
                     )
                 }
             },
-            selected = false,
+            selected = isSelected,
             onClick = { onResumeSession(session.id) },
             modifier = Modifier
                 .weight(1f)
                 .pointerHoverIcon(PointerIcon.Hand),
+            colors = ComponentColors.navigationDrawerItemColors(),
         )
 
         // Three-dot menu button with dropdown

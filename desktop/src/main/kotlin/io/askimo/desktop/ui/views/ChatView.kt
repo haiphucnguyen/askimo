@@ -21,11 +21,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -48,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.ui.components.messageList
+import io.askimo.desktop.ui.theme.ComponentColors
 
 // Helper function for file size formatting
 private fun formatFileSize(bytes: Long): String = when {
@@ -64,9 +63,7 @@ private fun fileAttachmentItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors = ComponentColors.surfaceVariantCardColors(),
     ) {
         Row(
             modifier = Modifier
@@ -95,7 +92,7 @@ private fun fileAttachmentItem(
                     Text(
                         text = formatFileSize(attachment.size),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -154,9 +151,7 @@ fun chatView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
+                colors = ComponentColors.primaryCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -176,7 +171,6 @@ fun chatView(
                         )
                         VerticalDivider(
                             modifier = Modifier.size(width = 1.dp, height = 20.dp),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f),
                         )
                         Text(
                             text = "Model: $model",
@@ -187,6 +181,7 @@ fun chatView(
                     TextButton(
                         onClick = onNavigateToSettings,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = ComponentColors.primaryTextButtonColors(),
                     ) {
                         Text(
                             text = "Change",
@@ -214,7 +209,6 @@ fun chatView(
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
                 trailingIcon = {
@@ -226,7 +220,6 @@ fun chatView(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Clear search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -241,9 +234,7 @@ fun chatView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
+                colors = ComponentColors.bannerCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -277,7 +268,7 @@ fun chatView(
                     Text(
                         "No messages found matching \"$searchQuery\"",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
@@ -296,9 +287,9 @@ fun chatView(
                 }
                 messages.isEmpty() -> {
                     Text(
-                        "Welcome to Askimo Desktop!\nStart a conversation by typing a message below.",
+                        "Welcome to Askimo!\nStart a conversation by typing a message below.",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
@@ -373,12 +364,12 @@ fun chatView(
                             }
                         }
                     },
+                    colors = ComponentColors.primaryIconButtonColors(),
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Icon(
                         Icons.Default.AttachFile,
                         contentDescription = "Attach file",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -430,25 +421,32 @@ fun chatView(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Show stop button when loading, send button otherwise
-                IconButton(
-                    onClick = {
-                        if (isLoading) {
-                            onStopResponse()
-                        } else if (inputText.text.isNotBlank()) {
-                            onSendMessage(inputText.text, attachments)
-                        }
-                    },
-                    enabled = isLoading || inputText.text.isNotBlank(),
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = if (isLoading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    ),
-                ) {
-                    if (isLoading) {
-                        Icon(Icons.Default.Stop, contentDescription = "Stop")
-                    } else {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                if (isLoading) {
+                    IconButton(
+                        onClick = onStopResponse,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Stop,
+                            contentDescription = "Stop",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = {
+                            if (inputText.text.isNotBlank()) {
+                                onSendMessage(inputText.text, attachments)
+                            }
+                        },
+                        enabled = inputText.text.isNotBlank(),
+                        colors = ComponentColors.primaryIconButtonColors(),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                        )
                     }
                 }
             }

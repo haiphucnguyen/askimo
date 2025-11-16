@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.ui.views
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,11 +59,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import io.askimo.core.session.ProviderConfigField
+import io.askimo.core.session.SettingField
+import io.askimo.desktop.model.AccentColor
+import io.askimo.desktop.model.FontSettings
+import io.askimo.desktop.model.FontSize
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.service.ThemePreferences
+import io.askimo.desktop.ui.theme.ComponentColors
 import io.askimo.desktop.viewmodel.SettingsViewModel
 
 @Composable
@@ -71,6 +79,7 @@ fun settingsView(
     modifier: Modifier = Modifier,
 ) {
     val currentThemeMode by ThemePreferences.themeMode.collectAsState()
+    val currentAccentColor by ThemePreferences.accentColor.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show success message
@@ -106,9 +115,7 @@ fun settingsView(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
+                colors = ComponentColors.bannerCardColors(),
             ) {
                 Column(
                     modifier = Modifier
@@ -126,12 +133,12 @@ fun settingsView(
                             Text(
                                 text = "Provider",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                             Text(
                                 text = viewModel.provider?.name ?: "Not set",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                         }
                         Button(
@@ -155,12 +162,12 @@ fun settingsView(
                             Text(
                                 text = "Model",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                             Text(
                                 text = viewModel.model,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                         }
                         Button(
@@ -187,13 +194,13 @@ fun settingsView(
                                 Text(
                                     text = "Settings",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
                                 viewModel.settingsDescription.forEach { setting ->
                                     Text(
                                         text = setting,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     )
                                 }
                             }
@@ -248,6 +255,45 @@ fun settingsView(
                 selected = currentThemeMode == ThemeMode.SYSTEM,
                 onClick = { ThemePreferences.setThemeMode(ThemeMode.SYSTEM) },
             )
+
+            // Accent Color Section
+            Text(
+                text = "Accent Color",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+
+            // Accent color options grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                AccentColor.entries.chunked(3).forEach { colorRow ->
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        colorRow.forEach { accentColor ->
+                            accentColorOption(
+                                accentColor = accentColor,
+                                selected = currentAccentColor == accentColor,
+                                onClick = { ThemePreferences.setAccentColor(accentColor) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Font Settings Section
+            Text(
+                text = "Font",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+
+            fontSettingsCard()
         }
 
         // Snackbar for success messages
@@ -313,13 +359,11 @@ private fun themeOption(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .pointerHoverIcon(PointerIcon.Hand),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-        ),
+        colors = if (selected) {
+            ComponentColors.primaryCardColors()
+        } else {
+            ComponentColors.surfaceVariantCardColors()
+        },
     ) {
         Row(
             modifier = Modifier
@@ -354,6 +398,249 @@ private fun themeOption(
                         },
                     )
                 }
+            }
+            if (selected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun fontSettingsCard() {
+    val currentFontSettings by ThemePreferences.fontSettings.collectAsState()
+    val availableFonts = remember { ThemePreferences.getAvailableSystemFonts() }
+    var fontDropdownExpanded by remember { mutableStateOf(false) }
+    var fontSizeDropdownExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Font Family
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Font Family",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { fontDropdownExpanded = true }
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = currentFontSettings.fontFamily,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Change font",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = fontDropdownExpanded,
+                        onDismissRequest = { fontDropdownExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.5f),
+                    ) {
+                        availableFonts.forEach { fontFamily ->
+                            DropdownMenuItem(
+                                text = {
+                                    // Apply the font style directly to the font name
+                                    Text(
+                                        text = fontFamily,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontFamily = if (fontFamily == FontSettings.SYSTEM_DEFAULT) {
+                                                FontFamily.Default
+                                            } else {
+                                                when (fontFamily.lowercase()) {
+                                                    "monospace", "courier", "courier new", "consolas", "monaco", "menlo",
+                                                    "dejavu sans mono", "lucida console",
+                                                    -> FontFamily.Monospace
+                                                    "serif", "times", "times new roman", "georgia", "palatino",
+                                                    "garamond", "baskerville", "book antiqua",
+                                                    -> FontFamily.Serif
+                                                    "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
+                                                    else -> FontFamily.SansSerif
+                                                }
+                                            },
+                                        ),
+                                    )
+                                },
+                                onClick = {
+                                    ThemePreferences.setFontSettings(
+                                        currentFontSettings.copy(fontFamily = fontFamily),
+                                    )
+                                    fontDropdownExpanded = false
+                                },
+                                leadingIcon = if (fontFamily == currentFontSettings.fontFamily) {
+                                    {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // Font Size
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Font Size",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { fontSizeDropdownExpanded = true }
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = currentFontSettings.fontSize.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Change size",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = fontSizeDropdownExpanded,
+                        onDismissRequest = { fontSizeDropdownExpanded = false },
+                    ) {
+                        FontSize.entries.forEach { fontSize ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = fontSize.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                },
+                                onClick = {
+                                    ThemePreferences.setFontSettings(
+                                        currentFontSettings.copy(fontSize = fontSize),
+                                    )
+                                    fontSizeDropdownExpanded = false
+                                },
+                                leadingIcon = if (fontSize == currentFontSettings.fontSize) {
+                                    {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun accentColorOption(
+    accentColor: AccentColor,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .pointerHoverIcon(PointerIcon.Hand),
+        colors = if (selected) {
+            ComponentColors.primaryCardColors()
+        } else {
+            ComponentColors.surfaceVariantCardColors()
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
+                // Color preview circle
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = accentColor.lightColor,
+                            shape = MaterialTheme.shapes.small,
+                        ),
+                )
+                Text(
+                    text = accentColor.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
             }
             if (selected) {
                 Icon(
@@ -403,9 +690,7 @@ private fun modelSelectionDialog(
                             )
                             viewModel.modelErrorHelp?.let { helpText ->
                                 Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    ),
+                                    colors = ComponentColors.surfaceVariantCardColors(),
                                 ) {
                                     Text(
                                         text = helpText,
@@ -434,13 +719,11 @@ private fun modelSelectionDialog(
                                     .fillMaxWidth()
                                     .clickable { onSelectModel(model) }
                                     .pointerHoverIcon(PointerIcon.Hand),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (model == viewModel.model) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                    },
-                                ),
+                                colors = if (model == viewModel.model) {
+                                    ComponentColors.primaryCardColors()
+                                } else {
+                                    ComponentColors.surfaceVariantCardColors()
+                                },
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -452,12 +735,16 @@ private fun modelSelectionDialog(
                                     Text(
                                         text = model,
                                         style = MaterialTheme.typography.bodyLarge,
+                                        color = if (model == viewModel.model) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                     )
                                     if (model == viewModel.model) {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
@@ -495,13 +782,13 @@ private fun settingsConfigurationDialog(
             ) {
                 viewModel.settingsFields.forEach { field ->
                     when (field) {
-                        is io.askimo.core.session.SettingField.TextField -> {
+                        is SettingField.TextField -> {
                             textFieldSetting(
                                 field = field,
                                 onValueChange = { viewModel.updateSettingsField(field.name, it) },
                             )
                         }
-                        is io.askimo.core.session.SettingField.EnumField -> {
+                        is SettingField.EnumField -> {
                             enumFieldSetting(
                                 field = field,
                                 onValueChange = { viewModel.updateSettingsField(field.name, it) },
@@ -524,7 +811,7 @@ private fun settingsConfigurationDialog(
 
 @Composable
 private fun textFieldSetting(
-    field: io.askimo.core.session.SettingField.TextField,
+    field: SettingField.TextField,
     onValueChange: (String) -> Unit,
 ) {
     var textValue by remember { mutableStateOf(field.value) }
@@ -578,7 +865,7 @@ private fun textFieldSetting(
 
 @Composable
 private fun enumFieldSetting(
-    field: io.askimo.core.session.SettingField.EnumField,
+    field: SettingField.EnumField,
     onValueChange: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -601,9 +888,7 @@ private fun enumFieldSetting(
                     .fillMaxWidth()
                     .clickable { expanded = true }
                     .pointerHoverIcon(PointerIcon.Hand),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
+                colors = ComponentColors.surfaceVariantCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -777,7 +1062,7 @@ private fun providerSelectionDialog(
                             )
 
                             when (field) {
-                                is io.askimo.core.session.ProviderConfigField.ApiKeyField -> {
+                                is ProviderConfigField.ApiKeyField -> {
                                     OutlinedTextField(
                                         value = viewModel.providerFieldValues[field.name] ?: "",
                                         onValueChange = { viewModel.updateProviderField(field.name, it) },
@@ -808,7 +1093,7 @@ private fun providerSelectionDialog(
                                         },
                                     )
                                 }
-                                is io.askimo.core.session.ProviderConfigField.BaseUrlField -> {
+                                is ProviderConfigField.BaseUrlField -> {
                                     OutlinedTextField(
                                         value = viewModel.providerFieldValues[field.name] ?: "",
                                         onValueChange = { viewModel.updateProviderField(field.name, it) },
