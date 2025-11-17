@@ -100,7 +100,7 @@ fun detectMacOSDarkMode(): Boolean {
             "defaults",
             "read",
             "-g",
-            "AppleInterfaceStyle"
+            "AppleInterfaceStyle",
         ).start()
 
         val result = process.inputStream.bufferedReader().readText().trim()
@@ -117,7 +117,7 @@ fun detectMacOSDarkMode(): Boolean {
 fun main() = application {
     val icon = BitmapPainter(
         Image.makeFromEncoded(
-            object {}.javaClass.getResourceAsStream("/images/askimo_linux_512.png")?.readBytes()
+            object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
                 ?: throw IllegalStateException("Icon not found"),
         ).toComposeImageBitmap(),
     )
@@ -328,7 +328,7 @@ fun sidebar(
                         painter = remember {
                             BitmapPainter(
                                 Image.makeFromEncoded(
-                                    object {}.javaClass.getResourceAsStream("/images/askimo_64.png")?.readBytes()
+                                    object {}.javaClass.getResourceAsStream("/images/askimo_logo_64.png")?.readBytes()
                                         ?: throw IllegalStateException("Icon not found"),
                                 ).toComposeImageBitmap(),
                             )

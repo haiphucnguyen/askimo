@@ -86,6 +86,10 @@ compose.desktop {
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"
 
+            // Automatically include all Java modules to support dependencies
+            // This ensures modules like java.sql, java.naming, etc. are available
+            includeAllModules = true
+
             macOS {
                 bundleID = "io.askimo.desktop"
                 iconFile.set(project.file("src/main/resources/images/askimo.icns"))

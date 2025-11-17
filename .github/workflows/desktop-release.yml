@@ -1,0 +1,216 @@
+name: Desktop Release
+
+on:
+  push:
+    tags: [ "desktop-v*" ]  # Trigger on desktop-specific version tags (e.g., desktop-v1.0.0)
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  # Build desktop installers for each platform
+  desktop-package:
+    name: desktop-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            task: packageDmg
+            artifact-pattern: "desktop/build/compose/binaries/main/dmg/*.dmg"
+            artifact-suffix: "macos"
+          - os: windows-latest
+            task: packageMsi
+            artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
+            artifact-suffix: "windows"
+          - os: ubuntu-latest
+            task: packageDeb
+            artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
+            artifact-suffix: "linux"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Build desktop application (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:build
+
+      - name: Build desktop application (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:build
+
+      - name: Package desktop installer (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
+
+      - name: Package desktop installer (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:${{ matrix.task }}
+
+      - name: Find installer package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATTERN="${{ matrix.artifact-pattern }}"
+          
+          # Use compgen if available (bash), otherwise use ls with wildcard
+          if compgen -G "$PATTERN" > /dev/null 2>&1; then
+            PKG="$(compgen -G "$PATTERN" | head -n1)"
+          else
+            PKG="$(ls $PATTERN 2>/dev/null | head -n1)" || true
+          fi
+          
+          if [ -z "$PKG" ]; then
+            echo "Error: No installer found matching pattern: $PATTERN" >&2
+            exit 1
+          fi
+          
+          echo "package=$PKG" >> $GITHUB_OUTPUT
+          echo "Found installer: $PKG"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: askimo-desktop-${{ matrix.artifact-suffix }}
+          path: ${{ steps.package.outputs.package }}
+          if-no-files-found: error
+          retention-days: 14
+
+  # Create GitHub release with all desktop installers
+  release:
+    name: Create Desktop Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ desktop-package ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all installer artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List downloaded artifacts
+        shell: bash
+        run: |
+          echo "Downloaded artifacts:"
+          ls -lhR dist/
+
+      - name: Prepare release assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF#refs/tags/}"  # e.g., desktop-v1.0.0
+          VERSION_PLAIN="${VERSION#desktop-v}"  # e.g., 1.0.0
+          
+          mkdir -p release
+          files=()
+
+          # macOS DMG
+          if [ -d "dist/askimo-desktop-macos" ]; then
+            DMG=$(find dist/askimo-desktop-macos -name "*.dmg" -type f | head -n1)
+            if [ -n "$DMG" ]; then
+              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-macos.dmg"
+              cp "$DMG" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged macOS DMG: $DEST"
+            fi
+          fi
+
+          # Windows MSI
+          if [ -d "dist/askimo-desktop-windows" ]; then
+            MSI=$(find dist/askimo-desktop-windows -name "*.msi" -type f | head -n1)
+            if [ -n "$MSI" ]; then
+              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-windows.msi"
+              cp "$MSI" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Windows MSI: $DEST"
+            fi
+          fi
+
+          # Linux DEB
+          if [ -d "dist/askimo-desktop-linux" ]; then
+            DEB=$(find dist/askimo-desktop-linux -name "*.deb" -type f | head -n1)
+            if [ -n "$DEB" ]; then
+              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-linux.deb"
+              cp "$DEB" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux DEB: $DEST"
+            fi
+          fi
+
+          # Generate checksums
+          if (( ${#files[@]} > 0 )); then
+            cd release
+            shasum -a 256 *.{dmg,msi,deb} 2>/dev/null > SHA256SUMS.txt || true
+            cd ..
+            files+=("release/SHA256SUMS.txt")
+          else
+            echo "Error: No installer packages found" >&2
+            exit 1
+          fi
+
+          # Output files for release upload
+          {
+            echo "files<<EOF"
+            printf 'release/%s\n' "$(basename "${files[@]}")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo ""
+          echo "Release files prepared:"
+          ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          name: Desktop ${{ github.ref_name }}
+          body: |
+            ## Askimo Desktop Application
+            
+            Desktop application installers for Askimo.
+            
+            ### Installation
+            
+            **macOS:**
+            - Download the `.dmg` file
+            - Open the DMG and drag Askimo to Applications
+            - Requires macOS 10.15 or later
+            
+            **Windows:**
+            - Download the `.msi` file
+            - Run the installer and follow the setup wizard
+            - Requires Windows 10 or later
+            
+            **Linux (Debian/Ubuntu):**
+            - Download the `.deb` file
+            - Install with: `sudo dpkg -i Askimo-Desktop-*.deb`
+            - Or double-click to install via Software Center
+            
+            ### Checksums
+            
+            Verify your download using the SHA256SUMS.txt file.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

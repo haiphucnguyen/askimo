@@ -169,8 +169,7 @@ private fun renderOrderedList(list: OrderedList) {
     Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)) {
         var item = list.firstChild
 
-        @Suppress("DEPRECATION")
-        var index = list.startNumber
+        var index = list.markerStartNumber
         while (item != null) {
             if (item is ListItem) {
                 Text(
@@ -195,6 +194,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
     // This provides better visual separation and respects the theme colors
     val backgroundColor = MaterialTheme.colorScheme.surface
     val isDark = backgroundColor.luminance() < 0.5
+
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
 
@@ -278,10 +278,10 @@ private fun renderTable(table: TableBlock) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .horizontalScroll(rememberScrollState())
+            .horizontalScroll(rememberScrollState()),
     ) {
         Column(
-            modifier = Modifier.border(1.dp, borderColor)
+            modifier = Modifier.border(1.dp, borderColor),
         ) {
             var child = table.firstChild
             while (child != null) {
@@ -293,8 +293,8 @@ private fun renderTable(table: TableBlock) {
                             if (headerRow is TableRow) {
                                 Row(
                                     modifier = Modifier.background(
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                    )
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    ),
                                 ) {
                                     var cell = headerRow.firstChild
                                     while (cell != null) {
@@ -303,7 +303,7 @@ private fun renderTable(table: TableBlock) {
                                                 modifier = Modifier
                                                     .widthIn(min = minCellWidth)
                                                     .border(1.dp, borderColor)
-                                                    .padding(8.dp)
+                                                    .padding(8.dp),
                                             ) {
                                                 Text(
                                                     text = extractCellText(cell),
@@ -333,7 +333,7 @@ private fun renderTable(table: TableBlock) {
                                                 modifier = Modifier
                                                     .widthIn(min = minCellWidth)
                                                     .border(1.dp, borderColor)
-                                                    .padding(8.dp)
+                                                    .padding(8.dp),
                                             ) {
                                                 Text(
                                                     text = extractCellText(cell),

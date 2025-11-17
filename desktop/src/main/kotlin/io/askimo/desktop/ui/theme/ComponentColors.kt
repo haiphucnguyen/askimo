@@ -15,6 +15,8 @@ import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.NavigationRailItemColors
 import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -165,14 +167,13 @@ object ComponentColors {
      * - Placeholder: onSurfaceVariant
      */
     @Composable
-    fun outlinedTextFieldColors(): androidx.compose.material3.TextFieldColors =
-        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            cursorColor = MaterialTheme.colorScheme.primary,
-        )
+    fun outlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.primary,
+    )
 
     /**
      * Sidebar surface color with subtle accent tint
@@ -182,7 +183,7 @@ object ComponentColors {
      * - Ties into custom theme colors
      */
     @Composable
-    fun sidebarSurfaceColor(): androidx.compose.ui.graphics.Color {
+    fun sidebarSurfaceColor(): Color {
         val surfaceColor = MaterialTheme.colorScheme.surface
         val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -196,7 +197,7 @@ object ComponentColors {
             red = surfaceColor.red + (primaryColor.red - surfaceColor.red) * tintAmount,
             green = surfaceColor.green + (primaryColor.green - surfaceColor.green) * tintAmount,
             blue = surfaceColor.blue + (primaryColor.blue - surfaceColor.blue) * tintAmount,
-            alpha = surfaceColor.alpha
+            alpha = surfaceColor.alpha,
         )
     }
 
@@ -222,7 +223,7 @@ object ComponentColors {
             red = surfaceColor.red + (primaryColor.red - surfaceColor.red) * tintAmount,
             green = surfaceColor.green + (primaryColor.green - surfaceColor.green) * tintAmount,
             blue = surfaceColor.blue + (primaryColor.blue - surfaceColor.blue) * tintAmount,
-            alpha = surfaceColor.alpha
+            alpha = surfaceColor.alpha,
         )
     }
 }

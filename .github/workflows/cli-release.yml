@@ -1,12 +1,13 @@
-name: Build
+name: CLI Release
 
 on:
   push:
     branches: [ main ]
-    tags: [ "v*" ]
+    tags: [ "v*" ]  # Trigger on version tags for CLI releases
   pull_request:
 
 jobs:
+  # Build native CLI binaries for x64 platforms
   native:
     name: native-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -132,7 +133,7 @@ jobs:
           retention-days: 14
 
 
-  # NEW: native arm64 build on hosted ARM runner
+  # Build native CLI binary for ARM64 on hosted ARM runner
   native-arm:
     name: native-ubuntu-24.04-arm
     if: startsWith(github.ref, 'refs/tags/')
@@ -192,6 +193,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # Package CLI binaries and create GitHub release
   release:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [ native, native-arm ]
@@ -269,6 +271,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Publish CLI Homebrew formula to separate tap repository
   homebrew:
     name: Publish Homebrew tap (separate repo)
     if: startsWith(github.ref, 'refs/tags/')
@@ -424,6 +427,7 @@ jobs:
             git push
           fi
 
+  # Publish CLI Scoop manifest for Windows package manager
   scoop:
     name: Publish Scoop manifest (Windows)
     if: startsWith(github.ref, 'refs/tags/')
@@ -522,6 +526,7 @@ jobs:
             echo "No changes to commit."
           fi
 
+  # Build and push multi-arch Docker images containing CLI binaries
   docker:
     name: Build & Push Docker (native, multi-arch)
     if: startsWith(github.ref, 'refs/tags/')
@@ -624,3 +629,4 @@ jobs:
             docker manifest push "$T"
           done
           docker rmi "$I:amd64-temp" "$I:arm64-temp" || true
+
