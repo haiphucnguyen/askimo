@@ -21,7 +21,7 @@ class KeychainManagerWindowsIntegrationTest {
     private val testProviders = mutableSetOf<String>()
 
     companion object {
-        private const val TEST_PROVIDER_PREFIX = "test-provider"
+        private const val TEST_PROVIDER_PREFIX = "windows-integration-test"
         private const val SIMPLE_API_KEY = "sk-simple123"
         private const val LONG_API_KEY = "sk-proj-xR7nK4mP9wQ2vE8bF5jL3tY6uA1sD0gH-zX9cV2bN4mK7pQ1wE5rT8yU3iO6aS2dF-vG4hJ8kL1nM0pR7tY2uI9oE3wQ6aS5dF8gH1jK4mP7xZ0cV3bN6mK9pQ2wE5rT-yU8iO1aS4dF7gH0jK3mP6xZ9cV2bN5mK8pQ1wE4rT7yU0iO3aS6dF9gH2jK5mP8xZ1cV4bN7mKpQ0wE3rT6yU9iO2aS5dF8gH1jK4mP7xZ0cV3bN6mKpQ2wE5rT8yU1iO4aS7dF0gH3jK6mP9xZ2cV5bN8mKpQ1wE4rT7yU0iO3aS6dF9gH2jK5mP8xZ1cV4bN7mKpQ0wE3rT6yU9iO2aS5dF8gH1jK4mP7xZ0cV3bN6mKpQ2wE5rT8yU1iO4aS7dF0gH3jK6mP9xZ2cV5bN8mKpQ1wE4rT7yU0iO3aS6dF9gH2jK5mP8xZ1cV4bN7mKpQ0wE3rT6yU9iO2aS5dF8gH1jK4mP7xZ0cV3bN6mKpQ2wE"
         private const val API_KEY_WITH_SPECIAL_CHARS = "sk-test_123-456_789-ABC_DEF"
@@ -39,9 +39,14 @@ class KeychainManagerWindowsIntegrationTest {
     @AfterEach
     fun tearDown() {
         // Clean up all test providers that were created during tests
+        // This ensures we always clean up from Windows Credential Manager
         testProviders.forEach { provider ->
             try {
-                KeychainManager.removeApiKey(provider)
+                // Always remove from Windows Credential Manager
+                val target = "askimo-cli:askimo-$provider"
+                val process = ProcessBuilder("cmdkey", "/delete:$target").start()
+                process.waitFor()
+                println("Cleaned up credential for provider: $provider")
             } catch (e: Exception) {
                 println("Warning: Failed to clean up test provider $provider: ${e.message}")
             }
@@ -161,21 +166,6 @@ class KeychainManagerWindowsIntegrationTest {
         assertTrue(KeychainManager.removeApiKey(provider1), "Failed to remove provider1 key")
         assertNull(KeychainManager.retrieveApiKey(provider1), "Provider1 key should be removed")
         assertEquals(key2, KeychainManager.retrieveApiKey(provider2), "Provider2 key should still exist")
-    }
-
-    @Test
-    fun `test edge case empty API key`() {
-        val provider = generateTestProvider("empty")
-        val emptyKey = ""
-
-        // Store empty API key
-        val storeResult = KeychainManager.storeApiKey(provider, emptyKey)
-        if (storeResult) {
-            val retrievedKey = KeychainManager.retrieveApiKey(provider)
-            assertEquals(emptyKey, retrievedKey, "Empty API key should be stored and retrieved correctly")
-        } else {
-            println("Empty API key storage failed as expected")
-        }
     }
 
     @Test

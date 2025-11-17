@@ -232,7 +232,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),
@@ -263,7 +263,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),
@@ -348,7 +348,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),
@@ -421,7 +421,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),
@@ -455,7 +455,7 @@ class ChatSessionRepository {
                         ChatMessage(
                             id = rs.getString("id"),
                             sessionId = rs.getString("session_id"),
-                            role = MessageRole.values().find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
                         ),

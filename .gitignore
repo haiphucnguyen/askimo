@@ -48,3 +48,4 @@ Gemfile.lock
 .env
 
 cloudflare-worker-openai-proxy.js
+.idea/

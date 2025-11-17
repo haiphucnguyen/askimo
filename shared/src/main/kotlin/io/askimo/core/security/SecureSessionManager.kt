@@ -7,6 +7,12 @@ package io.askimo.core.security
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.xai.XAiSettings
+import io.askimo.core.security.SecureApiKeyManager.StorageMethod
 import io.askimo.core.session.SessionParams
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.warn
@@ -161,13 +167,13 @@ class SecureSessionManager {
 
     private fun updateApiKeyPlaceholder(
         settings: HasApiKey,
-        method: SecureApiKeyManager.StorageMethod,
+        method: StorageMethod,
     ) {
         settings.apiKey =
             when (method) {
-                SecureApiKeyManager.StorageMethod.KEYCHAIN -> KEYCHAIN_API_KEY_PLACEHOLDER
-                SecureApiKeyManager.StorageMethod.ENCRYPTED -> KEYCHAIN_API_KEY_PLACEHOLDER
-                SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK -> settings.apiKey // Keep as-is
+                StorageMethod.KEYCHAIN -> KEYCHAIN_API_KEY_PLACEHOLDER
+                StorageMethod.ENCRYPTED -> KEYCHAIN_API_KEY_PLACEHOLDER
+                StorageMethod.INSECURE_FALLBACK -> settings.apiKey // Keep as-is
             }
     }
 
@@ -183,23 +189,23 @@ class SecureSessionManager {
      */
     private fun deepCopyProviderSettings(provider: ModelProvider, settings: ProviderSettings): ProviderSettings = when (provider) {
         ModelProvider.OPENAI -> {
-            val openAiSettings = settings as io.askimo.core.providers.openai.OpenAiSettings
+            val openAiSettings = settings as OpenAiSettings
             openAiSettings.copy()
         }
         ModelProvider.GEMINI -> {
-            val geminiSettings = settings as io.askimo.core.providers.gemini.GeminiSettings
+            val geminiSettings = settings as GeminiSettings
             geminiSettings.copy()
         }
         ModelProvider.XAI -> {
-            val xaiSettings = settings as io.askimo.core.providers.xai.XAiSettings
+            val xaiSettings = settings as XAiSettings
             xaiSettings.copy()
         }
         ModelProvider.ANTHROPIC -> {
-            val anthropicSettings = settings as io.askimo.core.providers.anthropic.AnthropicSettings
+            val anthropicSettings = settings as AnthropicSettings
             anthropicSettings.copy()
         }
         ModelProvider.OLLAMA -> {
-            val ollamaSettings = settings as io.askimo.core.providers.ollama.OllamaSettings
+            val ollamaSettings = settings as OllamaSettings
             ollamaSettings.copy()
         }
         ModelProvider.UNKNOWN -> settings // Unknown settings, return as-is

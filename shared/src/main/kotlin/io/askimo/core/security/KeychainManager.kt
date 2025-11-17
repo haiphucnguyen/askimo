@@ -254,9 +254,6 @@ object KeychainManager {
     ): Boolean {
         val target = "$SERVICE_NAME:askimo-$provider"
 
-        // For test providers, also store in a test-accessible way
-        val isTestProvider = provider.startsWith("test-provider")
-
         try {
             val process = ProcessBuilder(
                 "cmdkey",
@@ -266,14 +263,7 @@ object KeychainManager {
             ).start()
 
             val exitCode = process.waitFor()
-            val success = exitCode == 0
-
-            // For test providers, also store in an accessible format
-            if (success && isTestProvider) {
-                storeTestCredential(provider, apiKey)
-            }
-
-            return success
+            return exitCode == 0
         } catch (e: Exception) {
             debug("Failed to store API key with cmdkey: ${e.message}")
             return false
@@ -282,26 +272,59 @@ object KeychainManager {
 
     private fun retrieveWindowsCredentialManager(provider: String): String? {
         val target = "$SERVICE_NAME:askimo-$provider"
-        val isTestProvider = provider.startsWith("test-provider")
 
-        // For test providers, try test storage first
-        if (isTestProvider) {
-            retrieveTestCredential(provider)?.let { return it }
-        }
-
-        // Try PowerShell approach for actual credential retrieval
+        // Try PowerShell approach using CredentialManager API
         try {
-            val powershellScript = """
-                try {
-                    [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime] | Out-Null
-                    ${'$'}vault = New-Object Windows.Security.Credentials.PasswordVault
-                    ${'$'}cred = ${'$'}vault.Retrieve("$target", "askimo")
-                    ${'$'}cred.RetrievePassword()
-                    Write-Output ${'$'}cred.Password
-                } catch {
-                    exit 1
+            // Build PowerShell script with proper escaping
+            val csCode = """using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public class CredentialManager {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct CREDENTIAL {
+        public uint Flags;
+        public uint Type;
+        public string TargetName;
+        public string Comment;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+        public uint CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public uint Persist;
+        public uint AttributeCount;
+        public IntPtr Attributes;
+        public string TargetAlias;
+        public string UserName;
+    }
+
+    [DllImport(\""advapi32.dll\"", EntryPoint = \""CredReadW\"", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredRead(string target, uint type, int reservedFlag, out IntPtr credentialPtr);
+
+    [DllImport(\""advapi32.dll\"", SetLastError = true)]
+    public static extern bool CredFree(IntPtr cred);
+
+    public static string GetPassword(string target) {
+        IntPtr credPtr;
+        if (CredRead(target, 1, 0, out credPtr)) {
+            try {
+                CREDENTIAL cred = (CREDENTIAL)Marshal.PtrToStructure(credPtr, typeof(CREDENTIAL));
+                if (cred.CredentialBlobSize > 0) {
+                    byte[] passwordBytes = new byte[cred.CredentialBlobSize];
+                    Marshal.Copy(cred.CredentialBlob, passwordBytes, 0, (int)cred.CredentialBlobSize);
+                    return Encoding.Unicode.GetString(passwordBytes);
                 }
-            """.trimIndent()
+            } finally {
+                CredFree(credPtr);
+            }
+        }
+        return null;
+    }
+}"""
+
+            val powershellScript = "Add-Type -TypeDefinition '$csCode'; " +
+                "\$password = [CredentialManager]::GetPassword('$target'); " +
+                "if (\$password -ne \$null) { Write-Output \$password; exit 0 } " +
+                "else { [Console]::Error.WriteLine('Credential not found'); exit 1 }"
 
             val process = ProcessBuilder(
                 "powershell.exe",
@@ -314,10 +337,15 @@ object KeychainManager {
             ).start()
 
             val output = process.inputStream.bufferedReader().readText().trim()
+            val errorOutput = process.errorStream.bufferedReader().readText().trim()
             val exitCode = process.waitFor()
 
             if (exitCode == 0 && output.isNotBlank()) {
                 return output
+            } else if (errorOutput.isNotBlank()) {
+                debug("PowerShell credential retrieval failed with exit code $exitCode: $errorOutput")
+            } else {
+                debug("PowerShell credential retrieval failed with exit code $exitCode (no error message)")
             }
         } catch (e: Exception) {
             debug("PowerShell credential retrieval failed: ${e.message}")
@@ -341,7 +369,6 @@ object KeychainManager {
 
     private fun removeWindowsCredentialManager(provider: String): Boolean {
         val target = "$SERVICE_NAME:askimo-$provider"
-        val isTestProvider = provider.startsWith("test-provider")
 
         try {
             val process = ProcessBuilder(
@@ -350,14 +377,7 @@ object KeychainManager {
             ).start()
 
             val exitCode = process.waitFor()
-            val success = exitCode == 0
-
-            // For test providers, also remove from test storage
-            if (success && isTestProvider) {
-                removeTestCredential(provider)
-            }
-
-            return success
+            return exitCode == 0
         } catch (e: Exception) {
             debug("Failed to remove API key with cmdkey: ${e.message}")
             return false
@@ -379,57 +399,6 @@ object KeychainManager {
         process.waitFor() == 0
     } catch (e: IOException) {
         false
-    }
-
-    /**
-     * Test-only credential storage for Windows integration tests.
-     * Uses simple Base64 encoding for test credential storage to work around
-     * Windows Credential Manager retrieval limitations in test environments.
-     */
-    private fun storeTestCredential(provider: String, apiKey: String) {
-        try {
-            val testDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"), "askimo-test-credentials")
-            java.nio.file.Files.createDirectories(testDir)
-
-            val credentialFile = testDir.resolve("$provider.txt")
-            val encodedKey = java.util.Base64.getEncoder().encodeToString(apiKey.toByteArray())
-            java.nio.file.Files.write(credentialFile, encodedKey.toByteArray())
-
-            debug("Stored test credential for provider: $provider")
-        } catch (e: Exception) {
-            debug("Failed to store test credential: ${e.message}")
-        }
-    }
-
-    private fun retrieveTestCredential(provider: String): String? = try {
-        val testDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"), "askimo-test-credentials")
-        val credentialFile = testDir.resolve("$provider.txt")
-
-        if (java.nio.file.Files.exists(credentialFile)) {
-            val encodedKey = String(java.nio.file.Files.readAllBytes(credentialFile))
-            val decodedKey = String(java.util.Base64.getDecoder().decode(encodedKey))
-            debug("Retrieved test credential for provider: $provider")
-            decodedKey
-        } else {
-            null
-        }
-    } catch (e: Exception) {
-        debug("Failed to retrieve test credential: ${e.message}")
-        null
-    }
-
-    private fun removeTestCredential(provider: String) {
-        try {
-            val testDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"), "askimo-test-credentials")
-            val credentialFile = testDir.resolve("$provider.txt")
-
-            if (java.nio.file.Files.exists(credentialFile)) {
-                java.nio.file.Files.delete(credentialFile)
-                debug("Removed test credential for provider: $provider")
-            }
-        } catch (e: Exception) {
-            debug("Failed to remove test credential: ${e.message}")
-        }
     }
 
     enum class OperatingSystem {
