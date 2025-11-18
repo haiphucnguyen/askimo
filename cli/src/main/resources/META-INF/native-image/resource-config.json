@@ -218,6 +218,9 @@
         "pattern": "\\Qorg/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib\\E"
       },
       {
+        "pattern": "\\Qsqlite-jdbc.properties\\E"
+      },
+      {
         "pattern": "\\Qtemplates/gitcommit.yml\\E"
       },
       {

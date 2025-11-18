@@ -582,8 +582,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -2105,6 +2104,67 @@
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       }
+    ]
+  },
+  {
+    "name": "io.askimo.core.directive.ChatDirectiveRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "should allow maximum length content", "parameterTypes": [] },
+      { "name": "should allow maximum length name", "parameterTypes": [] },
+      { "name": "should check if directive exists", "parameterTypes": [] },
+      { "name": "should delete existing directive", "parameterTypes": [] },
+      { "name": "should enforce maximum content length", "parameterTypes": [] },
+      { "name": "should enforce maximum name length", "parameterTypes": [] },
+      { "name": "should get multiple directives by ids", "parameterTypes": [] },
+      {
+        "name": "should get multiple directives by names",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle special characters in directive content",
+        "parameterTypes": []
+      },
+      {
+        "name": "should list all directives ordered by name",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when getting directives with empty ids list",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when getting directives with empty names list",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when deleting non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save and retrieve a chat directive",
+        "parameterTypes": []
+      },
+      { "name": "should update existing directive", "parameterTypes": [] },
+      {
+        "name": "should update existing directive on save with same id",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] }
     ]
   },
   {
@@ -4221,7 +4281,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$imKaWudI",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$ga2XjsdC",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

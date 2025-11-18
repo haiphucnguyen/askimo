@@ -7,7 +7,6 @@ package io.askimo.core.session
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
 import kotlinx.serialization.json.Json
 import java.sql.Connection
 import java.time.LocalDateTime

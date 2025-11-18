@@ -1,14 +1,49 @@
-name: Desktop Release
+name: Desktop
 
 on:
   push:
-    tags: [ "desktop-v*" ]  # Trigger on desktop-specific version tags (e.g., desktop-v1.0.0)
+    tags: [ "v*" ]  # Trigger on version tags (e.g., v0.3.0)
+  pull_request:  # Build on every PR
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  # Build desktop installers for each platform
+  # Build desktop application for each platform (runs on PRs and releases)
+  desktop-build:
+    name: desktop-build-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, windows-latest, ubuntu-latest ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Build desktop application (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:build
+
+      - name: Build desktop application (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:build
+
+  # Package desktop installers for each platform (runs only on release tags)
   desktop-package:
-    name: desktop-${{ matrix.os }}
+    name: desktop-package-${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -93,7 +128,7 @@ jobs:
   # Create GitHub release with all desktop installers
   release:
     name: Create Desktop Release
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [ desktop-package ]
     runs-on: ubuntu-latest
     permissions:
@@ -116,8 +151,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/}"  # e.g., desktop-v1.0.0
-          VERSION_PLAIN="${VERSION#desktop-v}"  # e.g., 1.0.0
+          VERSION="${GITHUB_REF#refs/tags/}"  # e.g., v0.3.0
+          VERSION_PLAIN="${VERSION#v}"  # e.g., 0.3.0
           
           mkdir -p release
           files=()

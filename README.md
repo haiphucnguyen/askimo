@@ -10,8 +10,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/release.yml">
-    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/release.yml/badge.svg" alt="Build">
+  <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml">
+    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml/badge.svg" alt="Build">
+  </a>
+  <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml">
+    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Build">
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">

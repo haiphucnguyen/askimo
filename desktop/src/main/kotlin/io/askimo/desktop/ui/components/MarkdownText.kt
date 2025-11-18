@@ -9,11 +9,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -272,86 +274,92 @@ private fun renderBlockQuote(blockQuote: BlockQuote) {
 @Composable
 private fun renderTable(table: TableBlock) {
     val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    val minCellWidth = 150.dp
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .horizontalScroll(rememberScrollState()),
+            .border(1.dp, borderColor),
     ) {
-        Column(
-            modifier = Modifier.border(1.dp, borderColor),
-        ) {
-            var child = table.firstChild
-            while (child != null) {
-                when (child) {
-                    is TableHead -> {
-                        // Render table header
-                        var headerRow = child.firstChild
-                        while (headerRow != null) {
-                            if (headerRow is TableRow) {
-                                Row(
-                                    modifier = Modifier.background(
+        var child = table.firstChild
+        while (child != null) {
+            when (child) {
+                is TableHead -> {
+                    // Render table header
+                    var headerRow = child.firstChild
+                    while (headerRow != null) {
+                        if (headerRow is TableRow) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .background(
                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                     ),
-                                ) {
-                                    var cell = headerRow.firstChild
-                                    while (cell != null) {
-                                        if (cell is TableCell) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .widthIn(min = minCellWidth)
-                                                    .border(1.dp, borderColor)
-                                                    .padding(8.dp),
-                                            ) {
-                                                Text(
-                                                    text = extractCellText(cell),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            }
+                            ) {
+                                var cell = headerRow.firstChild
+                                while (cell != null) {
+                                    if (cell is TableCell) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                                .border(1.dp, borderColor)
+                                                .padding(8.dp),
+                                            contentAlignment = Alignment.TopStart,
+                                        ) {
+                                            Text(
+                                                text = extractCellText(cell),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
                                         }
-                                        cell = cell.next
                                     }
+                                    cell = cell.next
                                 }
                             }
-                            headerRow = headerRow.next
                         }
-                    }
-                    is TableBody -> {
-                        // Render table body
-                        var bodyRow = child.firstChild
-                        while (bodyRow != null) {
-                            if (bodyRow is TableRow) {
-                                Row {
-                                    var cell = bodyRow.firstChild
-                                    while (cell != null) {
-                                        if (cell is TableCell) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .widthIn(min = minCellWidth)
-                                                    .border(1.dp, borderColor)
-                                                    .padding(8.dp),
-                                            ) {
-                                                Text(
-                                                    text = extractCellText(cell),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            }
-                                        }
-                                        cell = cell.next
-                                    }
-                                }
-                            }
-                            bodyRow = bodyRow.next
-                        }
+                        headerRow = headerRow.next
                     }
                 }
-                child = child.next
+                is TableBody -> {
+                    // Render table body
+                    var bodyRow = child.firstChild
+                    while (bodyRow != null) {
+                        if (bodyRow is TableRow) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min),
+                            ) {
+                                var cell = bodyRow.firstChild
+                                while (cell != null) {
+                                    if (cell is TableCell) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                                .border(1.dp, borderColor)
+                                                .padding(8.dp),
+                                            contentAlignment = Alignment.TopStart,
+                                        ) {
+                                            Text(
+                                                text = extractCellText(cell),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                    }
+                                    cell = cell.next
+                                }
+                            }
+                        }
+                        bodyRow = bodyRow.next
+                    }
+                }
             }
+            child = child.next
         }
     }
 }

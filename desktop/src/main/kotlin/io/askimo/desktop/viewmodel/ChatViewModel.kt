@@ -504,13 +504,12 @@ class ChatViewModel(
         // Clear search state
         clearSearch()
 
-        // Start a new session with the currently selected directive
+        // Reset directive to null for new chat session
+        selectedDirective = null
+
+        // Start a new session without a directive
         val session = chatService.getSession()
         session.currentChatSession = null
-        if (selectedDirective != null) {
-            // Pre-create session with directive so it's ready for the first message
-            session.startNewChatSession(selectedDirective)
-        }
 
         chatService.clearMemory()
     }
