@@ -44,7 +44,9 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.model.ChatMessage
+import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.highlightSearchText
 
 @Composable
@@ -63,8 +65,8 @@ fun messageList(
     val scrollState = rememberScrollState()
     var shouldAutoScroll by remember { mutableStateOf(true) }
 
-    // Auto-scroll to bottom when new messages arrive or when thinking
-    LaunchedEffect(messages.size, isThinking) {
+    // Auto-scroll to bottom when messages change (including streaming updates) or when thinking
+    LaunchedEffect(messages, isThinking) {
         if (shouldAutoScroll) {
             scrollState.animateScrollTo(scrollState.maxValue)
         }
@@ -288,7 +290,7 @@ fun messageBubble(
 }
 
 @Composable
-private fun fileAttachmentChip(attachment: io.askimo.desktop.model.FileAttachment) {
+private fun fileAttachmentChip(attachment: FileAttachment) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -321,10 +323,4 @@ private fun fileAttachmentChip(attachment: io.askimo.desktop.model.FileAttachmen
             }
         }
     }
-}
-
-private fun formatFileSize(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> "${bytes / (1024 * 1024)} MB"
 }

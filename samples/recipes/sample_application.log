@@ -1,0 +1,51 @@
+2025-01-15 10:23:14.123 INFO  [main] com.example.app.Application - Starting Application v1.2.3
+2025-01-15 10:23:14.456 INFO  [main] com.example.app.config.ConfigLoader - Loading configuration from /etc/app/config.yaml
+2025-01-15 10:23:14.789 INFO  [main] com.example.app.database.ConnectionPool - Initializing database connection pool
+2025-01-15 10:23:15.012 INFO  [main] com.example.app.database.ConnectionPool - Database connection pool initialized with 10 connections
+2025-01-15 10:23:15.234 INFO  [main] com.example.app.server.HttpServer - Starting HTTP server on port 8080
+2025-01-15 10:23:15.567 INFO  [main] com.example.app.Application - Application started successfully in 1.444s
+
+2025-01-15 10:23:45.123 INFO  [http-thread-1] com.example.app.api.UserController - GET /api/users/123 - 200 OK (45ms)
+2025-01-15 10:23:46.456 INFO  [http-thread-2] com.example.app.api.UserController - GET /api/users/456 - 200 OK (32ms)
+2025-01-15 10:23:47.789 WARN  [http-thread-3] com.example.app.api.OrderController - GET /api/orders/789 - Slow query detected: 2145ms
+2025-01-15 10:23:48.012 ERROR [http-thread-4] com.example.app.api.PaymentController - POST /api/payments - Payment gateway timeout
+java.net.SocketTimeoutException: Read timed out
+    at java.net.SocketInputStream.socketRead0(Native Method)
+    at java.net.SocketInputStream.socketRead(SocketInputStream.java:116)
+    at java.net.SocketInputStream.read(SocketInputStream.java:171)
+    at com.example.app.payment.PaymentGateway.process(PaymentGateway.java:45)
+    at com.example.app.api.PaymentController.createPayment(PaymentController.java:78)
+2025-01-15 10:23:48.234 INFO  [http-thread-4] com.example.app.api.PaymentController - POST /api/payments - 504 Gateway Timeout (5234ms)
+
+2025-01-15 10:24:15.567 WARN  [http-thread-5] com.example.app.cache.RedisCache - Redis connection pool exhausted, waiting for available connection
+2025-01-15 10:24:15.890 ERROR [http-thread-5] com.example.app.cache.RedisCache - Failed to connect to Redis after 3 retries
+redis.clients.jedis.exceptions.JedisConnectionException: Could not get a resource from the pool
+    at redis.clients.jedis.util.Pool.getResource(Pool.java:53)
+    at com.example.app.cache.RedisCache.get(RedisCache.java:89)
+    at com.example.app.service.UserService.getUserById(UserService.java:34)
+2025-01-15 10:24:16.123 INFO  [http-thread-5] com.example.app.api.UserController - GET /api/users/789 - 500 Internal Server Error (5456ms)
+
+2025-01-15 10:24:45.456 WARN  [background-worker-1] com.example.app.scheduler.DataSyncJob - Data sync job took longer than expected: 15234ms (threshold: 10000ms)
+2025-01-15 10:25:12.789 ERROR [background-worker-2] com.example.app.scheduler.EmailJob - Failed to send notification email
+javax.mail.MessagingException: Could not connect to SMTP host: smtp.example.com, port: 587
+    at com.sun.mail.smtp.SMTPTransport.openServer(SMTPTransport.java:2118)
+    at com.sun.mail.smtp.SMTPTransport.protocolConnect(SMTPTransport.java:712)
+    at javax.mail.Service.connect(Service.java:366)
+    at com.example.app.notification.EmailService.send(EmailService.java:56)
+    at com.example.app.scheduler.EmailJob.execute(EmailJob.java:23)
+
+2025-01-15 10:25:45.012 WARN  [http-thread-6] com.example.app.api.OrderController - GET /api/orders/101 - Slow query detected: 3456ms
+2025-01-15 10:26:12.345 WARN  [http-thread-7] com.example.app.api.OrderController - GET /api/orders/102 - Slow query detected: 3789ms
+2025-01-15 10:26:45.678 WARN  [http-thread-8] com.example.app.api.OrderController - GET /api/orders/103 - Slow query detected: 4012ms
+
+2025-01-15 10:27:23.901 ERROR [http-thread-9] com.example.app.database.ConnectionPool - Failed to acquire database connection
+java.sql.SQLTransientConnectionException: Connection is not available, request timed out after 30000ms
+    at com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:201)
+    at com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:166)
+    at com.example.app.database.ConnectionPool.getConnection(ConnectionPool.java:45)
+    at com.example.app.repository.OrderRepository.findById(OrderRepository.java:23)
+
+2025-01-15 10:27:24.234 INFO  [http-thread-9] com.example.app.api.OrderController - GET /api/orders/104 - 503 Service Unavailable (5678ms)
+2025-01-15 10:27:45.567 WARN  [monitor-thread] com.example.app.health.HealthCheck - System health degraded: CPU=85%, Memory=92%, Disk=78%
+2025-01-15 10:28:12.890 ERROR [monitor-thread] com.example.app.health.HealthCheck - CRITICAL: Memory usage exceeded threshold: 95%
+

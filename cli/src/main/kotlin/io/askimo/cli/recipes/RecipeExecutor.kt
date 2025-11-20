@@ -32,6 +32,7 @@ class RecipeExecutor(
     data class RunOpts(
         val overrides: Map<String, String> = emptyMap(),
         val externalArgs: List<String> = emptyList(),
+        val stdinContent: String? = null,
         val terminal: Terminal? = null,
         val spinnerMessage: String = "Thinking…",
         val spinnerDoneLabel: String = "Done",

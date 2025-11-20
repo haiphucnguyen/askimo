@@ -1,0 +1,38 @@
+name: analyze_log
+defaults: {}
+
+      args: ["{{output}}"]
+      tool: print
+  - call:
+postActions:
+
+  Provide a comprehensive analysis with specific line numbers where relevant.
+  
+  ====END LOG====
+  {{stdin}}
+  ====BEGIN LOG====
+
+  Analyze the following log output:
+userTemplate: |
+
+  4. RECOMMENDATIONS: Actionable steps to resolve issues
+  3. PATTERNS: Notable patterns or trends
+  2. ERRORS & WARNINGS: Critical issues found
+  1. SUMMARY: Brief overview of the log analysis
+  Structure your response clearly with sections:
+  
+  - Actionable recommendations for fixing issues
+  - Root cause analysis for failures
+  - Performance issues or bottlenecks
+  - Patterns or anomalies
+  - Errors and warnings (categorize by severity)
+  Analyze the following log output and provide insights about:
+  You are a log analysis expert with deep knowledge of system logs, application logs, and debugging.
+system: |
+
+  - print
+allowedTools:
+
+description: "Analyze log output from stdin and provide insights"
+version: 1
+

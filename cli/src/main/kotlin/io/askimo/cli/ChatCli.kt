@@ -462,6 +462,9 @@ private fun runYamlCommand(
     val indicator = LoadingIndicator(terminal, "Running recipe '$name'$argsText…", "Recipe completed").apply { start() }
 
     try {
+        // Read stdin if available
+        val stdinContent = readStdinIfAny()
+
         val registry = RecipeRegistry()
         // Load once to inspect allowedTools (empty ⇒ all tools)
         val def = registry.load(name)
@@ -483,7 +486,11 @@ private fun runYamlCommand(
         RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
             executor.run(
                 name = name,
-                opts = RunOpts(overrides = overrides, externalArgs = externalArgs),
+                opts = RunOpts(
+                    overrides = overrides,
+                    externalArgs = externalArgs,
+                    stdinContent = stdinContent.ifEmpty { null },
+                ),
             )
         }
 

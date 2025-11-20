@@ -4,12 +4,14 @@
  */
 package io.askimo.desktop.model
 
+import java.time.LocalDateTime
+
 data class ChatMessage(
     val content: String,
     val isUser: Boolean,
     val attachments: List<FileAttachment> = emptyList(),
     val id: String? = null,
-    val timestamp: java.time.LocalDateTime? = null,
+    val timestamp: LocalDateTime? = null,
 )
 
 data class FileAttachment(

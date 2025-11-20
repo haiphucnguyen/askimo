@@ -66,6 +66,7 @@ import io.askimo.core.directive.ChatDirective
 import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.ui.components.manageDirectivesDialog
@@ -75,13 +76,6 @@ import io.askimo.desktop.ui.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
 import java.time.LocalDateTime
-
-// Helper function for file size formatting
-private fun formatFileSize(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> "${bytes / (1024 * 1024)} MB"
-}
 
 // File attachment item composable
 @Composable

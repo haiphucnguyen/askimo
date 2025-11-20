@@ -87,7 +87,91 @@ vars:
 
 ---
 
-## 4. Tool Access Control (`allowedTools`)
+## 4. Using Piped Input (stdin)
+
+Recipes can accept input from stdin (piped commands), making them powerful for analyzing logs, processing command output, or working with data streams. When stdin is available, it's automatically captured and made available as the `{{stdin}}` variable.
+
+### Basic Usage
+
+**Analyze log files:**
+```bash
+cat application.log | askimo -r analyze_log
+```
+
+**Process kubectl logs:**
+```bash
+kubectl logs pod-name | askimo -r analyze_log
+```
+
+**Analyze docker logs:**
+```bash
+docker logs container-name | askimo -r analyze_log
+```
+
+**Work with system logs:**
+```bash
+journalctl -u myservice -n 200 | askimo -r analyze_log
+```
+
+### Example: Log Analysis Recipe
+
+```yaml
+name: analyze_log
+version: 1
+description: "Analyze log output from stdin and provide insights"
+
+allowedTools:
+  - print
+
+system: |
+  You are a log analysis expert.
+  Analyze the following log output and provide insights about:
+  - Errors and warnings (categorize by severity)
+  - Patterns or anomalies
+  - Performance issues or bottlenecks
+  - Root cause analysis for failures
+  - Actionable recommendations
+
+userTemplate: |
+  Analyze the following log output:
+  
+  ====BEGIN LOG====
+  {{stdin}}
+  ====END LOG====
+  
+  Provide a comprehensive analysis with specific line numbers.
+
+postActions:
+  - call:
+      tool: print
+      args: ["{{output}}"]
+
+defaults: {}
+```
+
+### Combining stdin with Arguments
+
+You can use both stdin and positional arguments together:
+
+```bash
+echo "error data" | askimo -r process --set format=json extra-arg
+```
+
+In the recipe:
+- `{{stdin}}` contains the piped input
+- `{{arg1}}` contains "extra-arg"
+- `{{format}}` contains "json" (from --set override)
+
+### How stdin Detection Works
+
+The system automatically detects when data is piped to Askimo:
+- If stdin is available (pipe or redirect), it's read and stored in `{{stdin}}`
+- If no stdin is available (interactive terminal), `{{stdin}}` is empty/undefined
+- The recipe can check if stdin exists or provide a fallback value: `{{stdin|No input provided}}`
+
+---
+
+## 5. Tool Access Control (`allowedTools`)
 By default, a recipe has access to ALL built‑in tools. You only need to specify `allowedTools:` when you want to restrict what the recipe may call.
 You can view all available tools at any time by running:
 - Non-interactive mode: `askimo --tools`
@@ -171,7 +255,7 @@ postActions:
 
 ---
 
-## 6. Example Recipes
+## 7. Example Recipes
 
 ### Summarize Recipe (prints output)
 ```yaml

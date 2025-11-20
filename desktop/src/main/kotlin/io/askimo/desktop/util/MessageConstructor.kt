@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.util
 
+import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.model.FileAttachment
 
 /**
@@ -37,13 +38,4 @@ fun constructMessageWithAttachments(
         // Then include user's message/question
         appendLine(userMessage)
     }
-}
-
-/**
- * Formats file size in human-readable format.
- */
-private fun formatFileSize(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> "${bytes / (1024 * 1024)} MB"
 }
