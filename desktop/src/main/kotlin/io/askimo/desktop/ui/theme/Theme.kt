@@ -61,18 +61,18 @@ private val md_theme_dark_error = Color(0xFFFFB4AB)
 private val md_theme_dark_errorContainer = Color(0xFF93000A)
 private val md_theme_dark_onError = Color(0xFF690005)
 private val md_theme_dark_onErrorContainer = Color(0xFFFFDAD6)
-private val md_theme_dark_background = Color(0xFF191C1A)
+private val md_theme_dark_background = Color(0xFF2B2F2D)
 private val md_theme_dark_onBackground = Color(0xFFE1E3DF)
-private val md_theme_dark_surface = Color(0xFF191C1A)
+private val md_theme_dark_surface = Color(0xFF2B2F2D)
 private val md_theme_dark_onSurface = Color(0xFFE1E3DF)
-private val md_theme_dark_surfaceVariant = Color(0xFF404943)
+private val md_theme_dark_surfaceVariant = Color(0xFF4A524D)
 private val md_theme_dark_onSurfaceVariant = Color(0xFFBFC9C2)
 private val md_theme_dark_outline = Color(0xFF8A938C)
-private val md_theme_dark_inverseOnSurface = Color(0xFF191C1A)
+private val md_theme_dark_inverseOnSurface = Color(0xFF373B39)
 private val md_theme_dark_inverseSurface = Color(0xFFE1E3DF)
 private val md_theme_dark_inversePrimary = Color(0xFF006C4C)
 private val md_theme_dark_surfaceTint = Color(0xFF6CDBAC)
-private val md_theme_dark_outlineVariant = Color(0xFF404943)
+private val md_theme_dark_outlineVariant = Color(0xFF565E59)
 private val md_theme_dark_scrim = Color(0xFF000000)
 
 val LightColorScheme = lightColorScheme(
@@ -148,7 +148,7 @@ fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
         primary = accentColor.lightColor,
         primaryContainer = accentColor.lightColor.copy(alpha = 0.3f),
         onPrimaryContainer = Color.Black,
-        secondaryContainer = accentColor.lightColor.copy(alpha = 0.15f), // Subtle banner background
+        secondaryContainer = accentColor.lightColor.copy(alpha = 0.15f),
         onSecondaryContainer = Color.Black,
         inversePrimary = accentColor.darkColor,
         surfaceTint = accentColor.lightColor,
@@ -164,7 +164,7 @@ fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
         primary = accentColor.darkColor,
         primaryContainer = accentColor.darkColor.copy(alpha = 0.3f),
         onPrimaryContainer = Color.White,
-        secondaryContainer = accentColor.darkColor.copy(alpha = 0.15f), // Subtle banner background
+        secondaryContainer = accentColor.darkColor.copy(alpha = 0.15f),
         onSecondaryContainer = Color.White,
         inversePrimary = accentColor.lightColor,
         surfaceTint = accentColor.darkColor,
