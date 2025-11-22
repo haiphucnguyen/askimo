@@ -40,68 +40,6 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:build
 
-  # Build uber JARs for each platform (runs only on release tags)
-  desktop-jar:
-    name: desktop-jar-${{ matrix.os }}
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            artifact-suffix: "macos"
-          - os: windows-latest
-            artifact-suffix: "windows"
-          - os: ubuntu-latest
-            artifact-suffix: "linux"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
-
-      - name: Build uber JAR (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageUberJarForCurrentOS
-
-      - name: Build uber JAR (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:packageUberJarForCurrentOS
-
-      - name: Find uber JAR
-        id: jar
-        shell: bash
-        run: |
-          set -euo pipefail
-          JAR=$(find desktop/build/compose/jars -name "*.jar" -type f | head -n1)
-          
-          if [ -z "$JAR" ]; then
-            echo "Error: No uber JAR found" >&2
-            exit 1
-          fi
-          
-          echo "jar=$JAR" >> $GITHUB_OUTPUT
-          echo "Found uber JAR: $JAR"
-
-      - name: Upload uber JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: askimo-desktop-jar-${{ matrix.artifact-suffix }}
-          path: ${{ steps.jar.outputs.jar }}
-          if-no-files-found: error
-          retention-days: 14
 
   # Package desktop installers for each platform (runs only on release tags)
   desktop-package:
