@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.shadow)
 }
 
 group = rootProject.group
@@ -73,29 +72,6 @@ tasks.named<ProcessResources>("processResources") {
     from(aboutDir)
 }
 
-// Configure Shadow plugin for fat JAR
-tasks {
-    shadowJar {
-        archiveClassifier.set("all")
-        archiveBaseName.set("askimo-desktop")
-
-        manifest {
-            attributes["Main-Class"] = "io.askimo.desktop.MainKt"
-        }
-
-        // Exclude signature files that can cause issues
-        exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
-
-        // Merge service files
-        mergeServiceFiles()
-    }
-
-    // Make shadowJar part of the build
-    build {
-        dependsOn(shadowJar)
-    }
-}
-
 compose.desktop {
     application {
         mainClass = "io.askimo.desktop.MainKt"
@@ -107,8 +83,7 @@ compose.desktop {
                 TargetFormat.Deb,
             )
             packageName = "Askimo"
-            // Convert 0.x.y to 1.x.y for packaging (DMG requires MAJOR > 0)
-            packageVersion = project.version.toString().replace(Regex("^0\\."), "1.")
+            packageVersion = project.version.toString()
             description = "Askimo Desktop Application"
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"

@@ -285,13 +285,10 @@ fun settingsView(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                maxItemsInEachRow = 6,
             ) {
                 AccentColor.entries.forEach { accentColor ->
                     Box(
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .widthIn(min = 100.dp, max = 200.dp),
+                        modifier = Modifier.widthIn(min = 120.dp, max = 160.dp),
                     ) {
                         accentColorOption(
                             accentColor = accentColor,

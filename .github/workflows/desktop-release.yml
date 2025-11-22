@@ -40,11 +40,21 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:build
 
-  # Build fat JAR (runs only on release tags)
+  # Build uber JARs for each platform (runs only on release tags)
   desktop-jar:
-    name: desktop-jar
+    name: desktop-jar-${{ matrix.os }}
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact-suffix: "macos"
+          - os: windows-latest
+            artifact-suffix: "windows"
+          - os: ubuntu-latest
+            artifact-suffix: "linux"
 
     steps:
       - name: Checkout
@@ -61,28 +71,34 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
-      - name: Build fat JAR
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:shadowJar
+      - name: Build uber JAR (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageUberJarForCurrentOS
 
-      - name: Find fat JAR
+      - name: Build uber JAR (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:packageUberJarForCurrentOS
+
+      - name: Find uber JAR
         id: jar
         shell: bash
         run: |
           set -euo pipefail
-          JAR=$(find desktop/build/libs -name "*-all.jar" -type f | head -n1)
+          JAR=$(find desktop/build/compose/jars -name "*.jar" -type f | head -n1)
           
           if [ -z "$JAR" ]; then
-            echo "Error: No fat JAR found" >&2
+            echo "Error: No uber JAR found" >&2
             exit 1
           fi
           
           echo "jar=$JAR" >> $GITHUB_OUTPUT
-          echo "Found fat JAR: $JAR"
+          echo "Found uber JAR: $JAR"
 
-      - name: Upload fat JAR artifact
+      - name: Upload uber JAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: askimo-desktop-jar
+          name: askimo-desktop-jar-${{ matrix.artifact-suffix }}
           path: ${{ steps.jar.outputs.jar }}
           if-no-files-found: error
           retention-days: 14
@@ -142,6 +158,15 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:${{ matrix.task }}
 
+      - name: Build uber JAR (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageUberJarForCurrentOS
+
+      - name: Build uber JAR (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:packageUberJarForCurrentOS
+
       - name: Find installer package
         id: package
         shell: bash
@@ -164,19 +189,42 @@ jobs:
           echo "package=$PKG" >> $GITHUB_OUTPUT
           echo "Found installer: $PKG"
 
+      - name: Find uber JAR
+        id: jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=$(find desktop/build/compose/jars -name "*.jar" -type f | head -n1)
+          
+          if [ -z "$JAR" ]; then
+            echo "Error: No uber JAR found" >&2
+            exit 1
+          fi
+          
+          echo "jar=$JAR" >> $GITHUB_OUTPUT
+          echo "Found uber JAR: $JAR"
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: askimo-desktop-${{ matrix.artifact-suffix }}
+          name: askimo-desktop-installer-${{ matrix.artifact-suffix }}
           path: ${{ steps.package.outputs.package }}
           if-no-files-found: error
           retention-days: 14
 
-  # Create GitHub release with all desktop installers
+      - name: Upload uber JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: askimo-desktop-jar-${{ matrix.artifact-suffix }}
+          path: ${{ steps.jar.outputs.jar }}
+          if-no-files-found: error
+          retention-days: 14
+
+  # Create GitHub release with all desktop installers and JARs
   release:
     name: Create Desktop Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ desktop-package, desktop-jar ]
+    needs: [ desktop-package ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -203,8 +251,8 @@ jobs:
           files=()
 
           # macOS DMG
-          if [ -d "dist/askimo-desktop-macos" ]; then
-            DMG=$(find dist/askimo-desktop-macos -name "*.dmg" -type f | head -n1)
+          if [ -d "dist/askimo-desktop-installer-macos" ]; then
+            DMG=$(find dist/askimo-desktop-installer-macos -name "*.dmg" -type f | head -n1)
             if [ -n "$DMG" ]; then
               DEST="release/Askimo-Desktop-macos.dmg"
               cp "$DMG" "$DEST"
@@ -214,8 +262,8 @@ jobs:
           fi
 
           # Windows MSI
-          if [ -d "dist/askimo-desktop-windows" ]; then
-            MSI=$(find dist/askimo-desktop-windows -name "*.msi" -type f | head -n1)
+          if [ -d "dist/askimo-desktop-installer-windows" ]; then
+            MSI=$(find dist/askimo-desktop-installer-windows -name "*.msi" -type f | head -n1)
             if [ -n "$MSI" ]; then
               DEST="release/Askimo-Desktop-windows.msi"
               cp "$MSI" "$DEST"
@@ -225,8 +273,8 @@ jobs:
           fi
 
           # Linux DEB
-          if [ -d "dist/askimo-desktop-linux" ]; then
-            DEB=$(find dist/askimo-desktop-linux -name "*.deb" -type f | head -n1)
+          if [ -d "dist/askimo-desktop-installer-linux" ]; then
+            DEB=$(find dist/askimo-desktop-installer-linux -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
               DEST="release/Askimo-Desktop-linux.deb"
               cp "$DEB" "$DEST"
@@ -235,14 +283,36 @@ jobs:
             fi
           fi
 
-          # Fat JAR
-          if [ -d "dist/askimo-desktop-jar" ]; then
-            JAR=$(find dist/askimo-desktop-jar -name "*-all.jar" -type f | head -n1)
+          # macOS uber JAR
+          if [ -d "dist/askimo-desktop-jar-macos" ]; then
+            JAR=$(find dist/askimo-desktop-jar-macos -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop.jar"
+              DEST="release/askimo-desktop-macos.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged fat JAR: $DEST"
+              echo "✓ Packaged macOS uber JAR: $DEST"
+            fi
+          fi
+
+          # Windows uber JAR
+          if [ -d "dist/askimo-desktop-jar-windows" ]; then
+            JAR=$(find dist/askimo-desktop-jar-windows -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-windows.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Windows uber JAR: $DEST"
+            fi
+          fi
+
+          # Linux uber JAR
+          if [ -d "dist/askimo-desktop-jar-linux" ]; then
+            JAR=$(find dist/askimo-desktop-jar-linux -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-linux.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux uber JAR: $DEST"
             fi
           fi
 
@@ -278,32 +348,13 @@ jobs:
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
           name: Desktop ${{ github.ref_name }}
           body: |
-            ## Askimo Desktop Application
-            
-            Desktop application installers for Askimo.
+            ## Askimo Application
             
             ### Installation
             
-            **macOS:**
-            - Download the `.dmg` file
-            - Open the DMG and drag Askimo to Applications
-            - Requires macOS 10.15 or later
-            
-            **Windows:**
-            - Download the `.msi` file
-            - Run the installer and follow the setup wizard
-            - Requires Windows 10 or later
-            
-            **Linux (Debian/Ubuntu):**
-            - Download the `.deb` file
-            - Install with: `sudo dpkg -i Askimo-Desktop-linux.deb`
-            - Or double-click to install via Software Center
-            
-            **Cross-Platform JAR (All Platforms):**
-            - Download the `.jar` file
-            - Requires Java 21 or later
-            - Run with: `java -jar askimo-desktop.jar`
-            - This is a standalone executable JAR with all dependencies included
+            For installation instructions, please visit:
+            - **Desktop**: https://askimo.chat/docs/desktop/installation/
+            - **CLI**: https://askimo.chat/docs/cli/installation/
             
             ### Checksums
             
