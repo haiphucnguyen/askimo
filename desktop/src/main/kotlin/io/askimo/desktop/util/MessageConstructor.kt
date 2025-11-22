@@ -24,7 +24,6 @@ fun constructMessageWithAttachments(
     }
 
     return buildString {
-        // Include file contents first
         attachments.forEach { attachment ->
             appendLine("---")
             appendLine("Attached file: ${attachment.fileName}")

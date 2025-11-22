@@ -48,6 +48,7 @@ import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.highlightSearchText
+import java.time.LocalDateTime
 
 @Composable
 fun messageList(
@@ -60,7 +61,7 @@ fun messageList(
     onLoadPrevious: () -> Unit = {},
     searchQuery: String = "",
     currentSearchResultIndex: Int = 0,
-    onMessageClick: ((String, java.time.LocalDateTime) -> Unit)? = null,
+    onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     var shouldAutoScroll by remember { mutableStateOf(true) }
@@ -68,7 +69,17 @@ fun messageList(
     // Auto-scroll to bottom when messages change (including streaming updates) or when thinking
     LaunchedEffect(messages, isThinking) {
         if (shouldAutoScroll) {
-            scrollState.animateScrollTo(scrollState.maxValue)
+            // Use scrollTo instead of animateScrollTo for instant scroll during streaming
+            // This ensures the view stays at the bottom even during rapid updates
+            scrollState.scrollTo(scrollState.maxValue)
+        }
+    }
+
+    // Additional auto-scroll effect that triggers on every scroll state change
+    // This ensures we stay at the bottom during streaming even if maxValue changes
+    LaunchedEffect(scrollState.maxValue) {
+        if (shouldAutoScroll) {
+            scrollState.scrollTo(scrollState.maxValue)
         }
     }
 
@@ -156,7 +167,7 @@ fun messageBubble(
     message: ChatMessage,
     searchQuery: String = "",
     isActiveSearchResult: Boolean = false,
-    onMessageClick: ((String, java.time.LocalDateTime) -> Unit)? = null,
+    onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }

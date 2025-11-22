@@ -56,14 +56,11 @@ class ChatService {
                 trySend(ChatMessage(content = responseBuilder.toString(), isUser = false))
             }
 
-            // Save the AI response to session
             session.saveAiResponse(fullResponse)
 
-            // Update last response
             session.lastResponse = fullResponse
         }
 
-        // Close the channel when done
         close()
     }
 

@@ -275,6 +275,7 @@ fun app() {
                 isSessionsExpanded = isSessionsExpanded,
                 sessionsViewModel = sessionsViewModel,
                 currentSessionId = currentSessionId,
+                fontScale = fontSettings.fontSize.scale,
                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                 onNewChat = {
                     chatViewModel.clearChat()
@@ -395,6 +396,7 @@ fun sidebar(
     isSessionsExpanded: Boolean,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
+    fontScale: Float,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleSessions: () -> Unit,
@@ -417,13 +419,13 @@ fun sidebar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(ComponentColors.sidebarHeaderColor())
-                    .padding(16.dp),
+                    .padding((16 * fontScale).dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy((12 * fontScale).dp),
                 ) {
                     Icon(
                         painter = remember {
@@ -435,7 +437,7 @@ fun sidebar(
                             )
                         },
                         contentDescription = "Askimo",
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size((48 * fontScale).dp),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
@@ -460,7 +462,7 @@ fun sidebar(
 
             Column(
                 modifier = Modifier
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = (8 * fontScale).dp)
                     .verticalScroll(rememberScrollState()),
             ) {
                 // New Chat
@@ -470,13 +472,13 @@ fun sidebar(
                 TooltipArea(
                     tooltip = {
                         Surface(
-                            modifier = Modifier.padding(4.dp),
+                            modifier = Modifier.padding((4 * fontScale).dp),
                             color = MaterialTheme.colorScheme.inverseOnSurface,
                             shape = MaterialTheme.shapes.small,
                         ) {
                             Text(
                                 text = "New Chat ($modKey+N)",
-                                modifier = Modifier.padding(8.dp),
+                                modifier = Modifier.padding((8 * fontScale).dp),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -484,11 +486,11 @@ fun sidebar(
                 ) {
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                        label = { Text("New Chat") },
+                        label = { Text("New Chat", style = MaterialTheme.typography.labelLarge) },
                         selected = false,
                         onClick = onNewChat,
                         modifier = Modifier
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = (12 * fontScale).dp)
                             .pointerHoverIcon(PointerIcon.Hand),
                         colors = ComponentColors.navigationDrawerItemColors(),
                     )
@@ -497,7 +499,7 @@ fun sidebar(
                 // Sessions (Collapsible)
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.History, contentDescription = null) },
-                    label = { Text("Sessions") },
+                    label = { Text("Sessions", style = MaterialTheme.typography.labelLarge) },
                     selected = currentView == View.SESSIONS,
                     onClick = onToggleSessions,
                     badge = {
@@ -511,7 +513,7 @@ fun sidebar(
                         )
                     },
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = (12 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.navigationDrawerItemColors(),
                 )
@@ -519,14 +521,22 @@ fun sidebar(
                 // Sessions list (collapsible content)
                 if (isSessionsExpanded) {
                     Column(
-                        modifier = Modifier.padding(start = 32.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                        modifier = Modifier.padding(
+                            start = (32 * fontScale).dp,
+                            end = (12 * fontScale).dp,
+                            top = (4 * fontScale).dp,
+                            bottom = (4 * fontScale).dp,
+                        ),
                     ) {
                         if (sessionsViewModel.recentSessions.isEmpty()) {
                             Text(
                                 text = "No sessions yet",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = (16 * fontScale).dp,
+                                    vertical = (8 * fontScale).dp,
+                                ),
                             )
                         } else {
                             sessionsViewModel.recentSessions.forEach { session ->
@@ -553,7 +563,7 @@ fun sidebar(
                                     selected = false,
                                     onClick = onNavigateToSessions,
                                     modifier = Modifier
-                                        .padding(vertical = 2.dp)
+                                        .padding(vertical = (2 * fontScale).dp)
                                         .pointerHoverIcon(PointerIcon.Hand),
                                     colors = ComponentColors.navigationDrawerItemColors(),
                                 )
@@ -565,11 +575,11 @@ fun sidebar(
                 // Settings
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Settings") },
+                    label = { Text("Settings", style = MaterialTheme.typography.labelLarge) },
                     selected = currentView == View.SETTINGS,
                     onClick = onNavigateToSettings,
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = (12 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.navigationDrawerItemColors(),
                 )
@@ -577,11 +587,11 @@ fun sidebar(
                 // About
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    label = { Text("About") },
+                    label = { Text("About", style = MaterialTheme.typography.labelLarge) },
                     selected = currentView == View.ABOUT,
                     onClick = onNavigateToAbout,
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = (12 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.navigationDrawerItemColors(),
                 )
@@ -591,7 +601,7 @@ fun sidebar(
         // Collapsed sidebar with icons only
         Column(
             modifier = Modifier
-                .width(72.dp)
+                .width((72 * fontScale).dp)
                 .fillMaxHeight()
                 .background(ComponentColors.sidebarSurfaceColor())
                 .border(
@@ -605,7 +615,7 @@ fun sidebar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(ComponentColors.sidebarHeaderColor())
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = (16 * fontScale).dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 IconButton(
@@ -623,7 +633,7 @@ fun sidebar(
 
             Column(
                 modifier = Modifier
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = (8 * fontScale).dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {

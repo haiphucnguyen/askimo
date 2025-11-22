@@ -163,6 +163,18 @@ object ComponentColors {
     )
 
     /**
+     * Subtle button colors with lighter background
+     * - Container: secondaryContainer (lighter than primaryContainer)
+     * - Content: onSecondaryContainer
+     * - More subtle appearance than default buttons
+     */
+    @Composable
+    fun subtleButtonColors(): ButtonColors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    )
+
+    /**
      * Outlined text field colors that match the theme's divider colors
      * - Unfocused border: outlineVariant (matches dividers)
      * - Focused border: primary (accent color)
@@ -205,30 +217,13 @@ object ComponentColors {
     }
 
     /**
-     * Sidebar header color with stronger accent tint
-     * - Applies a stronger tint than sidebar for visual hierarchy
-     * - Makes header distinct from sidebar body
-     * - Adapts to light/dark mode (15% tint for light, 20% for dark)
-     * - Ties into custom theme colors
+     * Sidebar header color - uses secondaryContainer for a subtle accent
+     * - Lighter than primaryContainer (used by buttons)
+     * - Makes header visually distinct but not overwhelming
+     * - Consistent with Material3 design system
      */
     @Composable
-    fun sidebarHeaderColor(): Color {
-        val surfaceColor = MaterialTheme.colorScheme.surface
-        val primaryColor = MaterialTheme.colorScheme.primary
-
-        // Determine if we're in light or dark mode
-        val isLight = surfaceColor.luminance() > 0.5
-
-        // Apply stronger tint for header (15% for light mode, 20% for dark mode)
-        val tintAmount = if (isLight) 0.15f else 0.20f
-
-        return Color(
-            red = surfaceColor.red + (primaryColor.red - surfaceColor.red) * tintAmount,
-            green = surfaceColor.green + (primaryColor.green - surfaceColor.green) * tintAmount,
-            blue = surfaceColor.blue + (primaryColor.blue - surfaceColor.blue) * tintAmount,
-            alpha = surfaceColor.alpha,
-        )
-    }
+    fun sidebarHeaderColor(): Color = MaterialTheme.colorScheme.secondaryContainer
 
     /**
      * Themed DropdownMenu that uses correct theme colors.

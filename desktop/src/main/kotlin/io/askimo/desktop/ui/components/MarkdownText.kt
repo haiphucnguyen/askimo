@@ -153,12 +153,12 @@ private fun renderHeading(heading: Heading) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     val style = when (heading.level) {
-        1 -> MaterialTheme.typography.headlineLarge
-        2 -> MaterialTheme.typography.headlineMedium
-        3 -> MaterialTheme.typography.headlineSmall
-        4 -> MaterialTheme.typography.titleLarge
-        5 -> MaterialTheme.typography.titleMedium
-        else -> MaterialTheme.typography.titleSmall
+        1 -> MaterialTheme.typography.headlineMedium
+        2 -> MaterialTheme.typography.headlineSmall
+        3 -> MaterialTheme.typography.titleLarge
+        4 -> MaterialTheme.typography.titleMedium
+        5 -> MaterialTheme.typography.titleSmall
+        else -> MaterialTheme.typography.bodyLarge
     }
 
     Text(
@@ -526,7 +526,18 @@ private fun buildInlineContent(
                         background = inlineCodeBg,
                     ),
                 ) {
-                    append(child.literal)
+                    append(" ${child.literal} ")
+                }
+            }
+            is FencedCodeBlock -> {
+                // Treat fenced code blocks as inline code when they appear in inline contexts
+                withStyle(
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        background = inlineCodeBg,
+                    ),
+                ) {
+                    append(" ${child.literal} ")
                 }
             }
             is Image -> {

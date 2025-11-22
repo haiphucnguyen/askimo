@@ -11,6 +11,7 @@ import io.askimo.desktop.model.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.awt.GraphicsEnvironment
 import java.util.prefs.Preferences
 
 object ThemePreferences {
@@ -39,11 +40,11 @@ object ThemePreferences {
     }
 
     private fun loadAccentColor(): AccentColor {
-        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.GREEN.name)
+        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.OCEAN_BLUE.name)
         return try {
             AccentColor.valueOf(colorName)
         } catch (e: IllegalArgumentException) {
-            AccentColor.GREEN
+            AccentColor.OCEAN_BLUE
         }
     }
 
@@ -75,7 +76,7 @@ object ThemePreferences {
     }
 
     fun getAvailableSystemFonts(): List<String> {
-        val ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val ge = GraphicsEnvironment.getLocalGraphicsEnvironment()
         val fonts = ge.availableFontFamilyNames.toList()
         return listOf(FontSettings.SYSTEM_DEFAULT) + fonts.sorted()
     }
