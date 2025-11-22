@@ -204,12 +204,11 @@ jobs:
         with:
           path: dist
 
-      - name: Package versioned archives
+      - name: Package archives
         id: pkg
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/}"
           files=()
 
           # macOS
@@ -218,8 +217,8 @@ jobs:
             BIN=$(ls "$MAC_DIR"/* | head -n1)
             chmod +x "$BIN"
             TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-darwin-arm64.tar.gz" askimo
-            files+=("askimo-${VERSION}-darwin-arm64.tar.gz")
+            tar -C "$TMPDIR" -czf "askimo-darwin-arm64.tar.gz" askimo
+            files+=("askimo-darwin-arm64.tar.gz")
           fi
 
           # Linux amd64
@@ -228,8 +227,8 @@ jobs:
             BIN=$(ls "$LIN_AMD_DIR"/* | head -n1)
             chmod +x "$BIN"
             TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-x64.tar.gz" askimo
-            files+=("askimo-${VERSION}-linux-x64.tar.gz")
+            tar -C "$TMPDIR" -czf "askimo-linux-x64.tar.gz" askimo
+            files+=("askimo-linux-x64.tar.gz")
           fi
 
           # Linux arm64 (from native-arm)
@@ -238,16 +237,16 @@ jobs:
             BIN=$(ls "$LIN_ARM_DIR"/* | head -n1)
             chmod +x "$BIN"
             TMPDIR="$(mktemp -d)"; cp "$BIN" "$TMPDIR/askimo"
-            tar -C "$TMPDIR" -czf "askimo-${VERSION}-linux-arm64.tar.gz" askimo
-            files+=("askimo-${VERSION}-linux-arm64.tar.gz")
+            tar -C "$TMPDIR" -czf "askimo-linux-arm64.tar.gz" askimo
+            files+=("askimo-linux-arm64.tar.gz")
           fi
 
           # Windows
           WIN_DIR=$(compgen -G 'dist/*windows*' || true)
           if [[ -n "${WIN_DIR:-}" ]]; then
             EXE=$(ls "$WIN_DIR"/*.exe | head -n1)
-            zip -j "askimo-${VERSION}-windows-x64.zip" "$EXE"
-            files+=("askimo-${VERSION}-windows-x64.zip")
+            zip -j "askimo-windows-x64.zip" "$EXE"
+            files+=("askimo-windows-x64.zip")
           fi
 
           if (( ${#files[@]} )); then
@@ -296,8 +295,8 @@ jobs:
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
           JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
 
-          ARM_NAME="askimo-${TAG}-darwin-arm64.tar.gz"
-          AMD_NAME="askimo-${TAG}-darwin-amd64.tar.gz"
+          ARM_NAME="askimo-darwin-arm64.tar.gz"
+          AMD_NAME="askimo-darwin-amd64.tar.gz"
 
           ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
           AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
@@ -451,7 +450,7 @@ jobs:
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
           JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
 
-          WIN_NAME="askimo-${TAG}-windows-x64.zip"
+          WIN_NAME="askimo-windows-x64.zip"
           WIN_URL="$(echo "$JSON" | jq -r --arg N "$WIN_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
           SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
 

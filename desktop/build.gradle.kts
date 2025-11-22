@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.shadow)
 }
 
 group = rootProject.group
@@ -70,6 +71,29 @@ val generateAbout =
 tasks.named<ProcessResources>("processResources") {
     dependsOn(generateAbout)
     from(aboutDir)
+}
+
+// Configure Shadow plugin for fat JAR
+tasks {
+    shadowJar {
+        archiveClassifier.set("all")
+        archiveBaseName.set("askimo-desktop")
+
+        manifest {
+            attributes["Main-Class"] = "io.askimo.desktop.MainKt"
+        }
+
+        // Exclude signature files that can cause issues
+        exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+
+        // Merge service files
+        mergeServiceFiles()
+    }
+
+    // Make shadowJar part of the build
+    build {
+        dependsOn(shadowJar)
+    }
 }
 
 compose.desktop {

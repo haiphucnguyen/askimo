@@ -40,6 +40,53 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:build
 
+  # Build fat JAR (runs only on release tags)
+  desktop-jar:
+    name: desktop-jar
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Build fat JAR
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:shadowJar
+
+      - name: Find fat JAR
+        id: jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=$(find desktop/build/libs -name "*-all.jar" -type f | head -n1)
+          
+          if [ -z "$JAR" ]; then
+            echo "Error: No fat JAR found" >&2
+            exit 1
+          fi
+          
+          echo "jar=$JAR" >> $GITHUB_OUTPUT
+          echo "Found fat JAR: $JAR"
+
+      - name: Upload fat JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: askimo-desktop-jar
+          path: ${{ steps.jar.outputs.jar }}
+          if-no-files-found: error
+          retention-days: 14
+
   # Package desktop installers for each platform (runs only on release tags)
   desktop-package:
     name: desktop-package-${{ matrix.os }}
@@ -129,7 +176,7 @@ jobs:
   release:
     name: Create Desktop Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ desktop-package ]
+    needs: [ desktop-package, desktop-jar ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -151,8 +198,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF#refs/tags/}"  # e.g., v0.3.0
-          VERSION_PLAIN="${VERSION#v}"  # e.g., 0.3.0
           
           mkdir -p release
           files=()
@@ -161,7 +206,7 @@ jobs:
           if [ -d "dist/askimo-desktop-macos" ]; then
             DMG=$(find dist/askimo-desktop-macos -name "*.dmg" -type f | head -n1)
             if [ -n "$DMG" ]; then
-              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-macos.dmg"
+              DEST="release/Askimo-Desktop-macos.dmg"
               cp "$DMG" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged macOS DMG: $DEST"
@@ -172,7 +217,7 @@ jobs:
           if [ -d "dist/askimo-desktop-windows" ]; then
             MSI=$(find dist/askimo-desktop-windows -name "*.msi" -type f | head -n1)
             if [ -n "$MSI" ]; then
-              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-windows.msi"
+              DEST="release/Askimo-Desktop-windows.msi"
               cp "$MSI" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Windows MSI: $DEST"
@@ -183,17 +228,28 @@ jobs:
           if [ -d "dist/askimo-desktop-linux" ]; then
             DEB=$(find dist/askimo-desktop-linux -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
-              DEST="release/Askimo-Desktop-${VERSION_PLAIN}-linux.deb"
+              DEST="release/Askimo-Desktop-linux.deb"
               cp "$DEB" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Linux DEB: $DEST"
             fi
           fi
 
+          # Fat JAR
+          if [ -d "dist/askimo-desktop-jar" ]; then
+            JAR=$(find dist/askimo-desktop-jar -name "*-all.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged fat JAR: $DEST"
+            fi
+          fi
+
           # Generate checksums
           if (( ${#files[@]} > 0 )); then
             cd release
-            shasum -a 256 *.{dmg,msi,deb} 2>/dev/null > SHA256SUMS.txt || true
+            shasum -a 256 * 2>/dev/null | grep -v SHA256SUMS.txt > SHA256SUMS.txt || true
             cd ..
             files+=("release/SHA256SUMS.txt")
           else
@@ -240,8 +296,14 @@ jobs:
             
             **Linux (Debian/Ubuntu):**
             - Download the `.deb` file
-            - Install with: `sudo dpkg -i Askimo-Desktop-*.deb`
+            - Install with: `sudo dpkg -i Askimo-Desktop-linux.deb`
             - Or double-click to install via Software Center
+            
+            **Cross-Platform JAR (All Platforms):**
+            - Download the `.jar` file
+            - Requires Java 21 or later
+            - Run with: `java -jar askimo-desktop.jar`
+            - This is a standalone executable JAR with all dependencies included
             
             ### Checksums
             

@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.graalvm.native)
-    alias(libs.plugins.shadow)
 }
 
 group = rootProject.group
