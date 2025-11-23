@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.ui.theme.ComponentColors
 
 @Composable
@@ -40,6 +41,10 @@ fun newDirectiveDialog(
     var applyToCurrent by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
     var contentError by remember { mutableStateOf<String?>(null) }
+
+    // Pre-load error messages in composable context
+    val nameRequiredError = stringResource("directive.edit.name.required")
+    val contentRequiredError = stringResource("directive.edit.content.required")
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -55,7 +60,7 @@ fun newDirectiveDialog(
             ) {
                 // Title
                 Text(
-                    text = "New Directive",
+                    text = stringResource("directive.new.title"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -67,8 +72,8 @@ fun newDirectiveDialog(
                         name = it
                         nameError = null
                     },
-                    label = { Text("Name") },
-                    placeholder = { Text("e.g., concise-code, explain-like-im-5") },
+                    label = { Text(stringResource("directive.edit.name.label")) },
+                    placeholder = { Text(stringResource("directive.new.name.placeholder")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = nameError != null,
@@ -83,8 +88,8 @@ fun newDirectiveDialog(
                         content = it
                         contentError = null
                     },
-                    label = { Text("Content") },
-                    placeholder = { Text("Enter the directive instructions...") },
+                    label = { Text(stringResource("directive.edit.content.label")) },
+                    placeholder = { Text(stringResource("directive.new.content.placeholder")) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp),
@@ -106,7 +111,7 @@ fun newDirectiveDialog(
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                     Text(
-                        text = "Apply to the current chat session",
+                        text = stringResource("directive.new.apply.current"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -122,7 +127,7 @@ fun newDirectiveDialog(
                         onClick = onDismiss,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Text("Cancel")
+                        Text(stringResource("settings.cancel"))
                     }
 
                     TextButton(
@@ -131,12 +136,12 @@ fun newDirectiveDialog(
                             var hasError = false
 
                             if (name.isBlank()) {
-                                nameError = "Name is required"
+                                nameError = nameRequiredError
                                 hasError = true
                             }
 
                             if (content.isBlank()) {
-                                contentError = "Content is required"
+                                contentError = contentRequiredError
                                 hasError = true
                             }
 
@@ -147,7 +152,7 @@ fun newDirectiveDialog(
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         colors = ComponentColors.primaryTextButtonColors(),
                     ) {
-                        Text("Create")
+                        Text(stringResource("directive.new.create"))
                     }
                 }
             }

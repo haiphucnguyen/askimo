@@ -67,6 +67,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.session.ProviderConfigField
 import io.askimo.core.session.SettingField
+import io.askimo.desktop.i18n.LocalizationManager
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.model.AccentColor
 import io.askimo.desktop.model.FontSettings
@@ -113,7 +115,7 @@ fun settingsView(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                text = "Settings",
+                text = stringResource("settings.title"),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -121,7 +123,7 @@ fun settingsView(
 
             // Chat Configuration Section
             Text(
-                text = "Chat Configuration",
+                text = stringResource("settings.chat.config"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
@@ -145,12 +147,12 @@ fun settingsView(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Provider",
+                                text = stringResource("settings.provider"),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                             Text(
-                                text = viewModel.provider?.name ?: "Not set",
+                                text = viewModel.provider?.name ?: stringResource("provider.not.set"),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
@@ -161,7 +163,7 @@ fun settingsView(
                             colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null)
-                            Text("Change Provider", modifier = Modifier.padding(start = 8.dp))
+                            Text(stringResource("settings.provider.change.button"), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
 
@@ -175,7 +177,7 @@ fun settingsView(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Model",
+                                text = stringResource("settings.model"),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
@@ -191,7 +193,7 @@ fun settingsView(
                             colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null)
-                            Text("Change Model", modifier = Modifier.padding(start = 8.dp))
+                            Text(stringResource("settings.model.change.button"), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
 
@@ -208,7 +210,7 @@ fun settingsView(
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 Text(
-                                    text = "Settings",
+                                    text = stringResource("settings.title"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -226,7 +228,7 @@ fun settingsView(
                                 colors = ComponentColors.subtleButtonColors(),
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null)
-                                Text("Change Settings", modifier = Modifier.padding(start = 8.dp))
+                                Text(stringResource("settings.change.button"), modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
@@ -235,14 +237,14 @@ fun settingsView(
 
             // Appearance Section
             Text(
-                text = "Appearance",
+                text = stringResource("settings.appearance"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
             )
 
             Text(
-                text = "Theme",
+                text = stringResource("settings.theme"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 8.dp),
@@ -250,32 +252,42 @@ fun settingsView(
 
             // Theme options
             themeOption(
-                title = "Light",
-                description = "Always use light theme",
+                title = stringResource("theme.light"),
+                description = stringResource("theme.light.description"),
                 icon = { Icon(Icons.Default.LightMode, contentDescription = null) },
                 selected = currentThemeMode == ThemeMode.LIGHT,
                 onClick = { ThemePreferences.setThemeMode(ThemeMode.LIGHT) },
             )
 
             themeOption(
-                title = "Dark",
-                description = "Always use dark theme",
+                title = stringResource("theme.dark"),
+                description = stringResource("theme.dark.description"),
                 icon = { Icon(Icons.Default.DarkMode, contentDescription = null) },
                 selected = currentThemeMode == ThemeMode.DARK,
                 onClick = { ThemePreferences.setThemeMode(ThemeMode.DARK) },
             )
 
             themeOption(
-                title = "System",
-                description = "Follow system theme settings",
+                title = stringResource("theme.system"),
+                description = stringResource("theme.system.description"),
                 icon = { Icon(Icons.Default.Contrast, contentDescription = null) },
                 selected = currentThemeMode == ThemeMode.SYSTEM,
                 onClick = { ThemePreferences.setThemeMode(ThemeMode.SYSTEM) },
             )
 
+            // Language Section
+            Text(
+                text = stringResource("settings.language"),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+
+            languageSelectionCard()
+
             // Accent Color Section
             Text(
-                text = "Accent Color",
+                text = stringResource("settings.accent.color"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 16.dp),
@@ -301,7 +313,7 @@ fun settingsView(
 
             // Font Settings Section
             Text(
-                text = "Font",
+                text = stringResource("settings.font"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 16.dp),
@@ -311,7 +323,7 @@ fun settingsView(
 
             // Keyboard Shortcuts Section
             Text(
-                text = "Keyboard Shortcuts",
+                text = stringResource("settings.shortcuts"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 24.dp),
@@ -434,6 +446,81 @@ private fun themeOption(
 }
 
 @Composable
+private fun languageSelectionCard() {
+    val currentLocale by ThemePreferences.locale.collectAsState()
+    var languageDropdownExpanded by remember { mutableStateOf(false) }
+
+    val availableLanguages = remember { LocalizationManager.availableLocales }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource("settings.app.language"),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableCard { languageDropdownExpanded = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = availableLanguages[currentLocale] ?: currentLocale.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Change language",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = languageDropdownExpanded,
+                    onDismissRequest = { languageDropdownExpanded = false },
+                ) {
+                    availableLanguages.forEach { (locale, name) ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = if (locale == currentLocale) "✓ $name" else name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            },
+                            onClick = {
+                                ThemePreferences.setLocale(locale)
+                                languageDropdownExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun fontSettingsCard() {
     val currentFontSettings by ThemePreferences.fontSettings.collectAsState()
     val availableFonts = remember { ThemePreferences.getAvailableSystemFonts() }
@@ -453,7 +540,7 @@ private fun fontSettingsCard() {
             // Font Family
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Font Family",
+                    text = stringResource("settings.font.family"),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
@@ -543,7 +630,7 @@ private fun fontSettingsCard() {
             // Font Size
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Font Size",
+                    text = stringResource("settings.font.size"),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
@@ -694,7 +781,7 @@ private fun keyboardShortcutsCard() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Available Shortcuts",
+                text = stringResource("settings.shortcuts.available"),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
@@ -781,7 +868,7 @@ private fun modelSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Model") },
+        title = { Text(stringResource("settings.model.select.title")) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -796,7 +883,7 @@ private fun modelSelectionDialog(
                         ) {
                             CircularProgressIndicator()
                             Text(
-                                text = "Loading models...",
+                                text = stringResource("settings.model.loading"),
                                 modifier = Modifier.padding(start = 16.dp),
                             )
                         }
@@ -823,13 +910,13 @@ private fun modelSelectionDialog(
                     }
                     viewModel.availableModels.isEmpty() -> {
                         Text(
-                            text = "No models available",
+                            text = stringResource("settings.model.none"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     else -> {
                         Text(
-                            text = "Select a model for ${viewModel.provider?.name}:",
+                            text = stringResource("settings.model.select", viewModel.provider?.name ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
@@ -878,7 +965,7 @@ private fun modelSelectionDialog(
                 onClick = onDismiss,
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Close")
+                Text(stringResource("action.close"))
             }
         },
     )
@@ -891,7 +978,7 @@ private fun settingsConfigurationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Configure ${viewModel.provider?.name} Settings") },
+        title = { Text(stringResource("settings.configure.title", viewModel.provider?.name ?: "")) },
         text = {
             Column(
                 modifier = Modifier
@@ -922,7 +1009,7 @@ private fun settingsConfigurationDialog(
                 onClick = onDismiss,
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Done")
+                Text(stringResource("action.ok"))
             }
         },
     )
@@ -1083,7 +1170,7 @@ private fun providerSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Change Provider",
+                text = stringResource("provider.change.title"),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
@@ -1106,7 +1193,7 @@ private fun providerSelectionDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            text = "Select a provider:",
+                            text = stringResource("provider.select.prompt"),
                             style = MaterialTheme.typography.titleMedium,
                         )
 
@@ -1127,7 +1214,7 @@ private fun providerSelectionDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        text = viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Choose a provider...",
+                                        text = viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource("provider.choose.placeholder"),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -1177,7 +1264,7 @@ private fun providerSelectionDialog(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         Text(
-                            text = "Configure provider:",
+                            text = stringResource("provider.configure.prompt"),
                             style = MaterialTheme.typography.titleMedium,
                         )
 
@@ -1207,9 +1294,9 @@ private fun providerSelectionDialog(
                                             placeholder = {
                                                 Text(
                                                     if (field.hasExistingValue) {
-                                                        "API key stored securely"
+                                                        stringResource("provider.apikey.stored")
                                                     } else {
-                                                        "Enter API key"
+                                                        stringResource("provider.apikey.enter")
                                                     },
                                                 )
                                             },
@@ -1218,7 +1305,7 @@ private fun providerSelectionDialog(
                                                     if (field.hasExistingValue) {
                                                         Icon(
                                                             Icons.Default.CheckCircle,
-                                                            contentDescription = "Already stored",
+                                                            contentDescription = stringResource("provider.apikey.already.stored"),
                                                             tint = MaterialTheme.colorScheme.primary,
                                                         )
                                                     }
@@ -1235,7 +1322,7 @@ private fun providerSelectionDialog(
                                             onValueChange = { viewModel.updateProviderField(field.name, it) },
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = true,
-                                            placeholder = { Text("http://localhost:11434") },
+                                            placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
                                             colors = ComponentColors.outlinedTextFieldColors(),
                                         )
                                     }
@@ -1306,9 +1393,9 @@ private fun providerSelectionDialog(
                                 strokeWidth = 2.dp,
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Testing...")
+                            Text(stringResource("settings.test.connection.testing"))
                         } else {
-                            Text("Test Connection")
+                            Text(stringResource("settings.test.connection"))
                         }
                     }
                 }
@@ -1320,7 +1407,7 @@ private fun providerSelectionDialog(
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.subtleButtonColors(),
                 ) {
-                    Text("Save")
+                    Text(stringResource("settings.save"))
                 }
             }
         },
@@ -1329,7 +1416,7 @@ private fun providerSelectionDialog(
                 onClick = onDismiss,
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Cancel")
+                Text(stringResource("settings.cancel"))
             }
         },
     )

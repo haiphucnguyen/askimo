@@ -97,6 +97,12 @@ class Session(
     val chatSessionRepository = ChatSessionRepository()
     var currentChatSession: ChatSession? = null
 
+    /**
+     * System directive for the AI, typically used for language instructions or global behavior.
+     * This can be updated when the user changes locale or wants to modify AI's behavior.
+     */
+    var systemDirective: String? = null
+
     // Configuration for context management
     private val maxRecentMessages = AppConfig.chat.maxRecentMessages
     private val maxTokensForContext = AppConfig.chat.maxTokensForContext
@@ -552,25 +558,44 @@ class Session(
     }
 
     /**
-     * Build directive prompt if the current session has a directive applied.
-     * @return The directive prompt text, or null if no directive is set
+     * Build directive prompt combining system directive and session directive.
+     * System directive includes language instructions and other global directives.
+     * Session directive is user's custom directive for the specific conversation.
+     * @return The complete directive prompt text, or null if no directives are set
      */
     private fun buildDirectivePrompt(): String? {
-        val directiveId = currentChatSession?.directiveId ?: return null
+        val parts = mutableListOf<String>()
 
-        try {
-            val directiveRepository = io.askimo.core.directive.ChatDirectiveRepository()
-            val directive = directiveRepository.get(directiveId) ?: return null
+        // 1. Add system directive (language instruction, global settings, etc.)
+        systemDirective?.let { sysDir ->
+            if (sysDir.isNotBlank()) {
+                parts.add(sysDir.trim())
+            }
+        }
 
-            return buildString {
-                appendLine("SYSTEM DIRECTIVE: ${directive.name}")
-                appendLine(directive.content.trim())
-                appendLine("---")
-                appendLine("Apply this directive throughout the conversation.")
-            }.trim()
-        } catch (e: Exception) {
-            debug("Error loading directive: ${e.message}", e)
-            return null
+        // 2. Add session-specific directive (user's custom directive)
+        val directiveId = currentChatSession?.directiveId
+        if (directiveId != null) {
+            try {
+                val directiveRepository = io.askimo.core.directive.ChatDirectiveRepository()
+                val directive = directiveRepository.get(directiveId)
+                if (directive != null) {
+                    val sessionDirectiveText = buildString {
+                        appendLine("USER DIRECTIVE: ${directive.name}")
+                        appendLine(directive.content.trim())
+                    }.trim()
+                    parts.add(sessionDirectiveText)
+                }
+            } catch (e: Exception) {
+                debug("Error loading directive: ${e.message}", e)
+            }
+        }
+
+        // Return combined directives or null if none exist
+        return if (parts.isEmpty()) {
+            null
+        } else {
+            parts.joinToString("\n\n---\n\n")
         }
     }
 

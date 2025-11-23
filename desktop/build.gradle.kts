@@ -32,6 +32,10 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
 // Generate about.properties with version info
 val author = property("author") as String
 val licenseId = property("licenseId") as String
@@ -70,6 +74,7 @@ val generateAbout =
 tasks.named<ProcessResources>("processResources") {
     dependsOn(generateAbout)
     from(aboutDir)
+    filteringCharset = "UTF-8"
 }
 
 compose.desktop {

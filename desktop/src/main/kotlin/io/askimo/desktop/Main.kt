@@ -71,6 +71,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.session.ChatSessionExporterService
+import io.askimo.desktop.i18n.LocalizationManager
+import io.askimo.desktop.i18n.provideLocalization
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.model.FileAttachment
@@ -129,6 +132,9 @@ fun detectMacOSDarkMode(): Boolean {
 }
 
 fun main() = application {
+    val savedLocale = ThemePreferences.locale.value
+    LocalizationManager.setLocale(savedLocale)
+
     val icon = BitmapPainter(
         Image.makeFromEncoded(
             object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
@@ -194,6 +200,14 @@ fun app() {
     val themeMode by ThemePreferences.themeMode.collectAsState()
     val accentColor by ThemePreferences.accentColor.collectAsState()
     val fontSettings by ThemePreferences.fontSettings.collectAsState()
+    val locale by ThemePreferences.locale.collectAsState()
+
+    LaunchedEffect(locale) {
+        LocalizationManager.setLocale(locale)
+
+        // Set the language directive for AI communication
+        chatViewModel.getChatService().setLanguageDirective(locale)
+    }
 
     // State to track system theme - detect when needed
     var isSystemInDarkMode by remember { mutableStateOf(detectMacOSDarkMode()) }
@@ -223,178 +237,180 @@ fun app() {
         createCustomTypography(fontSettings)
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = customTypography,
-    ) {
-        // Always show sidebar in expanded or collapsed mode
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .onPreviewKeyEvent { keyEvent ->
-                    val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-
-                    when (shortcut) {
-                        AppShortcut.NEW_CHAT -> {
-                            chatViewModel.clearChat()
-                            inputText = TextFieldValue("")
-                            attachments = emptyList()
-                            currentView = View.CHAT
-                            true
-                        }
-                        AppShortcut.SEARCH_IN_CHAT -> {
-                            if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
-                                chatViewModel.enableSearchMode()
-                            }
-                            true
-                        }
-                        AppShortcut.TOGGLE_CHAT_HISTORY -> {
-                            isSessionsExpanded = !isSessionsExpanded
-                            true
-                        }
-                        AppShortcut.OPEN_SETTINGS -> {
-                            currentView = View.SETTINGS
-                            true
-                        }
-                        AppShortcut.STOP_AI_RESPONSE -> {
-                            if (chatViewModel.isLoading) {
-                                chatViewModel.cancelResponse()
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        AppShortcut.QUIT_APPLICATION -> {
-                            showQuitDialog = true
-                            true
-                        }
-                        else -> false
-                    }
-                },
+    provideLocalization(locale = locale) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = customTypography,
         ) {
-            // Observe current session ID
-            val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+            // Always show sidebar in expanded or collapsed mode
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onPreviewKeyEvent { keyEvent ->
+                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-            // Sidebar (expanded or collapsed)
-            sidebar(
-                isExpanded = isSidebarExpanded,
-                width = sidebarWidth,
-                currentView = currentView,
-                isSessionsExpanded = isSessionsExpanded,
-                sessionsViewModel = sessionsViewModel,
-                currentSessionId = currentSessionId,
-                fontScale = fontSettings.fontSize.scale,
-                onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
-                onNewChat = {
-                    chatViewModel.clearChat()
-                    inputText = TextFieldValue("")
-                    currentView = View.CHAT
-                },
-                onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                onNavigateToSessions = { currentView = View.SESSIONS },
-                onResumeSession = { sessionId ->
-                    chatViewModel.resumeSession(sessionId)
-                    currentView = View.CHAT
-                },
-                onDeleteSession = { sessionId ->
-                    sessionsViewModel.deleteSession(sessionId)
-                },
-                onStarSession = { sessionId, isStarred ->
-                    sessionsViewModel.updateSessionStarred(sessionId, isStarred)
-                },
-                onNavigateToSettings = { currentView = View.SETTINGS },
-            )
-
-            // Draggable divider
-            if (isSidebarExpanded) {
-                Box(
-                    modifier = Modifier
-                        .width(8.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                        .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
-                                change.consume()
-                                val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
-                                // Constrain width between 200dp and 500dp
-                                sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+                        when (shortcut) {
+                            AppShortcut.NEW_CHAT -> {
+                                chatViewModel.clearChat()
+                                inputText = TextFieldValue("")
+                                attachments = emptyList()
+                                currentView = View.CHAT
+                                true
                             }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Visual grip indicator
-                    Column(
+                            AppShortcut.SEARCH_IN_CHAT -> {
+                                if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
+                                    chatViewModel.enableSearchMode()
+                                }
+                                true
+                            }
+                            AppShortcut.TOGGLE_CHAT_HISTORY -> {
+                                isSessionsExpanded = !isSessionsExpanded
+                                true
+                            }
+                            AppShortcut.OPEN_SETTINGS -> {
+                                currentView = View.SETTINGS
+                                true
+                            }
+                            AppShortcut.STOP_AI_RESPONSE -> {
+                                if (chatViewModel.isLoading) {
+                                    chatViewModel.cancelResponse()
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            AppShortcut.QUIT_APPLICATION -> {
+                                showQuitDialog = true
+                                true
+                            }
+                            else -> false
+                        }
+                    },
+            ) {
+                // Observe current session ID
+                val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+
+                // Sidebar (expanded or collapsed)
+                sidebar(
+                    isExpanded = isSidebarExpanded,
+                    width = sidebarWidth,
+                    currentView = currentView,
+                    isSessionsExpanded = isSessionsExpanded,
+                    sessionsViewModel = sessionsViewModel,
+                    currentSessionId = currentSessionId,
+                    fontScale = fontSettings.fontSize.scale,
+                    onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
+                    onNewChat = {
+                        chatViewModel.clearChat()
+                        inputText = TextFieldValue("")
+                        currentView = View.CHAT
+                    },
+                    onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
+                    onNavigateToSessions = { currentView = View.SESSIONS },
+                    onResumeSession = { sessionId ->
+                        chatViewModel.resumeSession(sessionId)
+                        currentView = View.CHAT
+                    },
+                    onDeleteSession = { sessionId ->
+                        sessionsViewModel.deleteSession(sessionId)
+                    },
+                    onStarSession = { sessionId, isStarred ->
+                        sessionsViewModel.updateSessionStarred(sessionId, isStarred)
+                    },
+                    onNavigateToSettings = { currentView = View.SETTINGS },
+                )
+
+                // Draggable divider
+                if (isSidebarExpanded) {
+                    Box(
                         modifier = Modifier
-                            .width(2.dp)
-                            .fillMaxHeight(0.1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                            .width(8.dp)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                            .pointerInput(Unit) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
+                                    // Constrain width between 200dp and 500dp
+                                    sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        repeat(3) {
-                            Box(
-                                modifier = Modifier
-                                    .size(2.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        shape = CircleShape,
-                                    ),
-                            )
+                        // Visual grip indicator
+                        Column(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .fillMaxHeight(0.1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                        ) {
+                            repeat(3) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(2.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            shape = CircleShape,
+                                        ),
+                                )
+                            }
                         }
                     }
                 }
+
+                // Main content
+                mainContent(
+                    currentView = currentView,
+                    chatViewModel = chatViewModel,
+                    sessionsViewModel = sessionsViewModel,
+                    settingsViewModel = settingsViewModel,
+                    inputText = inputText,
+                    onInputTextChange = { inputText = it },
+                    onSendMessage = { message, fileAttachments ->
+                        chatViewModel.sendMessage(message, fileAttachments)
+                        inputText = TextFieldValue("")
+                        attachments = emptyList()
+                    },
+                    onResumeSession = { sessionId ->
+                        chatViewModel.resumeSession(sessionId)
+                        currentView = View.CHAT
+                    },
+                    attachments = attachments,
+                    onAttachmentsChange = { attachments = it },
+                    onNavigateToSettings = { currentView = View.SETTINGS },
+                )
             }
 
-            // Main content
-            mainContent(
-                currentView = currentView,
-                chatViewModel = chatViewModel,
-                sessionsViewModel = sessionsViewModel,
-                settingsViewModel = settingsViewModel,
-                inputText = inputText,
-                onInputTextChange = { inputText = it },
-                onSendMessage = { message, fileAttachments ->
-                    chatViewModel.sendMessage(message, fileAttachments)
-                    inputText = TextFieldValue("")
-                    attachments = emptyList()
-                },
-                onResumeSession = { sessionId ->
-                    chatViewModel.resumeSession(sessionId)
-                    currentView = View.CHAT
-                },
-                attachments = attachments,
-                onAttachmentsChange = { attachments = it },
-                onNavigateToSettings = { currentView = View.SETTINGS },
-            )
-        }
-
-        // Quit confirmation dialog
-        if (showQuitDialog) {
-            AlertDialog(
-                onDismissRequest = { showQuitDialog = false },
-                title = { Text("Quit Askimo?") },
-                text = { Text("Are you sure you want to quit Askimo?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showQuitDialog = false
-                            kotlin.system.exitProcess(0)
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Text("Yes")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showQuitDialog = false },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Text("No")
-                    }
-                },
-            )
-        }
-    }
+            // Quit confirmation dialog
+            if (showQuitDialog) {
+                AlertDialog(
+                    onDismissRequest = { showQuitDialog = false },
+                    title = { Text(stringResource("menu.quit") + "?") },
+                    text = { Text(stringResource("session.delete.confirm")) },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showQuitDialog = false
+                                kotlin.system.exitProcess(0)
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Text(stringResource("action.yes"))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showQuitDialog = false },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Text(stringResource("action.no"))
+                        }
+                    },
+                )
+            }
+        } // MaterialTheme
+    } // ProvideLocalization
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -486,7 +502,7 @@ fun sidebar(
                 ) {
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                        label = { Text("New Chat", style = MaterialTheme.typography.labelLarge) },
+                        label = { Text(stringResource("chat.new"), style = MaterialTheme.typography.labelLarge) },
                         selected = false,
                         onClick = onNewChat,
                         modifier = Modifier
@@ -499,7 +515,7 @@ fun sidebar(
                 // Sessions (Collapsible)
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.History, contentDescription = null) },
-                    label = { Text("Sessions", style = MaterialTheme.typography.labelLarge) },
+                    label = { Text(stringResource("chat.sessions"), style = MaterialTheme.typography.labelLarge) },
                     selected = currentView == View.SESSIONS,
                     onClick = onToggleSessions,
                     badge = {
@@ -656,7 +672,7 @@ fun sidebar(
             HorizontalDivider()
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                label = { Text("Settings", style = MaterialTheme.typography.labelLarge) },
+                label = { Text(stringResource("settings.title"), style = MaterialTheme.typography.labelLarge) },
                 selected = currentView == View.SETTINGS,
                 onClick = onNavigateToSettings,
                 modifier = Modifier
@@ -886,10 +902,10 @@ private fun sessionItemWithMenu(
                 onDismissRequest = { showMenu = false },
             ) {
                 themedTooltip(
-                    text = "Export entire chat history",
+                    text = stringResource("session.export.tooltip"),
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Export") },
+                        text = { Text(stringResource("session.export")) },
                         onClick = {
                             showMenu = false
                             showExportChatSessionHistoryDialog = true
@@ -904,10 +920,10 @@ private fun sessionItemWithMenu(
                     )
                 }
                 themedTooltip(
-                    text = if (session.isStarred) "Remove from starred" else "Add to starred",
+                    text = if (session.isStarred) stringResource("session.unstar") else stringResource("session.star"),
                 ) {
                     DropdownMenuItem(
-                        text = { Text(if (session.isStarred) "Unstar" else "Star") },
+                        text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
                         onClick = {
                             showMenu = false
                             onStarSession(session.id, !session.isStarred)
@@ -927,10 +943,10 @@ private fun sessionItemWithMenu(
                     )
                 }
                 themedTooltip(
-                    text = "Delete chat session (cannot be undone)",
+                    text = stringResource("session.delete.tooltip"),
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text(stringResource("action.delete")) },
                         onClick = {
                             showMenu = false
                             onDeleteSession(session.id)

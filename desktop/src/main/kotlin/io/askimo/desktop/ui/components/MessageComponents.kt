@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import io.askimo.core.util.formatFileSize
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.highlightSearchText
@@ -130,7 +131,7 @@ fun messageList(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "Loading previous messages...",
+                        text = stringResource("message.loading.previous"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
@@ -157,7 +158,7 @@ fun messageList(
                     horizontalArrangement = Arrangement.Start,
                 ) {
                     Text(
-                        text = "$spinnerFrame Thinking… (${thinkingElapsedSeconds}s)",
+                        text = "$spinnerFrame ${stringResource("message.thinking", thinkingElapsedSeconds)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
@@ -298,7 +299,7 @@ fun messageBubble(
                 // Copy button for AI messages (shown on hover)
                 if (!message.isUser && isHovered) {
                     themedTooltip(
-                        text = "Copy message",
+                        text = stringResource("message.copy"),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(4.dp),
@@ -311,7 +312,7 @@ fun messageBubble(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copy message",
+                                contentDescription = stringResource("message.copy.description"),
                                 modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             )

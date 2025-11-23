@@ -60,6 +60,7 @@ import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.formatFileSize
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.model.ChatMessage
@@ -71,6 +72,7 @@ import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
+import java.io.File
 import java.time.LocalDateTime
 
 // File attachment item composable
@@ -268,11 +270,34 @@ fun chatView(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        themedTooltip(
-                            text = "Provider: $provider\nModel: $model",
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        Text(
+                                            text = "${stringResource("settings.provider")}: $provider",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Text(
+                                            text = "${stringResource("settings.model")}: $model",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            },
                         ) {
                             Text(
-                                text = "$provider | $model",
+                                text = stringResource("chat.provider.model.short", provider, model),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -283,7 +308,7 @@ fun chatView(
                             colors = ComponentColors.primaryTextButtonColors(),
                         ) {
                             Text(
-                                text = "Change",
+                                text = stringResource("chat.change"),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -295,7 +320,7 @@ fun chatView(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Directive:",
+                            text = stringResource("chat.directive"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -345,7 +370,7 @@ fun chatView(
                                     Text(
                                         text = selectedDirectiveObj?.name?.take(30)?.let {
                                             if (selectedDirectiveObj.name.length > 30) "$it..." else it
-                                        } ?: "None",
+                                        } ?: stringResource("chat.directive.none"),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
                                     Icon(
@@ -365,7 +390,7 @@ fun chatView(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            text = "None",
+                                            text = stringResource("chat.directive.none"),
                                             style = MaterialTheme.typography.bodyMedium,
                                         )
                                     },
@@ -463,7 +488,7 @@ fun chatView(
                                                 modifier = Modifier.size(20.dp),
                                             )
                                             Text(
-                                                text = "New Directive",
+                                                text = stringResource("chat.directive.new"),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.primary,
                                             )
@@ -490,7 +515,7 @@ fun chatView(
                                                 modifier = Modifier.size(20.dp),
                                             )
                                             Text(
-                                                text = "Manage Directives",
+                                                text = stringResource("chat.directive.manage"),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.primary,
                                             )
@@ -559,7 +584,7 @@ fun chatView(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(searchFocusRequester),
-                        placeholder = { Text("Search in conversation...") },
+                        placeholder = { Text(stringResource("chat.search.placeholder")) },
                         singleLine = true,
                         colors = ComponentColors.outlinedTextFieldColors(),
                     )
@@ -568,7 +593,7 @@ fun chatView(
                     if (!isSearching && searchQuery.isNotEmpty()) {
                         Text(
                             text = if (searchResults.isEmpty()) {
-                                "No results"
+                                stringResource("chat.search.no.results")
                             } else {
                                 "${currentSearchResultIndex + 1}/${searchResults.size}"
                             },
@@ -635,7 +660,7 @@ fun chatView(
             when {
                 isSearchMode && searchResults.isEmpty() && !isSearching -> {
                     Text(
-                        "No messages found matching \"$searchQuery\"",
+                        stringResource("chat.search.not.found", searchQuery),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.align(Alignment.Center),
@@ -657,7 +682,7 @@ fun chatView(
                 }
                 messages.isEmpty() -> {
                     Text(
-                        "Welcome to Askimo!\nStart a conversation by typing a message below.",
+                        stringResource("chat.welcome"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.align(Alignment.Center),
@@ -680,13 +705,14 @@ fun chatView(
         HorizontalDivider()
 
         // File attachment handler
+        val selectFileTitle = stringResource("chat.select.file")
         val openFileDialog = {
-            val fileChooser = FileDialog(null as Frame?, "Select File", FileDialog.LOAD)
+            val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
             fileChooser.isVisible = true
             val selectedFile = fileChooser.file
             val selectedDir = fileChooser.directory
             if (selectedFile != null && selectedDir != null) {
-                val file = java.io.File(selectedDir, selectedFile)
+                val file = File(selectedDir, selectedFile)
                 try {
                     val content = file.readText()
                     val attachment = FileAttachment(
@@ -751,7 +777,7 @@ fun chatView(
                 val modKey = if (isMac) "⌘" else "Ctrl"
 
                 themedTooltip(
-                    text = "Attach File ($modKey+A)",
+                    text = stringResource("chat.attach.file", modKey),
                 ) {
                     IconButton(
                         onClick = openFileDialog,
@@ -801,7 +827,7 @@ fun chatView(
                                 else -> false
                             }
                         },
-                    placeholder = { Text("Type your message... (Enter to send, Shift+Enter for new line)") },
+                    placeholder = { Text(stringResource("chat.input.placeholder")) },
                     maxLines = 5,
                     isError = errorMessage != null,
                     supportingText = if (errorMessage != null) {

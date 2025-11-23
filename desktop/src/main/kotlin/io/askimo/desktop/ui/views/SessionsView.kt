@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.session.ChatSession
 import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.ui.theme.ComponentColors
 import io.askimo.desktop.viewmodel.SessionsViewModel
 
@@ -64,7 +65,7 @@ fun sessionsView(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Chat Sessions",
+                text = stringResource("sessions.title"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -97,7 +98,7 @@ fun sessionsView(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = "❌ ${viewModel.errorMessage}",
+                            text = stringResource("sessions.error", viewModel.errorMessage ?: ""),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -105,7 +106,7 @@ fun sessionsView(
                             viewModel.clearError()
                             viewModel.refresh()
                         }) {
-                            Text("Try Again")
+                            Text(stringResource("action.retry"))
                         }
                     }
                 }
@@ -117,11 +118,11 @@ fun sessionsView(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = "No chat sessions found.",
+                            text = stringResource("sessions.empty"),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
-                            text = "💡 Start a new conversation to create your first session!",
+                            text = stringResource("sessions.empty.hint"),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -201,7 +202,7 @@ private fun sessionCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "ID: ${session.id}",
+                        text = stringResource("sessions.id", session.id),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
@@ -214,12 +215,12 @@ private fun sessionCard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        text = "Created: ${TimeUtil.formatDisplay(session.createdAt)}",
+                        text = stringResource("sessions.created", TimeUtil.formatDisplay(session.createdAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Text(
-                        text = "Updated: ${TimeUtil.formatDisplay(session.updatedAt)}",
+                        text = stringResource("sessions.updated", TimeUtil.formatDisplay(session.updatedAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
@@ -244,7 +245,7 @@ private fun sessionCard(
                     onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text(stringResource("action.delete")) },
                         onClick = {
                             showMenu = false
                             onDeleteSession(session.id)
@@ -290,7 +291,7 @@ private fun paginationControls(
         }
 
         Text(
-            text = "Page $currentPage of $totalPages",
+            text = stringResource("sessions.page", currentPage, totalPages),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp),
         )

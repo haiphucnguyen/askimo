@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.directive.ChatDirective
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.ui.theme.ComponentColors
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -58,6 +59,10 @@ fun manageDirectivesDialog(
     var editName by remember { mutableStateOf("") }
     var editContent by remember { mutableStateOf("") }
     var editError by remember { mutableStateOf<String?>(null) }
+
+    // Pre-load error messages in composable context
+    val nameRequiredError = stringResource("directive.edit.name.required")
+    val contentRequiredError = stringResource("directive.edit.content.required")
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -79,7 +84,7 @@ fun manageDirectivesDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Manage Directives",
+                        text = stringResource("directive.manage.title"),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -89,7 +94,7 @@ fun manageDirectivesDialog(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource("action.close"),
                         )
                     }
                 }
@@ -99,7 +104,7 @@ fun manageDirectivesDialog(
                 // Directives list
                 if (directives.isEmpty()) {
                     Text(
-                        text = "No directives available. Create one to get started!",
+                        text = stringResource("directive.manage.empty"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
@@ -153,7 +158,7 @@ fun manageDirectivesDialog(
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Edit,
-                                                        contentDescription = "Edit",
+                                                        contentDescription = stringResource("action.edit"),
                                                         tint = MaterialTheme.colorScheme.primary,
                                                     )
                                                 }
@@ -163,7 +168,7 @@ fun manageDirectivesDialog(
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Delete,
-                                                        contentDescription = "Delete",
+                                                        contentDescription = stringResource("action.delete"),
                                                         tint = MaterialTheme.colorScheme.error,
                                                     )
                                                 }
@@ -184,8 +189,8 @@ fun manageDirectivesDialog(
                                                     editError = null
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
-                                                label = { Text("Name") },
-                                                placeholder = { Text("Enter directive name...") },
+                                                label = { Text(stringResource("directive.edit.name.label")) },
+                                                placeholder = { Text(stringResource("directive.edit.name.placeholder")) },
                                                 singleLine = true,
                                                 isError = editError != null && editName.isBlank(),
                                                 colors = ComponentColors.outlinedTextFieldColors(),
@@ -199,8 +204,8 @@ fun manageDirectivesDialog(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(200.dp),
-                                                label = { Text("Content") },
-                                                placeholder = { Text("Enter directive instructions...") },
+                                                label = { Text(stringResource("directive.edit.content.label")) },
+                                                placeholder = { Text(stringResource("directive.edit.content.placeholder")) },
                                                 maxLines = 10,
                                                 isError = editError != null,
                                                 supportingText = editError?.let { { Text(it) } },
@@ -227,15 +232,15 @@ fun manageDirectivesDialog(
                                                         contentDescription = null,
                                                         modifier = Modifier.size(16.dp),
                                                     )
-                                                    Text("Cancel")
+                                                    Text(stringResource("settings.cancel"))
                                                 }
 
                                                 TextButton(
                                                     onClick = {
                                                         if (editName.isBlank()) {
-                                                            editError = "Name is required"
+                                                            editError = nameRequiredError
                                                         } else if (editContent.isBlank()) {
-                                                            editError = "Content is required"
+                                                            editError = contentRequiredError
                                                         } else {
                                                             onUpdate(directive.id, editName.trim(), editContent.trim())
                                                             editingDirective = null
@@ -252,7 +257,7 @@ fun manageDirectivesDialog(
                                                         contentDescription = null,
                                                         modifier = Modifier.size(16.dp),
                                                     )
-                                                    Text("Save")
+                                                    Text(stringResource("settings.save"))
                                                 }
                                             }
                                         }
@@ -275,7 +280,7 @@ fun manageDirectivesDialog(
                                                         modifier = Modifier.padding(12.dp),
                                                     ) {
                                                         Text(
-                                                            text = "Full Content:",
+                                                            text = stringResource("directive.tooltip.full.content"),
                                                             style = MaterialTheme.typography.labelMedium,
                                                             color = MaterialTheme.colorScheme.primary,
                                                         )
@@ -300,7 +305,7 @@ fun manageDirectivesDialog(
 
                                         // Created date
                                         Text(
-                                            text = "Created: ${directive.createdAt.toLocalDate()}",
+                                            text = stringResource("directive.created", directive.createdAt.toLocalDate()),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -320,7 +325,7 @@ fun manageDirectivesDialog(
                         onClick = onDismiss,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Text("Close")
+                        Text(stringResource("action.close"))
                     }
                 }
             }

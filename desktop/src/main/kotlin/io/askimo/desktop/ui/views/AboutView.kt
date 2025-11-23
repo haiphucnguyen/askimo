@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.ui.theme.ComponentColors
 import java.time.Year
 
@@ -33,7 +34,7 @@ fun aboutDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "About ${VersionInfo.name}",
+                text = stringResource("about.title", VersionInfo.name),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
@@ -59,12 +60,12 @@ fun aboutDialog(
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Text(
-                            text = "Version ${VersionInfo.version}",
+                            text = "${stringResource("about.version")} ${VersionInfo.version}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Text(
-                            text = "Build Date: ${VersionInfo.buildDate}",
+                            text = "${stringResource("about.buildDate")}: ${VersionInfo.buildDate}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -97,12 +98,12 @@ fun aboutDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = "Description",
+                            text = stringResource("about.description"),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Text(
-                            text = "A modern desktop application for AI-powered conversations built with Kotlin and Compose Multiplatform.",
+                            text = stringResource("about.description.text"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -119,7 +120,7 @@ fun aboutDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = "License",
+                            text = stringResource("about.license"),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -129,7 +130,7 @@ fun aboutDialog(
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Text(
-                            text = "Copyright (c) ${Year.now().value} ${VersionInfo.author}",
+                            text = stringResource("about.copyright", Year.now().value, VersionInfo.author),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -142,7 +143,7 @@ fun aboutDialog(
                 onClick = onDismiss,
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Close")
+                Text(stringResource("action.close"))
             }
         },
     )

@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.service
 
+import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.model.AccentColor
 import io.askimo.desktop.model.FontSettings
 import io.askimo.desktop.model.FontSize
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.awt.GraphicsEnvironment
+import java.util.Locale
 import java.util.prefs.Preferences
 
 object ThemePreferences {
@@ -19,6 +21,7 @@ object ThemePreferences {
     private const val ACCENT_COLOR_KEY = "accent_color"
     private const val FONT_FAMILY_KEY = "font_family"
     private const val FONT_SIZE_KEY = "font_size"
+    private const val LOCALE_KEY = "locale"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
@@ -29,6 +32,9 @@ object ThemePreferences {
 
     private val _fontSettings = MutableStateFlow(loadFontSettings())
     val fontSettings: StateFlow<FontSettings> = _fontSettings.asStateFlow()
+
+    private val _locale = MutableStateFlow(loadLocale())
+    val locale: StateFlow<Locale> = _locale.asStateFlow()
 
     private fun loadThemeMode(): ThemeMode {
         val themeName = prefs.get(THEME_MODE_KEY, ThemeMode.SYSTEM.name)
@@ -59,6 +65,15 @@ object ThemePreferences {
         return FontSettings(fontFamily, fontSize)
     }
 
+    private fun loadLocale(): Locale {
+        val localeTag = prefs.get(LOCALE_KEY, Locale.getDefault().toLanguageTag())
+        return try {
+            Locale.forLanguageTag(localeTag)
+        } catch (e: Exception) {
+            Locale.getDefault()
+        }
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
         prefs.put(THEME_MODE_KEY, mode.name)
@@ -73,6 +88,12 @@ object ThemePreferences {
         _fontSettings.value = settings
         prefs.put(FONT_FAMILY_KEY, settings.fontFamily)
         prefs.put(FONT_SIZE_KEY, settings.fontSize.name)
+    }
+
+    fun setLocale(locale: Locale) {
+        _locale.value = locale
+        prefs.put(LOCALE_KEY, locale.toLanguageTag())
+        LocalizationManager.setLocale(locale)
     }
 
     fun getAvailableSystemFonts(): List<String> {

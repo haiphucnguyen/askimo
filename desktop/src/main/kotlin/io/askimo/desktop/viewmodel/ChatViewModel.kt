@@ -603,17 +603,8 @@ class ChatViewModel(
     }
 
     /**
-     * Get the currently selected directive name for display.
-     * @return The directive name or null if none selected
+     * Get the underlying ChatService for advanced operations like setting language directive.
+     * @return The ChatService instance
      */
-    fun getSelectedDirectiveName(): String? {
-        if (selectedDirective == null) return null
-
-        return try {
-            val directiveRepository = io.askimo.core.directive.ChatDirectiveRepository()
-            directiveRepository.get(selectedDirective!!)?.name
-        } catch (e: Exception) {
-            null
-        }
-    }
+    fun getChatService(): ChatService = chatService
 }
