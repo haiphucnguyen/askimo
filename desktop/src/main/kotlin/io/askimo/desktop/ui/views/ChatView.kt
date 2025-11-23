@@ -67,6 +67,7 @@ import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.ui.components.manageDirectivesDialog
 import io.askimo.desktop.ui.components.messageList
 import io.askimo.desktop.ui.components.newDirectiveDialog
+import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
@@ -267,19 +268,8 @@ fun chatView(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    shadowElevation = 4.dp,
-                                    shape = MaterialTheme.shapes.small,
-                                ) {
-                                    Text(
-                                        text = "Provider: $provider\nModel: $model",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.padding(8.dp),
-                                    )
-                                }
-                            },
+                        themedTooltip(
+                            text = "Provider: $provider\nModel: $model",
                         ) {
                             Text(
                                 text = "$provider | $model",
@@ -760,20 +750,8 @@ fun chatView(
                 val isMac = remember { System.getProperty("os.name").contains("Mac", ignoreCase = true) }
                 val modKey = if (isMac) "⌘" else "Ctrl"
 
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                        ) {
-                            Text(
-                                text = "Attach File ($modKey+A)",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    },
+                themedTooltip(
+                    text = "Attach File ($modKey+A)",
                 ) {
                     IconButton(
                         onClick = openFileDialog,

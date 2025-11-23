@@ -6,8 +6,6 @@ package io.askimo.desktop
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
-import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -47,7 +45,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,7 +66,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -81,6 +77,7 @@ import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
 import io.askimo.desktop.service.ThemePreferences
+import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
 import io.askimo.desktop.ui.theme.createCustomTypography
 import io.askimo.desktop.ui.theme.getDarkColorScheme
@@ -462,20 +459,8 @@ fun sidebar(
                 val isMac = remember { System.getProperty("os.name").contains("Mac", ignoreCase = true) }
                 val modKey = if (isMac) "⌘" else "Ctrl"
 
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding((4 * fontScale).dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                        ) {
-                            Text(
-                                text = "New Chat ($modKey+N)",
-                                modifier = Modifier.padding((8 * fontScale).dp),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    },
+                themedTooltip(
+                    text = "New Chat ($modKey+N)",
                 ) {
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -840,45 +825,27 @@ private fun sessionItemWithMenu(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        NavigationDrawerItem(
-            icon = null,
-            label = {
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                            shadowElevation = 4.dp,
-                        ) {
-                            Text(
-                                text = session.title,
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    delayMillis = 500,
-                    tooltipPlacement = TooltipPlacement.CursorPoint(
-                        offset = DpOffset(0.dp, 16.dp),
-                    ),
-                ) {
+        themedTooltip(
+            text = session.title,
+        ) {
+            NavigationDrawerItem(
+                icon = null,
+                label = {
                     Text(
                         text = session.title,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                }
-            },
-            selected = isSelected,
-            onClick = { onResumeSession(session.id) },
-            modifier = Modifier
-                .weight(1f)
-                .pointerHoverIcon(PointerIcon.Hand),
-            colors = ComponentColors.navigationDrawerItemColors(),
-        )
+                },
+                selected = isSelected,
+                onClick = { onResumeSession(session.id) },
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = ComponentColors.navigationDrawerItemColors(),
+            )
+        }
 
         Box {
             IconButton(
@@ -899,26 +866,8 @@ private fun sessionItemWithMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                            shadowElevation = 4.dp,
-                        ) {
-                            Text(
-                                text = "Export entire chat history",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    delayMillis = 500,
-                    tooltipPlacement = TooltipPlacement.CursorPoint(
-                        offset = DpOffset(8.dp, 0.dp),
-                    ),
+                themedTooltip(
+                    text = "Export entire chat history",
                 ) {
                     DropdownMenuItem(
                         text = { Text("Export") },
@@ -935,26 +884,8 @@ private fun sessionItemWithMenu(
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                            shadowElevation = 4.dp,
-                        ) {
-                            Text(
-                                text = if (session.isStarred) "Remove from starred" else "Add to starred",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    delayMillis = 500,
-                    tooltipPlacement = TooltipPlacement.CursorPoint(
-                        offset = DpOffset(8.dp, 0.dp),
-                    ),
+                themedTooltip(
+                    text = if (session.isStarred) "Remove from starred" else "Add to starred",
                 ) {
                     DropdownMenuItem(
                         text = { Text(if (session.isStarred) "Unstar" else "Star") },
@@ -976,26 +907,8 @@ private fun sessionItemWithMenu(
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            shape = MaterialTheme.shapes.small,
-                            shadowElevation = 4.dp,
-                        ) {
-                            Text(
-                                text = "Delete chat session (cannot be undone)",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    delayMillis = 500,
-                    tooltipPlacement = TooltipPlacement.CursorPoint(
-                        offset = DpOffset(8.dp, 0.dp),
-                    ),
+                themedTooltip(
+                    text = "Delete chat session (cannot be undone)",
                 ) {
                     DropdownMenuItem(
                         text = { Text("Delete") },

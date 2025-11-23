@@ -281,13 +281,13 @@ fun messageBubble(
                                             isActiveResult = isActiveSearchResult,
                                             activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
                                         ),
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
                                 } else {
                                     markdownText(
                                         markdown = message.content,
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
                                     )
                                 }
                             }
@@ -297,21 +297,25 @@ fun messageBubble(
 
                 // Copy button for AI messages (shown on hover)
                 if (!message.isUser && isHovered) {
-                    IconButton(
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(message.content))
-                        },
+                    themedTooltip(
+                        text = "Copy message",
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(32.dp),
+                            .padding(4.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy message",
-                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
+                        IconButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(message.content))
+                            },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy message",
+                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
                     }
                 }
             }

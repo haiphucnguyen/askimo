@@ -433,7 +433,7 @@ class ChatSessionRepository {
      * @param sessionId The session ID to search in
      * @param searchQuery The search query (case-insensitive)
      * @param limit Maximum number of results to return
-     * @return List of messages matching the search query, ordered by creation time (newest first)
+     * @return List of messages matching the search query, ordered by creation time (oldest first)
      */
     fun searchMessages(
         sessionId: String,
@@ -449,7 +449,7 @@ class ChatSessionRepository {
                 SELECT id, session_id, role, content, created_at
                 FROM chat_messages
                 WHERE session_id = ? AND LOWER(content) LIKE LOWER(?)
-                ORDER BY created_at DESC
+                ORDER BY created_at ASC
                 LIMIT ?
                 """,
             ).use { stmt ->

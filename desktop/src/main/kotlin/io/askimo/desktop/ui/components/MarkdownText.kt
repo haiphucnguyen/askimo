@@ -267,21 +267,25 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
 
         // Copy button (shown on hover)
         if (isHovered) {
-            IconButton(
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(codeBlock.literal))
-                },
+            themedTooltip(
+                text = "Copy code",
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(32.dp),
+                    .padding(4.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy code",
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+                IconButton(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(codeBlock.literal))
+                    },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy code",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }
