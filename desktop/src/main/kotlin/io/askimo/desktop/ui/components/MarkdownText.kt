@@ -44,11 +44,15 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -138,9 +142,11 @@ private fun renderNode(node: Node) {
 @Composable
 private fun renderParagraph(paragraph: Paragraph) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    val linkColor = MaterialTheme.colorScheme.primary
+    val annotatedText = buildInlineContent(paragraph, inlineCodeBg, linkColor)
 
     Text(
-        text = buildInlineContent(paragraph, inlineCodeBg),
+        text = annotatedText,
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
             .fillMaxWidth()
@@ -151,6 +157,7 @@ private fun renderParagraph(paragraph: Paragraph) {
 @Composable
 private fun renderHeading(heading: Heading) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    val linkColor = MaterialTheme.colorScheme.primary
 
     val style = when (heading.level) {
         1 -> MaterialTheme.typography.headlineMedium
@@ -162,7 +169,7 @@ private fun renderHeading(heading: Heading) {
     }
 
     Text(
-        text = buildInlineContent(heading, inlineCodeBg),
+        text = buildInlineContent(heading, inlineCodeBg, linkColor),
         style = style,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
@@ -179,14 +186,7 @@ private fun renderBulletList(list: BulletList) {
         var item = list.firstChild
         while (item != null) {
             if (item is ListItem) {
-                Text(
-                    text = buildAnnotatedString {
-                        append("• ")
-                        append(buildInlineContent(item, inlineCodeBg))
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 2.dp),
-                )
+                renderListItem(item, "• ", inlineCodeBg)
             }
             item = item.next
         }
@@ -203,17 +203,57 @@ private fun renderOrderedList(list: OrderedList) {
         var index = list.markerStartNumber
         while (item != null) {
             if (item is ListItem) {
-                Text(
-                    text = buildAnnotatedString {
-                        append("$index. ")
-                        append(buildInlineContent(item, inlineCodeBg))
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 2.dp),
-                )
+                renderListItem(item, "$index. ", inlineCodeBg)
                 index++
             }
             item = item.next
+        }
+    }
+}
+
+@Composable
+private fun renderListItem(
+    item: ListItem,
+    marker: String,
+    inlineCodeBg: Color,
+) {
+    val linkColor = MaterialTheme.colorScheme.primary
+
+    Column(modifier = Modifier.padding(vertical = 2.dp)) {
+        // First, collect inline content and nested blocks
+        val inlineContent = mutableListOf<Node>()
+        val nestedBlocks = mutableListOf<Node>()
+
+        var child = item.firstChild
+        while (child != null) {
+            when (child) {
+                is BulletList, is OrderedList -> nestedBlocks.add(child)
+                else -> inlineContent.add(child)
+            }
+            child = child.next
+        }
+
+        // Render inline content with marker
+        if (inlineContent.isNotEmpty()) {
+            val annotatedText = buildAnnotatedString {
+                append(marker)
+                inlineContent.forEach { node ->
+                    append(buildInlineContentForNode(node, inlineCodeBg, linkColor))
+                }
+            }
+
+            Text(
+                text = annotatedText,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        // Render nested lists
+        nestedBlocks.forEach { block ->
+            when (block) {
+                is BulletList -> renderBulletList(block)
+                is OrderedList -> renderOrderedList(block)
+            }
         }
     }
 }
@@ -318,7 +358,7 @@ private fun renderImage(image: Image) {
                 .data(image.destination)
                 .crossfade(true)
                 .build(),
-            contentDescription = image.title ?: extractImageAltText(image),
+            contentDescription = image.title ?: extractTextContent(image),
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
@@ -326,7 +366,7 @@ private fun renderImage(image: Image) {
         )
 
         // Show caption if title or alt text exists
-        val caption = image.title ?: extractImageAltText(image)
+        val caption = image.title ?: extractTextContent(image)
         if (caption.isNotBlank()) {
             Text(
                 text = caption,
@@ -507,7 +547,8 @@ private fun extractCellText(node: Node): String {
 
 private fun buildInlineContent(
     node: Node,
-    inlineCodeBg: androidx.compose.ui.graphics.Color,
+    inlineCodeBg: Color,
+    linkColor: Color,
 ): AnnotatedString = buildAnnotatedString {
     var child = node.firstChild
     while (child != null) {
@@ -515,12 +556,12 @@ private fun buildInlineContent(
             is MarkdownText -> append(child.literal)
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(buildInlineContent(child, inlineCodeBg))
+                    append(buildInlineContent(child, inlineCodeBg, linkColor))
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(buildInlineContent(child, inlineCodeBg))
+                    append(buildInlineContent(child, inlineCodeBg, linkColor))
                 }
             }
             is Code -> {
@@ -544,24 +585,55 @@ private fun buildInlineContent(
                     append(" ${child.literal} ")
                 }
             }
+            is Link -> {
+                // Add link annotation for clickable links using the new LinkAnnotation API
+                val linkText = extractTextContent(child)
+                val displayText = linkText.ifEmpty { child.destination }
+
+                withLink(
+                    LinkAnnotation.Url(
+                        url = child.destination,
+                        styles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = linkColor,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                        ),
+                    ),
+                ) {
+                    append(displayText)
+                }
+            }
             is Image -> {
                 // For inline images, show [image: alt text] placeholder
-                append("[image: ${extractImageAltText(child)}]")
+                append("[image: ${extractTextContent(child)}]")
             }
             is HardLineBreak, is SoftLineBreak -> append("\n")
-            is Paragraph -> append(buildInlineContent(child, inlineCodeBg))
-            else -> append(buildInlineContent(child, inlineCodeBg))
+            is Paragraph -> append(buildInlineContent(child, inlineCodeBg, linkColor))
+            else -> append(buildInlineContent(child, inlineCodeBg, linkColor))
         }
         child = child.next
     }
 }
 
 /**
- * Extract alt text from an image node.
+ * Build inline content for a single node (used by list items).
  */
-private fun extractImageAltText(image: Image): String {
+private fun buildInlineContentForNode(
+    node: Node,
+    inlineCodeBg: Color,
+    linkColor: Color,
+): AnnotatedString = buildAnnotatedString {
+    append(buildInlineContent(node, inlineCodeBg, linkColor))
+}
+
+/**
+ * Extract text content from a node by collecting all MarkdownText children.
+ * Used for extracting link text, image alt text, etc.
+ */
+private fun extractTextContent(node: Node): String {
     val builder = StringBuilder()
-    var child = image.firstChild
+    var child = node.firstChild
     while (child != null) {
         if (child is MarkdownText) {
             builder.append(child.literal)
