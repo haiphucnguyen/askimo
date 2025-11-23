@@ -1024,7 +1024,7 @@ class ChatSessionRepositoryIT {
 
         assertEquals(3, folders.size)
         assertEquals("Alpha", folders[0].name) // sort_order 5, alphabetically first
-        assertEquals("Beta", folders[1].name)  // sort_order 5, alphabetically second
+        assertEquals("Beta", folders[1].name) // sort_order 5, alphabetically second
         assertEquals("Zebra", folders[2].name) // sort_order 10
     }
 
