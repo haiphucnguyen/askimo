@@ -67,10 +67,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.session.ProviderConfigField
 import io.askimo.core.session.SettingField
+import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.model.AccentColor
 import io.askimo.desktop.model.FontSettings
 import io.askimo.desktop.model.FontSize
-import io.askimo.desktop.model.KeyboardShortcuts
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.service.ThemePreferences
 import io.askimo.desktop.ui.theme.ComponentColors
@@ -675,7 +675,13 @@ private fun accentColorOption(
 
 @Composable
 private fun keyboardShortcutsCard() {
-    val shortcutsByCategory = remember { KeyboardShortcuts.getShortcutsByCategory() }
+    val shortcutsByCategory = remember {
+        KeyMapManager.getAllShortcuts().mapValues { (_, shortcuts) ->
+            shortcuts.map { shortcut ->
+                shortcut.description to shortcut.getDisplayString()
+            }
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -732,37 +738,6 @@ private fun shortcutCategory(title: String) {
         color = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = Modifier.padding(top = 4.dp),
     )
-}
-
-@Composable
-private fun shortcutRow(description: String, shortcut: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f),
-        )
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            ),
-        ) {
-            Text(
-                text = shortcut,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-    }
 }
 
 @Composable

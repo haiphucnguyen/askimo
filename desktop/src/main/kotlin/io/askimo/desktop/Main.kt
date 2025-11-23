@@ -60,14 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
@@ -80,6 +73,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.session.ChatSessionExporterService
+import io.askimo.desktop.keymap.KeyMapManager
+import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
@@ -216,51 +211,43 @@ fun app() {
             modifier = Modifier
                 .fillMaxSize()
                 .onPreviewKeyEvent { keyEvent ->
-                    // Only handle key down events for shortcuts
-                    if (keyEvent.type != KeyEventType.KeyDown) {
-                        return@onPreviewKeyEvent false
-                    }
+                    val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                    val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
-                    val modifierPressed = if (isMac) keyEvent.isMetaPressed else keyEvent.isCtrlPressed
-
-                    when {
-                        // Cmd/Ctrl + N: New Chat
-                        keyEvent.key == Key.N && modifierPressed && !keyEvent.isShiftPressed -> {
+                    when (shortcut) {
+                        AppShortcut.NEW_CHAT -> {
                             chatViewModel.clearChat()
                             inputText = TextFieldValue("")
                             attachments = emptyList()
                             currentView = View.CHAT
                             true
                         }
-                        // Cmd/Ctrl + F: Search in Chat (only in chat view)
-                        keyEvent.key == Key.F && modifierPressed && !keyEvent.isShiftPressed && currentView == View.CHAT -> {
-                            if (!chatViewModel.isSearchMode) {
-                                chatViewModel.enableSearchMode() // Enable search mode
+                        AppShortcut.SEARCH_IN_CHAT -> {
+                            if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
+                                chatViewModel.enableSearchMode()
                             }
                             true
                         }
-                        // Cmd/Ctrl + H: Toggle Chat History
-                        keyEvent.key == Key.H && modifierPressed && !keyEvent.isShiftPressed -> {
+                        AppShortcut.TOGGLE_CHAT_HISTORY -> {
                             isSessionsExpanded = !isSessionsExpanded
                             true
                         }
-                        // Cmd/Ctrl + ,: Open Settings
-                        keyEvent.key == Key.Comma && modifierPressed && !keyEvent.isShiftPressed -> {
+                        AppShortcut.OPEN_SETTINGS -> {
                             currentView = View.SETTINGS
                             true
                         }
-                        // Cmd/Ctrl + S: Stop AI Response (only when loading)
-                        keyEvent.key == Key.S && modifierPressed && !keyEvent.isShiftPressed && chatViewModel.isLoading -> {
-                            chatViewModel.cancelResponse()
-                            true
+                        AppShortcut.STOP_AI_RESPONSE -> {
+                            if (chatViewModel.isLoading) {
+                                chatViewModel.cancelResponse()
+                                true
+                            } else {
+                                false
+                            }
                         }
-                        // Cmd/Ctrl + Q: Quit Application
-                        keyEvent.key == Key.Q && modifierPressed && !keyEvent.isShiftPressed -> {
+                        AppShortcut.QUIT_APPLICATION -> {
                             showQuitDialog = true
                             true
                         }
-                        else -> false // Don't consume other key events
+                        else -> false
                     }
                 },
         ) {

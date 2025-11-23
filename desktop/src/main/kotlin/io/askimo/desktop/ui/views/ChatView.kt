@@ -49,14 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
@@ -67,6 +60,8 @@ import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.formatFileSize
+import io.askimo.desktop.keymap.KeyMapManager
+import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.ui.components.manageDirectivesDialog
@@ -218,24 +213,32 @@ fun chatView(
         modifier = modifier
             .fillMaxSize()
             .onPreviewKeyEvent { keyEvent ->
-                if (keyEvent.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                }
+                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                when {
-                    // Escape: Close search box
-                    keyEvent.key == Key.Escape && isSearchMode -> {
-                        onClearSearch()
-                        true
-                    }
-                    // F3/Shift+F3: Navigate search results
-                    keyEvent.key == Key.F3 && isSearchMode && searchResults.isNotEmpty() -> {
-                        if (keyEvent.isShiftPressed) {
-                            onPreviousSearchResult()
+                when (shortcut) {
+                    AppShortcut.CLOSE_SEARCH -> {
+                        if (isSearchMode) {
+                            onClearSearch()
+                            true
                         } else {
-                            onNextSearchResult()
+                            false
                         }
-                        true
+                    }
+                    AppShortcut.NEXT_SEARCH_RESULT -> {
+                        if (isSearchMode && searchResults.isNotEmpty()) {
+                            onNextSearchResult()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    AppShortcut.PREVIOUS_SEARCH_RESULT -> {
+                        if (isSearchMode && searchResults.isNotEmpty()) {
+                            onPreviousSearchResult()
+                            true
+                        } else {
+                            false
+                        }
                     }
                     else -> false
                 }
@@ -595,7 +598,7 @@ fun chatView(
                     ) {
                         Icon(
                             Icons.Default.KeyboardArrowUp,
-                            contentDescription = "Previous result (Shift+F3)",
+                            contentDescription = "Previous result (${AppShortcut.PREVIOUS_SEARCH_RESULT.getDisplayString()})",
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -610,7 +613,7 @@ fun chatView(
                     ) {
                         Icon(
                             Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Next result (F3)",
+                            contentDescription = "Next result (${AppShortcut.NEXT_SEARCH_RESULT.getDisplayString()})",
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -715,22 +718,18 @@ fun chatView(
                 .fillMaxWidth()
                 .padding(16.dp)
                 .onPreviewKeyEvent { keyEvent ->
-                    // Handle Cmd/Ctrl + A for file attachment
-                    if (keyEvent.type == KeyEventType.KeyDown &&
-                        keyEvent.key == Key.A &&
-                        !keyEvent.isShiftPressed
-                    ) {
-                        val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
-                        val modifierPressed = if (isMac) keyEvent.isMetaPressed else keyEvent.isCtrlPressed
+                    val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                        if (modifierPressed && !isLoading) {
-                            openFileDialog()
-                            true // consume the event
-                        } else {
-                            false // let the text field handle Ctrl+A for select all
+                    when (shortcut) {
+                        AppShortcut.ATTACH_FILE -> {
+                            if (!isLoading) {
+                                openFileDialog()
+                                true
+                            } else {
+                                false
+                            }
                         }
-                    } else {
-                        false // don't consume other key events
+                        else -> false
                     }
                 },
         ) {
@@ -796,10 +795,10 @@ fun chatView(
                     modifier = Modifier
                         .weight(1f)
                         .onPreviewKeyEvent { keyEvent ->
-                            // Handle Enter key to send message (without Shift)
-                            // Shift+Enter adds a new line
-                            if (keyEvent.key == Key.Enter && keyEvent.type == KeyEventType.KeyDown) {
-                                if (keyEvent.isShiftPressed) {
+                            val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+
+                            when (shortcut) {
+                                AppShortcut.NEW_LINE -> {
                                     // Shift+Enter: insert new line at cursor position
                                     val cursorPosition = inputText.selection.start
                                     val textBeforeCursor = inputText.text.substring(0, cursorPosition)
@@ -812,16 +811,16 @@ fun chatView(
                                             selection = TextRange(newCursorPosition),
                                         ),
                                     )
-                                    true // consume the event
-                                } else {
+                                    true
+                                }
+                                AppShortcut.SEND_MESSAGE -> {
                                     // Enter without Shift: send message
                                     if (inputText.text.isNotBlank() && !isLoading) {
                                         onSendMessage(inputText.text, attachments)
                                     }
-                                    true // consume the event
+                                    true
                                 }
-                            } else {
-                                false // don't consume other key events
+                                else -> false
                             }
                         },
                     placeholder = { Text("Type your message... (Enter to send, Shift+Enter for new line)") },
