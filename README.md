@@ -36,7 +36,7 @@ Askimo is a provider-agnostic AI toolkit that gives you two powerful interfaces:
 
 Use OpenAI, Claude, Gemini, X AI, or local models like Ollama from one unified environment.
 
-> AI for your workflows with the freedom to choose any provider.
+> Chat on desktop, script in the terminal, and use any AI provider you like.
 
 ## Askimo Products
 
@@ -104,17 +104,20 @@ Highlights:
 
 ## Core Capabilities
 
-### AI Chat
-Multi-provider chat, persistent history, and rich formatting across desktop and terminal.
+Askimo brings together the power of AI models, the convenience of a native desktop experience, and the flexibility of a command line tool. Whether you are chatting, automating tasks, or working within a project, Askimo is built to fit the way you work.
 
-### Knowledge Management
-RAG-enabled projects, file indexing, and contextual responses.
+### Unified AI Chat
+Work with multiple AI providers in one place. Askimo keeps your entire conversation history available locally, with rich formatting, code highlighting, image support, provider switching, and fast full-text search. You can star important chats, organize your work, and export conversations when needed.
 
-### Automation
-Non-interactive mode, Recipes, stdin/stdout integration, and log analysis.
+### Knowledge and Project Intelligence
+Askimo CLI includes RAG-enabled project workspaces. It indexes your files, documentation, and code so AI responses include real project context. Backed by PostgreSQL and pgvector for reliable vector search.
 
-### Platform Architecture
-Provider-agnostic design, extensible plugins, and local-first privacy.
+### Automation and Terminal Workflows
+Pipe logs, files, or command output directly into Askimo, or run prompts in non-interactive mode for CI pipelines. Recipes let you build reusable workflows for code review, documentation, summarization, and more.
+
+### Flexible, Extensible Platform
+Use any provider, add your own integrations, or extend Askimo with custom commands and models. Both Desktop and CLI follow a local-first approach for privacy and data control.
+
 
 ## Installation
 
