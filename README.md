@@ -1,20 +1,20 @@
 <p align="center">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo.svg">
-        <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo-dark.svg">
-      </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo.svg">
+    <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo-dark.svg">
+  </picture>
 </p>
 
 <p align="center">
-  <b><a href="https://askimo.chat">askimo.chat</a></b> · AI for your workflows, with the freedom to choose any provider.
+  <b><a href="https://askimo.chat">askimo.chat</a></b> · AI for your workflows — on desktop or in the terminal, with the freedom to choose any provider.
 </p>
 
 <p align="center">
   <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml">
-    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml/badge.svg" alt="Build">
+    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml/badge.svg" alt="CLI Build">
   </a>
   <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml">
-    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Build">
+    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Build">
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
@@ -29,150 +29,144 @@
 
 # Askimo
 
-Askimo is a **provider-agnostic AI toolkit** that brings powerful AI capabilities to your command line and automation workflows.  
-From chatting with LLMs to automating DevOps pipelines, Askimo connects to any provider - OpenAI, X AI, Gemini, Anthropic, or local models like Ollama.
+Askimo is a **provider-agnostic AI toolkit** offering two powerful interfaces:
 
-> **AI for your workflows, with the freedom to choose any provider.**
+- **Askimo Desktop** — a native, multi-provider AI chat app
+- **Askimo CLI** — a command-line tool for automation, DevOps, and workflows
+
+Use OpenAI, Claude, Gemini, X AI, or local models like Ollama — all from one unified platform.
+
+> **AI for your workflows — with the freedom to choose any provider.**
 
 ---
 
-## ✨ Why Askimo
+# 🚀 Askimo Products
+
+## 💬 Askimo Desktop
+A beautiful, native desktop app that lets you chat with multiple AI providers side-by-side.  
+Perfect for writers, developers, researchers, and anyone who needs fast, consistent AI conversations.
+
+### Key Desktop Features
+- Switch between OpenAI, Claude, Gemini, X AI, and Ollama instantly
+- Persistent chat history stored locally
+- Rich markdown rendering, syntax highlighting, images, and file attachments
+- Star and save important conversations
+- Custom directives to shape AI responses
+- Smart search across your entire chat history
+- Local-first: no tracking, no cloud storage
+- Prompt library, shortcuts, and beautiful UI
+
+👉 **Get Askimo Desktop**: https://askimo.chat/desktop
+
+---
+
+## 🖥 Askimo CLI
+A powerful AI automation tool built for developers, DevOps engineers, and data workflows.
+
+### Key CLI Features
+- Provider-agnostic commands
+- Pipe logs, files, or command outputs directly into AI
+- Reusable Recipes for automation
+- RAG-enabled project workspaces using PostgreSQL + pgvector
+- Non-interactive mode for CI/CD pipelines
+- Extensible plug-in system
+
+👉 **Install Askimo CLI**: https://askimo.chat/cli
+
+---
+
+# ✨ Why Askimo
 
 * **Provider Freedom**  
-Switch between OpenAI, Gemini, X AI, Anthropic, or Ollama with the same commands. No vendor lock-in as the AI landscape evolves.
+  Use OpenAI, Gemini, X AI, Anthropic, or Ollama with the same interface.
 
-* **Automation-First Design**  
-Built for DevOps and automation workflows. Pipe files, logs, or command output into Askimo and let AI handle analysis, transformation, and decision-making.
+* **Unified Workflow**  
+  Switch between desktop chat and terminal automation seamlessly.
 
 * **RAG-Enabled Projects**  
-Create intelligent project workspaces with built-in vector search (pgvector). Your AI assistant knows your codebase, documentation, and project context.
+  Give AI full context about your codebase and docs using vector search.
 
 * **Reusable Recipes**  
-Build and share parameterized AI workflows. Create templates for code reviews, log analysis, documentation generation, and more.
-
-* **Dual Interface**  
-Choose your workflow: interactive chat for exploration, or non-interactive mode perfect for scripts, CI/CD pipelines, and automation.
+  Automate code review, logs, documentation generation, and more.
 
 * **Extensible Platform**  
-Add custom providers, commands, and integrations. Askimo grows with your team's needs.
+  Add custom providers, commands, and integrations.
 
 ---
 
-## 🎬 Demo
+# 🎬 Demo
 
-**Summarizing files, generating commit messages, and integrating with Git**
+## Askimo Desktop — Multi-Provider Chat
+[![Askimo Demo 2](public/desktop-demo.gif)](https://askimo.chat/desktop)
 
-[![Askimo Demo 1](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo1.gif)](https://askimo.chat)
-
-**Chatting with multiple AI providers**
-
-[![Askimo Demo 2](https://raw.githubusercontent.com/haiphucnguyen/askimo/main/public/demo2.gif)](https://askimo.chat)
+## Askimo CLI — Files, Logs, Git, and Pipelines
+[![Askimo Demo 1](public/cli-demo.gif)](https://askimo.chat/cli)
 
 ---
 
-## 🧠 Core Capabilities
+# 🧠 Core Capabilities
 
-### AI Chat
-- Interactive conversations with multiple AI providers
+### AI Chat (Desktop & CLI)
+- Multi-provider chat
+- Instant provider switching
+- Persistent history
+- Rich formatting
 
-### Knowledge Management
-- **RAG-enabled projects** with automatic document indexing
-- **Vector search** powered by PostgreSQL + pgvector
-- **Project workspaces** that give AI context about your codebase
-- **Contextual responses** based on your project's files and documentation
+### Knowledge Management (CLI)
+- RAG projects powered by pgvector
+- Automatic code/document indexing
+- Context-rich answers
 
-### Automation & DevOps
-- **Pipeline-friendly** non-interactive mode for CI/CD integration
-- **Recipe system** for reusable, parameterized AI workflows
-- **Log analysis** and system monitoring with AI insights
-- **Stdin/stdout** support for seamless integration with existing tools
+### Automation & DevOps (CLI)
+- Non-interactive mode for pipelines
+- Recipes for reusable AI workflows
+- Stdin/stdout for flexible integration
+- Log analysis & transformation
 
 ### Platform Features
-- **Provider-agnostic** architecture (OpenAI, Gemini, X AI, Ollama)
-- **Extensible** plugin system for custom providers and commands
-- **Configuration management** with per-provider parameter tuning
+- Provider-agnostic architecture
+- Extensible plugin system
+- Local-first privacy controls
+- Multi-interface ecosystem
 
 ---
 
-## ⚙️ Quickstart
+# 🛠 Installation
 
-### macOS / Linux (Homebrew)
-```bash
-brew tap haiphucnguyen/askimo
-brew install askimo
-askimo
-```
+Askimo has dedicated installation guides for each product and platform:
 
-### Windows (Scoop)
-```bash
-scoop bucket add askimo https://github.com/haiphucnguyen/scoop-askimo
-scoop install askimo
-askimo
-```
+- **Askimo Desktop → https://askimo.chat/docs/desktop/installation/**
+- **Askimo CLI → https://askimo.chat/docs/cli/installation/**
 
-Other ways to install → [Installation Guide](https://askimo.chat/reference/installation/)
-
-👉 Once installed, you can connect Askimo to providers like Ollama, OpenAI, Gemini, or X AI and start chatting.
-
-📖 See [Getting Started](https://askimo.chat/reference/getting-started/) for tutorials on setting up Ollama, adding API keys (OpenAI, Gemini, X AI), switching providers, and running real workflow examples.
+All installation methods (Homebrew, Scoop, JAR, macOS, Windows, Linux) are available in the docs.
 
 ---
 
-## 💬 CLI Usage
+# 📚 Usage
 
-Askimo supports **two modes** for running commands:
-
-### Interactive Mode
-Start Askimo without arguments to enter interactive mode:
-```bash
-askimo
-askimo> :help
-```
-
-### Non-Interactive Mode
-Run commands directly from the command line:
-```bash
-askimo --help
-askimo --list-providers
-askimo --set-provider openai
-echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
-```
-
-### Direct Chat (Non-Interactive)
-Send a single message to AI without entering interactive mode:
-```bash
-askimo -p "Your prompt here"
-askimo --prompt "Your prompt here"
-```
-
-**With piped input:**
-```bash
-# Analyze code from stdin
-echo "function add(a, b) { return a + b; }" | askimo -p "Convert this to TypeScript"
-
-# Process file contents
-cat myfile.js | askimo --prompt "Explain this code"
-
-# Analyze git changes
-git diff | askimo -p "Summarize these changes"
-
-# Process command output
-ls -la | askimo -p "Explain these file permissions"
-```
+- **Desktop Usage** → https://askimo.chat/desktop
+- **CLI Usage** → https://askimo.chat/cli
 
 ---
 
-## 🧩 Extending Askimo
+# 🧩 Extending Askimo
 
-Askimo is designed to be pluggable, so you can tailor it to your needs:
-
-- Add a new chat model → [Creating a New Chat Model](https://askimo.chat/development/creating-new-chat-model/)
-- Create a new command → [Creating a New Command](https://askimo.chat/development/creating-new-command/)
+- Create a new provider → https://askimo.chat/docs/development/creating-new-command/
+- Add new commands → https://askimo.chat/docs/development/creating-new-chat-provider/
 
 ---
 
-## 🤝 Contributing
+# 🤝 Contributing
 
-- Fork & clone the repo
-- Create a feature branch
-- Open a PR
+Contributions are welcome!  
+Check out:
+
+- **CONTRIBUTING.md**
+- **DCO guidelines**
+- **Developer Setup Docs**
+
+---
+
+# 📄 License
+
+Apache 2.0 — see [LICENSE](./LICENSE)

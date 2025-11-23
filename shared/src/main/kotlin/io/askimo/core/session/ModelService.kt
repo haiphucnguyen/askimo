@@ -88,6 +88,9 @@ object ModelService {
         // Update the model in session params
         session.params.model = newModel
 
+        // Persist the change to disk
+        SessionConfigManager.save(session.params)
+
         // Rebuild the chat service with the new model
         // Use KEEP_PER_PROVIDER_MODEL to preserve conversation history
         session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)

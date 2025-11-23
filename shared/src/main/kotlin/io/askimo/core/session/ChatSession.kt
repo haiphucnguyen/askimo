@@ -12,6 +12,20 @@ data class ChatSession(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val directiveId: String? = null,
+    val folderId: String? = null,
+    val isStarred: Boolean = false,
+    val sortOrder: Int = 0,
+)
+
+data class ChatFolder(
+    val id: String,
+    val name: String,
+    val parentFolderId: String? = null,
+    val color: String? = null,
+    val icon: String? = null,
+    val sortOrder: Int = 0,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
 )
 
 data class ChatMessage(

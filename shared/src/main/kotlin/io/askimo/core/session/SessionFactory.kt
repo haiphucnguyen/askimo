@@ -52,15 +52,6 @@ object SessionFactory {
         }
     }
 
-    /** Persist params, then (re)build and cache a fresh Session from them. */
-    fun reconfigure(params: SessionParams, mode: SessionMode = SessionMode.CLI_INTERACTIVE): Session {
-        SessionConfigManager.save(params)
-        return createSession(params, mode, forceReload = true)
-    }
-
-    /** Reload params from disk and rebuild the cached session. */
-    fun reloadFromDisk(mode: SessionMode = SessionMode.CLI_INTERACTIVE): Session = createSession(SessionConfigManager.load(), mode, forceReload = true)
-
     private fun buildSession(params: SessionParams, mode: SessionMode): Session {
         debug("Building session with params: $params, mode: $mode")
 

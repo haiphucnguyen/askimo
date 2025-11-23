@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -278,6 +280,9 @@ fun app() {
                 onDeleteSession = { sessionId ->
                     sessionsViewModel.deleteSession(sessionId)
                 },
+                onStarSession = { sessionId, isStarred ->
+                    sessionsViewModel.updateSessionStarred(sessionId, isStarred)
+                },
                 onNavigateToSettings = { currentView = View.SETTINGS },
                 onNavigateToAbout = { currentView = View.ABOUT },
             )
@@ -390,6 +395,7 @@ fun sidebar(
     onNavigateToSessions: () -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
+    onStarSession: (String, Boolean) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
 ) {
@@ -507,6 +513,8 @@ fun sidebar(
 
                 // Sessions list (collapsible content)
                 if (isSessionsExpanded) {
+                    var isStarredExpanded by remember { mutableStateOf(true) }
+
                     Column(
                         modifier = Modifier.padding(
                             start = (32 * fontScale).dp,
@@ -526,12 +534,83 @@ fun sidebar(
                                 ),
                             )
                         } else {
-                            sessionsViewModel.recentSessions.forEach { session ->
+                            val starredSessions = sessionsViewModel.recentSessions.filter { it.isStarred }
+                            val unstarredSessions = sessionsViewModel.recentSessions.filter { !it.isStarred }
+
+                            // Starred section (collapsible)
+                            if (starredSessions.isNotEmpty()) {
+                                NavigationDrawerItem(
+                                    icon = {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            "Starred (${starredSessions.size})",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        )
+                                    },
+                                    selected = false,
+                                    onClick = { isStarredExpanded = !isStarredExpanded },
+                                    badge = {
+                                        Icon(
+                                            imageVector = if (isStarredExpanded) {
+                                                Icons.Default.ExpandLess
+                                            } else {
+                                                Icons.Default.ExpandMore
+                                            },
+                                            contentDescription = if (isStarredExpanded) "Collapse" else "Expand",
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .padding(vertical = (2 * fontScale).dp)
+                                        .pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ComponentColors.navigationDrawerItemColors(),
+                                )
+
+                                // Starred sessions list
+                                if (isStarredExpanded) {
+                                    Column(
+                                        modifier = Modifier.padding(
+                                            start = (16 * fontScale).dp,
+                                        ),
+                                    ) {
+                                        starredSessions.forEach { session ->
+                                            sessionItemWithMenu(
+                                                session = session,
+                                                isSelected = session.id == currentSessionId,
+                                                onResumeSession = onResumeSession,
+                                                onDeleteSession = onDeleteSession,
+                                                onStarSession = onStarSession,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Divider between starred and unstarred
+                                if (unstarredSessions.isNotEmpty()) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(
+                                            vertical = (8 * fontScale).dp,
+                                            horizontal = (8 * fontScale).dp,
+                                        ),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    )
+                                }
+                            }
+
+                            // Unstarred sessions (always visible when sessions expanded)
+                            unstarredSessions.forEach { session ->
                                 sessionItemWithMenu(
                                     session = session,
                                     isSelected = session.id == currentSessionId,
                                     onResumeSession = onResumeSession,
                                     onDeleteSession = onDeleteSession,
+                                    onStarSession = onStarSession,
                                 )
                             }
 
@@ -749,6 +828,7 @@ private fun sessionItemWithMenu(
     isSelected: Boolean,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
+    onStarSession: (String, Boolean) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showExportChatSessionHistoryDialog by remember { mutableStateOf(false) }
@@ -850,6 +930,47 @@ private fun sessionItemWithMenu(
                             Icon(
                                 Icons.Default.Share,
                                 contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    )
+                }
+                TooltipArea(
+                    tooltip = {
+                        Surface(
+                            modifier = Modifier.padding(4.dp),
+                            color = MaterialTheme.colorScheme.inverseOnSurface,
+                            shape = MaterialTheme.shapes.small,
+                            shadowElevation = 4.dp,
+                        ) {
+                            Text(
+                                text = if (session.isStarred) "Remove from starred" else "Add to starred",
+                                modifier = Modifier.padding(8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    },
+                    delayMillis = 500,
+                    tooltipPlacement = TooltipPlacement.CursorPoint(
+                        offset = DpOffset(8.dp, 0.dp),
+                    ),
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (session.isStarred) "Unstar" else "Star") },
+                        onClick = {
+                            showMenu = false
+                            onStarSession(session.id, !session.isStarred)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = null,
+                                tint = if (session.isStarred) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                             )
                         },
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

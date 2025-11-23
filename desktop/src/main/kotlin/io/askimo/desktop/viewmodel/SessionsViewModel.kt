@@ -140,4 +140,25 @@ class SessionsViewModel(
             }
         }
     }
+
+    /**
+     * Update the starred status of a session and refresh the list.
+     */
+    fun updateSessionStarred(sessionId: String, isStarred: Boolean) {
+        scope.launch {
+            try {
+                val updated = withContext(Dispatchers.IO) {
+                    sessionService.updateSessionStarred(sessionId, isStarred)
+                }
+                if (updated) {
+                    // Refresh the current page
+                    refresh()
+                } else {
+                    errorMessage = "Session not found"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Error updating session: ${e.message}"
+            }
+        }
+    }
 }

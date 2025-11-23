@@ -961,4 +961,606 @@ class ChatSessionRepositoryIT {
         assertTrue(messages.isEmpty())
         assertNull(cursor)
     }
+
+    // ==================== Folder Management Tests ====================
+
+    @Test
+    fun `should create and retrieve a folder`() {
+        val folder = repository.createFolder("Work Projects")
+
+        assertNotNull(folder.id)
+        assertEquals("Work Projects", folder.name)
+        assertNull(folder.parentFolderId)
+        assertNull(folder.color)
+        assertNull(folder.icon)
+        assertEquals(0, folder.sortOrder)
+        assertNotNull(folder.createdAt)
+        assertNotNull(folder.updatedAt)
+
+        val retrieved = repository.getFolder(folder.id)
+        assertNotNull(retrieved)
+        assertEquals(folder.id, retrieved!!.id)
+        assertEquals(folder.name, retrieved.name)
+    }
+
+    @Test
+    fun `should create folder with all properties`() {
+        val folder = repository.createFolder(
+            name = "Personal",
+            parentFolderId = null,
+            color = "#FF5733",
+            icon = "📁",
+            sortOrder = 5,
+        )
+
+        assertEquals("Personal", folder.name)
+        assertEquals("#FF5733", folder.color)
+        assertEquals("📁", folder.icon)
+        assertEquals(5, folder.sortOrder)
+    }
+
+    @Test
+    fun `should create nested folders`() {
+        val parentFolder = repository.createFolder("Parent Folder")
+        val childFolder = repository.createFolder(
+            name = "Child Folder",
+            parentFolderId = parentFolder.id,
+        )
+
+        assertEquals(parentFolder.id, childFolder.parentFolderId)
+
+        val retrieved = repository.getFolder(childFolder.id)
+        assertNotNull(retrieved)
+        assertEquals(parentFolder.id, retrieved!!.parentFolderId)
+    }
+
+    @Test
+    fun `should retrieve all folders ordered by sort order and name`() {
+        repository.createFolder("Zebra", sortOrder = 10)
+        repository.createFolder("Alpha", sortOrder = 5)
+        repository.createFolder("Beta", sortOrder = 5)
+
+        val folders = repository.getAllFolders()
+
+        assertEquals(3, folders.size)
+        assertEquals("Alpha", folders[0].name) // sort_order 5, alphabetically first
+        assertEquals("Beta", folders[1].name)  // sort_order 5, alphabetically second
+        assertEquals("Zebra", folders[2].name) // sort_order 10
+    }
+
+    @Test
+    fun `should update folder name`() {
+        val folder = repository.createFolder("Old Name")
+
+        val updated = repository.updateFolder(folder.id, name = "New Name")
+
+        assertTrue(updated)
+        val retrieved = repository.getFolder(folder.id)
+        assertEquals("New Name", retrieved!!.name)
+    }
+
+    @Test
+    fun `should update folder properties`() {
+        val folder = repository.createFolder("Test Folder")
+
+        val updated = repository.updateFolder(
+            folderId = folder.id,
+            color = "#00FF00",
+            icon = "🚀",
+            sortOrder = 10,
+        )
+
+        assertTrue(updated)
+        val retrieved = repository.getFolder(folder.id)
+        assertEquals("#00FF00", retrieved!!.color)
+        assertEquals("🚀", retrieved.icon)
+        assertEquals(10, retrieved.sortOrder)
+    }
+
+    @Test
+    fun `should update folder parent`() {
+        val parent1 = repository.createFolder("Parent 1")
+        val parent2 = repository.createFolder("Parent 2")
+        val child = repository.createFolder("Child", parentFolderId = parent1.id)
+
+        val updated = repository.updateFolder(child.id, parentFolderId = parent2.id)
+
+        assertTrue(updated)
+        val retrieved = repository.getFolder(child.id)
+        assertEquals(parent2.id, retrieved!!.parentFolderId)
+    }
+
+    @Test
+    fun `should return false when updating non-existent folder`() {
+        val updated = repository.updateFolder("non-existent-id", name = "New Name")
+
+        assertEquals(false, updated)
+    }
+
+    @Test
+    fun `should return false when updating folder with no changes`() {
+        val folder = repository.createFolder("Test Folder")
+
+        val updated = repository.updateFolder(folder.id)
+
+        assertEquals(false, updated) // No changes specified
+    }
+
+    @Test
+    fun `should delete folder successfully`() {
+        val folder = repository.createFolder("Folder to Delete")
+
+        val deleted = repository.deleteFolder(folder.id)
+
+        assertTrue(deleted)
+        assertNull(repository.getFolder(folder.id))
+    }
+
+    @Test
+    fun `should return false when deleting non-existent folder`() {
+        val deleted = repository.deleteFolder("non-existent-folder-id")
+
+        assertEquals(false, deleted)
+    }
+
+    @Test
+    fun `should move sessions to root when deleting folder`() {
+        val folder = repository.createFolder("Test Folder")
+        val session = repository.createSession("Test Session", folderId = folder.id)
+
+        assertEquals(folder.id, session.folderId)
+
+        repository.deleteFolder(folder.id)
+
+        val updatedSession = repository.getSession(session.id)
+        assertNotNull(updatedSession)
+        assertNull(updatedSession!!.folderId) // Moved to root
+    }
+
+    @Test
+    fun `should move child folders to root when deleting parent folder`() {
+        val parent = repository.createFolder("Parent")
+        val child = repository.createFolder("Child", parentFolderId = parent.id)
+
+        assertEquals(parent.id, child.parentFolderId)
+
+        repository.deleteFolder(parent.id)
+
+        val updatedChild = repository.getFolder(child.id)
+        assertNotNull(updatedChild)
+        assertNull(updatedChild!!.parentFolderId) // Moved to root
+    }
+
+    @Test
+    fun `should return null for non-existent folder`() {
+        val result = repository.getFolder("non-existent-folder-id")
+
+        assertNull(result)
+    }
+
+    // ==================== Session with Folders Tests ====================
+
+    @Test
+    fun `should create session with folder`() {
+        val folder = repository.createFolder("Test Folder")
+        val session = repository.createSession("Test Session", folderId = folder.id)
+
+        assertEquals(folder.id, session.folderId)
+
+        val retrieved = repository.getSession(session.id)
+        assertEquals(folder.id, retrieved!!.folderId)
+    }
+
+    @Test
+    fun `should create session without folder (root level)`() {
+        val session = repository.createSession("Root Session")
+
+        assertNull(session.folderId)
+    }
+
+    @Test
+    fun `should move session to folder`() {
+        val session = repository.createSession("Test Session")
+        val folder = repository.createFolder("Test Folder")
+
+        assertNull(session.folderId)
+
+        val updated = repository.updateSessionFolder(session.id, folder.id)
+
+        assertTrue(updated)
+        val retrieved = repository.getSession(session.id)
+        assertEquals(folder.id, retrieved!!.folderId)
+    }
+
+    @Test
+    fun `should move session to root (null folder)`() {
+        val folder = repository.createFolder("Test Folder")
+        val session = repository.createSession("Test Session", folderId = folder.id)
+
+        assertEquals(folder.id, session.folderId)
+
+        val updated = repository.updateSessionFolder(session.id, null)
+
+        assertTrue(updated)
+        val retrieved = repository.getSession(session.id)
+        assertNull(retrieved!!.folderId)
+    }
+
+    @Test
+    fun `should move session between folders`() {
+        val folder1 = repository.createFolder("Folder 1")
+        val folder2 = repository.createFolder("Folder 2")
+        val session = repository.createSession("Test Session", folderId = folder1.id)
+
+        assertEquals(folder1.id, session.folderId)
+
+        repository.updateSessionFolder(session.id, folder2.id)
+
+        val retrieved = repository.getSession(session.id)
+        assertEquals(folder2.id, retrieved!!.folderId)
+    }
+
+    @Test
+    fun `should return false when moving non-existent session to folder`() {
+        val folder = repository.createFolder("Test Folder")
+        val updated = repository.updateSessionFolder("non-existent-id", folder.id)
+
+        assertEquals(false, updated)
+    }
+
+    @Test
+    fun `should get sessions by folder`() {
+        val folder1 = repository.createFolder("Folder 1")
+        val folder2 = repository.createFolder("Folder 2")
+
+        repository.createSession("Session in Folder 1 - A", folderId = folder1.id)
+        repository.createSession("Session in Folder 1 - B", folderId = folder1.id)
+        repository.createSession("Session in Folder 2", folderId = folder2.id)
+        repository.createSession("Root Session")
+
+        val folder1Sessions = repository.getSessionsByFolder(folder1.id)
+        assertEquals(2, folder1Sessions.size)
+        assertTrue(folder1Sessions.all { it.folderId == folder1.id })
+
+        val folder2Sessions = repository.getSessionsByFolder(folder2.id)
+        assertEquals(1, folder2Sessions.size)
+        assertEquals(folder2.id, folder2Sessions[0].folderId)
+    }
+
+    @Test
+    fun `should get root sessions (null folder)`() {
+        val folder = repository.createFolder("Test Folder")
+        repository.createSession("Root Session 1")
+        repository.createSession("Root Session 2")
+        repository.createSession("Folder Session", folderId = folder.id)
+
+        val rootSessions = repository.getSessionsByFolder(null)
+
+        assertEquals(2, rootSessions.size)
+        assertTrue(rootSessions.all { it.folderId == null })
+    }
+
+    @Test
+    fun `should return empty list for folder with no sessions`() {
+        val folder = repository.createFolder("Empty Folder")
+
+        val sessions = repository.getSessionsByFolder(folder.id)
+
+        assertTrue(sessions.isEmpty())
+    }
+
+    // ==================== Starred Sessions Tests ====================
+
+    @Test
+    fun `should create session with starred flag`() {
+        val session = repository.createSession("Starred Session", isStarred = true)
+
+        assertTrue(session.isStarred)
+
+        val retrieved = repository.getSession(session.id)
+        assertTrue(retrieved!!.isStarred)
+    }
+
+    @Test
+    fun `should create session without starred flag by default`() {
+        val session = repository.createSession("Normal Session")
+
+        assertEquals(false, session.isStarred)
+    }
+
+    @Test
+    fun `should star a session`() {
+        val session = repository.createSession("Test Session")
+
+        assertEquals(false, session.isStarred)
+
+        val updated = repository.updateSessionStarred(session.id, true)
+
+        assertTrue(updated)
+        val retrieved = repository.getSession(session.id)
+        assertTrue(retrieved!!.isStarred)
+    }
+
+    @Test
+    fun `should unstar a session`() {
+        val session = repository.createSession("Test Session", isStarred = true)
+
+        assertTrue(session.isStarred)
+
+        val updated = repository.updateSessionStarred(session.id, false)
+
+        assertTrue(updated)
+        val retrieved = repository.getSession(session.id)
+        assertEquals(false, retrieved!!.isStarred)
+    }
+
+    @Test
+    fun `should return false when starring non-existent session`() {
+        val updated = repository.updateSessionStarred("non-existent-id", true)
+
+        assertEquals(false, updated)
+    }
+
+    @Test
+    fun `should get all starred sessions`() {
+        repository.createSession("Starred 1", isStarred = true)
+        repository.createSession("Normal 1", isStarred = false)
+        repository.createSession("Starred 2", isStarred = true)
+        repository.createSession("Normal 2")
+
+        val starredSessions = repository.getStarredSessions()
+
+        assertEquals(2, starredSessions.size)
+        assertTrue(starredSessions.all { it.isStarred })
+    }
+
+    @Test
+    fun `should return empty list when no starred sessions`() {
+        repository.createSession("Normal Session 1")
+        repository.createSession("Normal Session 2")
+
+        val starredSessions = repository.getStarredSessions()
+
+        assertTrue(starredSessions.isEmpty())
+    }
+
+    @Test
+    fun `should get starred sessions ordered by sort order and updated time`() {
+        val session1 = repository.createSession("Starred 1", isStarred = true, sortOrder = 10)
+        Thread.sleep(10)
+        val session2 = repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
+        Thread.sleep(10)
+        val session3 = repository.createSession("Starred 3", isStarred = true, sortOrder = 5)
+
+        val starredSessions = repository.getStarredSessions()
+
+        assertEquals(3, starredSessions.size)
+        // First two should have sortOrder 5 (could be in either order based on timestamp precision)
+        assertTrue(starredSessions[0].sortOrder == 5)
+        assertTrue(starredSessions[1].sortOrder == 5)
+        // Last one should have sortOrder 10
+        assertEquals(session1.id, starredSessions[2].id)
+        assertEquals(10, starredSessions[2].sortOrder)
+    }
+
+    // ==================== Sort Order Tests ====================
+
+    @Test
+    fun `should create session with sort order`() {
+        val session = repository.createSession("Test Session", sortOrder = 42)
+
+        assertEquals(42, session.sortOrder)
+
+        val retrieved = repository.getSession(session.id)
+        assertEquals(42, retrieved!!.sortOrder)
+    }
+
+    @Test
+    fun `should create session with default sort order`() {
+        val session = repository.createSession("Test Session")
+
+        assertEquals(0, session.sortOrder)
+    }
+
+    @Test
+    fun `should update session sort order`() {
+        val session = repository.createSession("Test Session", sortOrder = 1)
+
+        assertEquals(1, session.sortOrder)
+
+        val updated = repository.updateSessionSortOrder(session.id, 10)
+
+        assertTrue(updated)
+        val retrieved = repository.getSession(session.id)
+        assertEquals(10, retrieved!!.sortOrder)
+    }
+
+    @Test
+    fun `should return false when updating sort order of non-existent session`() {
+        val updated = repository.updateSessionSortOrder("non-existent-id", 5)
+
+        assertEquals(false, updated)
+    }
+
+    @Test
+    fun `should order sessions by starred, sort order, and updated time`() {
+        // Create sessions with different combinations
+        val normal1 = repository.createSession("Normal 1", isStarred = false, sortOrder = 5)
+        Thread.sleep(10)
+        val normal2 = repository.createSession("Normal 2", isStarred = false, sortOrder = 10)
+        Thread.sleep(10)
+        val starred1 = repository.createSession("Starred 1", isStarred = true, sortOrder = 10)
+        Thread.sleep(10)
+        val starred2 = repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
+
+        val allSessions = repository.getAllSessions()
+
+        assertEquals(4, allSessions.size)
+
+        // First two should be starred sessions
+        assertTrue(allSessions[0].isStarred)
+        assertTrue(allSessions[1].isStarred)
+
+        // Last two should be normal sessions
+        assertEquals(false, allSessions[2].isStarred)
+        assertEquals(false, allSessions[3].isStarred)
+
+        // Within starred group, session with sortOrder 5 should come before sortOrder 10
+        val starredSessions = allSessions.filter { it.isStarred }
+        assertTrue(starredSessions[0].sortOrder <= starredSessions[1].sortOrder)
+
+        // Verify specific sessions exist
+        assertTrue(allSessions.any { it.id == starred1.id && it.isStarred })
+        assertTrue(allSessions.any { it.id == starred2.id && it.isStarred })
+        assertTrue(allSessions.any { it.id == normal1.id && !it.isStarred })
+        assertTrue(allSessions.any { it.id == normal2.id && !it.isStarred })
+    }
+
+    // ==================== Combined Features Tests ====================
+
+    @Test
+    fun `should handle session with folder and starred`() {
+        val folder = repository.createFolder("Important Folder")
+        val session = repository.createSession(
+            "Important Session",
+            folderId = folder.id,
+            isStarred = true,
+            sortOrder = 5,
+        )
+
+        assertEquals(folder.id, session.folderId)
+        assertTrue(session.isStarred)
+        assertEquals(5, session.sortOrder)
+
+        val retrieved = repository.getSession(session.id)
+        assertNotNull(retrieved)
+        assertEquals(folder.id, retrieved!!.folderId)
+        assertTrue(retrieved.isStarred)
+        assertEquals(5, retrieved.sortOrder)
+    }
+
+    @Test
+    fun `should get starred sessions from specific folder`() {
+        val folder = repository.createFolder("Test Folder")
+        repository.createSession("Starred in Folder", folderId = folder.id, isStarred = true)
+        repository.createSession("Normal in Folder", folderId = folder.id, isStarred = false)
+        repository.createSession("Starred in Root", isStarred = true)
+
+        val folderSessions = repository.getSessionsByFolder(folder.id)
+        val starredInFolder = folderSessions.filter { it.isStarred }
+
+        assertEquals(1, starredInFolder.size)
+        assertEquals(folder.id, starredInFolder[0].folderId)
+        assertTrue(starredInFolder[0].isStarred)
+    }
+
+    @Test
+    fun `should maintain starred flag when moving between folders`() {
+        val folder1 = repository.createFolder("Folder 1")
+        val folder2 = repository.createFolder("Folder 2")
+        val session = repository.createSession("Starred Session", folderId = folder1.id, isStarred = true)
+
+        assertTrue(session.isStarred)
+
+        repository.updateSessionFolder(session.id, folder2.id)
+
+        val retrieved = repository.getSession(session.id)
+        assertEquals(folder2.id, retrieved!!.folderId)
+        assertTrue(retrieved.isStarred) // Still starred after move
+    }
+
+    @Test
+    fun `should delete folder without affecting starred status of sessions`() {
+        val folder = repository.createFolder("Test Folder")
+        val session = repository.createSession("Starred Session", folderId = folder.id, isStarred = true)
+
+        repository.deleteFolder(folder.id)
+
+        val retrieved = repository.getSession(session.id)
+        assertNotNull(retrieved)
+        assertNull(retrieved!!.folderId) // Moved to root
+        assertTrue(retrieved.isStarred) // Still starred
+    }
+
+    @Test
+    fun `should handle complex folder hierarchy with starred sessions`() {
+        val parent = repository.createFolder("Parent", color = "#FF0000", icon = "📂")
+        val child1 = repository.createFolder("Child 1", parentFolderId = parent.id, sortOrder = 1)
+        val child2 = repository.createFolder("Child 2", parentFolderId = parent.id, sortOrder = 2)
+
+        repository.createSession("Parent Session", folderId = parent.id, isStarred = true)
+        repository.createSession("Child 1 Session A", folderId = child1.id, isStarred = false)
+        repository.createSession("Child 1 Session B", folderId = child1.id, isStarred = true)
+        repository.createSession("Child 2 Session", folderId = child2.id, isStarred = false)
+
+        // Verify folder structure
+        val allFolders = repository.getAllFolders()
+        assertEquals(3, allFolders.size)
+
+        // Verify sessions in each folder
+        assertEquals(1, repository.getSessionsByFolder(parent.id).size)
+        assertEquals(2, repository.getSessionsByFolder(child1.id).size)
+        assertEquals(1, repository.getSessionsByFolder(child2.id).size)
+
+        // Verify starred sessions across all folders
+        val starredSessions = repository.getStarredSessions()
+        assertEquals(2, starredSessions.size)
+    }
+
+    @Test
+    fun `should update session updated_at when changing folder or starred status`() {
+        val folder = repository.createFolder("Test Folder")
+        val session = repository.createSession("Test Session")
+        val originalUpdatedAt = session.updatedAt
+
+        Thread.sleep(10)
+
+        repository.updateSessionFolder(session.id, folder.id)
+
+        val afterFolderMove = repository.getSession(session.id)
+        assertNotNull(afterFolderMove)
+        assertTrue(afterFolderMove!!.updatedAt.isAfter(originalUpdatedAt))
+
+        Thread.sleep(10)
+
+        repository.updateSessionStarred(session.id, true)
+
+        val afterStarred = repository.getSession(session.id)
+        assertNotNull(afterStarred)
+        assertTrue(afterStarred!!.updatedAt.isAfter(afterFolderMove.updatedAt))
+    }
+
+    @Test
+    fun `should handle edge case with special characters in folder names`() {
+        val folder = repository.createFolder("Special !@#$%^&*() Folder 🚀")
+
+        assertEquals("Special !@#$%^&*() Folder 🚀", folder.name)
+
+        val retrieved = repository.getFolder(folder.id)
+        assertEquals("Special !@#$%^&*() Folder 🚀", retrieved!!.name)
+    }
+
+    @Test
+    fun `should handle session with directive and folder together`() {
+        val folder = repository.createFolder("Work")
+        val session = repository.createSession(
+            title = "Work Session",
+            directiveId = "test-directive-id",
+            folderId = folder.id,
+            isStarred = true,
+            sortOrder = 3,
+        )
+
+        assertEquals("test-directive-id", session.directiveId)
+        assertEquals(folder.id, session.folderId)
+        assertTrue(session.isStarred)
+        assertEquals(3, session.sortOrder)
+
+        val retrieved = repository.getSession(session.id)
+        assertNotNull(retrieved)
+        assertEquals("test-directive-id", retrieved!!.directiveId)
+        assertEquals(folder.id, retrieved.folderId)
+        assertTrue(retrieved.isStarred)
+        assertEquals(3, retrieved.sortOrder)
+    }
 }

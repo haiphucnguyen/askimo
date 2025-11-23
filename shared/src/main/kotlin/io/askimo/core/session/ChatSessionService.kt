@@ -92,6 +92,15 @@ class ChatSessionService(
     fun deleteSession(sessionId: String): Boolean = repository.deleteSession(sessionId)
 
     /**
+     * Update the starred status of a session.
+     *
+     * @param sessionId The ID of the session to update
+     * @param isStarred true to star the session, false to unstar
+     * @return true if the session was updated, false if it didn't exist
+     */
+    fun updateSessionStarred(sessionId: String, isStarred: Boolean): Boolean = repository.updateSessionStarred(sessionId, isStarred)
+
+    /**
      * Resume a chat session by ID and return the result with messages.
      *
      * @param session The current Session instance to resume into
