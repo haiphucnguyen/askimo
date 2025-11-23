@@ -9,5 +9,4 @@ enum class View {
     NEW_CHAT,
     SESSIONS,
     SETTINGS,
-    ABOUT,
 }

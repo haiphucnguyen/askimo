@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowLeft
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.MoreVert
@@ -67,6 +66,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -82,7 +82,7 @@ import io.askimo.desktop.ui.theme.ComponentColors
 import io.askimo.desktop.ui.theme.createCustomTypography
 import io.askimo.desktop.ui.theme.getDarkColorScheme
 import io.askimo.desktop.ui.theme.getLightColorScheme
-import io.askimo.desktop.ui.views.aboutView
+import io.askimo.desktop.ui.views.aboutDialog
 import io.askimo.desktop.ui.views.chatView
 import io.askimo.desktop.ui.views.sessionsView
 import io.askimo.desktop.ui.views.settingsView
@@ -142,7 +142,29 @@ fun main() = application {
         title = "Askimo",
         state = rememberWindowState(width = 800.dp, height = 600.dp),
     ) {
+        var showAboutDialog by remember { mutableStateOf(false) }
+
+        MenuBar {
+            Menu("Help") {
+                Item(
+                    "Documentation",
+                    onClick = {
+                        try {
+                            java.awt.Desktop.getDesktop().browse(java.net.URI("https://askimo.chat/docs/"))
+                        } catch (e: Exception) {
+                            // Silently fail if browser cannot be opened
+                        }
+                    },
+                )
+                Item("About", onClick = { showAboutDialog = true })
+            }
+        }
+
         app()
+
+        if (showAboutDialog) {
+            aboutDialog(onDismiss = { showAboutDialog = false })
+        }
     }
 }
 
@@ -281,7 +303,6 @@ fun app() {
                     sessionsViewModel.updateSessionStarred(sessionId, isStarred)
                 },
                 onNavigateToSettings = { currentView = View.SETTINGS },
-                onNavigateToAbout = { currentView = View.ABOUT },
             )
 
             // Draggable divider
@@ -394,7 +415,6 @@ fun sidebar(
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit,
 ) {
     if (isExpanded) {
         // Expanded sidebar with full text
@@ -450,10 +470,12 @@ fun sidebar(
             }
             HorizontalDivider()
 
+            // Scrollable content area
             Column(
                 modifier = Modifier
-                    .padding(vertical = (8 * fontScale).dp)
-                    .verticalScroll(rememberScrollState()),
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = (8 * fontScale).dp),
             ) {
                 // New Chat
                 val isMac = remember { System.getProperty("os.name").contains("Mac", ignoreCase = true) }
@@ -488,6 +510,11 @@ fun sidebar(
                                 Icons.Default.ExpandMore
                             },
                             contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
+                            tint = if (currentView == View.SESSIONS) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         )
                     },
                     modifier = Modifier
@@ -549,6 +576,7 @@ fun sidebar(
                                                 Icons.Default.ExpandMore
                                             },
                                             contentDescription = if (isStarredExpanded) "Collapse" else "Expand",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     },
                                     modifier = Modifier
@@ -599,8 +627,8 @@ fun sidebar(
                                 )
                             }
 
-                            // Show More button if there are more than 10 sessions
-                            if (sessionsViewModel.totalSessionCount > 10) {
+                            // Show More button if there are more sessions than the max displayed
+                            if (sessionsViewModel.totalSessionCount > SessionsViewModel.MAX_SIDEBAR_SESSIONS) {
                                 NavigationDrawerItem(
                                     icon = null,
                                     label = {
@@ -622,31 +650,20 @@ fun sidebar(
                         }
                     }
                 }
-
-                // Settings
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Settings", style = MaterialTheme.typography.labelLarge) },
-                    selected = currentView == View.SETTINGS,
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier
-                        .padding(horizontal = (12 * fontScale).dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationDrawerItemColors(),
-                )
-
-                // About
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    label = { Text("About", style = MaterialTheme.typography.labelLarge) },
-                    selected = currentView == View.ABOUT,
-                    onClick = onNavigateToAbout,
-                    modifier = Modifier
-                        .padding(horizontal = (12 * fontScale).dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationDrawerItemColors(),
-                )
             }
+
+            // Settings at bottom
+            HorizontalDivider()
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                label = { Text("Settings", style = MaterialTheme.typography.labelLarge) },
+                selected = currentView == View.SETTINGS,
+                onClick = onNavigateToSettings,
+                modifier = Modifier
+                    .padding(horizontal = (12 * fontScale).dp, vertical = (8 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = ComponentColors.navigationDrawerItemColors(),
+            )
         }
     } else {
         // Collapsed sidebar with icons only
@@ -684,6 +701,7 @@ fun sidebar(
 
             Column(
                 modifier = Modifier
+                    .weight(1f)
                     .padding(vertical = (8 * fontScale).dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -707,27 +725,20 @@ fun sidebar(
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.navigationRailItemColors(),
                 )
-
-                // Settings
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = null,
-                    selected = currentView == View.SETTINGS,
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
-                )
-
-                // About
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Info, contentDescription = "About") },
-                    label = null,
-                    selected = currentView == View.ABOUT,
-                    onClick = onNavigateToAbout,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
-                )
             }
+
+            // Settings at bottom
+            HorizontalDivider()
+            NavigationRailItem(
+                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                label = null,
+                selected = currentView == View.SETTINGS,
+                onClick = onNavigateToSettings,
+                modifier = Modifier
+                    .padding(vertical = (8 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = ComponentColors.navigationRailItemColors(),
+            )
         }
     }
 }
@@ -799,9 +810,6 @@ fun mainContent(
                 viewModel = settingsViewModel,
                 modifier = Modifier.fillMaxSize(),
             )
-            View.ABOUT -> aboutView(
-                modifier = Modifier.fillMaxSize(),
-            )
         }
     }
 }
@@ -818,12 +826,10 @@ private fun sessionItemWithMenu(
     var showMenu by remember { mutableStateOf(false) }
     var showExportChatSessionHistoryDialog by remember { mutableStateOf(false) }
 
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         themedTooltip(
             text = session.title,
@@ -831,37 +837,50 @@ private fun sessionItemWithMenu(
             NavigationDrawerItem(
                 icon = null,
                 label = {
-                    Text(
-                        text = session.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = session.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+
+                        Box(
+                            modifier = Modifier.padding(start = 4.dp),
+                        ) {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+                    }
                 },
                 selected = isSelected,
                 onClick = { onResumeSession(session.id) },
                 modifier = Modifier
-                    .weight(1f)
+                    .fillMaxWidth()
                     .pointerHoverIcon(PointerIcon.Hand),
                 colors = ComponentColors.navigationDrawerItemColors(),
             )
         }
 
-        Box {
-            IconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier
-                    .padding(0.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-            ) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(0.dp),
-                )
-            }
-
+        Box(
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
+        ) {
             ComponentColors.themedDropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },

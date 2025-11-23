@@ -21,6 +21,10 @@ class SessionsViewModel(
     private val scope: CoroutineScope,
     private val sessionService: ChatSessionService = ChatSessionService(),
 ) {
+    companion object {
+        const val MAX_SIDEBAR_SESSIONS = 50
+    }
+
     var pagedSessions by mutableStateOf<PagedSessions?>(null)
         private set
 
@@ -44,13 +48,13 @@ class SessionsViewModel(
     }
 
     /**
-     * Load recent sessions for sidebar display (max 10).
+     * Load recent sessions for sidebar display (max defined by MAX_SIDEBAR_SESSIONS).
      */
     fun loadRecentSessions() {
         scope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    sessionService.getAllSessionsSorted().take(10)
+                    sessionService.getAllSessionsSorted().take(MAX_SIDEBAR_SESSIONS)
                 }
                 recentSessions = result
                 totalSessionCount = withContext(Dispatchers.IO) {

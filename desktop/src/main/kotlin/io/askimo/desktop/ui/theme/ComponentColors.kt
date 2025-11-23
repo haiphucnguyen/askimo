@@ -81,9 +81,11 @@ object ComponentColors {
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
         selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        selectedBadgeColor = MaterialTheme.colorScheme.onPrimaryContainer,
         unselectedContainerColor = Color.Transparent,
         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unselectedBadgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
     /**
