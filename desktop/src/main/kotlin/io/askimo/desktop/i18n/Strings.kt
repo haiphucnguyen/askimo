@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.text.MessageFormat
 import java.util.Locale
 import java.util.Properties
 
@@ -165,7 +166,10 @@ object LocalizationManager {
             message
         } else {
             try {
-                String.format(currentLocale, message, *args)
+                // Convert all arguments to strings to avoid MessageFormat's number formatting
+                // (which adds thousand separators like "2,025" instead of "2025")
+                val stringArgs = args.map { it.toString() }.toTypedArray()
+                MessageFormat(message, currentLocale).format(stringArgs)
             } catch (e: Exception) {
                 message
             }
