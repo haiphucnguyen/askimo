@@ -69,7 +69,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -146,28 +145,20 @@ fun main() = application {
         ).toComposeImageBitmap(),
     )
 
+    var showAboutDialog by remember { mutableStateOf(false) }
+
     Window(
         icon = icon,
         onCloseRequest = ::exitApplication,
         title = "Askimo",
         state = rememberWindowState(width = 800.dp, height = 600.dp),
     ) {
-        var showAboutDialog by remember { mutableStateOf(false) }
-
-        MenuBar {
-            Menu("Help") {
-                Item(
-                    "Documentation",
-                    onClick = {
-                        try {
-                            java.awt.Desktop.getDesktop().browse(java.net.URI("https://askimo.chat/docs/"))
-                        } catch (e: Exception) {
-                            // Silently fail if browser cannot be opened
-                        }
-                    },
-                )
-                Item("About", onClick = { showAboutDialog = true })
-            }
+        // Setup native menu bar for all OS
+        LaunchedEffect(Unit) {
+            NativeMenuBar.setup(
+                frameWindowScope = this@Window,
+                onShowAbout = { showAboutDialog = true },
+            )
         }
 
         app()
