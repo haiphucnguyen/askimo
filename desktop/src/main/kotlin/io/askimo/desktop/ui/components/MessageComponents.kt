@@ -68,7 +68,11 @@ fun messageList(
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
-    var shouldAutoScroll by remember { mutableStateOf(true) }
+
+    // Key shouldAutoScroll to the first message ID (if exists) or message count
+    // This ensures it resets to true when switching to a different session
+    val sessionKey = messages.firstOrNull()?.id ?: messages.size
+    var shouldAutoScroll by remember(sessionKey) { mutableStateOf(true) }
 
     // Auto-scroll to bottom when messages change (including streaming updates) or when thinking
     LaunchedEffect(messages, isThinking) {

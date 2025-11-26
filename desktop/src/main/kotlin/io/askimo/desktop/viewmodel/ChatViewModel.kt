@@ -15,6 +15,7 @@ import io.askimo.core.session.getConfigInfo
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.service.ChatService
+import io.askimo.desktop.util.ErrorHandler
 import io.askimo.desktop.util.constructMessageWithAttachments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,6 +93,10 @@ class ChatViewModel(
     private var thinkingJob: Job? = null
     private var animationJob: Job? = null
 
+    // Track active subscription jobs per threadId (not chatId) to ensure proper cleanup
+    // Key = threadId, Value = subscription Job
+    private val activeSubscriptions = mutableMapOf<String, Job>()
+
     // Pagination state
     private var currentCursor: java.time.LocalDateTime? = null
     private val _currentSessionId = MutableStateFlow<String?>(null)
@@ -119,6 +124,114 @@ class ChatViewModel(
     fun getSpinnerFrame(): Char = spinnerFrames[thinkingFrameIndex % spinnerFrames.size]
 
     /**
+     * Subscribe to a SPECIFIC thread by threadId.
+     * This ensures we only get chunks from THIS specific question, not old ones.
+     */
+    private fun subscribeToThread(threadId: String, chatId: String) {
+        // Cancel any existing subscription for this threadId to prevent duplicates
+        activeSubscriptions[threadId]?.cancel()
+        activeSubscriptions.remove(threadId)
+
+        val streamingService = chatService.getStreamingService()
+        val activeThread = streamingService.getActiveThread(threadId)
+
+        if (activeThread != null) {
+            // Check if chunks have been received yet
+            val hasChunks = activeThread.chunks.value.isNotEmpty()
+
+            if (!hasChunks) {
+                // Still in "thinking" phase - show thinking indicator
+                isThinking = true
+                startThinkingTimer()
+            } else {
+                // Chunks already available - display them immediately
+                val streamingContent = activeThread.chunks.value.joinToString("")
+                val lastMessage = messages.lastOrNull()
+                if (lastMessage != null && !lastMessage.isUser) {
+                    messages = messages.dropLast(1) + ChatMessage(
+                        content = streamingContent,
+                        isUser = false,
+                    )
+                } else {
+                    messages = messages + ChatMessage(
+                        content = streamingContent,
+                        isUser = false,
+                    )
+                }
+            }
+
+            // Create a single job for this SPECIFIC threadId's subscription
+            val subscriptionJob = scope.launch {
+                var firstTokenReceived = hasChunks
+
+                try {
+                    activeThread.chunks.collect { chunks ->
+                        // STRICT CHECK: Only update UI if CURRENTLY viewing THIS EXACT chatId
+                        if (_currentSessionId.value == chatId && chunks.isNotEmpty()) {
+                            // First token received - stop thinking indicator
+                            if (!firstTokenReceived) {
+                                firstTokenReceived = true
+                                isThinking = false
+                                stopThinkingTimer()
+                            }
+
+                            val streamingContent = chunks.joinToString("")
+                            currentResponse = streamingContent
+
+                            // Update the AI message
+                            val lastMessage = messages.lastOrNull()
+                            if (lastMessage != null && !lastMessage.isUser) {
+                                // Update existing AI message
+                                messages = messages.dropLast(1) + ChatMessage(
+                                    content = streamingContent,
+                                    isUser = false,
+                                )
+                            } else {
+                                // Add new AI message
+                                messages = messages + ChatMessage(
+                                    content = streamingContent,
+                                    isUser = false,
+                                )
+                            }
+
+                            isLoading = false
+
+                            // Notify that message exchange is complete (for refreshing sidebar)
+                            onMessageComplete?.invoke()
+                        }
+                    }
+                } finally {
+                    // Clean up this subscription when done (by threadId)
+                    activeSubscriptions.remove(threadId)
+                }
+            }
+
+            // Track this subscription by threadId (not chatId!)
+            activeSubscriptions[threadId] = subscriptionJob
+
+            // Monitor completion in a separate job
+            scope.launch {
+                try {
+                    activeThread.isComplete.collect { isComplete ->
+                        // Only update if still on this chat
+                        if (_currentSessionId.value == chatId && isComplete) {
+                            isLoading = false
+                            isThinking = false
+                            stopThinkingTimer()
+
+                            // Cancel and clean up subscription when thread completes (by threadId)
+                            activeSubscriptions[threadId]?.cancel()
+                            activeSubscriptions.remove(threadId)
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    // Expected when subscription is cancelled
+                }
+            }
+        }
+    }
+
+    /**
      * Send a message to the AI.
      *
      * @param message The user's message
@@ -126,6 +239,16 @@ class ChatViewModel(
      */
     fun sendMessage(message: String, attachments: List<FileAttachment> = emptyList()) {
         if (message.isBlank() || isLoading) return
+
+        // Get or create session ID
+        val sessionId = _currentSessionId.value ?: run {
+            // New chat - will get session ID after first message
+            chatService.getSession().currentChatSession?.id ?: "temp-" + System.currentTimeMillis()
+        }
+
+        // Cancel any previous job to prevent old subscriptions from interfering
+        currentJob?.cancel()
+        currentJob = null
 
         // Clear any previous error
         errorMessage = null
@@ -157,60 +280,51 @@ class ChatViewModel(
         val fullMessage = constructMessageWithAttachments(message, attachments)
 
         currentJob = scope.launch {
-            var firstTokenReceived = false
             try {
-                chatService.sendMessage(fullMessage)
-                    .catch { exception ->
-                        errorMessage = "Error: ${exception.message}"
-                        isLoading = false
-                        isThinking = false
-                        stopThinkingTimer()
-                    }
-                    .collect { chatMessage ->
-                        if (!chatMessage.isUser) {
-                            // First token received - stop thinking indicator
-                            if (!firstTokenReceived) {
-                                firstTokenReceived = true
-                                isThinking = false
-                                stopThinkingTimer()
-                            }
+                // Start streaming in background - creates new thread for this Q&A
+                val threadId = chatService.sendMessage(fullMessage, sessionId)
 
-                            // This is the AI response
-                            currentResponse = chatMessage.content
+                if (threadId == null) {
+                    // Either max concurrent streams reached OR chat already has active question
+                    errorMessage = "Please wait for the current response to complete before asking another question."
+                    isLoading = false
+                    isThinking = false
+                    stopThinkingTimer()
+                    return@launch
+                }
 
-                            // Add or update the AI message
-                            val lastMessage = messages.lastOrNull()
-                            if (lastMessage != null && !lastMessage.isUser) {
-                                // Update existing AI message
-                                messages = messages.dropLast(1) + chatMessage
-                            } else {
-                                // Add new AI message
-                                messages = messages + chatMessage
-                            }
+                // Update session ID if this was a new chat
+                if (_currentSessionId.value == null) {
+                    val currentSession = chatService.getSession().currentChatSession
+                    _currentSessionId.value = currentSession?.id ?: sessionId
+                }
 
-                            isLoading = false
+                // Subscribe to this SPECIFIC thread (not just chatId)
+                subscribeToThread(threadId, sessionId)
 
-                            // Notify that message exchange is complete (for refreshing sidebar)
-                            onMessageComplete?.invoke()
-                        }
-                    }
             } catch (e: CancellationException) {
-                // Handle cancellation gracefully
-                isLoading = false
-                isThinking = false
-                stopThinkingTimer()
-                errorMessage = "Response cancelled"
+                // Handle cancellation gracefully - only update if still on same session
+                if (_currentSessionId.value == sessionId) {
+                    isLoading = false
+                    isThinking = false
+                    stopThinkingTimer()
+                    errorMessage = ErrorHandler.getCancellationMessage()
+                }
             } catch (e: Exception) {
-                errorMessage = "Error: ${e.message}"
-                isLoading = false
-                isThinking = false
-                stopThinkingTimer()
+                // Only update if still on same session
+                if (_currentSessionId.value == sessionId) {
+                    errorMessage = ErrorHandler.getUserFriendlyError(e, "sending message")
+                    isLoading = false
+                    isThinking = false
+                    stopThinkingTimer()
+                }
             }
         }
     }
 
     /**
      * Cancel the current AI response.
+     * Stops the stream and discards all buffered chunks (does not save to database).
      */
     fun cancelResponse() {
         currentJob?.cancel()
@@ -218,6 +332,17 @@ class ChatViewModel(
         isLoading = false
         isThinking = false
         stopThinkingTimer()
+
+        // Stop the streaming service and cancel ALL subscriptions for current chat
+        val chatId = _currentSessionId.value
+        if (chatId != null) {
+            // Cancel ALL subscriptions (in case there are multiple)
+            activeSubscriptions.values.forEach { it.cancel() }
+            activeSubscriptions.clear()
+
+            // Stop the streaming thread
+            chatService.getStreamingService().stopStream(chatId)
+        }
     }
 
     private fun startThinkingTimer() {
@@ -250,6 +375,7 @@ class ChatViewModel(
 
     /**
      * Resume a chat session by ID and load the most recent messages.
+     * If the session is actively streaming, continue displaying the stream.
      *
      * @param sessionId The ID of the session to resume
      * @return true if successful, false otherwise
@@ -257,6 +383,11 @@ class ChatViewModel(
     fun resumeSession(sessionId: String): Boolean {
         scope.launch {
             try {
+                // IMPORTANT: Cancel ALL old subscriptions before switching
+                // Clear all subscriptions to prevent any old threads from updating UI
+                activeSubscriptions.values.forEach { it.cancel() }
+                activeSubscriptions.clear()
+
                 isLoading = true
                 errorMessage = null
 
@@ -284,18 +415,32 @@ class ChatViewModel(
                     // Store pagination state
                     currentCursor = result.cursor
                     hasMoreMessages = result.hasMore
+
+                    // Update current session ID AFTER cancelling old subscriptions
                     _currentSessionId.value = sessionId
 
                     // Load directive from the resumed session
                     val session = chatService.getSession()
                     selectedDirective = session.currentChatSession?.directiveId
+
+                    // Reset thinking state
+                    isThinking = false
+                    stopThinkingTimer()
+
+                    // Subscribe to active thread if this chat is streaming
+                    val streamingService = chatService.getStreamingService()
+                    val activeThread = streamingService.getActiveThreadForChat(sessionId)
+                    if (activeThread != null) {
+                        // This chat has an active thread - subscribe to it
+                        subscribeToThread(activeThread.threadId, sessionId)
+                    }
                 } else {
                     errorMessage = result.errorMessage
                 }
 
                 isLoading = false
             } catch (e: Exception) {
-                errorMessage = "Error resuming session: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "resuming session", "Failed to load session. Please try again.")
                 isLoading = false
             }
         }
@@ -341,7 +486,7 @@ class ChatViewModel(
 
                 isLoadingPrevious = false
             } catch (e: Exception) {
-                errorMessage = "Error loading previous messages: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "loading previous messages", "Failed to load previous messages. Please try again.")
                 isLoadingPrevious = false
             }
         }
@@ -400,7 +545,7 @@ class ChatViewModel(
 
                 isSearching = false
             } catch (e: Exception) {
-                errorMessage = "Error searching messages: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "searching messages", "Search failed. Please try again.")
                 isSearching = false
             }
         }
@@ -535,7 +680,7 @@ class ChatViewModel(
 
                 isLoading = false
             } catch (e: Exception) {
-                errorMessage = "Error jumping to message: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "jumping to message", "Failed to navigate to message. Please try again.")
                 isLoading = false
             }
         }

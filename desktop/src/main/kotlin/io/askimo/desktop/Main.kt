@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -180,6 +181,9 @@ fun app() {
     var showQuitDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // Store input text per session ID to prevent cross-contamination
+    val sessionInputTexts = remember { mutableStateMapOf<String, TextFieldValue>() }
+
     // Create ViewModels
     val chatViewModel = remember { ChatViewModel(scope = scope) }
     val sessionsViewModel = remember { SessionsViewModel(scope = scope) }
@@ -295,6 +299,12 @@ fun app() {
                     fontScale = fontSettings.fontSize.scale,
                     onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                     onNewChat = {
+                        // Save current input text before clearing
+                        val currentSessionId = chatViewModel.currentSessionId.value
+                        if (currentSessionId != null && inputText.text.isNotBlank()) {
+                            sessionInputTexts[currentSessionId] = inputText
+                        }
+
                         chatViewModel.clearChat()
                         inputText = TextFieldValue("")
                         currentView = View.CHAT
@@ -302,7 +312,17 @@ fun app() {
                     onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
                     onNavigateToSessions = { currentView = View.SESSIONS },
                     onResumeSession = { sessionId ->
+                        // Save current input text before switching
+                        val currentSessionId = chatViewModel.currentSessionId.value
+                        if (currentSessionId != null && inputText.text.isNotBlank()) {
+                            sessionInputTexts[currentSessionId] = inputText
+                        }
+
                         chatViewModel.resumeSession(sessionId)
+
+                        // Restore input text for the new session
+                        inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
+
                         currentView = View.CHAT
                     },
                     onDeleteSession = { sessionId ->
@@ -363,14 +383,43 @@ fun app() {
                     sessionsViewModel = sessionsViewModel,
                     settingsViewModel = settingsViewModel,
                     inputText = inputText,
-                    onInputTextChange = { inputText = it },
+                    onInputTextChange = { newText ->
+                        inputText = newText
+                        // Save to session storage as user types
+                        val currentSessionId = chatViewModel.currentSessionId.value
+                        if (currentSessionId != null) {
+                            if (newText.text.isNotBlank()) {
+                                sessionInputTexts[currentSessionId] = newText
+                            } else {
+                                sessionInputTexts.remove(currentSessionId)
+                            }
+                        }
+                    },
                     onSendMessage = { message, fileAttachments ->
+                        // Get current session ID before sending
+                        val currentSessionId = chatViewModel.currentSessionId.value
+
                         chatViewModel.sendMessage(message, fileAttachments)
                         inputText = TextFieldValue("")
                         attachments = emptyList()
+
+                        // Clear input text from session storage after sending
+                        if (currentSessionId != null) {
+                            sessionInputTexts.remove(currentSessionId)
+                        }
                     },
                     onResumeSession = { sessionId ->
+                        // Save current input text before switching
+                        val currentSessionId = chatViewModel.currentSessionId.value
+                        if (currentSessionId != null && inputText.text.isNotBlank()) {
+                            sessionInputTexts[currentSessionId] = inputText
+                        }
+
                         chatViewModel.resumeSession(sessionId)
+
+                        // Restore input text for the new session
+                        inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
+
                         currentView = View.CHAT
                     },
                     attachments = attachments,

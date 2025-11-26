@@ -16,6 +16,7 @@ import io.askimo.core.session.ProviderTestResult
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
+import io.askimo.desktop.util.ErrorHandler
 import io.askimo.core.session.getConfigInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ class SettingsViewModel(
     var provider by mutableStateOf<ModelProvider?>(null)
         private set
 
-    var model by mutableStateOf<String>("")
+    var model by mutableStateOf("")
         private set
 
     var settingsDescription by mutableStateOf<List<String>>(emptyList())
@@ -210,7 +211,8 @@ class SettingsViewModel(
                     // Test connection
                     ProviderService.testProviderConnection(provider, newSettings)
                 } catch (e: Exception) {
-                    ProviderTestResult.Failure("Error: ${e.message}")
+                    val errorMsg = ErrorHandler.getUserFriendlyError(e, "testing provider connection", "Failed to test connection. Please check your settings.")
+                    ProviderTestResult.Failure(errorMsg)
                 }
             }
 
@@ -276,7 +278,8 @@ class SettingsViewModel(
                         is ProviderTestResult.Failure -> testResult
                     }
                 } catch (e: Exception) {
-                    ProviderTestResult.Failure("Error: ${e.message}")
+                    val errorMsg = ErrorHandler.getUserFriendlyError(e, "applying provider change", "Failed to apply provider settings. Please try again.")
+                    ProviderTestResult.Failure(errorMsg)
                 }
             }
 

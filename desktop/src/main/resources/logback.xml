@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender for development -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appender for persistent logs -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/.askimo/logs/askimo-desktop.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover -->
+            <fileNamePattern>${user.home}/.askimo/logs/askimo-desktop.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Keep 7 days worth of history -->
+            <maxHistory>7</maxHistory>
+            <!-- Total size cap of 100MB -->
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </root>
+
+    <!-- Askimo application logging - more verbose -->
+    <logger name="io.askimo" level="DEBUG" />
+
+    <!-- Reduce verbosity for third-party libraries -->
+    <logger name="org.apache.http" level="WARN" />
+    <logger name="io.netty" level="WARN" />
+    <logger name="org.jetbrains" level="WARN" />
+    <logger name="kotlinx.coroutines" level="WARN" />
+</configuration>
+

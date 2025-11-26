@@ -16,6 +16,7 @@ dependencies {
     api(libs.langchain4j.ollama)
     api(libs.langchain4j.google.ai.gemini)
     api(libs.langchain4j.anthropic)
+    api(libs.langchain4j.http.client)
     api(libs.langchain4j.localai)
     api(libs.kotlinx.serialization.json.jvm)
     api(libs.kotlinx.coroutines.core)
@@ -27,6 +28,8 @@ dependencies {
     api(libs.sqlite.jdbc)
     api(libs.hikaricp)
     api(kotlin("stdlib"))
+    // Token counting
+    api("com.knuddels:jtokkit:1.0.0")
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

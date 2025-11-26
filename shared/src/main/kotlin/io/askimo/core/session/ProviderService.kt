@@ -10,6 +10,7 @@ import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ProviderValidator
 import io.askimo.core.providers.anthropic.AnthropicSettings
 import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
@@ -132,6 +133,12 @@ object ProviderService {
                     value = (existingSettings as? OllamaSettings)?.baseUrl ?: "http://localhost:11434",
                 ),
             )
+            ModelProvider.LMSTUDIO -> listOf(
+                ProviderConfigField.BaseUrlField(
+                    description = "LM Studio server URL (default: http://localhost:1234/v1)",
+                    value = (existingSettings as? LmStudioSettings)?.baseUrl ?: "http://localhost:1234/v1",
+                ),
+            )
             else -> emptyList()
         }
     }
@@ -170,6 +177,10 @@ object ProviderService {
             }
             ModelProvider.OLLAMA -> {
                 val current = existingSettings as? OllamaSettings ?: defaults as OllamaSettings
+                current.copy(baseUrl = fields["baseUrl"] ?: current.baseUrl)
+            }
+            ModelProvider.LMSTUDIO -> {
+                val current = existingSettings as? LmStudioSettings ?: defaults as LmStudioSettings
                 current.copy(baseUrl = fields["baseUrl"] ?: current.baseUrl)
             }
             else -> existingSettings ?: defaults

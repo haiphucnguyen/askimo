@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.PagedSessions
+import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,7 +81,7 @@ class SessionsViewModel(
                 }
                 pagedSessions = result
             } catch (e: Exception) {
-                errorMessage = "Error loading sessions: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "loading sessions", "Failed to load sessions. Please try again.")
             } finally {
                 isLoading = false
             }
@@ -137,10 +138,10 @@ class SessionsViewModel(
                     // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Session not found"
+                    errorMessage = "Session not found."
                 }
             } catch (e: Exception) {
-                errorMessage = "Error deleting session: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "deleting session", "Failed to delete session. Please try again.")
             }
         }
     }
@@ -158,10 +159,10 @@ class SessionsViewModel(
                     // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Session not found"
+                    errorMessage = "Session not found."
                 }
             } catch (e: Exception) {
-                errorMessage = "Error updating session: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "updating session", "Failed to update session. Please try again.")
             }
         }
     }
@@ -179,10 +180,10 @@ class SessionsViewModel(
                     // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Failed to rename session"
+                    errorMessage = "Failed to rename session."
                 }
             } catch (e: Exception) {
-                errorMessage = "Error renaming session: ${e.message}"
+                errorMessage = ErrorHandler.getUserFriendlyError(e, "renaming session", "Failed to rename session. Please try again.")
             }
         }
     }

@@ -7,6 +7,8 @@ package io.askimo.core.util
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.anthropic.AnthropicSettings
 import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
+import io.askimo.core.providers.localai.LocalAiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
@@ -22,6 +24,8 @@ val coreProvidersModule =
             subclass(XAiSettings::class, XAiSettings.serializer())
             subclass(GeminiSettings::class, GeminiSettings.serializer())
             subclass(AnthropicSettings::class, AnthropicSettings.serializer())
+            subclass(LmStudioSettings::class, LmStudioSettings.serializer())
+            subclass(LocalAiSettings::class, LocalAiSettings.serializer())
         }
     }
 

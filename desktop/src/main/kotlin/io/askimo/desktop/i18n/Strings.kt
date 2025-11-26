@@ -73,10 +73,6 @@ object LocalizationManager {
             }
         }
 
-        localesMap.forEach { (locale, displayName) ->
-            println("  ${locale.toLanguageTag()} -> $displayName")
-        }
-
         // Sort: English first, then alphabetically by English language name
         val sortedEntries = localesMap.entries.sortedWith(
             compareBy(
@@ -86,12 +82,6 @@ object LocalizationManager {
             ),
         )
 
-        sortedEntries.forEach { (locale, displayName) ->
-            val englishName = locale.getDisplayLanguage(Locale.ENGLISH)
-            println("  ${locale.toLanguageTag()} -> $displayName (englishName: $englishName, isEnglish: ${locale.language == "en"})")
-        }
-
-        // Convert back to LinkedHashMap to preserve order
         linkedMapOf<Locale, String>().apply {
             sortedEntries.forEach { (locale, displayName) ->
                 put(locale, displayName)

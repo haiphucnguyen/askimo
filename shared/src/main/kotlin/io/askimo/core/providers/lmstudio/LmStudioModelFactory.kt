@@ -4,12 +4,15 @@
  */
 package io.askimo.core.providers.lmstudio
 
+import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -18,6 +21,7 @@ import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import java.net.http.HttpClient
 import java.time.Duration
 
 class LmStudioModelFactory : ChatModelFactory {
@@ -26,10 +30,21 @@ class LmStudioModelFactory : ChatModelFactory {
             "Invalid settings type for LMStudio: ${settings::class.simpleName}"
         }
 
-        // LMStudio typically runs one model at a time
-        // You can query the /v1/models endpoint but it's not always reliable
-        info("⚠️ LMStudio model listing may not reflect currently loaded model.")
-        emptyList()
+        info("ℹ️ Fetching models from LM Studio server at ${settings.baseUrl}")
+
+        val models = fetchModels(
+            apiKey = "lm-studio",
+            url = "${settings.baseUrl}/models",
+            providerName = ModelProvider.LMSTUDIO,
+        )
+
+        if (models.isEmpty()) {
+            info("⚠️ No models found. Make sure a model is loaded in LM Studio.")
+        } else {
+            info("✓ Found ${models.size} model(s): ${models.joinToString(", ")}")
+        }
+
+        models
     } catch (e: Exception) {
         info("⚠️ Failed to fetch models from LMStudio: ${e.message}")
         debug(e)
@@ -37,7 +52,7 @@ class LmStudioModelFactory : ChatModelFactory {
     }
 
     override fun defaultSettings(): ProviderSettings = LmStudioSettings(
-        baseUrl = "http://localhost:1234/v1", // default LMStudio endpoint
+        baseUrl = "http://localhost:1234/v1",
     )
 
     override fun create(
@@ -51,6 +66,10 @@ class LmStudioModelFactory : ChatModelFactory {
             "Invalid settings type for LMStudio: ${settings::class.simpleName}"
         }
 
+        // LMStudio requires HTTP/1.1
+        val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -58,6 +77,7 @@ class LmStudioModelFactory : ChatModelFactory {
                 .apiKey("lm-studio") // LMStudio doesn't require a real API key but OpenAI client expects one
                 .modelName(model)
                 .timeout(Duration.ofMinutes(5))
+                .httpClientBuilder(jdkHttpClientBuilder)
                 .apply {
                     val s = samplingFor(settings.presets.style)
                     temperature(s.temperature)

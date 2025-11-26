@@ -4,6 +4,8 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.util.TokenCounter
+import io.askimo.core.util.TokenCounter.TokenInfo
 import java.time.LocalDateTime
 
 /**
@@ -40,7 +42,7 @@ class ChatSessionService(
     /**
      * Get all sessions sorted by most recently updated first.
      */
-    fun getAllSessionsSorted(): List<ChatSession> = repository.getAllSessions().sortedByDescending { it.updatedAt }
+    fun getAllSessionsSorted(): List<ChatSession> = repository.getAllSessions().sortedByDescending { it.createdAt }
 
     /**
      * Get a paginated list of sessions.
@@ -197,6 +199,17 @@ class ChatSessionService(
      * @return List of messages matching the search query
      */
     fun searchMessages(sessionId: String, searchQuery: String, limit: Int = 100): List<ChatMessage> = repository.searchMessages(sessionId, searchQuery, limit)
+
+    /**
+     * Get token count information for a specific chat session.
+     *
+     * @param sessionId The session ID to count tokens for
+     * @return TokenInfo containing token counts and message count
+     */
+    fun getSessionTokenInfo(sessionId: String): TokenInfo {
+        val messages = repository.getMessages(sessionId)
+        return TokenCounter.getTokenInfo(messages)
+    }
 
     /**
      * Close the repository connection.

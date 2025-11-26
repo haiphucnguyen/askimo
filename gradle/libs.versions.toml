@@ -6,6 +6,7 @@ commonmark = "0.27.0"
 kotlinxSerializationJson = "1.9.0"
 kotlinxCoroutines = "1.9.0"
 slf4j = "2.0.17"
+logback = "1.5.21"
 junitBom = "5.14.0"
 postgresql = "42.7.7"
 langchain4jPgvector = "1.8.0-beta15"
@@ -35,6 +36,7 @@ langchain4j-open-ai = { group = "dev.langchain4j", name = "langchain4j-open-ai",
 langchain4j-ollama = { group = "dev.langchain4j", name = "langchain4j-ollama", version.ref = "langchain4j" }
 langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
+langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
 langchain4j-pgvector = { group = "dev.langchain4j", name = "langchain4j-pgvector", version.ref = "langchain4jPgvector" }
 langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai", version.ref = "langchain4jPgvector" }
 
@@ -57,7 +59,9 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 
 
 # Logging
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
+logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 
 # Database and MCP SDK
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }

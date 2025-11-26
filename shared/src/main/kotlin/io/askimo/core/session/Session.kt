@@ -22,6 +22,7 @@ import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.Logger.info
+import io.askimo.core.util.TokenCounter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -505,11 +506,90 @@ class Session(
     }
 
     /**
+     * Prepare context and get prompt for a SPECIFIC chat ID.
+     * This is thread-safe and doesn't rely on currentChatSession.
+     *
+     * @param userMessage The user's message
+     * @param chatId The specific chat ID to save to
+     * @return The prompt with context
+     */
+    fun prepareContextAndGetPromptForChat(userMessage: String, chatId: String): String {
+        // Skip persistence for CLI_PROMPT mode
+        if (mode == SessionMode.CLI_PROMPT) {
+            return userMessage
+        }
+
+        // Save user message to the SPECIFIC chat ID (not currentChatSession)
+        chatSessionRepository.addMessage(chatId, MessageRole.USER, userMessage)
+
+        // Generate title from first user message
+        val messages = chatSessionRepository.getMessages(chatId)
+        if (messages.count { it.role == MessageRole.USER } == 1) {
+            chatSessionRepository.generateAndUpdateTitle(chatId, userMessage)
+        }
+
+        // Get context from the SPECIFIC chat
+        val chatSession = chatSessionRepository.getSession(chatId) ?: return userMessage
+
+        // 🔍 Count tokens for this chat session
+        val tokenInfo = TokenCounter.getTokenInfo(messages)
+        debug("🔍 [Token Counter] Chat ID: $chatId")
+        debug("🔍 [Token Counter] Messages: ${tokenInfo.messageCount}")
+        debug("🔍 [Token Counter] Total tokens: ${tokenInfo.formattedCount} (${tokenInfo.totalTokens})")
+
+        // Temporarily set currentChatSession to get context (but don't keep it)
+        val previousSession = currentChatSession
+        try {
+            currentChatSession = chatSession
+            val prompt = preparePromptWithContext(userMessage)
+
+            // 🔍 Count tokens in final prompt
+            val promptTokens = TokenCounter.countTokens(prompt)
+            debug("🔍 [Token Counter] Final prompt tokens: ${TokenCounter.formatTokenCount(promptTokens)} ($promptTokens)")
+
+            return prompt
+        } finally {
+            currentChatSession = previousSession
+        }
+    }
+
+    /**
      * Save the AI response after streaming is complete
      */
     fun saveAiResponse(response: String) {
         addChatMessage(MessageRole.ASSISTANT, response)
         triggerSummarizationIfNeeded()
+    }
+
+    /**
+     * Save the AI response to a specific session (used when session may have changed).
+     * This ensures the response is saved to the correct session even if currentChatSession
+     * has been switched to a different session.
+     *
+     * @param response The AI response to save
+     * @param sessionId The specific session ID to save to
+     */
+    fun saveAiResponseToSession(response: String, sessionId: String) {
+        // Skip persistence for CLI_PROMPT mode
+        if (mode == SessionMode.CLI_PROMPT) {
+            return
+        }
+
+        // Save directly to the specified session ID
+        chatSessionRepository.addMessage(sessionId, MessageRole.ASSISTANT, response)
+
+        // Trigger summarization for this specific session if needed
+        val messageCount = chatSessionRepository.getMessageCount(sessionId)
+        if (messageCount > summarizationThreshold && messageCount % summarizationThreshold == 0) {
+            // Need to temporarily switch to this session for summarization
+            val previousSession = currentChatSession
+            try {
+                currentChatSession = chatSessionRepository.getSession(sessionId)
+                summarizeOlderMessages()
+            } finally {
+                currentChatSession = previousSession
+            }
+        }
     }
 
     /**

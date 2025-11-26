@@ -4,15 +4,9 @@
  */
 package io.askimo.desktop.service
 
-import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
-import io.askimo.desktop.model.ChatMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.withContext
 
 /**
  * Service for managing chat interactions in the desktop application.
@@ -22,45 +16,41 @@ import kotlinx.coroutines.withContext
  */
 class ChatService {
     private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
+    private val streamingService: StreamingService = StreamingService(session)
 
     init {
         Runtime.getRuntime().addShutdownHook(
             Thread {
+                streamingService.shutdown()
                 session.chatSessionRepository.close()
             },
         )
     }
 
     /**
-     * Send a message and get a streaming response.
+     * Get the streaming service for checking active streams.
+     */
+    fun getStreamingService(): StreamingService = streamingService
+
+    /**
+     * Send a message and start streaming in the background.
+     *
+     * Creates a new thread for this question-answer pair.
+     * Thread closes automatically after completion.
      *
      * @param userMessage The message from the user
-     * @return Flow of chat messages representing the streaming response
+     * @param chatId The chat ID for this message
+     * @return threadId if streaming started successfully, null if chat already has active question or max concurrent streams reached
      */
-    fun sendMessage(userMessage: String): Flow<ChatMessage> = callbackFlow {
-        // Emit the user message first
-        send(ChatMessage(content = userMessage, isUser = true))
-
-        // Build response with streaming
-        val responseBuilder = StringBuilder()
-
-        withContext(Dispatchers.IO) {
-            // Prepare context and get the prompt to use
-            val promptWithContext = session.prepareContextAndGetPrompt(userMessage)
-
-            // Stream the response with token-by-token emission
-            val fullResponse = session.getChatService().sendStreamingMessageWithCallback(promptWithContext) { token ->
-                responseBuilder.append(token)
-                // Send each token as it arrives for real-time streaming effect
-                trySend(ChatMessage(content = responseBuilder.toString(), isUser = false))
+    fun sendMessage(userMessage: String, chatId: String): String? {
+        // Start streaming in background - creates new thread for this Q&A
+        return streamingService.startStream(
+            chatId = chatId,
+            userMessage = userMessage,
+            onChunkReceived = { _ ->
+                // Callback not used - UI subscribes directly to StreamingService
             }
-
-            session.saveAiResponse(fullResponse)
-
-            session.lastResponse = fullResponse
-        }
-
-        close()
+        )
     }
 
     /**

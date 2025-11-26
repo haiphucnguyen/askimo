@@ -6,11 +6,13 @@ package io.askimo.core.providers
 
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
 import io.askimo.core.providers.ModelProvider.GEMINI
+import io.askimo.core.providers.ModelProvider.LMSTUDIO
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.anthropic.AnthropicSettings
 import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
@@ -56,6 +58,11 @@ object ProviderValidator {
                 s.baseUrl.isNotBlank() && isHttpReachable(s.baseUrl)
             } == true
 
+        LMSTUDIO ->
+            (settings as? LmStudioSettings)?.let { s ->
+                s.baseUrl.isNotBlank() && isHttpReachable(s.baseUrl)
+            } == true
+
         else -> true
     }
 
@@ -69,6 +76,15 @@ object ProviderValidator {
                 1) Install Ollama: https://ollama.com/download
                 2) Start it (default listens on http://localhost:11434)
                 3) Verify your baseUrl, e.g.: :set-param ollama.baseUrl http://localhost:11434
+            """.trimIndent()
+
+        LMSTUDIO ->
+            """
+                💡 LM Studio server not reachable at your configured baseUrl.
+                1) Install LM Studio: https://lmstudio.ai/
+                2) Start the local server (default listens on http://localhost:1234/v1)
+                3) Load a model in LM Studio
+                4) Verify your baseUrl matches the server address shown in LM Studio
             """.trimIndent()
 
         OPENAI ->
