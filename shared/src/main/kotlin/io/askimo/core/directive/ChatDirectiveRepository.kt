@@ -5,12 +5,36 @@
 package io.askimo.core.directive
 
 import io.askimo.core.db.AbstractSQLiteRepository
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.upsert
 import java.sql.Connection
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 const val DIRECTIVE_NAME_MAX_LENGTH = 128
 const val DIRECTIVE_CONTENT_MAX_LENGTH = 8192
+
+/**
+ * Exposed table definition for chat_directives.
+ */
+object ChatDirectivesTable : Table("chat_directives") {
+    val id = varchar("id", 36)
+    val name = varchar("name", DIRECTIVE_NAME_MAX_LENGTH)
+    val content = varchar("content", DIRECTIVE_CONTENT_MAX_LENGTH)
+    val createdAt = datetime("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        uniqueIndex(name)
+    }
+}
 
 /**
  * Repository for managing chat directives stored in SQLite database.
@@ -19,6 +43,10 @@ class ChatDirectiveRepository(
     useInMemory: Boolean = false,
 ) : AbstractSQLiteRepository(useInMemory) {
     override val databaseFileName: String = "chat_directives.db"
+
+    private val database by lazy {
+        Database.connect(dataSource)
+    }
 
     override fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
@@ -103,21 +131,12 @@ class ChatDirectiveRepository(
             "Directive content cannot exceed $DIRECTIVE_CONTENT_MAX_LENGTH characters"
         }
 
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                INSERT INTO chat_directives (id, name, content, created_at)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    name = excluded.name,
-                    content = excluded.content
-            """,
-            ).use { stmt ->
-                stmt.setString(1, directive.id)
-                stmt.setString(2, directive.name)
-                stmt.setString(3, directive.content)
-                stmt.setString(4, directive.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.executeUpdate()
+        transaction(database) {
+            ChatDirectivesTable.upsert {
+                it[id] = directive.id
+                it[name] = directive.name
+                it[content] = directive.content
+                it[createdAt] = directive.createdAt
             }
         }
 
@@ -127,58 +146,36 @@ class ChatDirectiveRepository(
     /**
      * Get a directive by id.
      */
-    fun get(id: String): ChatDirective? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, name, content, created_at
-                FROM chat_directives
-                WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, id)
-                val rs = stmt.executeQuery()
-                return if (rs.next()) {
-                    ChatDirective(
-                        id = rs.getString("id"),
-                        name = rs.getString("name"),
-                        content = rs.getString("content"),
-                        createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                    )
-                } else {
-                    null
-                }
+    fun get(id: String): ChatDirective? = transaction(database) {
+        ChatDirectivesTable
+            .selectAll()
+            .where { ChatDirectivesTable.id eq id }
+            .singleOrNull()
+            ?.let { row ->
+                ChatDirective(
+                    id = row[ChatDirectivesTable.id],
+                    name = row[ChatDirectivesTable.name],
+                    content = row[ChatDirectivesTable.content],
+                    createdAt = row[ChatDirectivesTable.createdAt],
+                )
             }
-        }
     }
 
     /**
      * List all directives, ordered by name.
      */
-    fun list(): List<ChatDirective> {
-        val directives = mutableListOf<ChatDirective>()
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(
-                    """
-                    SELECT id, name, content, created_at
-                    FROM chat_directives
-                    ORDER BY name ASC
-                """,
+    fun list(): List<ChatDirective> = transaction(database) {
+        ChatDirectivesTable
+            .selectAll()
+            .orderBy(ChatDirectivesTable.name to SortOrder.ASC)
+            .map { row ->
+                ChatDirective(
+                    id = row[ChatDirectivesTable.id],
+                    name = row[ChatDirectivesTable.name],
+                    content = row[ChatDirectivesTable.content],
+                    createdAt = row[ChatDirectivesTable.createdAt],
                 )
-                while (rs.next()) {
-                    directives.add(
-                        ChatDirective(
-                            id = rs.getString("id"),
-                            name = rs.getString("name"),
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                        ),
-                    )
-                }
             }
-        }
-        return directives
     }
 
     /**
@@ -193,20 +190,11 @@ class ChatDirectiveRepository(
             "Directive content cannot exceed $DIRECTIVE_CONTENT_MAX_LENGTH characters"
         }
 
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                UPDATE chat_directives
-                SET name = ?, content = ?
-                WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, directive.name)
-                stmt.setString(2, directive.content)
-                stmt.setString(3, directive.id)
-                val rowsAffected = stmt.executeUpdate()
-                return rowsAffected > 0
-            }
+        return transaction(database) {
+            ChatDirectivesTable.update({ ChatDirectivesTable.id eq directive.id }) {
+                it[name] = directive.name
+                it[content] = directive.content
+            } > 0
         }
     }
 
@@ -214,123 +202,63 @@ class ChatDirectiveRepository(
      * Delete a directive by id.
      * @return true if deleted, false if directive doesn't exist
      */
-    fun delete(id: String): Boolean {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                DELETE FROM chat_directives WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, id)
-                val rowsAffected = stmt.executeUpdate()
-                return rowsAffected > 0
-            }
-        }
+    fun delete(id: String): Boolean = transaction(database) {
+        ChatDirectivesTable.deleteWhere { ChatDirectivesTable.id eq id } > 0
     }
 
     /**
      * Check if a directive exists by id.
      */
-    fun exists(id: String): Boolean {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT 1 FROM chat_directives WHERE id = ? LIMIT 1
-            """,
-            ).use { stmt ->
-                stmt.setString(1, id)
-                val rs = stmt.executeQuery()
-                return rs.next()
-            }
-        }
+    fun exists(id: String): Boolean = transaction(database) {
+        ChatDirectivesTable
+            .selectAll()
+            .where { ChatDirectivesTable.id eq id }
+            .limit(1)
+            .count() > 0
     }
 
     /**
      * Check if a directive exists by name.
      */
-    fun existsByName(name: String): Boolean {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT 1 FROM chat_directives WHERE name = ? LIMIT 1
-            """,
-            ).use { stmt ->
-                stmt.setString(1, name)
-                val rs = stmt.executeQuery()
-                return rs.next()
-            }
-        }
+    fun existsByName(name: String): Boolean = transaction(database) {
+        ChatDirectivesTable
+            .selectAll()
+            .where { ChatDirectivesTable.name eq name }
+            .limit(1)
+            .count() > 0
     }
 
     /**
      * Get multiple directives by ids.
      */
-    fun getByIds(ids: List<String>): List<ChatDirective> {
-        if (ids.isEmpty()) return emptyList()
-
-        val directives = mutableListOf<ChatDirective>()
-        dataSource.connection.use { conn ->
-            val placeholders = ids.joinToString(",") { "?" }
-            conn.prepareStatement(
-                """
-                SELECT id, name, content, created_at
-                FROM chat_directives
-                WHERE id IN ($placeholders)
-                ORDER BY name ASC
-            """,
-            ).use { stmt ->
-                ids.forEachIndexed { index, id ->
-                    stmt.setString(index + 1, id)
-                }
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    directives.add(
-                        ChatDirective(
-                            id = rs.getString("id"),
-                            name = rs.getString("name"),
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                        ),
-                    )
-                }
-            }
-        }
-        return directives
+    fun getByIds(ids: List<String>): List<ChatDirective> = getByColumn(
+        table = ChatDirectivesTable,
+        column = ChatDirectivesTable.id,
+        values = ids,
+        orderBy = ChatDirectivesTable.name to SortOrder.ASC,
+    ) { row ->
+        ChatDirective(
+            id = row[ChatDirectivesTable.id],
+            name = row[ChatDirectivesTable.name],
+            content = row[ChatDirectivesTable.content],
+            createdAt = row[ChatDirectivesTable.createdAt],
+        )
     }
 
     /**
      * Get multiple directives by names.
      */
-    fun getByNames(names: List<String>): List<ChatDirective> {
-        if (names.isEmpty()) return emptyList()
-
-        val directives = mutableListOf<ChatDirective>()
-        dataSource.connection.use { conn ->
-            val placeholders = names.joinToString(",") { "?" }
-            conn.prepareStatement(
-                """
-                SELECT id, name, content, created_at
-                FROM chat_directives
-                WHERE name IN ($placeholders)
-                ORDER BY name ASC
-            """,
-            ).use { stmt ->
-                names.forEachIndexed { index, name ->
-                    stmt.setString(index + 1, name)
-                }
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    directives.add(
-                        ChatDirective(
-                            id = rs.getString("id"),
-                            name = rs.getString("name"),
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                        ),
-                    )
-                }
-            }
-        }
-        return directives
+    fun getByNames(names: List<String>): List<ChatDirective> = getByColumn(
+        table = ChatDirectivesTable,
+        column = ChatDirectivesTable.name,
+        values = names,
+        orderBy = ChatDirectivesTable.name to SortOrder.ASC,
+    ) { row ->
+        ChatDirective(
+            id = row[ChatDirectivesTable.id],
+            name = row[ChatDirectivesTable.name],
+            content = row[ChatDirectivesTable.content],
+            createdAt = row[ChatDirectivesTable.createdAt],
+        )
     }
 }

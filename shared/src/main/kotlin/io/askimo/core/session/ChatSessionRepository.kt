@@ -6,9 +6,23 @@ package io.askimo.core.session
 
 import io.askimo.core.db.AbstractSQLiteRepository
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.lowerCase
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.upsert
 import java.sql.Connection
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 const val SESSION_TITLE_MAX_LENGTH = 256
@@ -18,12 +32,77 @@ enum class PaginationDirection {
     BACKWARD,
 }
 
+/**
+ * Exposed table definition for chat_folders.
+ */
+object ChatFoldersTable : Table("chat_folders") {
+    val id = varchar("id", 36)
+    val name = varchar("name", 256)
+    val parentFolderId = varchar("parent_folder_id", 36).nullable()
+    val color = varchar("color", 50).nullable()
+    val icon = varchar("icon", 50).nullable()
+    val sortOrder = integer("sort_order").default(0)
+    val createdAt = datetime("created_at")
+    val updatedAt = datetime("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+/**
+ * Exposed table definition for chat_sessions.
+ */
+object ChatSessionsTable : Table("chat_sessions") {
+    val id = varchar("id", 36)
+    val title = varchar("title", SESSION_TITLE_MAX_LENGTH)
+    val createdAt = datetime("created_at")
+    val updatedAt = datetime("updated_at")
+    val directiveId = varchar("directive_id", 36).nullable()
+    val folderId = varchar("folder_id", 36).nullable()
+    val isStarred = integer("is_starred").default(0)
+    val sortOrder = integer("sort_order").default(0)
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+/**
+ * Exposed table definition for chat_messages.
+ */
+object ChatMessagesTable : Table("chat_messages") {
+    val id = varchar("id", 36)
+    val sessionId = varchar("session_id", 36)
+    val role = varchar("role", 50)
+    val content = text("content")
+    val createdAt = datetime("created_at")
+    val isOutdated = integer("is_outdated").default(0)
+    val editParentId = varchar("edit_parent_id", 36).nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+/**
+ * Exposed table definition for conversation_summaries.
+ */
+object ConversationSummariesTable : Table("conversation_summaries") {
+    val sessionId = varchar("session_id", 36)
+    val keyFacts = text("key_facts")
+    val mainTopics = text("main_topics")
+    val recentContext = text("recent_context")
+    val lastSummarizedMessageId = varchar("last_summarized_message_id", 36)
+    val createdAt = datetime("created_at")
+
+    override val primaryKey = PrimaryKey(sessionId)
+}
+
 class ChatSessionRepository(
     useInMemory: Boolean = false,
 ) : AbstractSQLiteRepository(useInMemory) {
     override val databaseFileName: String = "chat_sessions.db"
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    private val database by lazy {
+        Database.connect(dataSource)
+    }
 
     override fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
@@ -121,83 +200,61 @@ class ChatSessionRepository(
             sortOrder = sortOrder,
         )
 
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                INSERT INTO chat_sessions (id, title, created_at, updated_at, directive_id, folder_id, is_starred, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            ).use { stmt ->
-                stmt.setString(1, session.id)
-                stmt.setString(2, session.title)
-                stmt.setString(3, session.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(4, session.updatedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(5, directiveId)
-                stmt.setString(6, folderId)
-                stmt.setInt(7, if (isStarred) 1 else 0)
-                stmt.setInt(8, sortOrder)
-                stmt.executeUpdate()
+        transaction(database) {
+            ChatSessionsTable.insert {
+                it[id] = session.id
+                it[ChatSessionsTable.title] = session.title
+                it[createdAt] = session.createdAt
+                it[updatedAt] = session.updatedAt
+                it[ChatSessionsTable.directiveId] = session.directiveId
+                it[ChatSessionsTable.folderId] = session.folderId
+                it[ChatSessionsTable.isStarred] = if (session.isStarred) 1 else 0
+                it[ChatSessionsTable.sortOrder] = session.sortOrder
             }
         }
 
         return session
     }
 
-    fun getAllSessions(): List<ChatSession> {
-        val sessions = mutableListOf<ChatSession>()
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(
-                    """
-                    SELECT id, title, created_at, updated_at, directive_id, folder_id, is_starred, sort_order
-                    FROM chat_sessions
-                    ORDER BY is_starred DESC, sort_order ASC, updated_at DESC
-                """,
+    fun getAllSessions(): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .orderBy(
+                ChatSessionsTable.isStarred to SortOrder.DESC,
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .map { row ->
+                ChatSession(
+                    id = row[ChatSessionsTable.id],
+                    title = row[ChatSessionsTable.title],
+                    createdAt = row[ChatSessionsTable.createdAt],
+                    updatedAt = row[ChatSessionsTable.updatedAt],
+                    directiveId = row[ChatSessionsTable.directiveId],
+                    folderId = row[ChatSessionsTable.folderId],
+                    isStarred = row[ChatSessionsTable.isStarred] == 1,
+                    sortOrder = row[ChatSessionsTable.sortOrder],
                 )
-                while (rs.next()) {
-                    sessions.add(
-                        ChatSession(
-                            id = rs.getString("id"),
-                            title = rs.getString("title"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
-                            directiveId = rs.getString("directive_id"),
-                            folderId = rs.getString("folder_id"),
-                            isStarred = rs.getInt("is_starred") == 1,
-                            sortOrder = rs.getInt("sort_order"),
-                        ),
-                    )
-                }
             }
-        }
-        return sessions
     }
 
-    fun getSession(sessionId: String): ChatSession? = dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            """
-            SELECT id, title, created_at, updated_at, directive_id, folder_id, is_starred, sort_order
-            FROM chat_sessions
-            WHERE id = ?
-        """,
-        ).use { stmt ->
-            stmt.setString(1, sessionId)
-            val rs = stmt.executeQuery()
-            if (rs.next()) {
+    fun getSession(sessionId: String): ChatSession? = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .where { ChatSessionsTable.id eq sessionId }
+            .singleOrNull()
+            ?.let { row ->
                 ChatSession(
-                    id = rs.getString("id"),
-                    title = rs.getString("title"),
-                    createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                    updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
-                    directiveId = rs.getString("directive_id"),
-                    folderId = rs.getString("folder_id"),
-                    isStarred = rs.getInt("is_starred") == 1,
-                    sortOrder = rs.getInt("sort_order"),
+                    id = row[ChatSessionsTable.id],
+                    title = row[ChatSessionsTable.title],
+                    createdAt = row[ChatSessionsTable.createdAt],
+                    updatedAt = row[ChatSessionsTable.updatedAt],
+                    directiveId = row[ChatSessionsTable.directiveId],
+                    folderId = row[ChatSessionsTable.folderId],
+                    isStarred = row[ChatSessionsTable.isStarred] == 1,
+                    sortOrder = row[ChatSessionsTable.sortOrder],
                 )
-            } else {
-                null
             }
-        }
     }
 
     fun addMessage(sessionId: String, role: MessageRole, content: String): ChatMessage {
@@ -209,111 +266,62 @@ class ChatSessionRepository(
             createdAt = LocalDateTime.now(),
         )
 
-        dataSource.connection.use { conn ->
-            conn.autoCommit = false
-            try {
-                // Insert message
-                conn.prepareStatement(
-                    """
-                    INSERT INTO chat_messages (id, session_id, role, content, created_at, is_outdated, edit_parent_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, message.id)
-                    stmt.setString(2, message.sessionId)
-                    stmt.setString(3, message.role.value)
-                    stmt.setString(4, message.content)
-                    stmt.setString(5, message.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                    stmt.setInt(6, if (message.isOutdated) 1 else 0)
-                    stmt.setString(7, message.editParentId)
-                    stmt.executeUpdate()
-                }
+        transaction(database) {
+            // Insert message
+            ChatMessagesTable.insert {
+                it[id] = message.id
+                it[ChatMessagesTable.sessionId] = message.sessionId
+                it[ChatMessagesTable.role] = message.role.value
+                it[ChatMessagesTable.content] = message.content
+                it[createdAt] = message.createdAt
+                it[ChatMessagesTable.isOutdated] = if (message.isOutdated) 1 else 0
+                it[ChatMessagesTable.editParentId] = message.editParentId
+            }
 
-                // Update session's updated_at
-                conn.prepareStatement(
-                    """
-                    UPDATE chat_sessions SET updated_at = ? WHERE id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                    stmt.setString(2, sessionId)
-                    stmt.executeUpdate()
-                }
-
-                conn.commit()
-            } catch (e: Exception) {
-                conn.rollback()
-                throw e
-            } finally {
-                conn.autoCommit = true
+            // Update session's updated_at
+            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+                it[updatedAt] = LocalDateTime.now()
             }
         }
 
         return message
     }
 
-    fun getMessages(sessionId: String): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ?
-                ORDER BY created_at ASC
-            """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+    fun getMessages(sessionId: String): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where { ChatMessagesTable.sessionId eq sessionId }
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
             }
-        }
-        return messages
     }
 
-    fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ?
-                ORDER BY created_at DESC
-                LIMIT ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                stmt.setInt(2, limit)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
-            }
-        }
-        return messages.reversed() // Return in chronological order
+    fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where { ChatMessagesTable.sessionId eq sessionId }
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
+            .limit(limit)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }.reversed() // Return in chronological order
     }
 
     /**
@@ -324,37 +332,23 @@ class ChatSessionRepository(
      * @param limit Number of active messages to retrieve (default: 20)
      * @return List of active messages, ordered by creation time (oldest first)
      */
-    fun getRecentActiveMessages(sessionId: String, limit: Int = 20): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND is_outdated = 0
-                ORDER BY created_at DESC
-                LIMIT ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                stmt.setInt(2, limit)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
-            }
-        }
-        return messages.reversed() // Return in chronological order
+    fun getRecentActiveMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where { (ChatMessagesTable.sessionId eq sessionId) and (ChatMessagesTable.isOutdated eq 0) }
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
+            .limit(limit)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }.reversed() // Return in chronological order
     }
 
     /**
@@ -370,77 +364,48 @@ class ChatSessionRepository(
         limit: Int = 20,
         cursor: LocalDateTime? = null,
         direction: PaginationDirection = PaginationDirection.FORWARD,
-    ): Pair<List<ChatMessage>, LocalDateTime?> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            val query = when {
-                cursor == null && direction == PaginationDirection.FORWARD -> {
-                    // Start from the beginning (oldest messages)
-                    """
-                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                    FROM chat_messages
-                    WHERE session_id = ?
-                    ORDER BY created_at ASC
-                    LIMIT ?
-                    """
-                }
-                cursor == null && direction == PaginationDirection.BACKWARD -> {
-                    // Start from the end (newest messages)
-                    """
-                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                    FROM chat_messages
-                    WHERE session_id = ?
-                    ORDER BY created_at DESC
-                    LIMIT ?
-                    """
-                }
-                direction == PaginationDirection.FORWARD -> {
-                    // Get messages after the cursor (newer messages)
-                    """
-                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                    FROM chat_messages
-                    WHERE session_id = ? AND created_at > ?
-                    ORDER BY created_at ASC
-                    LIMIT ?
-                    """
-                }
-                else -> {
-                    // Get messages before the cursor (older messages)
-                    """
-                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                    FROM chat_messages
-                    WHERE session_id = ? AND created_at < ?
-                    ORDER BY created_at DESC
-                    LIMIT ?
-                    """
-                }
+    ): Pair<List<ChatMessage>, LocalDateTime?> = transaction(database) {
+        val query = ChatMessagesTable.selectAll()
+            .where { ChatMessagesTable.sessionId eq sessionId }
+
+        // Apply cursor filtering and ordering based on direction
+        val orderedQuery = when {
+            cursor == null && direction == PaginationDirection.FORWARD -> {
+                // Start from the beginning (oldest messages)
+                query.orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             }
-
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, sessionId)
-                if (cursor != null) {
-                    stmt.setString(2, cursor.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                    stmt.setInt(3, limit + 1) // Fetch one extra to determine if there are more
-                } else {
-                    stmt.setInt(2, limit + 1) // Fetch one extra to determine if there are more
-                }
-
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+            cursor == null && direction == PaginationDirection.BACKWARD -> {
+                // Start from the end (newest messages)
+                query.orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
+            }
+            direction == PaginationDirection.FORWARD -> {
+                // Get messages after the cursor (newer messages)
+                query
+                    .andWhere { ChatMessagesTable.createdAt.greater(cursor!!) }
+                    .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            }
+            else -> {
+                // Get messages before the cursor (older messages)
+                query
+                    .andWhere { ChatMessagesTable.createdAt.less(cursor!!) }
+                    .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
             }
         }
+
+        // Fetch one extra to determine if there are more
+        val messages = orderedQuery
+            .limit(limit + 1)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }
 
         // Check if there are more messages
         val hasMore = messages.size > limit
@@ -460,15 +425,15 @@ class ChatSessionRepository(
             null
         }
 
-        return Pair(orderedMessages, nextCursor)
+        Pair(orderedMessages, nextCursor)
     }
 
-    fun getMessageCount(sessionId: String): Int = dataSource.connection.use { conn ->
-        conn.prepareStatement("SELECT COUNT(*) FROM chat_messages WHERE session_id = ?").use { stmt ->
-            stmt.setString(1, sessionId)
-            val rs = stmt.executeQuery()
-            if (rs.next()) rs.getInt(1) else 0
-        }
+    fun getMessageCount(sessionId: String): Int = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where { ChatMessagesTable.sessionId eq sessionId }
+            .count()
+            .toInt()
     }
 
     /**
@@ -486,73 +451,58 @@ class ChatSessionRepository(
     ): List<ChatMessage> {
         if (searchQuery.isBlank()) return emptyList()
 
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND LOWER(content) LIKE LOWER(?)
-                ORDER BY created_at ASC
-                LIMIT ?
-                """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                stmt.setString(2, "%$searchQuery%")
-                stmt.setInt(3, limit)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
+        return transaction(database) {
+            ChatMessagesTable
+                .selectAll()
+                .where {
+                    (ChatMessagesTable.sessionId eq sessionId) and
+                        ChatMessagesTable.content.lowerCase().like("%${searchQuery.lowercase()}%")
+                }
+                .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+                .limit(limit)
+                .map { row ->
+                    ChatMessage(
+                        id = row[ChatMessagesTable.id],
+                        sessionId = row[ChatMessagesTable.sessionId],
+                        role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                        content = row[ChatMessagesTable.content],
+                        createdAt = row[ChatMessagesTable.createdAt],
+                        isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                        editParentId = row[ChatMessagesTable.editParentId],
                     )
                 }
-            }
         }
-        return messages
     }
 
-    fun getMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND created_at > (
-                    SELECT created_at FROM chat_messages WHERE id = ?
-                )
-                ORDER BY created_at ASC
-                LIMIT ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                stmt.setString(2, afterMessageId)
-                stmt.setInt(3, limit)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+    fun getMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> = transaction(database) {
+        // First get the timestamp of the after message
+        val afterTimestamp = ChatMessagesTable
+            .select(ChatMessagesTable.createdAt)
+            .where { ChatMessagesTable.id eq afterMessageId }
+            .singleOrNull()
+            ?.get(ChatMessagesTable.createdAt)
+            ?: return@transaction emptyList()
+
+        // Then get messages after that timestamp
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    ChatMessagesTable.createdAt.greater(afterTimestamp)
             }
-        }
-        return messages
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            .limit(limit)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }
     }
 
     /**
@@ -564,40 +514,36 @@ class ChatSessionRepository(
      * @param limit Number of active messages to retrieve
      * @return List of active messages after the specified message
      */
-    fun getActiveMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND is_outdated = 0 AND created_at > (
-                    SELECT created_at FROM chat_messages WHERE id = ?
-                )
-                ORDER BY created_at ASC
-                LIMIT ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                stmt.setString(2, afterMessageId)
-                stmt.setInt(3, limit)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+    fun getActiveMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> = transaction(database) {
+        // First get the timestamp of the after message
+        val afterTimestamp = ChatMessagesTable
+            .select(ChatMessagesTable.createdAt)
+            .where { ChatMessagesTable.id eq afterMessageId }
+            .singleOrNull()
+            ?.get(ChatMessagesTable.createdAt)
+            ?: return@transaction emptyList()
+
+        // Then get active messages after that timestamp
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    (ChatMessagesTable.isOutdated eq 0) and
+                    ChatMessagesTable.createdAt.greater(afterTimestamp)
             }
-        }
-        return messages
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            .limit(limit)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }
     }
 
     /**
@@ -607,16 +553,9 @@ class ChatSessionRepository(
      * @param messageId The message ID to mark as outdated
      * @return Number of messages marked (should be 1)
      */
-    fun markMessageAsOutdated(messageId: String): Int = dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            """
-                UPDATE chat_messages
-                SET is_outdated = 1
-                WHERE id = ?
-                """,
-        ).use { stmt ->
-            stmt.setString(1, messageId)
-            stmt.executeUpdate()
+    fun markMessageAsOutdated(messageId: String): Int = transaction(database) {
+        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
+            it[isOutdated] = 1
         }
     }
 
@@ -628,19 +567,21 @@ class ChatSessionRepository(
      * @param fromMessageId The message ID from which to start marking as outdated (this message itself is not marked)
      * @return Number of messages marked as outdated
      */
-    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            """
-                UPDATE chat_messages
-                SET is_outdated = 1
-                WHERE session_id = ? AND created_at > (
-                    SELECT created_at FROM chat_messages WHERE id = ?
-                )
-                """,
-        ).use { stmt ->
-            stmt.setString(1, sessionId)
-            stmt.setString(2, fromMessageId)
-            stmt.executeUpdate()
+    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = transaction(database) {
+        // First get the timestamp of the from message
+        val fromTimestamp = ChatMessagesTable
+            .select(ChatMessagesTable.createdAt)
+            .where { ChatMessagesTable.id eq fromMessageId }
+            .singleOrNull()
+            ?.get(ChatMessagesTable.createdAt)
+            ?: return@transaction 0
+
+        // Then mark all messages after that timestamp as outdated
+        ChatMessagesTable.update({
+            (ChatMessagesTable.sessionId eq sessionId) and
+                ChatMessagesTable.createdAt.greater(fromTimestamp)
+        }) {
+            it[isOutdated] = 1
         }
     }
 
@@ -653,18 +594,10 @@ class ChatSessionRepository(
      * @param editParentId The ID of the original message that was edited
      */
     fun updateMessageContent(messageId: String, newContent: String, editParentId: String?) {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                UPDATE chat_messages
-                SET content = ?, edit_parent_id = ?
-                WHERE id = ?
-                """,
-            ).use { stmt ->
-                stmt.setString(1, newContent)
-                stmt.setString(2, editParentId)
-                stmt.setString(3, messageId)
-                stmt.executeUpdate()
+        transaction(database) {
+            ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
+                it[content] = newContent
+                it[ChatMessagesTable.editParentId] = editParentId
             }
         }
     }
@@ -676,35 +609,25 @@ class ChatSessionRepository(
      * @param sessionId The session ID
      * @return List of active messages, ordered by creation time
      */
-    fun getActiveMessages(sessionId: String): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND is_outdated = 0
-                ORDER BY created_at ASC
-                """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+    fun getActiveMessages(sessionId: String): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    (ChatMessagesTable.isOutdated eq 0)
             }
-        }
-        return messages
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }
     }
 
     /**
@@ -714,84 +637,59 @@ class ChatSessionRepository(
      * @param sessionId The session ID
      * @return List of outdated messages, ordered by creation time
      */
-    fun getOutdatedMessages(sessionId: String): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
-                FROM chat_messages
-                WHERE session_id = ? AND is_outdated = 1
-                ORDER BY created_at ASC
-                """,
-            ).use { stmt ->
-                stmt.setString(1, sessionId)
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    messages.add(
-                        ChatMessage(
-                            id = rs.getString("id"),
-                            sessionId = rs.getString("session_id"),
-                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
-                            content = rs.getString("content"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            isOutdated = rs.getInt("is_outdated") == 1,
-                            editParentId = rs.getString("edit_parent_id"),
-                        ),
-                    )
-                }
+    fun getOutdatedMessages(sessionId: String): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    (ChatMessagesTable.isOutdated eq 1)
             }
-        }
-        return messages
+            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            .map { row ->
+                ChatMessage(
+                    id = row[ChatMessagesTable.id],
+                    sessionId = row[ChatMessagesTable.sessionId],
+                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
+                    content = row[ChatMessagesTable.content],
+                    createdAt = row[ChatMessagesTable.createdAt],
+                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
+                    editParentId = row[ChatMessagesTable.editParentId],
+                )
+            }
     }
 
     fun saveSummary(summary: ConversationSummary) {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                INSERT OR REPLACE INTO conversation_summaries
-                (session_id, key_facts, main_topics, recent_context, last_summarized_message_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            ).use { stmt ->
-                stmt.setString(1, summary.sessionId)
-                stmt.setString(2, json.encodeToString(summary.keyFacts))
-                stmt.setString(3, json.encodeToString(summary.mainTopics))
-                stmt.setString(4, summary.recentContext)
-                stmt.setString(5, summary.lastSummarizedMessageId)
-                stmt.setString(6, summary.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.executeUpdate()
+        transaction(database) {
+            ConversationSummariesTable.upsert {
+                it[sessionId] = summary.sessionId
+                it[keyFacts] = json.encodeToString(summary.keyFacts)
+                it[mainTopics] = json.encodeToString(summary.mainTopics)
+                it[recentContext] = summary.recentContext
+                it[lastSummarizedMessageId] = summary.lastSummarizedMessageId
+                it[createdAt] = summary.createdAt
             }
         }
     }
 
-    fun getConversationSummary(sessionId: String): ConversationSummary? = dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            """
-                SELECT session_id, key_facts, main_topics, recent_context, last_summarized_message_id, created_at
-                FROM conversation_summaries
-                WHERE session_id = ?
-            """,
-        ).use { stmt ->
-            stmt.setString(1, sessionId)
-            val rs = stmt.executeQuery()
-            if (rs.next()) {
+    fun getConversationSummary(sessionId: String): ConversationSummary? = transaction(database) {
+        ConversationSummariesTable
+            .selectAll()
+            .where { ConversationSummariesTable.sessionId eq sessionId }
+            .singleOrNull()
+            ?.let { row ->
                 try {
                     ConversationSummary(
-                        sessionId = rs.getString("session_id"),
-                        keyFacts = json.decodeFromString<Map<String, String>>(rs.getString("key_facts")),
-                        mainTopics = json.decodeFromString<List<String>>(rs.getString("main_topics")),
-                        recentContext = rs.getString("recent_context"),
-                        lastSummarizedMessageId = rs.getString("last_summarized_message_id"),
-                        createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                        sessionId = row[ConversationSummariesTable.sessionId],
+                        keyFacts = json.decodeFromString<Map<String, String>>(row[ConversationSummariesTable.keyFacts]),
+                        mainTopics = json.decodeFromString<List<String>>(row[ConversationSummariesTable.mainTopics]),
+                        recentContext = row[ConversationSummariesTable.recentContext],
+                        lastSummarizedMessageId = row[ConversationSummariesTable.lastSummarizedMessageId],
+                        createdAt = row[ConversationSummariesTable.createdAt],
                     )
                 } catch (e: Exception) {
                     null // Return null if JSON parsing fails
                 }
-            } else {
-                null
             }
-        }
     }
 
     private fun generateTitle(firstMessage: String): String {
@@ -808,15 +706,9 @@ class ChatSessionRepository(
 
     fun generateAndUpdateTitle(sessionId: String, firstMessage: String) {
         val title = generateTitle(firstMessage)
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET title = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, title)
-                stmt.setString(2, sessionId)
-                stmt.executeUpdate()
+        transaction(database) {
+            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+                it[ChatSessionsTable.title] = title
             }
         }
     }
@@ -827,125 +719,55 @@ class ChatSessionRepository(
      * @param directiveId The directive ID to set (null to clear directive)
      * @return true if updated successfully
      */
-    fun updateSessionDirective(sessionId: String, directiveId: String?): Boolean {
-        dataSource.connection.use { conn ->
-            val rowsAffected = conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET directive_id = ?, updated_at = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, directiveId)
-                stmt.setString(2, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(3, sessionId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
-        }
+    fun updateSessionDirective(sessionId: String, directiveId: String?): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[ChatSessionsTable.directiveId] = directiveId
+            it[updatedAt] = LocalDateTime.now()
+        } > 0
     }
 
     /**
      * Delete a chat session and all its related data (messages and summaries)
      */
-    fun deleteSession(sessionId: String): Boolean {
-        dataSource.connection.use { conn ->
-            conn.autoCommit = false
-            try {
-                // Delete conversation summaries
-                conn.prepareStatement(
-                    """
-                    DELETE FROM conversation_summaries WHERE session_id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, sessionId)
-                    stmt.executeUpdate()
-                }
+    fun deleteSession(sessionId: String): Boolean = transaction(database) {
+        // Delete conversation summaries
+        ConversationSummariesTable.deleteWhere { ConversationSummariesTable.sessionId eq sessionId }
 
-                // Delete chat messages
-                conn.prepareStatement(
-                    """
-                    DELETE FROM chat_messages WHERE session_id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, sessionId)
-                    stmt.executeUpdate()
-                }
+        // Delete chat messages
+        ChatMessagesTable.deleteWhere { ChatMessagesTable.sessionId eq sessionId }
 
-                // Delete the session itself
-                val rowsAffected = conn.prepareStatement(
-                    """
-                    DELETE FROM chat_sessions WHERE id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, sessionId)
-                    stmt.executeUpdate()
-                }
-
-                conn.commit()
-                return rowsAffected > 0
-            } catch (e: Exception) {
-                conn.rollback()
-                throw e
-            } finally {
-                conn.autoCommit = true
-            }
-        }
+        // Delete the session itself
+        ChatSessionsTable.deleteWhere { ChatSessionsTable.id eq sessionId } > 0
     }
 
     /**
      * Update the starred status of a session
      */
-    fun updateSessionStarred(sessionId: String, isStarred: Boolean): Boolean {
-        dataSource.connection.use { conn ->
-            val rowsAffected = conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET is_starred = ?, updated_at = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setInt(1, if (isStarred) 1 else 0)
-                stmt.setString(2, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(3, sessionId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
-        }
+    fun updateSessionStarred(sessionId: String, isStarred: Boolean): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[ChatSessionsTable.isStarred] = if (isStarred) 1 else 0
+            it[updatedAt] = LocalDateTime.now()
+        } > 0
     }
 
     /**
      * Move a session to a folder
      */
-    fun updateSessionFolder(sessionId: String, folderId: String?): Boolean {
-        dataSource.connection.use { conn ->
-            val rowsAffected = conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET folder_id = ?, updated_at = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, folderId)
-                stmt.setString(2, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(3, sessionId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
-        }
+    fun updateSessionFolder(sessionId: String, folderId: String?): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[ChatSessionsTable.folderId] = folderId
+            it[updatedAt] = LocalDateTime.now()
+        } > 0
     }
 
     /**
      * Update the sort order of a session
      */
-    fun updateSessionSortOrder(sessionId: String, sortOrder: Int): Boolean {
-        dataSource.connection.use { conn ->
-            val rowsAffected = conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET sort_order = ?, updated_at = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setInt(1, sortOrder)
-                stmt.setString(2, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(3, sessionId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
-        }
+    fun updateSessionSortOrder(sessionId: String, sortOrder: Int): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[ChatSessionsTable.sortOrder] = sortOrder
+            it[updatedAt] = LocalDateTime.now()
+        } > 0
     }
 
     /**
@@ -957,90 +779,69 @@ class ChatSessionRepository(
             return false
         }
 
-        dataSource.connection.use { conn ->
-            val rowsAffected = conn.prepareStatement(
-                """
-                UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, trimmedTitle)
-                stmt.setString(2, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(3, sessionId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
+        return transaction(database) {
+            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+                it[ChatSessionsTable.title] = trimmedTitle
+                it[updatedAt] = LocalDateTime.now()
+            } > 0
         }
     }
 
     /**
      * Get all sessions in a folder
      */
-    fun getSessionsByFolder(folderId: String?): List<ChatSession> {
-        val sessions = mutableListOf<ChatSession>()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, title, created_at, updated_at, directive_id, folder_id, is_starred, sort_order
-                FROM chat_sessions
-                WHERE folder_id ${if (folderId == null) "IS NULL" else "= ?"}
-                ORDER BY is_starred DESC, sort_order ASC, updated_at DESC
-            """,
-            ).use { stmt ->
-                if (folderId != null) {
-                    stmt.setString(1, folderId)
-                }
-                val rs = stmt.executeQuery()
-                while (rs.next()) {
-                    sessions.add(
-                        ChatSession(
-                            id = rs.getString("id"),
-                            title = rs.getString("title"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
-                            directiveId = rs.getString("directive_id"),
-                            folderId = rs.getString("folder_id"),
-                            isStarred = rs.getInt("is_starred") == 1,
-                            sortOrder = rs.getInt("sort_order"),
-                        ),
-                    )
-                }
-            }
+    fun getSessionsByFolder(folderId: String?): List<ChatSession> = transaction(database) {
+        val query = ChatSessionsTable.selectAll()
+
+        val filteredQuery = if (folderId == null) {
+            query.where { ChatSessionsTable.folderId.isNull() }
+        } else {
+            query.where { ChatSessionsTable.folderId eq folderId }
         }
-        return sessions
+
+        filteredQuery
+            .orderBy(
+                ChatSessionsTable.isStarred to SortOrder.DESC,
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .map { row ->
+                ChatSession(
+                    id = row[ChatSessionsTable.id],
+                    title = row[ChatSessionsTable.title],
+                    createdAt = row[ChatSessionsTable.createdAt],
+                    updatedAt = row[ChatSessionsTable.updatedAt],
+                    directiveId = row[ChatSessionsTable.directiveId],
+                    folderId = row[ChatSessionsTable.folderId],
+                    isStarred = row[ChatSessionsTable.isStarred] == 1,
+                    sortOrder = row[ChatSessionsTable.sortOrder],
+                )
+            }
     }
 
     /**
      * Get all starred sessions
      */
-    fun getStarredSessions(): List<ChatSession> {
-        val sessions = mutableListOf<ChatSession>()
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(
-                    """
-                    SELECT id, title, created_at, updated_at, directive_id, folder_id, is_starred, sort_order
-                    FROM chat_sessions
-                    WHERE is_starred = 1
-                    ORDER BY sort_order ASC, updated_at DESC
-                """,
+    fun getStarredSessions(): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .where { ChatSessionsTable.isStarred eq 1 }
+            .orderBy(
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .map { row ->
+                ChatSession(
+                    id = row[ChatSessionsTable.id],
+                    title = row[ChatSessionsTable.title],
+                    createdAt = row[ChatSessionsTable.createdAt],
+                    updatedAt = row[ChatSessionsTable.updatedAt],
+                    directiveId = row[ChatSessionsTable.directiveId],
+                    folderId = row[ChatSessionsTable.folderId],
+                    isStarred = row[ChatSessionsTable.isStarred] == 1,
+                    sortOrder = row[ChatSessionsTable.sortOrder],
                 )
-                while (rs.next()) {
-                    sessions.add(
-                        ChatSession(
-                            id = rs.getString("id"),
-                            title = rs.getString("title"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
-                            directiveId = rs.getString("directive_id"),
-                            folderId = rs.getString("folder_id"),
-                            isStarred = rs.getInt("is_starred") == 1,
-                            sortOrder = rs.getInt("sort_order"),
-                        ),
-                    )
-                }
             }
-        }
-        return sessions
     }
 
     /**
@@ -1064,22 +865,16 @@ class ChatSessionRepository(
             updatedAt = LocalDateTime.now(),
         )
 
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                INSERT INTO chat_folders (id, name, parent_folder_id, color, icon, sort_order, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            ).use { stmt ->
-                stmt.setString(1, folder.id)
-                stmt.setString(2, folder.name)
-                stmt.setString(3, parentFolderId)
-                stmt.setString(4, color)
-                stmt.setString(5, icon)
-                stmt.setInt(6, sortOrder)
-                stmt.setString(7, folder.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(8, folder.updatedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.executeUpdate()
+        transaction(database) {
+            ChatFoldersTable.insert {
+                it[id] = folder.id
+                it[ChatFoldersTable.name] = folder.name
+                it[ChatFoldersTable.parentFolderId] = folder.parentFolderId
+                it[ChatFoldersTable.color] = folder.color
+                it[ChatFoldersTable.icon] = folder.icon
+                it[ChatFoldersTable.sortOrder] = folder.sortOrder
+                it[createdAt] = folder.createdAt
+                it[updatedAt] = folder.updatedAt
             }
         }
 
@@ -1089,64 +884,47 @@ class ChatSessionRepository(
     /**
      * Get all folders
      */
-    fun getAllFolders(): List<ChatFolder> {
-        val folders = mutableListOf<ChatFolder>()
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(
-                    """
-                    SELECT id, name, parent_folder_id, color, icon, sort_order, created_at, updated_at
-                    FROM chat_folders
-                    ORDER BY sort_order ASC, name ASC
-                """,
+    fun getAllFolders(): List<ChatFolder> = transaction(database) {
+        ChatFoldersTable
+            .selectAll()
+            .orderBy(
+                ChatFoldersTable.sortOrder to SortOrder.ASC,
+                ChatFoldersTable.name to SortOrder.ASC,
+            )
+            .map { row ->
+                ChatFolder(
+                    id = row[ChatFoldersTable.id],
+                    name = row[ChatFoldersTable.name],
+                    parentFolderId = row[ChatFoldersTable.parentFolderId],
+                    color = row[ChatFoldersTable.color],
+                    icon = row[ChatFoldersTable.icon],
+                    sortOrder = row[ChatFoldersTable.sortOrder],
+                    createdAt = row[ChatFoldersTable.createdAt],
+                    updatedAt = row[ChatFoldersTable.updatedAt],
                 )
-                while (rs.next()) {
-                    folders.add(
-                        ChatFolder(
-                            id = rs.getString("id"),
-                            name = rs.getString("name"),
-                            parentFolderId = rs.getString("parent_folder_id"),
-                            color = rs.getString("color"),
-                            icon = rs.getString("icon"),
-                            sortOrder = rs.getInt("sort_order"),
-                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                            updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
-                        ),
-                    )
-                }
             }
-        }
-        return folders
     }
 
     /**
      * Get a folder by ID
      */
-    fun getFolder(folderId: String): ChatFolder? = dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            """
-            SELECT id, name, parent_folder_id, color, icon, sort_order, created_at, updated_at
-            FROM chat_folders
-            WHERE id = ?
-        """,
-        ).use { stmt ->
-            stmt.setString(1, folderId)
-            val rs = stmt.executeQuery()
-            if (rs.next()) {
+    fun getFolder(folderId: String): ChatFolder? = transaction(database) {
+        ChatFoldersTable
+            .selectAll()
+            .where { ChatFoldersTable.id eq folderId }
+            .singleOrNull()
+            ?.let { row ->
                 ChatFolder(
-                    id = rs.getString("id"),
-                    name = rs.getString("name"),
-                    parentFolderId = rs.getString("parent_folder_id"),
-                    color = rs.getString("color"),
-                    icon = rs.getString("icon"),
-                    sortOrder = rs.getInt("sort_order"),
-                    createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                    updatedAt = LocalDateTime.parse(rs.getString("updated_at")),
+                    id = row[ChatFoldersTable.id],
+                    name = row[ChatFoldersTable.name],
+                    parentFolderId = row[ChatFoldersTable.parentFolderId],
+                    color = row[ChatFoldersTable.color],
+                    icon = row[ChatFoldersTable.icon],
+                    sortOrder = row[ChatFoldersTable.sortOrder],
+                    createdAt = row[ChatFoldersTable.createdAt],
+                    updatedAt = row[ChatFoldersTable.updatedAt],
                 )
-            } else {
-                null
             }
-        }
     }
 
     /**
@@ -1160,79 +938,38 @@ class ChatSessionRepository(
         icon: String? = null,
         sortOrder: Int? = null,
     ): Boolean {
-        val updates = mutableListOf<String>()
-        if (name != null) updates.add("name = ?")
-        if (parentFolderId !== null) updates.add("parent_folder_id = ?")
-        if (color !== null) updates.add("color = ?")
-        if (icon !== null) updates.add("icon = ?")
-        if (sortOrder != null) updates.add("sort_order = ?")
+        // Check if there's anything to update
+        if (name == null && parentFolderId === null && color === null && icon === null && sortOrder == null) {
+            return false
+        }
 
-        if (updates.isEmpty()) return false
-
-        updates.add("updated_at = ?")
-
-        dataSource.connection.use { conn ->
-            val sql = "UPDATE chat_folders SET ${updates.joinToString(", ")} WHERE id = ?"
-            val rowsAffected = conn.prepareStatement(sql).use { stmt ->
-                var idx = 1
-                if (name != null) stmt.setString(idx++, name)
-                if (parentFolderId !== null) stmt.setString(idx++, parentFolderId)
-                if (color !== null) stmt.setString(idx++, color)
-                if (icon !== null) stmt.setString(idx++, icon)
-                if (sortOrder != null) stmt.setInt(idx++, sortOrder)
-                stmt.setString(idx++, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                stmt.setString(idx, folderId)
-                stmt.executeUpdate()
-            }
-            return rowsAffected > 0
+        return transaction(database) {
+            ChatFoldersTable.update({ ChatFoldersTable.id eq folderId }) {
+                if (name != null) it[ChatFoldersTable.name] = name
+                if (parentFolderId !== null) it[ChatFoldersTable.parentFolderId] = parentFolderId
+                if (color !== null) it[ChatFoldersTable.color] = color
+                if (icon !== null) it[ChatFoldersTable.icon] = icon
+                if (sortOrder != null) it[ChatFoldersTable.sortOrder] = sortOrder
+                it[updatedAt] = LocalDateTime.now()
+            } > 0
         }
     }
 
     /**
      * Delete a folder (moves sessions to root)
      */
-    fun deleteFolder(folderId: String): Boolean {
-        dataSource.connection.use { conn ->
-            conn.autoCommit = false
-            try {
-                // Move sessions to root (null folder_id)
-                conn.prepareStatement(
-                    """
-                    UPDATE chat_sessions SET folder_id = NULL WHERE folder_id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, folderId)
-                    stmt.executeUpdate()
-                }
-
-                // Move child folders to root
-                conn.prepareStatement(
-                    """
-                    UPDATE chat_folders SET parent_folder_id = NULL WHERE parent_folder_id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, folderId)
-                    stmt.executeUpdate()
-                }
-
-                // Delete the folder
-                val rowsAffected = conn.prepareStatement(
-                    """
-                    DELETE FROM chat_folders WHERE id = ?
-                """,
-                ).use { stmt ->
-                    stmt.setString(1, folderId)
-                    stmt.executeUpdate()
-                }
-
-                conn.commit()
-                return rowsAffected > 0
-            } catch (e: Exception) {
-                conn.rollback()
-                throw e
-            } finally {
-                conn.autoCommit = true
-            }
+    fun deleteFolder(folderId: String): Boolean = transaction(database) {
+        // Move sessions to root (null folder_id)
+        ChatSessionsTable.update({ ChatSessionsTable.folderId eq folderId }) {
+            it[ChatSessionsTable.folderId] = null
         }
+
+        // Move child folders to root
+        ChatFoldersTable.update({ ChatFoldersTable.parentFolderId eq folderId }) {
+            it[ChatFoldersTable.parentFolderId] = null
+        }
+
+        // Delete the folder
+        ChatFoldersTable.deleteWhere { ChatFoldersTable.id eq folderId } > 0
     }
 }
