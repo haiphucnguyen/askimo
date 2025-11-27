@@ -4,12 +4,10 @@
  */
 package io.askimo.core.directive
 
-import com.zaxxer.hikari.HikariDataSource
-import io.askimo.core.db.DatabaseConnectionFactory
+import io.askimo.core.db.AbstractSQLiteRepository
 import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import javax.sql.DataSource
 
 const val DIRECTIVE_NAME_MAX_LENGTH = 128
 const val DIRECTIVE_CONTENT_MAX_LENGTH = 8192
@@ -17,17 +15,12 @@ const val DIRECTIVE_CONTENT_MAX_LENGTH = 8192
 /**
  * Repository for managing chat directives stored in SQLite database.
  */
-class ChatDirectiveRepository {
-    private val hikariDataSource: HikariDataSource by lazy {
-        DatabaseConnectionFactory.createSQLiteDataSource(
-            databaseFileName = "chat_directives.db",
-            initializeDatabase = ::initializeDatabase,
-        )
-    }
+class ChatDirectiveRepository(
+    useInMemory: Boolean = false,
+) : AbstractSQLiteRepository(useInMemory) {
+    override val databaseFileName: String = "chat_directives.db"
 
-    private val dataSource: DataSource get() = hikariDataSource
-
-    private fun initializeDatabase(conn: Connection) {
+    override fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
             // Check if old table exists
             val oldTableExists = conn.metaData.getTables(null, null, "chat_directives", null).use { rs ->

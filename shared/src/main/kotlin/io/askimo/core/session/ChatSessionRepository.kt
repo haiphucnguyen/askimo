@@ -4,14 +4,12 @@
  */
 package io.askimo.core.session
 
-import com.zaxxer.hikari.HikariDataSource
-import io.askimo.core.db.DatabaseConnectionFactory
+import io.askimo.core.db.AbstractSQLiteRepository
 import kotlinx.serialization.json.Json
 import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import javax.sql.DataSource
 
 const val SESSION_TITLE_MAX_LENGTH = 256
 
@@ -21,30 +19,13 @@ enum class PaginationDirection {
 }
 
 class ChatSessionRepository(
-    private val useInMemory: Boolean = false,
-) : AutoCloseable {
-    private val hikariDataSource: HikariDataSource by lazy {
-        DatabaseConnectionFactory.createSQLiteDataSource(
-            databaseFileName = "chat_sessions.db",
-            initializeDatabase = ::initializeDatabase,
-            useInMemory = useInMemory,
-        )
-    }
+    useInMemory: Boolean = false,
+) : AbstractSQLiteRepository(useInMemory) {
+    override val databaseFileName: String = "chat_sessions.db"
 
-    private val dataSource: DataSource get() = hikariDataSource
     private val json = Json { ignoreUnknownKeys = true }
 
-    override fun close() {
-        try {
-            if (!hikariDataSource.isClosed) {
-                hikariDataSource.close()
-            }
-        } catch (_: UninitializedPropertyAccessException) {
-            // DataSource was never initialized, nothing to close
-        }
-    }
-
-    private fun initializeDatabase(conn: Connection) {
+    override fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
             stmt.executeUpdate(
                 """
