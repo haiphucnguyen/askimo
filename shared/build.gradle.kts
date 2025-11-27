@@ -27,9 +27,8 @@ dependencies {
     api(libs.jackson.dataformat.yaml)
     api(libs.sqlite.jdbc)
     api(libs.hikaricp)
+    api(libs.koin.core)
     api(kotlin("stdlib"))
-    // Token counting
-    api("com.knuddels:jtokkit:1.0.0")
     runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
@@ -37,6 +36,8 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.testcontainers.ollama)
     testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.koin.test)
+    testImplementation(libs.koin.test.junit5)
 }
 
 tasks.test {

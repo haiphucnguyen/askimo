@@ -72,13 +72,6 @@ fun main(args: Array<String>) {
 
     val session = SessionFactory.createSession(mode = mode)
 
-    // Add shutdown hook to gracefully close database connections
-    Runtime.getRuntime().addShutdownHook(
-        Thread {
-            session.chatSessionRepository.close()
-        },
-    )
-
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =
         listOf(

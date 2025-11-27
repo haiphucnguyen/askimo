@@ -6,6 +6,7 @@ package io.askimo.core.providers.localai
 
 import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.Presets
+import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.SettingField
 import io.askimo.core.providers.Style
@@ -43,4 +44,18 @@ data class LocalAiSettings(
             else -> this
         }
     }
+
+    override fun getConfigFields(): List<ProviderConfigField> = listOf(
+        ProviderConfigField.BaseUrlField(
+            description = "LocalAI server URL (default: http://localhost:8080)",
+            value = baseUrl,
+        ),
+    )
+
+    override fun applyConfigFields(fields: Map<String, String>): ProviderSettings {
+        val newBaseUrl = fields["baseUrl"] ?: baseUrl
+        return copy(baseUrl = newBaseUrl)
+    }
+
+    override fun deepCopy(): ProviderSettings = copy()
 }

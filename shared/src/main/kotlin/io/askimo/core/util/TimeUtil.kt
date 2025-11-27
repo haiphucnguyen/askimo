@@ -11,6 +11,7 @@ import java.util.Locale
 
 object TimeUtil {
     private val shortFmt = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+    private val timestampFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
     fun stamp(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
@@ -24,10 +25,7 @@ object TimeUtil {
      * @param locale The locale to use for formatting (defaults to system locale)
      * @return The formatted date-time string
      */
-    fun formatDisplay(dateTime: LocalDateTime, locale: Locale = Locale.getDefault()): String {
-        val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm", locale)
-        return dateTime.format(formatter)
-    }
+    fun formatDisplay(dateTime: LocalDateTime, locale: Locale = Locale.getDefault()): String = format(dateTime, "MMM dd, yyyy HH:mm", locale)
 
     /**
      * Formats a LocalDateTime with a custom pattern for the given locale.

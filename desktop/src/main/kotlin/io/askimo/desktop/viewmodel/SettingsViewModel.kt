@@ -8,12 +8,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.providers.ProviderTestResult
 import io.askimo.core.providers.SettingField
 import io.askimo.core.session.MemoryPolicy
-import io.askimo.core.session.ProviderConfigField
-import io.askimo.core.session.ProviderService
-import io.askimo.core.session.ProviderTestResult
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
 import io.askimo.core.session.SessionFactory
@@ -119,7 +118,7 @@ class SettingsViewModel(
      * Opens the provider selection dialog.
      */
     fun onChangeProvider() {
-        availableProviders = ProviderService.getAvailableProviders()
+        availableProviders = ProviderRegistry.getSupportedProviders().toList()
         connectionError = null
         connectionErrorHelp = null
 
@@ -130,7 +129,8 @@ class SettingsViewModel(
 
             // Load existing settings and configuration fields
             val existingSettings = session.params.providerSettings[currentProvider]
-            providerConfigFields = ProviderService.getProviderConfigFields(currentProvider, existingSettings)
+                ?: ProviderRegistry.getFactory(currentProvider)?.defaultSettings()
+            providerConfigFields = existingSettings?.getConfigFields() ?: emptyList()
 
             // Initialize field values with existing or default values
             providerFieldValues = providerConfigFields.associate { field ->
@@ -159,9 +159,10 @@ class SettingsViewModel(
 
         // Get existing settings if available
         val existingSettings = session.params.providerSettings[newProvider]
+            ?: ProviderRegistry.getFactory(newProvider)?.defaultSettings()
 
         // Get configuration fields for the provider
-        providerConfigFields = ProviderService.getProviderConfigFields(newProvider, existingSettings)
+        providerConfigFields = existingSettings?.getConfigFields() ?: emptyList()
 
         // Initialize field values with existing or default values
         providerFieldValues = providerConfigFields.associate { field ->
@@ -188,7 +189,7 @@ class SettingsViewModel(
         val provider = selectedProvider ?: return
 
         // Validate all required fields are filled
-        if (!ProviderService.validateConfigFields(providerFieldValues, providerConfigFields)) {
+        if (!validateConfigFields(providerFieldValues, providerConfigFields)) {
             connectionError = "Please fill in all required fields"
             return
         }
@@ -202,16 +203,21 @@ class SettingsViewModel(
                 try {
                     // Get existing settings if available
                     val existingSettings = session.params.providerSettings[provider]
+                        ?: ProviderRegistry.getFactory(provider)?.defaultSettings()
 
                     // Create updated settings
-                    val newSettings = ProviderService.createProviderSettings(
-                        provider,
-                        providerFieldValues,
-                        existingSettings,
-                    )
+                    val newSettings = existingSettings?.applyConfigFields(providerFieldValues)
+                        ?: return@withContext ProviderTestResult.Failure("Failed to create settings")
 
-                    // Test connection
-                    ProviderService.testProviderConnection(provider, newSettings)
+                    // Test connection (just validate for now)
+                    if (newSettings.validate()) {
+                        ProviderTestResult.Success
+                    } else {
+                        ProviderTestResult.Failure(
+                            message = "Cannot connect to ${provider.name.lowercase()} provider",
+                            helpText = newSettings.getSetupHelpText(),
+                        )
+                    }
                 } catch (e: Exception) {
                     val errorMsg = ErrorHandler.getUserFriendlyError(e, "testing provider connection", "Failed to test connection. Please check your settings.")
                     ProviderTestResult.Failure(errorMsg)
@@ -242,7 +248,7 @@ class SettingsViewModel(
         val provider = selectedProvider ?: return
 
         // Validate all required fields are filled
-        if (!ProviderService.validateConfigFields(providerFieldValues, providerConfigFields)) {
+        if (!validateConfigFields(providerFieldValues, providerConfigFields)) {
             connectionError = "Please fill in all required fields"
             return
         }
@@ -256,28 +262,37 @@ class SettingsViewModel(
                 try {
                     // Get existing settings if available
                     val existingSettings = session.params.providerSettings[provider]
+                        ?: ProviderRegistry.getFactory(provider)?.defaultSettings()
 
                     // Create updated settings
-                    val newSettings = ProviderService.createProviderSettings(
-                        provider,
-                        providerFieldValues,
-                        existingSettings,
-                    )
+                    val newSettings = existingSettings?.applyConfigFields(providerFieldValues)
+                        ?: return@withContext ProviderTestResult.Failure("Failed to create settings")
 
-                    // Test connection
-                    val testResult = ProviderService.testProviderConnection(provider, newSettings)
+                    // Test connection (validate)
+                    if (!newSettings.validate()) {
+                        return@withContext ProviderTestResult.Failure(
+                            message = "Cannot connect to ${provider.name.lowercase()} provider",
+                            helpText = newSettings.getSetupHelpText(),
+                        )
+                    }
 
-                    when (testResult) {
-                        is ProviderTestResult.Success -> {
-                            // Change provider
-                            val success = ProviderService.changeProvider(session, provider, newSettings)
-                            if (success) {
-                                ProviderTestResult.Success
-                            } else {
-                                ProviderTestResult.Failure("Failed to apply provider changes")
-                            }
+                    // Change provider (inline logic from ProviderService)
+                    try {
+                        session.params.currentProvider = provider
+                        session.setProviderSetting(provider, newSettings)
+
+                        var model = session.params.getModel(provider)
+                        if (model.isBlank()) {
+                            model = newSettings.defaultModel
                         }
-                        is ProviderTestResult.Failure -> testResult
+                        session.params.model = model
+
+                        SessionConfigManager.save(session.params)
+                        session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+
+                        ProviderTestResult.Success
+                    } catch (e: Exception) {
+                        ProviderTestResult.Failure("Failed to apply provider changes")
                     }
                 } catch (e: Exception) {
                     val errorMsg = ErrorHandler.getUserFriendlyError(e, "applying provider change", "Failed to apply provider settings. Please try again.")
@@ -466,5 +481,22 @@ class SettingsViewModel(
      */
     fun dismissSuccessMessage() {
         showSuccessMessage = false
+    }
+
+    /**
+     * Validates that all required fields are filled.
+     */
+    private fun validateConfigFields(fields: Map<String, String>, configFields: List<ProviderConfigField>): Boolean = configFields.all { field ->
+        if (field.required) {
+            // For API key fields with existing values, blank is acceptable (means keep existing)
+            if (field is ProviderConfigField.ApiKeyField && field.hasExistingValue) {
+                true
+            } else {
+                val value = fields[field.name]
+                value != null && value.isNotBlank()
+            }
+        } else {
+            true
+        }
     }
 }

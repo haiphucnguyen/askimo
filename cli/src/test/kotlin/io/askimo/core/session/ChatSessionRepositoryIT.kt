@@ -37,7 +37,6 @@ class ChatSessionRepositoryIT {
 
     @AfterEach
     fun tearDown() {
-        repository.close()
         testBaseScope.close()
     }
 
@@ -557,7 +556,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, messages.size)
@@ -579,7 +578,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, firstPage.size)
@@ -589,7 +588,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = cursor1,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, secondPage.size)
@@ -610,7 +609,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(3, messages.size)
@@ -631,7 +630,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(3, firstPage.size)
@@ -641,7 +640,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = cursor1,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(3, secondPage.size)
@@ -662,7 +661,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, firstPage.size)
@@ -672,7 +671,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = cursor1,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(2, secondPage.size) // Only 2 messages left
@@ -692,7 +691,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(3, firstPage.size)
@@ -702,7 +701,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = cursor1,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(2, secondPage.size) // Only 2 messages left
@@ -722,7 +721,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, firstPage.size)
@@ -732,7 +731,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = cursor1,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, secondPage.size)
@@ -750,7 +749,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 10,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertTrue(messages.isEmpty())
@@ -771,7 +770,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 5,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(5, messages.size)
@@ -795,7 +794,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 5,
             cursor = null,
-            direction = "backward",
+            direction = PaginationDirection.BACKWARD,
         )
 
         assertEquals(5, messages.size)
@@ -821,7 +820,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 3,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(3, messages.size)
@@ -847,7 +846,7 @@ class ChatSessionRepositoryIT {
                 sessionId = session.id,
                 limit = 10,
                 cursor = cursor,
-                direction = "forward",
+                direction = PaginationDirection.FORWARD,
             )
             allMessages.addAll(messages)
             cursor = nextCursor
@@ -875,7 +874,7 @@ class ChatSessionRepositoryIT {
                 sessionId = session.id,
                 limit = 10,
                 cursor = cursor,
-                direction = "backward",
+                direction = PaginationDirection.BACKWARD,
             )
             // Add at the beginning since we're going backward
             allMessages.addAll(0, messages)
@@ -897,7 +896,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 10,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(1, messages.size)
@@ -921,7 +920,7 @@ class ChatSessionRepositoryIT {
                 sessionId = session.id,
                 limit = 5,
                 cursor = cursor,
-                direction = "forward",
+                direction = PaginationDirection.FORWARD,
             )
             messages.forEach { allMessageIds.add(it.id) }
             cursor = nextCursor
@@ -942,7 +941,7 @@ class ChatSessionRepositoryIT {
             sessionId = session.id,
             limit = 100,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertEquals(10, messages.size) // Returns all available messages
@@ -955,7 +954,7 @@ class ChatSessionRepositoryIT {
             sessionId = "non-existent-session",
             limit = 10,
             cursor = null,
-            direction = "forward",
+            direction = PaginationDirection.FORWARD,
         )
 
         assertTrue(messages.isEmpty())
