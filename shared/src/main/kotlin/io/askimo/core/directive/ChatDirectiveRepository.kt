@@ -4,9 +4,8 @@
  */
 package io.askimo.core.directive
 
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import io.askimo.core.util.AskimoHome
+import io.askimo.core.db.DatabaseConnectionFactory
 import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -20,28 +19,10 @@ const val DIRECTIVE_CONTENT_MAX_LENGTH = 8192
  */
 class ChatDirectiveRepository {
     private val hikariDataSource: HikariDataSource by lazy {
-        val dbPath = AskimoHome.base().resolve("chat_directives.db").toString()
-
-        val config = HikariConfig().apply {
-            jdbcUrl = "jdbc:sqlite:$dbPath"
-            driverClassName = "org.sqlite.JDBC"
-            maximumPoolSize = 10
-            minimumIdle = 2
-            connectionTimeout = 30000
-            idleTimeout = 600000
-            maxLifetime = 1800000
-            // SQLite specific optimizations
-            addDataSourceProperty("cachePrepStmts", "true")
-            addDataSourceProperty("prepStmtCacheSize", "250")
-            addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
-        }
-
-        HikariDataSource(config).also { ds ->
-            // Initialize database schema
-            ds.connection.use { conn ->
-                initializeDatabase(conn)
-            }
-        }
+        DatabaseConnectionFactory.createSQLiteDataSource(
+            databaseFileName = "chat_directives.db",
+            initializeDatabase = ::initializeDatabase,
+        )
     }
 
     private val dataSource: DataSource get() = hikariDataSource
@@ -163,34 +144,6 @@ class ChatDirectiveRepository {
             """,
             ).use { stmt ->
                 stmt.setString(1, id)
-                val rs = stmt.executeQuery()
-                return if (rs.next()) {
-                    ChatDirective(
-                        id = rs.getString("id"),
-                        name = rs.getString("name"),
-                        content = rs.getString("content"),
-                        createdAt = LocalDateTime.parse(rs.getString("created_at")),
-                    )
-                } else {
-                    null
-                }
-            }
-        }
-    }
-
-    /**
-     * Get a directive by name.
-     */
-    fun getByName(name: String): ChatDirective? {
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT id, name, content, created_at
-                FROM chat_directives
-                WHERE name = ?
-            """,
-            ).use { stmt ->
-                stmt.setString(1, name)
                 val rs = stmt.executeQuery()
                 return if (rs.next()) {
                     ChatDirective(

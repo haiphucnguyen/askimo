@@ -7,6 +7,7 @@ package io.askimo.core.security
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.SettingField
 import io.askimo.core.providers.Style
 import io.askimo.core.providers.Verbosity
 import kotlinx.serialization.Serializable
@@ -28,6 +29,13 @@ data class TestProviderSettings(
     )
 
     override fun toString(): String = "TestProviderSettings(apiKey=****, presets=$presets)"
+
+    override fun getFields(): List<SettingField> = emptyList()
+
+    override fun updateField(fieldName: String, value: String): ProviderSettings = when (fieldName) {
+        "apiKey" -> copy(apiKey = value)
+        else -> this
+    }
 }
 
 /**

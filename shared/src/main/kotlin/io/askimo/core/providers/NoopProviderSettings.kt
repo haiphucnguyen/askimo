@@ -10,4 +10,8 @@ object NoopProviderSettings : ProviderSettings {
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL)
 
     override fun describe(): List<String> = listOf()
+
+    override fun getFields(): List<SettingField> = emptyList()
+
+    override fun updateField(fieldName: String, value: String): ProviderSettings = this
 }

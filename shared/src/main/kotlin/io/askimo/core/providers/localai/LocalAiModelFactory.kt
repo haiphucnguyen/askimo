@@ -10,7 +10,6 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -20,12 +19,8 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
 
-class LocalAiModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> = try {
-        require(settings is LocalAiSettings) {
-            "Invalid settings type for LocalAI: ${settings::class.simpleName}"
-        }
-
+class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
+    override fun availableModels(settings: LocalAiSettings): List<String> = try {
         // LocalAI doesn't have a direct API to list models like Ollama
         // Users typically need to configure models manually
         // Return an empty list or implement a custom API call if LocalAI supports it
@@ -37,21 +32,17 @@ class LocalAiModelFactory : ChatModelFactory {
         emptyList()
     }
 
-    override fun defaultSettings(): ProviderSettings = LocalAiSettings(
+    override fun defaultSettings(): LocalAiSettings = LocalAiSettings(
         baseUrl = "http://localhost:8080", // default LocalAI endpoint
     )
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: LocalAiSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is LocalAiSettings) {
-            "Invalid settings type for LocalAI: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             LocalAiStreamingChatModel
                 .builder()

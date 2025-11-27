@@ -4,6 +4,7 @@
  */
 package io.askimo.core.session
 
+import java.io.BufferedWriter
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -62,7 +63,7 @@ class ChatSessionExporterService(
      * @param writer The buffered writer to write to
      * @param session The chat session metadata
      */
-    private fun writeHeader(writer: java.io.BufferedWriter, session: ChatSession) {
+    private fun writeHeader(writer: BufferedWriter, session: ChatSession) {
         writer.appendLine("# Chat Session: ${session.title}")
         writer.appendLine()
         writer.appendLine("**Session ID**: ${session.id}")
@@ -83,7 +84,7 @@ class ChatSessionExporterService(
      * @param writer The buffered writer to write to
      * @param sessionId The ID of the session
      */
-    private fun streamMessagesToFile(writer: java.io.BufferedWriter, sessionId: String) {
+    private fun streamMessagesToFile(writer: BufferedWriter, sessionId: String) {
         var cursor: LocalDateTime? = null
         val pageSize = 100 // Load 100 messages at a time
         var messageCounter = 0
@@ -117,7 +118,7 @@ class ChatSessionExporterService(
      * @param message The message to write
      * @param index The message number (1-based)
      */
-    private fun writeMessage(writer: java.io.BufferedWriter, message: ChatMessage, index: Int) {
+    private fun writeMessage(writer: BufferedWriter, message: ChatMessage, index: Int) {
         writer.appendLine("## Message $index")
         writer.appendLine("**Role**: ${message.role.value.uppercase()}")
         writer.appendLine("**Timestamp**: ${message.createdAt.format(timestampFormatter)}")
@@ -133,7 +134,7 @@ class ChatSessionExporterService(
      *
      * @param writer The buffered writer to write to
      */
-    private fun writeFooter(writer: java.io.BufferedWriter) {
+    private fun writeFooter(writer: BufferedWriter) {
         val exportTime = LocalDateTime.now().format(timestampFormatter)
         writer.appendLine("[End of chat session - Total messages: $totalMessageCount]")
         writer.appendLine()

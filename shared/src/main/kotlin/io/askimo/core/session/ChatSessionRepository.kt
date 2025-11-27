@@ -4,9 +4,8 @@
  */
 package io.askimo.core.session
 
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import io.askimo.core.util.AskimoHome
+import io.askimo.core.db.DatabaseConnectionFactory
 import kotlinx.serialization.json.Json
 import java.sql.Connection
 import java.time.LocalDateTime
@@ -18,28 +17,10 @@ const val SESSION_TITLE_MAX_LENGTH = 256
 
 class ChatSessionRepository {
     private val hikariDataSource: HikariDataSource by lazy {
-        val dbPath = AskimoHome.base().resolve("chat_sessions.db").toString()
-
-        val config = HikariConfig().apply {
-            jdbcUrl = "jdbc:sqlite:$dbPath"
-            driverClassName = "org.sqlite.JDBC"
-            maximumPoolSize = 10
-            minimumIdle = 2
-            connectionTimeout = 30000
-            idleTimeout = 600000
-            maxLifetime = 1800000
-            // SQLite specific optimizations
-            addDataSourceProperty("cachePrepStmts", "true")
-            addDataSourceProperty("prepStmtCacheSize", "250")
-            addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
-        }
-
-        HikariDataSource(config).also { ds ->
-            // Initialize database schema
-            ds.connection.use { conn ->
-                initializeDatabase(conn)
-            }
-        }
+        DatabaseConnectionFactory.createSQLiteDataSource(
+            databaseFileName = "chat_sessions.db",
+            initializeDatabase = ::initializeDatabase,
+        )
     }
 
     private val dataSource: DataSource get() = hikariDataSource

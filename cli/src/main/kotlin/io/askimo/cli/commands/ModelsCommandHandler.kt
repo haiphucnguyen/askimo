@@ -4,7 +4,9 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.session.ModelService
+import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.Session
 import io.askimo.core.util.Logger.info
 import org.jline.reader.ParsedLine
@@ -25,17 +27,25 @@ class ModelsCommandHandler(
 
     override fun handle(line: ParsedLine) {
         val provider = session.params.currentProvider
+        val factory = ProviderRegistry.getFactory(provider)
 
-        when (val result = ModelService.getAvailableModels(provider, session)) {
-            is ModelService.ModelsResult.Success -> {
-                info("Available models for provider '${provider.name.lowercase()}':")
-                result.models.forEach { info("- $it") }
-                info("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
-            }
-            is ModelService.ModelsResult.Error -> {
-                info("❌ ${result.message}")
-                result.helpText?.let { info("\n💡 $it") }
-            }
+        if (factory == null) {
+            info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+            return
+        }
+
+        val settings = session.params.providerSettings[provider] ?: factory.defaultSettings()
+
+        @Suppress("UNCHECKED_CAST")
+        val models = (factory as ChatModelFactory<ProviderSettings>).availableModels(settings)
+
+        if (models.isEmpty()) {
+            info("❌ No models available for ${provider.name.lowercase()}")
+            info("\n💡 ${factory.getNoModelsHelpText()}")
+        } else {
+            info("Available models for provider '${provider.name.lowercase()}':")
+            models.forEach { info("- $it") }
+            info("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
         }
     }
 }

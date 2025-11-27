@@ -10,15 +10,14 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
-class AnthropicModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> {
+class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
+    override fun availableModels(settings: AnthropicSettings): List<String> {
         // Anthropic doesn’t yet expose a “list models” endpoint like OpenAI,
         // so we’ll return known public models manually.
         return listOf(
@@ -31,19 +30,15 @@ class AnthropicModelFactory : ChatModelFactory {
         )
     }
 
-    override fun defaultSettings(): ProviderSettings = AnthropicSettings()
+    override fun defaultSettings(): AnthropicSettings = AnthropicSettings()
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: AnthropicSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is AnthropicSettings) {
-            "Invalid settings type for Anthropic: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             AnthropicStreamingChatModel
                 .builder()

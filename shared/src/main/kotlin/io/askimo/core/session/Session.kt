@@ -6,6 +6,7 @@ package io.askimo.core.session
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorContentRetriever
@@ -181,12 +182,12 @@ class Session(
     /**
      * Returns the registered factory for the current provider.
      */
-    fun getModelFactory(): ChatModelFactory? = ProviderRegistry.getFactory(params.currentProvider)
+    fun getModelFactory(): ChatModelFactory<*>? = ProviderRegistry.getFactory(params.currentProvider)
 
     /**
      * Returns the registered factory for the given provider.
      */
-    fun getModelFactory(provider: ModelProvider): ChatModelFactory? = ProviderRegistry.getFactory(provider)
+    fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
 
     /**
      * Gets the provider-specific settings map, or creates defaults if missing.
@@ -196,14 +197,40 @@ class Session(
     }
 
     /**
-     * Retrieves an existing chat memory for the given provider and model combination,
-     * or creates a new one if none exists.
+     * Safely calls createMemory on a factory with the given settings.
+     * Uses unchecked cast which is safe because the registry ensures
+     * factory and settings types match for each provider.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : ProviderSettings> createMemoryFromFactory(
+        factory: ChatModelFactory<*>,
+        model: String,
+        settings: T,
+    ): ChatMemory = (factory as ChatModelFactory<T>).createMemory(model, settings)
+
+    /**
+     * Safely calls create on a factory with the given settings.
+     * Uses unchecked cast which is safe because the registry ensures
+     * factory and settings types match for each provider.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : ProviderSettings> createChatServiceFromFactory(
+        factory: ChatModelFactory<*>,
+        model: String,
+        settings: T,
+        memory: ChatMemory,
+        retrievalAugmentor: RetrievalAugmentor? = null,
+        sessionMode: SessionMode = SessionMode.CLI_INTERACTIVE,
+    ): ChatService = (factory as ChatModelFactory<T>).create(model, settings, memory, retrievalAugmentor, sessionMode)
+
+    /**
+     * Returns the provider-specific chat memory for a given (provider, model) pair,
+     * creating one if it doesn't exist yet.
      *
-     * @param provider The model provider to get or create memory for
-     * @param model The model name to get or create memory for
-     * @param settings Provider-specific settings that may influence memory creation
-     * @return A [ChatMemory] instance that maintains conversation history for the specified
-     *         provider/model combination
+     * @param provider The model provider
+     * @param model The name of the model
+     * @param settings Provider-specific configuration settings used to create memory if needed
+     * @return The chat memory instance for this provider/model combination
      */
     fun getOrCreateMemory(
         provider: ModelProvider,
@@ -212,8 +239,9 @@ class Session(
     ): ChatMemory {
         val key = "${provider.name}/$model"
         return memoryMap.getOrPut(key) {
-            ProviderRegistry.getFactory(provider)?.createMemory(model, settings)
-                ?: MessageWindowChatMemory.withMaxMessages(200)
+            ProviderRegistry.getFactory(provider)?.let { factory ->
+                createMemoryFromFactory(factory, model, settings)
+            } ?: MessageWindowChatMemory.withMaxMessages(200)
         }
     }
 
@@ -247,7 +275,7 @@ class Session(
         }
 
         val memory = getOrCreateMemory(provider, modelName, settings)
-        val newModel = factory.create(modelName, settings, memory, sessionMode = mode)
+        val newModel = createChatServiceFromFactory(factory, modelName, settings, memory, sessionMode = mode)
         setChatService(newModel)
         return newModel
     }
@@ -292,14 +320,14 @@ class Session(
             getModelFactory(provider)
                 ?: error("No model factory registered for $provider")
 
-        val upgraded =
-            factory.create(
-                model = model,
-                settings = settings,
-                memory = memory,
-                retrievalAugmentor = rag,
-                sessionMode = mode,
-            )
+        val upgraded = createChatServiceFromFactory(
+            factory = factory,
+            model = model,
+            settings = settings,
+            memory = memory,
+            retrievalAugmentor = rag,
+            sessionMode = mode,
+        )
         info("RAG enabled for $model")
         setChatService(upgraded)
     }

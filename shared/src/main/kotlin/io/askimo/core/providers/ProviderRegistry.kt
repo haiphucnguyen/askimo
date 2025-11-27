@@ -35,7 +35,7 @@ object ProviderRegistry {
     /**
      * Internal registry mapping model providers to their respective factory implementations.
      */
-    private val factories =
+    private val factories: Map<ModelProvider, ChatModelFactory<*>> =
         mapOf(
             OPENAI to OpenAiModelFactory(),
             XAI to XAiModelFactory(),
@@ -52,7 +52,7 @@ object ProviderRegistry {
      * @param provider The model provider to get the factory for
      * @return The chat model factory for the provider, or null if no factory is registered
      */
-    fun getFactory(provider: ModelProvider): ChatModelFactory? = factories[provider]
+    fun getFactory(provider: ModelProvider): ChatModelFactory<*>? = factories[provider]
 
     /**
      * Returns the set of model providers for which a factory is currently registered.

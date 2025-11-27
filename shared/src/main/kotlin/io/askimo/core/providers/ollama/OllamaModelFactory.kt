@@ -10,7 +10,6 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -20,8 +19,8 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
 
-class OllamaModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> = try {
+class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
+    override fun availableModels(settings: OllamaSettings): List<String> = try {
         val process =
             ProcessBuilder("ollama", "list")
                 .redirectErrorStream(true)
@@ -46,21 +45,26 @@ class OllamaModelFactory : ChatModelFactory {
         emptyList()
     }
 
-    override fun defaultSettings(): ProviderSettings = OllamaSettings(
+    override fun defaultSettings(): OllamaSettings = OllamaSettings(
         baseUrl = "http://localhost:11434", // default Ollama endpoint
     )
 
+    override fun getNoModelsHelpText(): String = """
+        You may not have any models installed yet.
+
+        Visit https://ollama.com/library to browse available models.
+        Then run: ollama pull <modelName> to install a model locally.
+
+        Example: ollama pull llama3
+    """.trimIndent()
+
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: OllamaSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is OllamaSettings) {
-            "Invalid settings type for Ollama: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()

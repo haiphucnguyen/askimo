@@ -8,12 +8,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.providers.SettingField
 import io.askimo.core.session.MemoryPolicy
-import io.askimo.core.session.ModelService
 import io.askimo.core.session.ProviderConfigField
 import io.askimo.core.session.ProviderService
 import io.askimo.core.session.ProviderTestResult
 import io.askimo.core.session.Session
+import io.askimo.core.session.SessionConfigManager
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
 import io.askimo.core.session.getConfigInfo
@@ -71,7 +73,7 @@ class SettingsViewModel(
     var showSettingsDialog by mutableStateOf(false)
         private set
 
-    var settingsFields by mutableStateOf<List<io.askimo.core.session.SettingField>>(emptyList())
+    var settingsFields by mutableStateOf<List<SettingField>>(emptyList())
         private set
 
     var showProviderDialog by mutableStateOf(false)
@@ -326,26 +328,40 @@ class SettingsViewModel(
         showModelDialog = true
 
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                provider?.let { ModelService.getAvailableModels(it, session) }
+            val currentProvider = provider
+            if (currentProvider == null) {
+                isLoadingModels = false
+                availableModels = emptyList()
+                modelError = "Provider not set"
+                modelErrorHelp = null
+                return@launch
             }
 
-            isLoadingModels = false
-
-            when (result) {
-                is ModelService.ModelsResult.Success -> {
-                    availableModels = result.models
-                    modelError = null
+            withContext(Dispatchers.IO) {
+                val factory = ProviderRegistry.getFactory(currentProvider)
+                if (factory == null) {
+                    isLoadingModels = false
+                    availableModels = emptyList()
+                    modelError = "No model factory registered for provider: ${currentProvider.name.lowercase()}"
                     modelErrorHelp = null
+                    return@withContext
                 }
-                is ModelService.ModelsResult.Error -> {
+
+                val settings = session.params.providerSettings[currentProvider] ?: factory.defaultSettings()
+
+                @Suppress("UNCHECKED_CAST")
+                val models = (factory as io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+                    .availableModels(settings)
+
+                isLoadingModels = false
+
+                if (models.isEmpty()) {
                     availableModels = emptyList()
-                    modelError = result.message
-                    modelErrorHelp = result.helpText
-                }
-                null -> {
-                    availableModels = emptyList()
-                    modelError = "Provider not set"
+                    modelError = "No models available for ${currentProvider.name.lowercase()}"
+                    modelErrorHelp = factory.getNoModelsHelpText()
+                } else {
+                    availableModels = models
+                    modelError = null
                     modelErrorHelp = null
                 }
             }
@@ -359,7 +375,7 @@ class SettingsViewModel(
     fun onChangeSettings() {
         provider?.let { currentProvider ->
             val currentSettings = session.getCurrentProviderSettings()
-            settingsFields = io.askimo.core.session.SettingsService.getSettingsFields(currentProvider, currentSettings)
+            settingsFields = currentSettings.getFields()
             showSettingsDialog = true
         }
     }
@@ -370,7 +386,21 @@ class SettingsViewModel(
     fun selectModel(newModel: String) {
         scope.launch {
             val success = withContext(Dispatchers.IO) {
-                ModelService.changeModel(session, newModel)
+                try {
+                    // Update the model in session params
+                    session.params.model = newModel
+
+                    // Persist the change to disk
+                    SessionConfigManager.save(session.params)
+
+                    // Rebuild the chat service with the new model
+                    // Use KEEP_PER_PROVIDER_MODEL to preserve conversation history
+                    session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+
+                    true
+                } catch (_: Exception) {
+                    false
+                }
             }
 
             if (success) {
@@ -402,12 +432,7 @@ class SettingsViewModel(
             scope.launch {
                 val currentSettings = session.getCurrentProviderSettings()
                 val updatedSettings = withContext(Dispatchers.IO) {
-                    io.askimo.core.session.SettingsService.updateSettingField(
-                        currentProvider,
-                        currentSettings,
-                        fieldName,
-                        value,
-                    )
+                    currentSettings.updateField(fieldName, value)
                 }
 
                 // Update session with new settings
@@ -422,7 +447,7 @@ class SettingsViewModel(
                 loadConfiguration()
 
                 // Refresh settings fields in dialog
-                settingsFields = io.askimo.core.session.SettingsService.getSettingsFields(currentProvider, updatedSettings)
+                settingsFields = updatedSettings.getFields()
             }
         }
     }

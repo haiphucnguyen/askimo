@@ -7,8 +7,11 @@ package io.askimo.core.providers.openai
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.SettingField
 import io.askimo.core.providers.Style
 import io.askimo.core.providers.Verbosity
+import io.askimo.core.providers.createCommonPresetFields
+import io.askimo.core.providers.updatePresetField
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -24,4 +27,23 @@ data class OpenAiSettings(
     )
 
     override fun toString(): String = "OpenAiSettings(apiKey=****, presets=$presets)"
+
+    override fun getFields(): List<SettingField> = listOf(
+        SettingField.TextField(
+            name = SettingField.API_KEY,
+            label = "API Key",
+            description = "OpenAI API key",
+            value = apiKey,
+            isPassword = true,
+        ),
+    ) + createCommonPresetFields(presets)
+
+    override fun updateField(fieldName: String, value: String): ProviderSettings {
+        updatePresetField(presets, fieldName, value)?.let { return copy(presets = it) }
+
+        return when (fieldName) {
+            SettingField.API_KEY -> copy(apiKey = value)
+            else -> this
+        }
+    }
 }

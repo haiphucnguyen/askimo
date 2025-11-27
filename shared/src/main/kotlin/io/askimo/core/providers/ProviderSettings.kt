@@ -31,6 +31,16 @@ interface ProviderSettings {
      * @return A list of strings describing the current configuration settings
      */
     fun describe(): List<String>
+
+    /**
+     * Returns the list of configurable fields for this provider's settings.
+     */
+    fun getFields(): List<SettingField>
+
+    /**
+     * Updates a field value in the settings and returns the updated settings.
+     */
+    fun updateField(fieldName: String, value: String): ProviderSettings
 }
 
 interface HasApiKey {
