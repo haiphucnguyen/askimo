@@ -14,4 +14,6 @@ object NoopProviderSettings : ProviderSettings {
     override fun getFields(): List<SettingField> = emptyList()
 
     override fun updateField(fieldName: String, value: String): ProviderSettings = this
+
+    override fun deepCopy(): ProviderSettings = this
 }

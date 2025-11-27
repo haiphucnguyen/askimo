@@ -65,8 +65,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.SettingField
-import io.askimo.core.session.ProviderConfigField
 import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager

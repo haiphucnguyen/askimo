@@ -13,14 +13,6 @@ sealed class SettingField {
     abstract val description: String
 
     companion object {
-        /**
-         * Constants for common setting field names.
-         * Using constants instead of hardcoded strings provides:
-         * - Compile-time safety
-         * - Easy refactoring
-         * - IDE autocomplete support
-         * - Prevents typos
-         */
         const val API_KEY = "apiKey"
         const val BASE_URL = "baseUrl"
         const val STYLE = "style"

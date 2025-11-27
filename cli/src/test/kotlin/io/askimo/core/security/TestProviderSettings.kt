@@ -36,6 +36,8 @@ data class TestProviderSettings(
         "apiKey" -> copy(apiKey = value)
         else -> this
     }
+
+    override fun deepCopy(): ProviderSettings = copy()
 }
 
 /**

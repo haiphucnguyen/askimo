@@ -6,7 +6,6 @@ package io.askimo.cli.commands
 
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderRegistry
-import io.askimo.core.providers.ProviderValidator
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
@@ -77,9 +76,10 @@ class SetProviderCommandHandler(
         info("💡 Use `:models` to list all available models for this provider.")
         info("💡 Then use `:set-param model <modelName>` to choose one.")
 
-        if (!ProviderValidator.validate(provider, session.getCurrentProviderSettings())) {
+        val settings = session.getCurrentProviderSettings()
+        if (!settings.validate()) {
             info("⚠️  This provider isn't fully configured yet.")
-            info(ProviderValidator.getHelpText(provider))
+            info(settings.getSetupHelpText())
             info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
         }
     }

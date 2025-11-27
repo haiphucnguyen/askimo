@@ -41,6 +41,47 @@ interface ProviderSettings {
      * Updates a field value in the settings and returns the updated settings.
      */
     fun updateField(fieldName: String, value: String): ProviderSettings
+
+    /**
+     * Validates that this provider's settings are properly configured.
+     * Each provider can implement its own validation logic.
+     *
+     * @return true if settings are valid and provider is ready to use, false otherwise
+     */
+    fun validate(): Boolean = true
+
+    /**
+     * Returns helpful guidance text to display when settings validation fails.
+     * Each provider can provide specific instructions for setup.
+     *
+     * @return Help text explaining how to properly configure this provider
+     */
+    fun getSetupHelpText(): String = "Please check your provider configuration."
+
+    /**
+     * Returns the configuration fields required to set up this provider.
+     * Each provider can define what fields users need to configure.
+     *
+     * @return List of configuration fields for UI display
+     */
+    fun getConfigFields(): List<ProviderConfigField> = emptyList()
+
+    /**
+     * Applies configuration field values to create updated settings.
+     * Each provider handles how to merge new values with existing settings.
+     *
+     * @param fields Map of field names to their new values
+     * @return Updated settings with the new field values applied
+     */
+    fun applyConfigFields(fields: Map<String, String>): ProviderSettings = this
+
+    /**
+     * Creates a deep copy of these settings to avoid shared mutable state.
+     * Used for defensive copying when loading/saving sessions.
+     *
+     * @return A new instance with the same values
+     */
+    fun deepCopy(): ProviderSettings
 }
 
 interface HasApiKey {
