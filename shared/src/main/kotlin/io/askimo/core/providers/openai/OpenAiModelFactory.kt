@@ -13,7 +13,6 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -21,11 +20,9 @@ import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
-class OpenAiModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> {
-        val apiKey =
-            (settings as? OpenAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
-                ?: return emptyList()
+class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
+    override fun availableModels(settings: OpenAiSettings): List<String> {
+        val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
 
         val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             "${AppConfig.proxy.url}/openai"
@@ -40,19 +37,24 @@ class OpenAiModelFactory : ChatModelFactory {
         )
     }
 
-    override fun defaultSettings(): ProviderSettings = OpenAiSettings()
+    override fun defaultSettings(): OpenAiSettings = OpenAiSettings()
+
+    override fun getNoModelsHelpText(): String = """
+        One possible reason is that you haven't provided your OpenAI API key yet.
+
+        1. Get your API key from: https://platform.openai.com/account/api-keys
+        2. Then set it in the Settings
+
+        Get an API key here: https://platform.openai.com/api-keys
+    """.trimIndent()
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: OpenAiSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is OpenAiSettings) {
-            "Invalid settings type for OpenAI: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()

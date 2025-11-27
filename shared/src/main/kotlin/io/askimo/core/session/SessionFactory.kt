@@ -4,6 +4,7 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
@@ -68,7 +69,13 @@ object SessionFactory {
 
         val memory = session.getOrCreateMemory(provider, modelName, settings)
 
-        val chatService = factory?.create(modelName, settings, memory) ?: NoopChatService
+        val chatService = if (factory != null) {
+            @Suppress("UNCHECKED_CAST")
+            (factory as ChatModelFactory<ProviderSettings>)
+                .create(modelName, settings, memory, sessionMode = mode)
+        } else {
+            NoopChatService
+        }
         session.setChatService(chatService)
 
         return session

@@ -76,6 +76,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.session.ChatSessionExporterService
 import io.askimo.core.session.SESSION_TITLE_MAX_LENGTH
+import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
@@ -101,6 +102,9 @@ import io.askimo.desktop.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.Image
+import org.koin.core.context.GlobalContext.get
+import org.koin.core.context.startKoin
+import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
 import java.io.File
 import javax.swing.JFileChooser
@@ -137,36 +141,43 @@ fun detectMacOSDarkMode(): Boolean {
     }
 }
 
-fun main() = application {
-    val savedLocale = ThemePreferences.locale.value
-    LocalizationManager.setLocale(savedLocale)
+fun main() {
+    // Initialize Koin for dependency injection
+    startKoin {
+        modules(allDesktopModules)
+    }
 
-    val icon = BitmapPainter(
-        Image.makeFromEncoded(
-            object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
-                ?: throw IllegalStateException("Icon not found"),
-        ).toComposeImageBitmap(),
-    )
+    application {
+        val savedLocale = ThemePreferences.locale.value
+        LocalizationManager.setLocale(savedLocale)
 
-    var showAboutDialog by remember { mutableStateOf(false) }
+        val icon = BitmapPainter(
+            Image.makeFromEncoded(
+                object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
+                    ?: throw IllegalStateException("Icon not found"),
+            ).toComposeImageBitmap(),
+        )
 
-    Window(
-        icon = icon,
-        onCloseRequest = ::exitApplication,
-        title = "Askimo",
-        state = rememberWindowState(width = 800.dp, height = 600.dp),
-    ) {
-        LaunchedEffect(Unit) {
-            NativeMenuBar.setup(
-                frameWindowScope = this@Window,
-                onShowAbout = { showAboutDialog = true },
-            )
-        }
+        var showAboutDialog by remember { mutableStateOf(false) }
 
-        app()
+        Window(
+            icon = icon,
+            onCloseRequest = ::exitApplication,
+            title = "Askimo",
+            state = rememberWindowState(width = 800.dp, height = 600.dp),
+        ) {
+            LaunchedEffect(Unit) {
+                NativeMenuBar.setup(
+                    frameWindowScope = this@Window,
+                    onShowAbout = { showAboutDialog = true },
+                )
+            }
 
-        if (showAboutDialog) {
-            aboutDialog(onDismiss = { showAboutDialog = false })
+            app()
+
+            if (showAboutDialog) {
+                aboutDialog(onDismiss = { showAboutDialog = false })
+            }
         }
     }
 }
@@ -187,10 +198,14 @@ fun app() {
     // Store input text per session ID to prevent cross-contamination
     val sessionInputTexts = remember { mutableStateMapOf<String, TextFieldValue>() }
 
-    // Create ViewModels
-    val chatViewModel = remember { ChatViewModel(scope = scope) }
-    val sessionsViewModel = remember { SessionsViewModel(scope = scope) }
-    val settingsViewModel = remember { SettingsViewModel(scope = scope) }
+    // Create ViewModels using Koin
+    val koin = get()
+    val chatViewModel = remember { koin.get<ChatViewModel> { parametersOf(scope) } }
+    val sessionsViewModel = remember { koin.get<SessionsViewModel> { parametersOf(scope) } }
+    val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
+
+    // Get ChatService directly from Koin (it's a singleton)
+    val chatService = remember { koin.get<io.askimo.desktop.service.ChatService>() }
 
     // Set up callback to refresh sessions list when a message is complete
     chatViewModel.setOnMessageCompleteCallback {
@@ -207,7 +222,7 @@ fun app() {
         LocalizationManager.setLocale(locale)
 
         // Set the language directive for AI communication
-        chatViewModel.getChatService().setLanguageDirective(locale)
+        chatService.setLanguageDirective(locale)
     }
 
     // State to track system theme - detect when needed
@@ -1086,6 +1101,7 @@ private fun sessionItemWithMenu(
         var exportError by remember { mutableStateOf<String?>(null) }
         var showSuccessDialog by remember { mutableStateOf(false) }
         val exportScope = rememberCoroutineScope()
+        val exporterService = remember { get().get<ChatSessionExporterService>() }
 
         val exportDialogTitle = stringResource("session.export.dialog.title")
         val dialogDescription = stringResource("session.export.dialog.description", session.title)
@@ -1186,9 +1202,8 @@ private fun sessionItemWithMenu(
                         exportError = null
 
                         exportScope.launch(Dispatchers.IO) {
-                            val exporter = ChatSessionExporterService()
                             try {
-                                val result = exporter.exportToMarkdown(session.id, exportFilePath)
+                                val result = exporterService.exportToMarkdown(session.id, exportFilePath)
 
                                 // Handle result - state updates will automatically happen on UI thread
                                 result.fold(
@@ -1206,8 +1221,6 @@ private fun sessionItemWithMenu(
                             } catch (e: Exception) {
                                 exportError = e.message ?: errorUnknown
                                 isExporting = false
-                            } finally {
-                                exporter.close()
                             }
                         }
                     },

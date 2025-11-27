@@ -24,7 +24,6 @@ class ChatService {
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 streamingService.shutdown()
-                session.chatSessionRepository.close()
             },
         )
     }

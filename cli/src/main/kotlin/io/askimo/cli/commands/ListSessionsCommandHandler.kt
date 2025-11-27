@@ -17,7 +17,6 @@ class ListSessionsCommandHandler : CommandHandler {
     private val sessionsPerPage = 10
 
     override fun handle(line: ParsedLine) {
-        // Parse page number from command if provided
         val args = line.words()
         val requestedPage = if (args.size >= 2) args[1].toIntOrNull() ?: 1 else 1
 

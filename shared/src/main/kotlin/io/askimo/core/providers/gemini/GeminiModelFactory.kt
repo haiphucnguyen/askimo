@@ -12,7 +12,6 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -20,11 +19,9 @@ import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
-class GeminiModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> {
-        val apiKey =
-            (settings as? GeminiSettings)?.apiKey?.takeIf { it.isNotBlank() }
-                ?: return emptyList()
+class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
+    override fun availableModels(settings: GeminiSettings): List<String> {
+        val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
 
         val baseUrl = settings.baseUrl
         val url = "${baseUrl.trimEnd('/')}/models"
@@ -36,19 +33,15 @@ class GeminiModelFactory : ChatModelFactory {
         )
     }
 
-    override fun defaultSettings(): ProviderSettings = GeminiSettings()
+    override fun defaultSettings(): GeminiSettings = GeminiSettings()
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: GeminiSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is GeminiSettings) {
-            "Invalid settings type for Gemini: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             GoogleAiGeminiStreamingChatModel
                 .builder()

@@ -5,10 +5,12 @@
 package io.askimo.core.project
 
 import io.askimo.core.config.AppConfig
+import io.askimo.testcontainers.TestContainersConfig
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.dockerclient.DockerClientProviderStrategy
 import org.testcontainers.utility.DockerImageName
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 
 object PostgresContainerManager {
@@ -18,7 +20,7 @@ object PostgresContainerManager {
         container?.takeIf { it.isRunning }?.let { return it }
 
         ensureDockerAvailable()
-        ensureTestcontainersReuseEnabled()
+        TestContainersConfig.ensureConfigured()
         val image = DockerImageName.parse("pgvector/pgvector:0.8.1-pg18-trixie")
 
         // clean up any old same-named container to avoid 409 conflicts
@@ -30,7 +32,7 @@ object PostgresContainerManager {
                 .withUsername("askimo")
                 .withPassword("askimo")
                 .withStartupAttempts(1)
-                .withStartupTimeout(java.time.Duration.ofSeconds(60))
+                .withStartupTimeout(Duration.ofSeconds(60))
                 .withReuse(true)
                 .apply { start() }
 
@@ -63,9 +65,5 @@ object PostgresContainerManager {
         } catch (e: Exception) {
             throw IllegalStateException("Docker is not available. Please start Docker and try again.", e)
         }
-    }
-
-    private fun ensureTestcontainersReuseEnabled() {
-        System.setProperty("testcontainers.reuse.enable", "true")
     }
 }

@@ -89,6 +89,12 @@
         "pattern": "\\QMETA-INF/services/kotlin.test.AsserterContributor\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.sql.DatabaseConnectionAutoRegistration\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.sql.statements.GlobalStatementInterceptor\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/org.junit.platform.commons.support.scanning.ClasspathScanner\\E"
       },
       {

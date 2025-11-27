@@ -7,13 +7,6 @@ package io.askimo.core.security
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.providers.anthropic.AnthropicSettings
-import io.askimo.core.providers.gemini.GeminiSettings
-import io.askimo.core.providers.lmstudio.LmStudioSettings
-import io.askimo.core.providers.localai.LocalAiSettings
-import io.askimo.core.providers.ollama.OllamaSettings
-import io.askimo.core.providers.openai.OpenAiSettings
-import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod
 import io.askimo.core.session.SessionParams
 import io.askimo.core.util.Logger.debug
@@ -36,8 +29,8 @@ class SecureSessionManager {
         // Clone the session params with deep copy of provider settings
         val secureParams = sessionParams.copy(
             models = sessionParams.models.toMutableMap(),
-            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
-                deepCopyProviderSettings(provider, settings)
+            providerSettings = sessionParams.providerSettings.mapValues { (_, settings) ->
+                deepCopyProviderSettings(settings)
             }.toMutableMap(),
         )
 
@@ -58,8 +51,8 @@ class SecureSessionManager {
         // Clone the session params with deep copy of provider settings
         val sanitizedParams = sessionParams.copy(
             models = sessionParams.models.toMutableMap(),
-            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
-                deepCopyProviderSettings(provider, settings)
+            providerSettings = sessionParams.providerSettings.mapValues { (_, settings) ->
+                deepCopyProviderSettings(settings)
             }.toMutableMap(),
         )
 
@@ -189,37 +182,7 @@ class SecureSessionManager {
     /**
      * Creates a deep copy of provider settings to avoid shared mutable state.
      */
-    private fun deepCopyProviderSettings(provider: ModelProvider, settings: ProviderSettings): ProviderSettings = when (provider) {
-        ModelProvider.OPENAI -> {
-            val openAiSettings = settings as OpenAiSettings
-            openAiSettings.copy()
-        }
-        ModelProvider.GEMINI -> {
-            val geminiSettings = settings as GeminiSettings
-            geminiSettings.copy()
-        }
-        ModelProvider.XAI -> {
-            val xaiSettings = settings as XAiSettings
-            xaiSettings.copy()
-        }
-        ModelProvider.ANTHROPIC -> {
-            val anthropicSettings = settings as AnthropicSettings
-            anthropicSettings.copy()
-        }
-        ModelProvider.OLLAMA -> {
-            val ollamaSettings = settings as OllamaSettings
-            ollamaSettings.copy()
-        }
-        ModelProvider.LOCALAI -> {
-            val localAiSettings = settings as LocalAiSettings
-            localAiSettings.copy()
-        }
-        ModelProvider.LMSTUDIO -> {
-            val lmStudioSettings = settings as LmStudioSettings
-            lmStudioSettings.copy()
-        }
-        ModelProvider.UNKNOWN -> settings // Unknown settings, return as-is
-    }
+    private fun deepCopyProviderSettings(settings: ProviderSettings): ProviderSettings = settings.deepCopy()
 
     data class MigrationResult(
         val results: Map<ModelProvider, SecureApiKeyManager.StorageResult>,

@@ -176,9 +176,7 @@ fun manageDirectivesDialog(
                                         }
                                     }
 
-                                    // Directive content or edit mode
                                     if (editingDirective == directive.id) {
-                                        // Inline edit mode
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {

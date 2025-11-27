@@ -4,8 +4,6 @@
  */
 package io.askimo.core.session
 
-import io.askimo.core.util.TokenCounter
-import io.askimo.core.util.TokenCounter.TokenInfo
 import java.time.LocalDateTime
 
 /**
@@ -35,6 +33,9 @@ data class ResumeSessionPaginatedResult(
  *
  * This service provides operations for listing, sorting, and paginating chat sessions
  * in a platform-agnostic way.
+ *
+ * @param repository The chat session repository. If not provided, creates a new instance.
+ *                   For dependency injection scenarios, pass an injected repository.
  */
 class ChatSessionService(
     private val repository: ChatSessionRepository = ChatSessionRepository(),
@@ -154,7 +155,7 @@ class ChatSessionService(
                 sessionId = sessionId,
                 limit = limit,
                 cursor = null,
-                direction = "backward",
+                direction = PaginationDirection.BACKWARD,
             )
             ResumeSessionPaginatedResult(
                 success = true,
@@ -187,7 +188,7 @@ class ChatSessionService(
         sessionId = sessionId,
         limit = limit,
         cursor = cursor,
-        direction = "backward",
+        direction = PaginationDirection.BACKWARD,
     )
 
     /**
@@ -199,24 +200,6 @@ class ChatSessionService(
      * @return List of messages matching the search query
      */
     fun searchMessages(sessionId: String, searchQuery: String, limit: Int = 100): List<ChatMessage> = repository.searchMessages(sessionId, searchQuery, limit)
-
-    /**
-     * Get token count information for a specific chat session.
-     *
-     * @param sessionId The session ID to count tokens for
-     * @return TokenInfo containing token counts and message count
-     */
-    fun getSessionTokenInfo(sessionId: String): TokenInfo {
-        val messages = repository.getMessages(sessionId)
-        return TokenCounter.getTokenInfo(messages)
-    }
-
-    /**
-     * Close the repository connection.
-     */
-    fun close() {
-        repository.close()
-    }
 }
 
 /**

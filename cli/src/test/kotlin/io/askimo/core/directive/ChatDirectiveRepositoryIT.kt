@@ -32,13 +32,14 @@ class ChatDirectiveRepositoryIT {
         testBaseScope = AskimoHome.withTestBase(tempDir)
         repository = ChatDirectiveRepository()
 
-        // Initialize repository by calling list()
         repository.list()
     }
 
     @AfterEach
     fun tearDown() {
-        repository.close()
+        if (::repository.isInitialized) {
+            repository.close()
+        }
         testBaseScope.close()
     }
 

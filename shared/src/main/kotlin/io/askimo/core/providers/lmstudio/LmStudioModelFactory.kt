@@ -13,7 +13,6 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -24,12 +23,8 @@ import io.askimo.tools.fs.LocalFsTools
 import java.net.http.HttpClient
 import java.time.Duration
 
-class LmStudioModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> = try {
-        require(settings is LmStudioSettings) {
-            "Invalid settings type for LMStudio: ${settings::class.simpleName}"
-        }
-
+class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
+    override fun availableModels(settings: LmStudioSettings): List<String> = try {
         info("ℹ️ Fetching models from LM Studio server at ${settings.baseUrl}")
 
         val models = fetchModels(
@@ -51,21 +46,17 @@ class LmStudioModelFactory : ChatModelFactory {
         emptyList()
     }
 
-    override fun defaultSettings(): ProviderSettings = LmStudioSettings(
+    override fun defaultSettings(): LmStudioSettings = LmStudioSettings(
         baseUrl = "http://localhost:1234/v1",
     )
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: LmStudioSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is LmStudioSettings) {
-            "Invalid settings type for LMStudio: ${settings::class.simpleName}"
-        }
-
         // LMStudio requires HTTP/1.1
         val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)

@@ -4,6 +4,7 @@
  */
 package io.askimo.core.project
 
+import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -23,14 +24,14 @@ class PostgresContainerManagerTest {
 
     @Test
     fun `should start PostgresContainerManager and be running`() {
+        TestContainersConfig.ensureConfigured()
         // Skip if Docker is not available
         val dockerAvailable = runCatching { DockerClientFactory.instance().client() }.isSuccess
         assumeTrue(dockerAvailable, "Docker is not available; skipping PostgresContainerManager test")
 
         // Try to start the container
         val pg =
-            kotlin
-                .runCatching { PostgresContainerManager.startIfNeeded() }
+            runCatching { PostgresContainerManager.startIfNeeded() }
                 .getOrElse { throwable ->
                     assumeTrue(false, "Skipping: could not start Postgres container: ${throwable.message}")
                     return

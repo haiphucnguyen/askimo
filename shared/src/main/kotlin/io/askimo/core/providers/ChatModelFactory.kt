@@ -12,22 +12,24 @@ import io.askimo.core.session.SessionMode
 /**
  * Factory interface for creating chat model instances for a specific AI provider.
  * Each implementation corresponds to a different model provider (e.g., OpenAI, Ollama).
+ *
+ * @param T The specific ProviderSettings type for this factory
  */
-interface ChatModelFactory {
+interface ChatModelFactory<T : ProviderSettings> {
     /**
      * Returns a list of available model names for this provider.
      *
      * @param settings Provider-specific settings that may be needed to retrieve available models
      * @return List of model identifiers that can be used with this provider
      */
-    fun availableModels(settings: ProviderSettings): List<String>
+    fun availableModels(settings: T): List<String>
 
     /**
      * Returns the default settings for this provider.
      *
      * @return Default provider-specific settings that can be used to initialize models
      */
-    fun defaultSettings(): ProviderSettings
+    fun defaultSettings(): T
 
     /**
      * Creates a chat service instance with the specified parameters.
@@ -44,7 +46,7 @@ interface ChatModelFactory {
      */
     fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: T,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor? = null,
         sessionMode: SessionMode = SessionMode.CLI_INTERACTIVE,
@@ -59,6 +61,14 @@ interface ChatModelFactory {
      */
     fun createMemory(
         model: String,
-        settings: ProviderSettings,
+        settings: T,
     ): ChatMemory = MessageWindowChatMemory.withMaxMessages(200)
+
+    /**
+     * Returns helpful guidance text to display when no models are available for this provider.
+     * Each factory can override this to provide provider-specific instructions.
+     *
+     * @return Help text explaining how to set up or configure the provider
+     */
+    fun getNoModelsHelpText(): String = "Please check your provider configuration."
 }

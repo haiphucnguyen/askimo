@@ -5,7 +5,11 @@
 package io.askimo.tools.fs
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -34,12 +38,12 @@ class LocalFsToolsTest {
         val result = mutableMapOf<String, Any?>()
 
         result["success"] = element["success"]?.jsonPrimitive?.boolean
-        result["output"] = element["output"]?.let { if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content }
-        result["error"] = element["error"]?.let { if (it is kotlinx.serialization.json.JsonNull) null else it.jsonPrimitive.content }
+        result["output"] = element["output"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+        result["error"] = element["error"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
 
         // Parse metadata if present
         val metadata = element["metadata"]
-        if (metadata != null && metadata !is kotlinx.serialization.json.JsonNull) {
+        if (metadata != null && metadata !is JsonNull) {
             val metadataObj = metadata.jsonObject
             metadataObj.forEach { (key, value) ->
                 result[key] = parseJsonValue(value)
@@ -51,9 +55,9 @@ class LocalFsToolsTest {
         return result
     }
 
-    private fun parseJsonValue(value: kotlinx.serialization.json.JsonElement): Any? = when (value) {
-        is kotlinx.serialization.json.JsonNull -> null
-        is kotlinx.serialization.json.JsonPrimitive -> {
+    private fun parseJsonValue(value: JsonElement): Any? = when (value) {
+        is JsonNull -> null
+        is JsonPrimitive -> {
             when {
                 value.isString -> value.content
                 value.content == "true" -> true
@@ -61,13 +65,12 @@ class LocalFsToolsTest {
                 else -> value.content.toLongOrNull() ?: value.content.toDoubleOrNull() ?: value.content
             }
         }
-        is kotlinx.serialization.json.JsonArray -> {
+        is JsonArray -> {
             value.map { parseJsonValue(it) }
         }
-        is kotlinx.serialization.json.JsonObject -> {
+        is JsonObject -> {
             value.mapValues { (_, v) -> parseJsonValue(v) }
         }
-        else -> value.toString()
     }
 
     @AfterEach

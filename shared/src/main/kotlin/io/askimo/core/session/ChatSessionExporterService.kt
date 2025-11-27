@@ -4,6 +4,7 @@
  */
 package io.askimo.core.session
 
+import java.io.BufferedWriter
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -31,22 +32,15 @@ class ChatSessionExporterService(
      */
     fun exportToMarkdown(sessionId: String, filename: String): Result<Unit> {
         return try {
-            // Get session metadata
             val session = repository.getSession(sessionId)
                 ?: return Result.failure(Exception("Session not found: $sessionId"))
 
-            // Prepare file and write header
             val file = File(filename)
-            file.parentFile?.mkdirs() // Create parent directories if they don't exist
+            file.parentFile?.mkdirs()
 
             file.bufferedWriter().use { writer ->
-                // Write header
                 writeHeader(writer, session)
-
-                // Stream messages in batches and write to file
                 streamMessagesToFile(writer, sessionId)
-
-                // Write footer
                 writeFooter(writer)
             }
 
@@ -62,7 +56,7 @@ class ChatSessionExporterService(
      * @param writer The buffered writer to write to
      * @param session The chat session metadata
      */
-    private fun writeHeader(writer: java.io.BufferedWriter, session: ChatSession) {
+    private fun writeHeader(writer: BufferedWriter, session: ChatSession) {
         writer.appendLine("# Chat Session: ${session.title}")
         writer.appendLine()
         writer.appendLine("**Session ID**: ${session.id}")
@@ -83,21 +77,19 @@ class ChatSessionExporterService(
      * @param writer The buffered writer to write to
      * @param sessionId The ID of the session
      */
-    private fun streamMessagesToFile(writer: java.io.BufferedWriter, sessionId: String) {
+    private fun streamMessagesToFile(writer: BufferedWriter, sessionId: String) {
         var cursor: LocalDateTime? = null
         val pageSize = 100 // Load 100 messages at a time
         var messageCounter = 0
 
         do {
-            // Load messages in forward direction (oldest to newest)
             val (messages, nextCursor) = repository.getMessagesPaginated(
                 sessionId = sessionId,
                 limit = pageSize,
                 cursor = cursor,
-                direction = "forward",
+                direction = PaginationDirection.FORWARD,
             )
 
-            // Write this batch of messages to file immediately
             messages.forEach { message ->
                 messageCounter++
                 writeMessage(writer, message, messageCounter)
@@ -106,7 +98,6 @@ class ChatSessionExporterService(
             cursor = nextCursor
         } while (nextCursor != null)
 
-        // Store the total count for footer
         totalMessageCount = messageCounter
     }
 
@@ -117,10 +108,10 @@ class ChatSessionExporterService(
      * @param message The message to write
      * @param index The message number (1-based)
      */
-    private fun writeMessage(writer: java.io.BufferedWriter, message: ChatMessage, index: Int) {
+    private fun writeMessage(writer: BufferedWriter, message: ChatMessage, index: Int) {
         writer.appendLine("## Message $index")
         writer.appendLine("**Role**: ${message.role.value.uppercase()}")
-        writer.appendLine("**Timestamp**: ${message.createdAt.format(timestampFormatter)}")
+        writer.appendLine("**Timestamp**: ${message.createdAt!!.format(timestampFormatter)}")
         writer.appendLine()
         writer.appendLine(message.content)
         writer.appendLine()
@@ -133,20 +124,12 @@ class ChatSessionExporterService(
      *
      * @param writer The buffered writer to write to
      */
-    private fun writeFooter(writer: java.io.BufferedWriter) {
+    private fun writeFooter(writer: BufferedWriter) {
         val exportTime = LocalDateTime.now().format(timestampFormatter)
         writer.appendLine("[End of chat session - Total messages: $totalMessageCount]")
         writer.appendLine()
         writer.appendLine("*Exported on: $exportTime*")
     }
 
-    // Track total message count for footer
     private var totalMessageCount = 0
-
-    /**
-     * Close the repository connection.
-     */
-    fun close() {
-        repository.close()
-    }
 }

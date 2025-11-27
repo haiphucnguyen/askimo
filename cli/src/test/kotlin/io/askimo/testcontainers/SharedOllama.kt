@@ -16,7 +16,7 @@ object SharedOllama {
     private const val OLLAMA_MODELS_VOLUME = "askimo-ollama-models-cache"
 
     val container: OllamaContainer by lazy {
-        System.setProperty("testcontainers.reuse.enable", "true")
+        TestContainersConfig.ensureConfigured()
 
         val image = DockerImageName.parse("ollama/ollama:0.12.5")
         OllamaContainer(image)

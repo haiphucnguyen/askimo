@@ -19,8 +19,10 @@ shadow = "9.0.1"
 graalvmSvm = "25.0.1"
 sqlite = "3.50.3.0"
 hikaricp = "7.0.2"
+exposed = "0.61.0"
 compose = "1.9.3"
 coil = "3.3.0"
+koin = "4.1.1"
 
 [libraries]
 # JLine
@@ -67,6 +69,16 @@ logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
 hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
+
+# Exposed ORM
+exposed-core = { group = "org.jetbrains.exposed", name = "exposed-core", version.ref = "exposed" }
+exposed-jdbc = { group = "org.jetbrains.exposed", name = "exposed-jdbc", version.ref = "exposed" }
+exposed-java-time = { group = "org.jetbrains.exposed", name = "exposed-java-time", version.ref = "exposed" }
+
+# Koin DI
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
+koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", version.ref = "koin" }
 
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }

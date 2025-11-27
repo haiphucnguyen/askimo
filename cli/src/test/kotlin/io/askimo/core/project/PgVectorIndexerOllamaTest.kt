@@ -10,6 +10,7 @@ import io.askimo.core.session.Session
 import io.askimo.core.session.SessionMode
 import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
+import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.nio.file.Files
 import java.nio.file.Path
@@ -38,15 +38,19 @@ class PgVectorIndexerOllamaTest {
             image: String,
         ) : PostgreSQLContainer<PgVectorPostgres>(image)
 
-        @Container
         @JvmStatic
-        val postgres: PgVectorPostgres =
+        val postgres: PgVectorPostgres by lazy {
+            // Apply common TestContainers configuration
+            TestContainersConfig.ensureConfigured()
+
             PgVectorPostgres("pgvector/pgvector:pg16").apply {
                 withDatabaseName("askimo_test")
                 withUsername("askimo")
                 withPassword("askimo")
                 withReuse(true)
+                start() // Start the container manually
             }
+        }
     }
 
     @Test
@@ -61,6 +65,9 @@ class PgVectorIndexerOllamaTest {
         val baseUrl = "http://$host:$port"
         System.setProperty("OLLAMA_URL", baseUrl)
         System.setProperty("OLLAMA_EMBED_MODEL", "jina/jina-embeddings-v2-small-en:latest")
+
+        // Ensure the embedding model is pulled
+        SharedOllama.ensureModelPulled("jina/jina-embeddings-v2-small-en:latest")
 
         val pgHost = postgres.host
         val pgPort = postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)

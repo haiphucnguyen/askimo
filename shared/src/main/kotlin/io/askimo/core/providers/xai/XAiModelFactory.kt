@@ -12,7 +12,6 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
@@ -20,14 +19,10 @@ import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
-class XAiModelFactory : ChatModelFactory {
-    override fun availableModels(settings: ProviderSettings): List<String> {
-        val apiKey =
-            (settings as? XAiSettings)?.apiKey?.takeIf { it.isNotBlank() }
-                ?: return emptyList()
-
-        val baseUrl = (settings as? XAiSettings)?.baseUrl ?: return emptyList()
-        val url = "${baseUrl.trimEnd('/')}/models"
+class XAiModelFactory : ChatModelFactory<XAiSettings> {
+    override fun availableModels(settings: XAiSettings): List<String> {
+        val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
+        val url = "${settings.baseUrl.trimEnd('/')}/models"
 
         return fetchModels(
             apiKey = apiKey,
@@ -36,19 +31,15 @@ class XAiModelFactory : ChatModelFactory {
         )
     }
 
-    override fun defaultSettings(): ProviderSettings = XAiSettings()
+    override fun defaultSettings(): XAiSettings = XAiSettings()
 
     override fun create(
         model: String,
-        settings: ProviderSettings,
+        settings: XAiSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         sessionMode: SessionMode,
     ): ChatService {
-        require(settings is XAiSettings) {
-            "Invalid settings type for XAI: ${settings::class.simpleName}"
-        }
-
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()

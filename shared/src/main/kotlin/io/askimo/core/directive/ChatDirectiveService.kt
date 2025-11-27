@@ -79,27 +79,7 @@ class ChatDirectiveService(
     fun deleteDirective(id: String): Boolean = repository.delete(id)
 
     /**
-     * Get a directive by id.
-     */
-    fun getDirective(id: String): ChatDirective? = repository.get(id)
-
-    /**
-     * Get a directive by name.
-     */
-    fun getDirectiveByName(name: String): ChatDirective? = repository.getByName(name)
-
-    /**
      * List all directives.
      */
     fun listAllDirectives(): List<ChatDirective> = repository.list()
-
-    /**
-     * Check if a directive exists by id.
-     */
-    fun directiveExists(id: String): Boolean = repository.exists(id)
-
-    /**
-     * Check if a directive exists by name.
-     */
-    fun directiveExistsByName(name: String): Boolean = repository.existsByName(name)
 }
