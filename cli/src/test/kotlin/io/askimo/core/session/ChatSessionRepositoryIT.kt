@@ -979,6 +979,7 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should return null cursor when no more messages forward`() {
         val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now().withNano(0)
         repeat(5) { i ->
             repository.addMessage(
                 ChatMessage(
@@ -986,7 +987,7 @@ class ChatSessionRepositoryIT {
                     sessionId = session.id,
                     role = MessageRole.USER,
                     content = "Message $i",
-
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
                 ),
             )
         }

@@ -9,6 +9,7 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
+import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -36,6 +37,7 @@ class CreateProjectCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `should start postgres container and be connectable`() {
+        TestContainersConfig.ensureConfigured()
         val dockerAvailable = runCatching { DockerClientFactory.instance().client() }.isSuccess
         assumeTrue(dockerAvailable, "Docker is not available; skipping Postgres container test")
 

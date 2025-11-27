@@ -3169,6 +3169,18 @@
         "parameterTypes": []
       },
       {
+        "name": "should return false when updating title of non-existent session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating title with empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating title with only whitespace",
+        "parameterTypes": []
+      },
+      {
         "name": "should return null cursor when no more messages backward",
         "parameterTypes": []
       },
@@ -3193,6 +3205,14 @@
         "parameterTypes": []
       },
       { "name": "should star a session", "parameterTypes": [] },
+      {
+        "name": "should trim whitespace when updating session title",
+        "parameterTypes": []
+      },
+      {
+        "name": "should truncate title to maximum length when updating",
+        "parameterTypes": []
+      },
       { "name": "should unstar a session", "parameterTypes": [] },
       {
         "name": "should update conversation summary when saving again",
@@ -3202,12 +3222,17 @@
       { "name": "should update folder parent", "parameterTypes": [] },
       { "name": "should update folder properties", "parameterTypes": [] },
       { "name": "should update session sort order", "parameterTypes": [] },
+      { "name": "should update session title", "parameterTypes": [] },
       {
         "name": "should update session updated_at when adding message",
         "parameterTypes": []
       },
       {
         "name": "should update session updated_at when changing folder or starred status",
+        "parameterTypes": []
+      },
+      {
+        "name": "should update session updated_at when changing title",
         "parameterTypes": []
       },
       { "name": "should work with non-existent session", "parameterTypes": [] },
@@ -4413,7 +4438,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$2shFdMjl",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$79erLA7U",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

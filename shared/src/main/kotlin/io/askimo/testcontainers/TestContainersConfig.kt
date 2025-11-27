@@ -25,4 +25,3 @@ object TestContainersConfig {
         configured = true
     }
 }
-
