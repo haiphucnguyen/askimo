@@ -108,7 +108,6 @@ class GeminiModelFactoryTest {
         val factory = GeminiModelFactory()
         val defaultSettings = factory.defaultSettings()
 
-        assertTrue(defaultSettings is GeminiSettings, "Expected GeminiSettings instance")
         assertTrue(defaultSettings.apiKey.isBlank(), "Expected blank API key in default settings")
         assertTrue(defaultSettings.baseUrl.isNotBlank(), "Expected non-blank base URL in default settings")
     }

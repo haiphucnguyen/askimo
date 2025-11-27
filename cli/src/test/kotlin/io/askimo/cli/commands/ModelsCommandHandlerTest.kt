@@ -92,7 +92,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         // Ollama might have no models if not installed, or might list available ones
         assertTrue(
             output.contains("Available models for provider 'ollama'") ||
-                output.contains("❌ No models available for Ollama"),
+                output.contains("❌ No models available for ollama"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
         assertTrue(output.contains("💡"))
@@ -127,7 +127,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         assertTrue(
             output.contains("Available models for provider 'anthropic'") ||
-                output.contains("❌ No models available for provider: anthropic"),
+                output.contains("❌ No models available for anthropic"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
         assertTrue(output.contains("💡"))

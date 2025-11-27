@@ -108,7 +108,6 @@ class OpenAiModelFactoryTest {
         val factory = OpenAiModelFactory()
         val defaultSettings = factory.defaultSettings()
 
-        assertTrue(defaultSettings is OpenAiSettings, "Expected OpenAiSettings instance")
         assertTrue(defaultSettings.apiKey.isBlank(), "Expected blank API key in default settings")
     }
 }
