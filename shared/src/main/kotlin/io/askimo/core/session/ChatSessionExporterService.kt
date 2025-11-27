@@ -111,7 +111,7 @@ class ChatSessionExporterService(
     private fun writeMessage(writer: BufferedWriter, message: ChatMessage, index: Int) {
         writer.appendLine("## Message $index")
         writer.appendLine("**Role**: ${message.role.value.uppercase()}")
-        writer.appendLine("**Timestamp**: ${message.createdAt.format(timestampFormatter)}")
+        writer.appendLine("**Timestamp**: ${message.createdAt!!.format(timestampFormatter)}")
         writer.appendLine()
         writer.appendLine(message.content)
         writer.appendLine()

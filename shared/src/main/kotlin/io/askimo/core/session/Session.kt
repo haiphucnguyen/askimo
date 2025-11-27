@@ -343,7 +343,13 @@ class Session(
         val session = when (mode) {
             SessionMode.CLI_INTERACTIVE, SessionMode.DESKTOP -> {
                 // Persist session to database for interactive modes
-                chatSessionRepository.createSession("New Chat", directiveId)
+                chatSessionRepository.createSession(
+                    ChatSession(
+                        id = "", // Will be auto-generated
+                        title = "New Chat",
+                        directiveId = directiveId,
+                    ),
+                )
             }
             SessionMode.CLI_PROMPT -> {
                 // Create in-memory only session for non-interactive mode
@@ -395,7 +401,14 @@ class Session(
         }
 
         currentChatSession?.let { session ->
-            chatSessionRepository.addMessage(session.id, role, content)
+            chatSessionRepository.addMessage(
+                ChatMessage(
+                    id = "", // Will be auto-generated
+                    sessionId = session.id,
+                    role = role,
+                    content = content,
+                ),
+            )
 
             // Generate title from first user message
             if (role == MessageRole.USER) {
@@ -550,7 +563,14 @@ class Session(
         }
 
         // Save user message to the SPECIFIC chat ID (not currentChatSession)
-        chatSessionRepository.addMessage(chatId, MessageRole.USER, userMessage)
+        chatSessionRepository.addMessage(
+            ChatMessage(
+                id = "", // Will be auto-generated
+                sessionId = chatId,
+                role = MessageRole.USER,
+                content = userMessage,
+            ),
+        )
 
         // Generate title from first user message
         val messages = chatSessionRepository.getMessages(chatId)
@@ -607,7 +627,14 @@ class Session(
         }
 
         // Save directly to the specified session ID
-        chatSessionRepository.addMessage(sessionId, MessageRole.ASSISTANT, response)
+        chatSessionRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = sessionId,
+                role = MessageRole.ASSISTANT,
+                content = response,
+            ),
+        )
 
         // Trigger summarization for this specific session if needed
         val messageCount = chatSessionRepository.getMessageCount(sessionId)

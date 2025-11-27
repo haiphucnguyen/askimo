@@ -9,8 +9,8 @@ import java.time.LocalDateTime
 data class ChatSession(
     val id: String,
     val title: String,
-    val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime,
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
     val directiveId: String? = null,
     val folderId: String? = null,
     val isStarred: Boolean = false,
@@ -33,7 +33,7 @@ data class ChatMessage(
     val sessionId: String,
     val role: MessageRole,
     val content: String,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime = LocalDateTime.now(),
     val isOutdated: Boolean = false,
     val editParentId: String? = null,
 )
@@ -44,5 +44,5 @@ data class ConversationSummary(
     val mainTopics: List<String>,
     val recentContext: String,
     val lastSummarizedMessageId: String,
-    val createdAt: LocalDateTime,
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 )

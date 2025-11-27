@@ -182,38 +182,27 @@ class ChatSessionRepository(
         }
     }
 
-    fun createSession(
-        title: String,
-        directiveId: String? = null,
-        folderId: String? = null,
-        isStarred: Boolean = false,
-        sortOrder: Int = 0,
-    ): ChatSession {
-        val session = ChatSession(
+    fun createSession(session: ChatSession): ChatSession {
+        // Inject server-controlled field: UUID
+        // createdAt and updatedAt will use the values from session (which default to LocalDateTime.now())
+        val sessionWithInjectedFields = session.copy(
             id = UUID.randomUUID().toString(),
-            title = title,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now(),
-            directiveId = directiveId,
-            folderId = folderId,
-            isStarred = isStarred,
-            sortOrder = sortOrder,
         )
 
         transaction(database) {
             ChatSessionsTable.insert {
-                it[id] = session.id
-                it[ChatSessionsTable.title] = session.title
-                it[createdAt] = session.createdAt
-                it[updatedAt] = session.updatedAt
-                it[ChatSessionsTable.directiveId] = session.directiveId
-                it[ChatSessionsTable.folderId] = session.folderId
-                it[ChatSessionsTable.isStarred] = if (session.isStarred) 1 else 0
-                it[ChatSessionsTable.sortOrder] = session.sortOrder
+                it[id] = sessionWithInjectedFields.id
+                it[ChatSessionsTable.title] = sessionWithInjectedFields.title
+                it[createdAt] = sessionWithInjectedFields.createdAt
+                it[updatedAt] = sessionWithInjectedFields.updatedAt
+                it[ChatSessionsTable.directiveId] = sessionWithInjectedFields.directiveId
+                it[ChatSessionsTable.folderId] = sessionWithInjectedFields.folderId
+                it[ChatSessionsTable.isStarred] = if (sessionWithInjectedFields.isStarred) 1 else 0
+                it[ChatSessionsTable.sortOrder] = sessionWithInjectedFields.sortOrder
             }
         }
 
-        return session
+        return sessionWithInjectedFields
     }
 
     fun getAllSessions(): List<ChatSession> = transaction(database) {
@@ -256,35 +245,32 @@ class ChatSessionRepository(
                 )
             }
     }
-
-    fun addMessage(sessionId: String, role: MessageRole, content: String): ChatMessage {
-        val message = ChatMessage(
+    fun addMessage(message: ChatMessage): ChatMessage {
+        // Inject server-controlled field: UUID
+        // createdAt will use the value from message (which defaults to LocalDateTime.now())
+        val messageWithInjectedFields = message.copy(
             id = UUID.randomUUID().toString(),
-            sessionId = sessionId,
-            role = role,
-            content = content,
-            createdAt = LocalDateTime.now(),
         )
 
         transaction(database) {
             // Insert message
             ChatMessagesTable.insert {
-                it[id] = message.id
-                it[ChatMessagesTable.sessionId] = message.sessionId
-                it[ChatMessagesTable.role] = message.role.value
-                it[ChatMessagesTable.content] = message.content
-                it[createdAt] = message.createdAt
-                it[ChatMessagesTable.isOutdated] = if (message.isOutdated) 1 else 0
-                it[ChatMessagesTable.editParentId] = message.editParentId
+                it[id] = messageWithInjectedFields.id
+                it[ChatMessagesTable.sessionId] = messageWithInjectedFields.sessionId
+                it[ChatMessagesTable.role] = messageWithInjectedFields.role.value
+                it[ChatMessagesTable.content] = messageWithInjectedFields.content
+                it[createdAt] = messageWithInjectedFields.createdAt
+                it[ChatMessagesTable.isOutdated] = if (messageWithInjectedFields.isOutdated) 1 else 0
+                it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
             }
 
             // Update session's updated_at
-            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            ChatSessionsTable.update({ ChatSessionsTable.id eq messageWithInjectedFields.sessionId }) {
                 it[updatedAt] = LocalDateTime.now()
             }
         }
 
-        return message
+        return messageWithInjectedFields
     }
 
     fun getMessages(sessionId: String): List<ChatMessage> = transaction(database) {

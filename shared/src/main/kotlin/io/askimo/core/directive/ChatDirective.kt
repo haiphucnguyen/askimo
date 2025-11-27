@@ -12,8 +12,8 @@ import java.util.UUID
  * to influence AI behavior (tone, format, style, etc.)
  */
 data class ChatDirective(
-    val id: String = UUID.randomUUID().toString(), // unique identifier
-    val name: String, // user-friendly name (e.g., "Concise Code", "Explain Like I'm 5")
-    val content: String, // raw directive text provided by user
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val content: String,
     val createdAt: LocalDateTime = LocalDateTime.now(),
 )

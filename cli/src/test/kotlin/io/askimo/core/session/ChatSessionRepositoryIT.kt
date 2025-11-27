@@ -45,7 +45,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create and retrieve a chat session`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         assertNotNull(session.id)
         assertEquals("Test Session", session.title)
@@ -56,8 +56,9 @@ class ChatSessionRepositoryIT {
         assertNotNull(retrieved)
         assertEquals(session.id, retrieved.id)
         assertEquals(session.title, retrieved.title)
-        assertEquals(session.createdAt, retrieved.createdAt)
-        assertEquals(session.updatedAt, retrieved.updatedAt)
+        // Compare timestamps with millisecond precision (SQLite truncates nanoseconds)
+        assertEquals(session.createdAt.withNano(0), retrieved.createdAt.withNano(0))
+        assertEquals(session.updatedAt.withNano(0), retrieved.updatedAt.withNano(0))
     }
 
     @Test
@@ -69,26 +70,60 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should retrieve all sessions ordered by updated_at desc`() {
-        val session1 = repository.createSession("First Session")
-        Thread.sleep(10) // Ensure different timestamps
-        val session2 = repository.createSession("Second Session")
-        Thread.sleep(10)
-        val session3 = repository.createSession("Third Session")
+        val baseTime = LocalDateTime.now().withNano(0)
+        val session1 = repository.createSession(
+            ChatSession(
+                id = "",
+                title = "First Session",
+                createdAt = baseTime.plusSeconds(1),
+                updatedAt = baseTime.plusSeconds(1),
+            ),
+        )
+        val session2 = repository.createSession(
+            ChatSession(
+                id = "",
+                title = "Second Session",
+                createdAt = baseTime.plusSeconds(2),
+                updatedAt = baseTime.plusSeconds(2),
+            ),
+        )
+        val session3 = repository.createSession(
+            ChatSession(
+                id = "",
+                title = "Third Session",
+                createdAt = baseTime.plusSeconds(3),
+                updatedAt = baseTime.plusSeconds(3),
+            ),
+        )
 
         val sessions = repository.getAllSessions()
 
         assertEquals(3, sessions.size)
-        assertEquals(session3.id, sessions[0].id) // Most recent first
+        assertEquals(session3.id, sessions[0].id)
         assertEquals(session2.id, sessions[1].id)
         assertEquals(session1.id, sessions[2].id)
     }
 
     @Test
     fun `should add and retrieve messages for a session`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
-        val userMessage = repository.addMessage(session.id, MessageRole.USER, "Hello, AI!")
-        val assistantMessage = repository.addMessage(session.id, MessageRole.ASSISTANT, "Hello! How can I help you?")
+        val userMessage = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Hello, AI!",
+            ),
+        )
+        val assistantMessage = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Hello! How can I help you?",
+            ),
+        )
 
         assertNotNull(userMessage.id)
         assertEquals(session.id, userMessage.sessionId)
@@ -110,12 +145,25 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should update session updated_at when adding message`() {
-        val session = repository.createSession("Test Session")
+        val baseTime = LocalDateTime.now().withNano(0)
+        val session = repository.createSession(
+            ChatSession(
+                id = "",
+                title = "Test Session",
+                createdAt = baseTime,
+                updatedAt = baseTime,
+            ),
+        )
         val originalUpdatedAt = session.updatedAt
 
-        Thread.sleep(10)
-
-        repository.addMessage(session.id, MessageRole.USER, "Test message")
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message",
+            ),
+        )
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
@@ -124,11 +172,44 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should retrieve recent messages in chronological order`() {
-        val session = repository.createSession("Test Session")
-        repository.addMessage(session.id, MessageRole.USER, "Message 1")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
-        repository.addMessage(session.id, MessageRole.USER, "Message 2")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 2")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 1",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(3),
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 2",
+                createdAt = baseTime.plusSeconds(4),
+            ),
+        )
 
         val recentMessages = repository.getRecentMessages(session.id, 3)
 
@@ -140,24 +221,72 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should count messages correctly`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         assertEquals(0, repository.getMessageCount(session.id))
 
-        repository.addMessage(session.id, MessageRole.USER, "Message 1")
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+
+            ),
+        )
         assertEquals(1, repository.getMessageCount(session.id))
 
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 1",
+            ),
+        )
         assertEquals(2, repository.getMessageCount(session.id))
     }
 
     @Test
     fun `should retrieve messages after specific message`() {
-        val session = repository.createSession("Test Session")
-        val message1 = repository.addMessage(session.id, MessageRole.USER, "Message 1")
-        val message2 = repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
-        val message3 = repository.addMessage(session.id, MessageRole.USER, "Message 2")
-        val message4 = repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 2")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now().withNano(0)
+        val message1 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        val message2 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 1",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+        val message3 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(3),
+            ),
+        )
+        val message4 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 2",
+                createdAt = baseTime.plusSeconds(4),
+            ),
+        )
 
         val messagesAfter = repository.getMessagesAfter(session.id, message1.id, 10)
 
@@ -169,8 +298,15 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should save and retrieve conversation summary`() {
-        val session = repository.createSession("Test Session")
-        val message = repository.addMessage(session.id, MessageRole.USER, "Test message")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val message = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message",
+            ),
+        )
 
         val summary = ConversationSummary(
             sessionId = session.id,
@@ -178,7 +314,6 @@ class ChatSessionRepositoryIT {
             mainTopics = listOf("unit testing", "database"),
             recentContext = "User is asking about testing",
             lastSummarizedMessageId = message.id,
-            createdAt = LocalDateTime.now(),
         )
 
         repository.saveSummary(summary)
@@ -194,9 +329,23 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should update conversation summary when saving again`() {
-        val session = repository.createSession("Test Session")
-        val message1 = repository.addMessage(session.id, MessageRole.USER, "Test message 1")
-        val message2 = repository.addMessage(session.id, MessageRole.USER, "Test message 2")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val message1 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message 1",
+            ),
+        )
+        val message2 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message 2",
+            ),
+        )
 
         val originalSummary = ConversationSummary(
             sessionId = session.id,
@@ -204,7 +353,6 @@ class ChatSessionRepositoryIT {
             mainTopics = listOf("unit testing"),
             recentContext = "Initial context",
             lastSummarizedMessageId = message1.id,
-            createdAt = LocalDateTime.now(),
         )
 
         val updatedSummary = ConversationSummary(
@@ -213,7 +361,6 @@ class ChatSessionRepositoryIT {
             mainTopics = listOf("unit testing", "database"),
             recentContext = "Updated context",
             lastSummarizedMessageId = message2.id,
-            createdAt = LocalDateTime.now(),
         )
 
         // When
@@ -238,7 +385,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should generate and update session title`() {
-        val session = repository.createSession("Temporary Title")
+        val session = repository.createSession(ChatSession(id = "", title = "Temporary Title"))
         val firstMessage = "What is the best way to test a Kotlin application?"
 
         repository.generateAndUpdateTitle(session.id, firstMessage)
@@ -251,7 +398,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should generate title with ellipsis for long messages`() {
-        val session = repository.createSession("Temporary Title")
+        val session = repository.createSession(ChatSession(id = "", title = "Temporary Title"))
         // Create a message longer than SESSION_TITLE_MAX_LENGTH to test ellipsis
         val longMessage = "a".repeat(SESSION_TITLE_MAX_LENGTH + 50)
 
@@ -266,7 +413,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should generate title ending with period for sentences`() {
-        val session = repository.createSession("Temporary Title")
+        val session = repository.createSession(ChatSession(id = "", title = "Temporary Title"))
         val sentenceMessage = "This is a complete sentence. And this is another one."
 
         repository.generateAndUpdateTitle(session.id, sentenceMessage)
@@ -278,13 +425,21 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle database transactions correctly on failure`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         // This test verifies that if something goes wrong during message addition,
         // the transaction is rolled back. We can't easily simulate a database failure,
         // but we can verify the basic transaction structure works.
         assertDoesNotThrow {
-            repository.addMessage(session.id, MessageRole.USER, "Test message")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Test message",
+
+                ),
+            )
         }
 
         assertEquals(1, repository.getMessageCount(session.id))
@@ -299,11 +454,32 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle different message roles correctly`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
-        repository.addMessage(session.id, MessageRole.USER, "User message")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Assistant message")
-        repository.addMessage(session.id, MessageRole.SYSTEM, "System message")
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "User message",
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Assistant message",
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.SYSTEM,
+                content = "System message",
+            ),
+        )
 
         val messages = repository.getMessages(session.id)
         assertEquals(3, messages.size)
@@ -321,7 +497,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle empty messages list`() {
-        val session = repository.createSession("Empty Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Empty Session"))
 
         val messages = repository.getMessages(session.id)
 
@@ -330,9 +506,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should limit recent messages correctly`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val recentMessages = repository.getRecentMessages(session.id, 5)
@@ -344,8 +529,15 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle conversation summary with complex data`() {
-        val session = repository.createSession("Test Session")
-        val message = repository.addMessage(session.id, MessageRole.USER, "Test message")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val message = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message",
+            ),
+        )
 
         val complexSummary = ConversationSummary(
             sessionId = session.id,
@@ -363,7 +555,6 @@ class ChatSessionRepositoryIT {
             ),
             recentContext = "User is working on a complex web application with multiple microservices. They need help with database optimization and testing strategies.",
             lastSummarizedMessageId = message.id,
-            createdAt = LocalDateTime.now(),
         )
 
         repository.saveSummary(complexSummary)
@@ -377,7 +568,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should delete session successfully`() {
-        val session = repository.createSession("Session to Delete")
+        val session = repository.createSession(ChatSession(id = "", title = "Session to Delete"))
 
         val deleted = repository.deleteSession(session.id)
 
@@ -394,10 +585,33 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should delete session and all its messages`() {
-        val session = repository.createSession("Session with Messages")
-        repository.addMessage(session.id, MessageRole.USER, "Message 1")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
-        repository.addMessage(session.id, MessageRole.USER, "Message 2")
+        val session = repository.createSession(ChatSession(id = "", title = "Session with Messages"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 1",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 2",
+
+            ),
+        )
 
         assertEquals(3, repository.getMessageCount(session.id))
 
@@ -411,8 +625,16 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should delete session and its conversation summary`() {
-        val session = repository.createSession("Session with Summary")
-        val message = repository.addMessage(session.id, MessageRole.USER, "Test message")
+        val session = repository.createSession(ChatSession(id = "", title = "Session with Summary"))
+        val message = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message",
+
+            ),
+        )
 
         val summary = ConversationSummary(
             sessionId = session.id,
@@ -420,7 +642,7 @@ class ChatSessionRepositoryIT {
             mainTopics = listOf("unit testing"),
             recentContext = "Test context",
             lastSummarizedMessageId = message.id,
-            createdAt = LocalDateTime.now(),
+
         )
 
         repository.saveSummary(summary)
@@ -435,9 +657,25 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should delete session with all related data`() {
-        val session = repository.createSession("Complete Session")
-        repository.addMessage(session.id, MessageRole.USER, "Message 1")
-        val message2 = repository.addMessage(session.id, MessageRole.ASSISTANT, "Response 1")
+        val session = repository.createSession(ChatSession(id = "", title = "Complete Session"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+
+            ),
+        )
+        val message2 = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Response 1",
+
+            ),
+        )
 
         val summary = ConversationSummary(
             sessionId = session.id,
@@ -445,7 +683,7 @@ class ChatSessionRepositoryIT {
             mainTopics = listOf("topic1", "topic2"),
             recentContext = "Context",
             lastSummarizedMessageId = message2.id,
-            createdAt = LocalDateTime.now(),
+
         )
         repository.saveSummary(summary)
 
@@ -467,10 +705,26 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should not affect other sessions when deleting one`() {
-        val session1 = repository.createSession("Session 1")
-        val session2 = repository.createSession("Session 2")
-        repository.addMessage(session1.id, MessageRole.USER, "Message in session 1")
-        repository.addMessage(session2.id, MessageRole.USER, "Message in session 2")
+        val session1 = repository.createSession(ChatSession(id = "", title = "Session 1"))
+        val session2 = repository.createSession(ChatSession(id = "", title = "Session 2"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session1.id,
+                role = MessageRole.USER,
+                content = "Message in session 1",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session2.id,
+                role = MessageRole.USER,
+                content = "Message in session 2",
+
+            ),
+        )
 
         val deleted = repository.deleteSession(session1.id)
 
@@ -483,7 +737,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle deletion of session with no messages`() {
-        val session = repository.createSession("Empty Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Empty Session"))
 
         assertEquals(0, repository.getMessageCount(session.id))
 
@@ -495,8 +749,16 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle deletion of session with no summary`() {
-        val session = repository.createSession("Session without Summary")
-        repository.addMessage(session.id, MessageRole.USER, "Message")
+        val session = repository.createSession(ChatSession(id = "", title = "Session without Summary"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message",
+
+            ),
+        )
 
         assertNull(repository.getConversationSummary(session.id))
 
@@ -508,9 +770,9 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should delete multiple sessions independently`() {
-        val session1 = repository.createSession("Session 1")
-        val session2 = repository.createSession("Session 2")
-        val session3 = repository.createSession("Session 3")
+        val session1 = repository.createSession(ChatSession(id = "", title = "Session 1"))
+        val session2 = repository.createSession(ChatSession(id = "", title = "Session 2"))
+        val session3 = repository.createSession(ChatSession(id = "", title = "Session 3"))
 
         assertEquals(3, repository.getAllSessions().size)
 
@@ -532,27 +794,59 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should maintain database integrity after deletion`() {
-        val session1 = repository.createSession("Session 1")
-        val session2 = repository.createSession("Session 2")
-        repository.addMessage(session1.id, MessageRole.USER, "Message 1")
-        repository.addMessage(session2.id, MessageRole.USER, "Message 2")
+        val session1 = repository.createSession(ChatSession(id = "", title = "Session 1"))
+        val session2 = repository.createSession(ChatSession(id = "", title = "Session 2"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session1.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session2.id,
+                role = MessageRole.USER,
+                content = "Message 2",
+
+            ),
+        )
 
         repository.deleteSession(session1.id)
 
         // Verify we can still create new sessions and add messages
-        val session3 = repository.createSession("Session 3")
+        val session3 = repository.createSession(ChatSession(id = "", title = "Session 3"))
         assertNotNull(session3)
 
-        val newMessage = repository.addMessage(session2.id, MessageRole.USER, "Another message")
+        val newMessage = repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session2.id,
+                role = MessageRole.USER,
+                content = "Another message",
+
+            ),
+        )
         assertNotNull(newMessage)
         assertEquals(2, repository.getMessageCount(session2.id))
     }
 
     @Test
     fun `should paginate messages forward from start`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+
+                ),
+            )
         }
 
         val (messages, nextCursor) = repository.getMessagesPaginated(
@@ -571,10 +865,21 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should paginate messages forward with cursor`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         val messages = mutableListOf<ChatMessage>()
+        val baseTime = LocalDateTime.now()
         repeat(10) { i ->
-            messages.add(repository.addMessage(session.id, MessageRole.USER, "Message $i"))
+            messages.add(
+                repository.addMessage(
+                    ChatMessage(
+                        id = "",
+                        sessionId = session.id,
+                        role = MessageRole.USER,
+                        content = "Message $i",
+                        createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                    ),
+                ),
+            )
         }
 
         val (firstPage, cursor1) = repository.getMessagesPaginated(
@@ -603,9 +908,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should paginate messages backward from end`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val (messages, prevCursor) = repository.getMessagesPaginated(
@@ -624,9 +938,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should paginate messages backward with cursor`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val (firstPage, cursor1) = repository.getMessagesPaginated(
@@ -655,9 +978,17 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return null cursor when no more messages forward`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         repeat(5) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+
+                ),
+            )
         }
 
         val (firstPage, cursor1) = repository.getMessagesPaginated(
@@ -677,7 +1008,7 @@ class ChatSessionRepositoryIT {
             direction = PaginationDirection.FORWARD,
         )
 
-        assertEquals(2, secondPage.size) // Only 2 messages left
+        assertEquals(2, secondPage.size)
         assertEquals("Message 3", secondPage[0].content)
         assertEquals("Message 4", secondPage[1].content)
         assertNull(cursor2) // No more messages
@@ -685,9 +1016,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return null cursor when no more messages backward`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now().withNano(0)
         repeat(5) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val (firstPage, cursor1) = repository.getMessagesPaginated(
@@ -715,9 +1055,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle pagination with exact page size`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(6) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val (firstPage, cursor1) = repository.getMessagesPaginated(
@@ -746,7 +1095,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return empty list and null cursor for empty session`() {
-        val session = repository.createSession("Empty Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Empty Session"))
 
         val (messages, cursor) = repository.getMessagesPaginated(
             sessionId = session.id,
@@ -761,12 +1110,19 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should maintain chronological order in forward pagination`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         val timestamps = mutableListOf<LocalDateTime>()
         repeat(10) { i ->
-            val message = repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            val message = repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+
+                ),
+            )
             timestamps.add(message.createdAt)
-            Thread.sleep(1) // Ensure different timestamps
         }
 
         val (messages, _) = repository.getMessagesPaginated(
@@ -787,10 +1143,17 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should maintain chronological order in backward pagination`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
-            Thread.sleep(1) // Ensure different timestamps
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+
+                ),
+            )
         }
 
         val (messages, _) = repository.getMessagesPaginated(
@@ -812,12 +1175,52 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle pagination with different message roles`() {
-        val session = repository.createSession("Test Session")
-        repository.addMessage(session.id, MessageRole.SYSTEM, "System message")
-        repository.addMessage(session.id, MessageRole.USER, "User message 1")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Assistant response 1")
-        repository.addMessage(session.id, MessageRole.USER, "User message 2")
-        repository.addMessage(session.id, MessageRole.ASSISTANT, "Assistant response 2")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.SYSTEM,
+                content = "System message",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "User message 1",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Assistant response 1",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "User message 2",
+
+            ),
+        )
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Assistant response 2",
+
+            ),
+        )
 
         val (messages, cursor) = repository.getMessagesPaginated(
             sessionId = session.id,
@@ -835,9 +1238,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should paginate through entire message history forward`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now().withNano(0)
         repeat(25) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val allMessages = mutableListOf<ChatMessage>()
@@ -863,9 +1275,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should paginate through entire message history backward`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(25) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val allMessages = mutableListOf<ChatMessage>()
@@ -892,8 +1313,16 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle pagination with single message`() {
-        val session = repository.createSession("Test Session")
-        repository.addMessage(session.id, MessageRole.USER, "Only message")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        repository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Only message",
+
+            ),
+        )
 
         val (messages, cursor) = repository.getMessagesPaginated(
             sessionId = session.id,
@@ -909,9 +1338,18 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should not duplicate messages across pages`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
         repeat(15) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong() + 1),
+                ),
+            )
         }
 
         val allMessageIds = mutableSetOf<String>()
@@ -935,9 +1373,17 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should handle large page sizes`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         repeat(10) { i ->
-            repository.addMessage(session.id, MessageRole.USER, "Message $i")
+            repository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+
+                ),
+            )
         }
 
         val (messages, cursor) = repository.getMessagesPaginated(
@@ -1108,7 +1554,7 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should move sessions to root when deleting folder`() {
         val folder = repository.createFolder("Test Folder")
-        val session = repository.createSession("Test Session", folderId = folder.id)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", folderId = folder.id))
 
         assertEquals(folder.id, session.folderId)
 
@@ -1145,7 +1591,7 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should create session with folder`() {
         val folder = repository.createFolder("Test Folder")
-        val session = repository.createSession("Test Session", folderId = folder.id)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", folderId = folder.id))
 
         assertEquals(folder.id, session.folderId)
 
@@ -1155,14 +1601,14 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create session without folder (root level)`() {
-        val session = repository.createSession("Root Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Root Session"))
 
         assertNull(session.folderId)
     }
 
     @Test
     fun `should move session to folder`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         val folder = repository.createFolder("Test Folder")
 
         assertNull(session.folderId)
@@ -1177,7 +1623,7 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should move session to root (null folder)`() {
         val folder = repository.createFolder("Test Folder")
-        val session = repository.createSession("Test Session", folderId = folder.id)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", folderId = folder.id))
 
         assertEquals(folder.id, session.folderId)
 
@@ -1192,7 +1638,7 @@ class ChatSessionRepositoryIT {
     fun `should move session between folders`() {
         val folder1 = repository.createFolder("Folder 1")
         val folder2 = repository.createFolder("Folder 2")
-        val session = repository.createSession("Test Session", folderId = folder1.id)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", folderId = folder1.id))
 
         assertEquals(folder1.id, session.folderId)
 
@@ -1215,10 +1661,10 @@ class ChatSessionRepositoryIT {
         val folder1 = repository.createFolder("Folder 1")
         val folder2 = repository.createFolder("Folder 2")
 
-        repository.createSession("Session in Folder 1 - A", folderId = folder1.id)
-        repository.createSession("Session in Folder 1 - B", folderId = folder1.id)
-        repository.createSession("Session in Folder 2", folderId = folder2.id)
-        repository.createSession("Root Session")
+        repository.createSession(ChatSession(id = "", title = "Session in Folder 1 - A", folderId = folder1.id))
+        repository.createSession(ChatSession(id = "", title = "Session in Folder 1 - B", folderId = folder1.id))
+        repository.createSession(ChatSession(id = "", title = "Session in Folder 2", folderId = folder2.id))
+        repository.createSession(ChatSession(id = "", title = "Root Session"))
 
         val folder1Sessions = repository.getSessionsByFolder(folder1.id)
         assertEquals(2, folder1Sessions.size)
@@ -1232,9 +1678,9 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should get root sessions (null folder)`() {
         val folder = repository.createFolder("Test Folder")
-        repository.createSession("Root Session 1")
-        repository.createSession("Root Session 2")
-        repository.createSession("Folder Session", folderId = folder.id)
+        repository.createSession(ChatSession(id = "", title = "Root Session 1"))
+        repository.createSession(ChatSession(id = "", title = "Root Session 2"))
+        repository.createSession(ChatSession(id = "", title = "Folder Session", folderId = folder.id))
 
         val rootSessions = repository.getSessionsByFolder(null)
 
@@ -1255,7 +1701,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create session with starred flag`() {
-        val session = repository.createSession("Starred Session", isStarred = true)
+        val session = repository.createSession(ChatSession(id = "", title = "Starred Session", isStarred = true))
 
         assertTrue(session.isStarred)
 
@@ -1265,14 +1711,14 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create session without starred flag by default`() {
-        val session = repository.createSession("Normal Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Normal Session"))
 
         assertEquals(false, session.isStarred)
     }
 
     @Test
     fun `should star a session`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         assertEquals(false, session.isStarred)
 
@@ -1285,7 +1731,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should unstar a session`() {
-        val session = repository.createSession("Test Session", isStarred = true)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", isStarred = true))
 
         assertTrue(session.isStarred)
 
@@ -1305,10 +1751,10 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should get all starred sessions`() {
-        repository.createSession("Starred 1", isStarred = true)
-        repository.createSession("Normal 1", isStarred = false)
-        repository.createSession("Starred 2", isStarred = true)
-        repository.createSession("Normal 2")
+        repository.createSession(ChatSession(id = "", title = "Starred 1", isStarred = true))
+        repository.createSession(ChatSession(id = "", title = "Normal 1", isStarred = false))
+        repository.createSession(ChatSession(id = "", title = "Starred 2", isStarred = true))
+        repository.createSession(ChatSession(id = "", title = "Normal 2"))
 
         val starredSessions = repository.getStarredSessions()
 
@@ -1318,8 +1764,8 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return empty list when no starred sessions`() {
-        repository.createSession("Normal Session 1")
-        repository.createSession("Normal Session 2")
+        repository.createSession(ChatSession(id = "", title = "Normal Session 1"))
+        repository.createSession(ChatSession(id = "", title = "Normal Session 2"))
 
         val starredSessions = repository.getStarredSessions()
 
@@ -1328,11 +1774,9 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should get starred sessions ordered by sort order and updated time`() {
-        val session1 = repository.createSession("Starred 1", isStarred = true, sortOrder = 10)
-        Thread.sleep(10)
-        repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
-        Thread.sleep(10)
-        repository.createSession("Starred 3", isStarred = true, sortOrder = 5)
+        val session1 = repository.createSession(ChatSession(id = "", title = "Starred 1", isStarred = true, sortOrder = 10))
+        repository.createSession(ChatSession(id = "", title = "Starred 2", isStarred = true, sortOrder = 5))
+        repository.createSession(ChatSession(id = "", title = "Starred 3", isStarred = true, sortOrder = 5))
 
         val starredSessions = repository.getStarredSessions()
 
@@ -1349,7 +1793,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create session with sort order`() {
-        val session = repository.createSession("Test Session", sortOrder = 42)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", sortOrder = 42))
 
         assertEquals(42, session.sortOrder)
 
@@ -1359,14 +1803,14 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should create session with default sort order`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         assertEquals(0, session.sortOrder)
     }
 
     @Test
     fun `should update session sort order`() {
-        val session = repository.createSession("Test Session", sortOrder = 1)
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session", sortOrder = 1))
 
         assertEquals(1, session.sortOrder)
 
@@ -1386,7 +1830,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should update session title`() {
-        val session = repository.createSession("Original Title")
+        val session = repository.createSession(ChatSession(id = "", title = "Original Title"))
 
         assertEquals("Original Title", session.title)
 
@@ -1399,7 +1843,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should trim whitespace when updating session title`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         val updated = repository.updateSessionTitle(session.id, "  New Title With Spaces  ")
 
@@ -1410,7 +1854,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return false when updating title with empty string`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         val updated = repository.updateSessionTitle(session.id, "")
 
@@ -1421,7 +1865,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should return false when updating title with only whitespace`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         val updated = repository.updateSessionTitle(session.id, "   ")
 
@@ -1439,7 +1883,7 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should truncate title to maximum length when updating`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
 
         val longTitle = "a".repeat(SESSION_TITLE_MAX_LENGTH + 100)
         val updated = repository.updateSessionTitle(session.id, longTitle)
@@ -1452,11 +1896,10 @@ class ChatSessionRepositoryIT {
 
     @Test
     fun `should update session updated_at when changing title`() {
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         val originalUpdatedAt = session.updatedAt
 
-        Thread.sleep(10) // Ensure different timestamp
-
+        Thread.sleep(10) // Ensure timestamp difference
         repository.updateSessionTitle(session.id, "New Title")
 
         val retrieved = repository.getSession(session.id)
@@ -1468,13 +1911,10 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should order sessions by starred, sort order, and updated time`() {
         // Create sessions with different combinations
-        val normal1 = repository.createSession("Normal 1", isStarred = false, sortOrder = 5)
-        Thread.sleep(10)
-        val normal2 = repository.createSession("Normal 2", isStarred = false, sortOrder = 10)
-        Thread.sleep(10)
-        val starred1 = repository.createSession("Starred 1", isStarred = true, sortOrder = 10)
-        Thread.sleep(10)
-        val starred2 = repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
+        val normal1 = repository.createSession(ChatSession(id = "", title = "Normal 1", isStarred = false, sortOrder = 5))
+        val normal2 = repository.createSession(ChatSession(id = "", title = "Normal 2", isStarred = false, sortOrder = 10))
+        val starred1 = repository.createSession(ChatSession(id = "", title = "Starred 1", isStarred = true, sortOrder = 10))
+        val starred2 = repository.createSession(ChatSession(id = "", title = "Starred 2", isStarred = true, sortOrder = 5))
 
         val allSessions = repository.getAllSessions()
 
@@ -1505,10 +1945,13 @@ class ChatSessionRepositoryIT {
     fun `should handle session with folder and starred`() {
         val folder = repository.createFolder("Important Folder")
         val session = repository.createSession(
-            "Important Session",
-            folderId = folder.id,
-            isStarred = true,
-            sortOrder = 5,
+            ChatSession(
+                id = "",
+                title = "Important Session",
+                folderId = folder.id,
+                isStarred = true,
+                sortOrder = 5,
+            ),
         )
 
         assertEquals(folder.id, session.folderId)
@@ -1525,9 +1968,9 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should get starred sessions from specific folder`() {
         val folder = repository.createFolder("Test Folder")
-        repository.createSession("Starred in Folder", folderId = folder.id, isStarred = true)
-        repository.createSession("Normal in Folder", folderId = folder.id, isStarred = false)
-        repository.createSession("Starred in Root", isStarred = true)
+        repository.createSession(ChatSession(id = "", title = "Starred in Folder", folderId = folder.id, isStarred = true))
+        repository.createSession(ChatSession(id = "", title = "Normal in Folder", folderId = folder.id, isStarred = false))
+        repository.createSession(ChatSession(id = "", title = "Starred in Root", isStarred = true))
 
         val folderSessions = repository.getSessionsByFolder(folder.id)
         val starredInFolder = folderSessions.filter { it.isStarred }
@@ -1541,7 +1984,7 @@ class ChatSessionRepositoryIT {
     fun `should maintain starred flag when moving between folders`() {
         val folder1 = repository.createFolder("Folder 1")
         val folder2 = repository.createFolder("Folder 2")
-        val session = repository.createSession("Starred Session", folderId = folder1.id, isStarred = true)
+        val session = repository.createSession(ChatSession(id = "", title = "Starred Session", folderId = folder1.id, isStarred = true))
 
         assertTrue(session.isStarred)
 
@@ -1555,7 +1998,7 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should delete folder without affecting starred status of sessions`() {
         val folder = repository.createFolder("Test Folder")
-        val session = repository.createSession("Starred Session", folderId = folder.id, isStarred = true)
+        val session = repository.createSession(ChatSession(id = "", title = "Starred Session", folderId = folder.id, isStarred = true))
 
         repository.deleteFolder(folder.id)
 
@@ -1571,10 +2014,10 @@ class ChatSessionRepositoryIT {
         val child1 = repository.createFolder("Child 1", parentFolderId = parent.id, sortOrder = 1)
         val child2 = repository.createFolder("Child 2", parentFolderId = parent.id, sortOrder = 2)
 
-        repository.createSession("Parent Session", folderId = parent.id, isStarred = true)
-        repository.createSession("Child 1 Session A", folderId = child1.id, isStarred = false)
-        repository.createSession("Child 1 Session B", folderId = child1.id, isStarred = true)
-        repository.createSession("Child 2 Session", folderId = child2.id, isStarred = false)
+        repository.createSession(ChatSession(id = "", title = "Parent Session", folderId = parent.id, isStarred = true))
+        repository.createSession(ChatSession(id = "", title = "Child 1 Session A", folderId = child1.id, isStarred = false))
+        repository.createSession(ChatSession(id = "", title = "Child 1 Session B", folderId = child1.id, isStarred = true))
+        repository.createSession(ChatSession(id = "", title = "Child 2 Session", folderId = child2.id, isStarred = false))
 
         // Verify folder structure
         val allFolders = repository.getAllFolders()
@@ -1593,19 +2036,17 @@ class ChatSessionRepositoryIT {
     @Test
     fun `should update session updated_at when changing folder or starred status`() {
         val folder = repository.createFolder("Test Folder")
-        val session = repository.createSession("Test Session")
+        val session = repository.createSession(ChatSession(id = "", title = "Test Session"))
         val originalUpdatedAt = session.updatedAt
 
-        Thread.sleep(10)
-
+        Thread.sleep(10) // Ensure timestamp difference
         repository.updateSessionFolder(session.id, folder.id)
 
         val afterFolderMove = repository.getSession(session.id)
         assertNotNull(afterFolderMove)
         assertTrue(afterFolderMove.updatedAt.isAfter(originalUpdatedAt))
 
-        Thread.sleep(10)
-
+        Thread.sleep(10) // Ensure timestamp difference
         repository.updateSessionStarred(session.id, true)
 
         val afterStarred = repository.getSession(session.id)
@@ -1627,11 +2068,14 @@ class ChatSessionRepositoryIT {
     fun `should handle session with directive and folder together`() {
         val folder = repository.createFolder("Work")
         val session = repository.createSession(
-            title = "Work Session",
-            directiveId = "test-directive-id",
-            folderId = folder.id,
-            isStarred = true,
-            sortOrder = 3,
+            ChatSession(
+                id = "",
+                title = "Work Session",
+                directiveId = "test-directive-id",
+                folderId = folder.id,
+                isStarred = true,
+                sortOrder = 3,
+            ),
         )
 
         assertEquals("test-directive-id", session.directiveId)
