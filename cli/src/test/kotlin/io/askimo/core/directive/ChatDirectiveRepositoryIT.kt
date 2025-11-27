@@ -38,7 +38,6 @@ class ChatDirectiveRepositoryIT {
 
     @AfterEach
     fun tearDown() {
-        repository.close()
         testBaseScope.close()
     }
 

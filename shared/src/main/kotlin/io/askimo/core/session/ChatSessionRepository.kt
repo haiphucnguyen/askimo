@@ -15,16 +15,34 @@ import javax.sql.DataSource
 
 const val SESSION_TITLE_MAX_LENGTH = 256
 
-class ChatSessionRepository {
+enum class PaginationDirection {
+    FORWARD,
+    BACKWARD,
+}
+
+class ChatSessionRepository(
+    private val useInMemory: Boolean = false,
+) : AutoCloseable {
     private val hikariDataSource: HikariDataSource by lazy {
         DatabaseConnectionFactory.createSQLiteDataSource(
             databaseFileName = "chat_sessions.db",
             initializeDatabase = ::initializeDatabase,
+            useInMemory = useInMemory,
         )
     }
 
     private val dataSource: DataSource get() = hikariDataSource
     private val json = Json { ignoreUnknownKeys = true }
+
+    override fun close() {
+        try {
+            if (!hikariDataSource.isClosed) {
+                hikariDataSource.close()
+            }
+        } catch (_: UninitializedPropertyAccessException) {
+            // DataSource was never initialized, nothing to close
+        }
+    }
 
     private fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->
@@ -363,19 +381,19 @@ class ChatSessionRepository {
      * @param sessionId The session ID
      * @param limit Number of messages to retrieve (default: 20)
      * @param cursor The timestamp cursor for pagination. If null, starts from the beginning (oldest messages)
-     * @param direction Direction of pagination: "forward" (newer messages) or "backward" (older messages)
+     * @param direction Direction of pagination: FORWARD (newer messages) or BACKWARD (older messages)
      * @return A pair of messages list and the next cursor (null if no more messages)
      */
     fun getMessagesPaginated(
         sessionId: String,
         limit: Int = 20,
         cursor: LocalDateTime? = null,
-        direction: String = "forward",
+        direction: PaginationDirection = PaginationDirection.FORWARD,
     ): Pair<List<ChatMessage>, LocalDateTime?> {
         val messages = mutableListOf<ChatMessage>()
         dataSource.connection.use { conn ->
             val query = when {
-                cursor == null && direction == "forward" -> {
+                cursor == null && direction == PaginationDirection.FORWARD -> {
                     // Start from the beginning (oldest messages)
                     """
                     SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
@@ -385,7 +403,7 @@ class ChatSessionRepository {
                     LIMIT ?
                     """
                 }
-                cursor == null && direction == "backward" -> {
+                cursor == null && direction == PaginationDirection.BACKWARD -> {
                     // Start from the end (newest messages)
                     """
                     SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
@@ -395,7 +413,7 @@ class ChatSessionRepository {
                     LIMIT ?
                     """
                 }
-                direction == "forward" -> {
+                direction == PaginationDirection.FORWARD -> {
                     // Get messages after the cursor (newer messages)
                     """
                     SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
@@ -448,11 +466,11 @@ class ChatSessionRepository {
         val resultMessages = if (hasMore) messages.take(limit) else messages
 
         // Reverse if we fetched in backward direction to maintain chronological order
-        val orderedMessages = if (direction == "backward") resultMessages.reversed() else resultMessages
+        val orderedMessages = if (direction == PaginationDirection.BACKWARD) resultMessages.reversed() else resultMessages
 
         // Calculate next cursor
         val nextCursor = if (hasMore && orderedMessages.isNotEmpty()) {
-            if (direction == "forward") {
+            if (direction == PaginationDirection.FORWARD) {
                 orderedMessages.last().createdAt
             } else {
                 orderedMessages.first().createdAt
@@ -1234,15 +1252,6 @@ class ChatSessionRepository {
             } finally {
                 conn.autoCommit = true
             }
-        }
-    }
-
-    /**
-     * Gracefully close the connection pool when the application shuts down
-     */
-    fun close() {
-        if (hikariDataSource.isRunning) {
-            hikariDataSource.close()
         }
     }
 }

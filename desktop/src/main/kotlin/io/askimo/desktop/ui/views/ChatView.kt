@@ -56,7 +56,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.core.directive.ChatDirective
-import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.TimeUtil
@@ -71,6 +70,7 @@ import io.askimo.desktop.ui.components.messageList
 import io.askimo.desktop.ui.components.newDirectiveDialog
 import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
+import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -172,9 +172,8 @@ fun chatView(
     onEditMessage: (ChatMessage) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // Initialize directive service
     val directiveService = remember {
-        ChatDirectiveService(ChatDirectiveRepository())
+        GlobalContext.get().get<ChatDirectiveService>()
     }
 
     // Load all directives

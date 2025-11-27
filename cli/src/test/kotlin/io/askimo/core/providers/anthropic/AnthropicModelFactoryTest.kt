@@ -61,7 +61,6 @@ class AnthropicModelFactoryTest {
         val factory = AnthropicModelFactory()
         val defaultSettings = factory.defaultSettings()
 
-        assertTrue(defaultSettings is AnthropicSettings, "Expected AnthropicSettings instance")
         assertTrue(defaultSettings.baseUrl.isNotBlank(), "Expected non-blank base URL in default settings")
     }
 }

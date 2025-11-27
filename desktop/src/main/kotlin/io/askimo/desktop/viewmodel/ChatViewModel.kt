@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import io.askimo.core.session.ChatSessionRepository
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
+import io.askimo.core.session.PaginationDirection
 import io.askimo.core.session.SessionConfigInfo
 import io.askimo.core.session.getConfigInfo
 import io.askimo.desktop.model.ChatMessage
@@ -37,8 +38,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * - Resuming previous chat sessions
  */
 class ChatViewModel(
-    private val chatService: ChatService = ChatService(),
+    private val chatService: ChatService,
     private val scope: CoroutineScope,
+    private val repository: ChatSessionRepository,
 ) {
     var messages by mutableStateOf(listOf<ChatMessage>())
         private set
@@ -634,20 +636,18 @@ class ChatViewModel(
 
                 val afterMessages = withContext(Dispatchers.IO) {
                     // Load messages after the target
-                    val repo = ChatSessionRepository()
-                    val (after, _) = repo.getMessagesPaginated(
+                    val (after, _) = repository.getMessagesPaginated(
                         sessionId = _currentSessionId.value!!,
                         limit = halfPageSize,
                         cursor = messageTimestamp,
-                        direction = "forward",
+                        direction = PaginationDirection.FORWARD,
                     )
                     after
                 }
 
                 // Get the target message itself
                 val allSessionMessages = withContext(Dispatchers.IO) {
-                    val repo = ChatSessionRepository()
-                    repo.getMessages(_currentSessionId.value!!)
+                    repository.getMessages(_currentSessionId.value!!)
                 }
                 val targetMessage = allSessionMessages.find { it.id == messageId }
 
@@ -697,13 +697,11 @@ class ChatViewModel(
 
         return try {
             withContext(Dispatchers.IO) {
-                val repo = ChatSessionRepository()
-
                 // 1. Mark the ORIGINAL message (being edited) as outdated
-                repo.markMessageAsOutdated(originalMessageId)
+                repository.markMessageAsOutdated(originalMessageId)
 
                 // 2. Mark ALL subsequent messages as outdated
-                val subsequentCount = repo.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
+                val subsequentCount = repository.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
                 println("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
 
                 true
@@ -749,9 +747,8 @@ class ChatViewModel(
         val sessionId = _currentSessionId.value ?: return
 
         withContext(Dispatchers.IO) {
-            val repo = ChatSessionRepository()
             // Load ALL messages including outdated ones
-            val allMessages = repo.getMessages(sessionId)
+            val allMessages = repository.getMessages(sessionId)
 
             // Convert to ChatMessage format
             messages = allMessages.map { sessionMessage ->
@@ -831,10 +828,4 @@ class ChatViewModel(
         }
         // Otherwise, the directive will be applied when a new session is started
     }
-
-    /**
-     * Get the underlying ChatService for advanced operations like setting language directive.
-     * @return The ChatService instance
-     */
-    fun getChatService(): ChatService = chatService
 }

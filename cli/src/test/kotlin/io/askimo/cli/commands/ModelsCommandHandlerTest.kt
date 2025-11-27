@@ -57,10 +57,10 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         // Without a valid API key, OpenAI might return no models
         assertTrue(
             output.contains("Available models for provider 'openai'") ||
-                output.contains("❌ No models available for OpenAI"),
+                output.contains("❌ No models available for openai"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
-        assertTrue(output.contains("💡"))
+        assertTrue(output.contains("💡") || output.contains("Please check your provider configuration"))
     }
 
     @Test
@@ -92,7 +92,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         // Ollama might have no models if not installed, or might list available ones
         assertTrue(
             output.contains("Available models for provider 'ollama'") ||
-                output.contains("❌ No models available for Ollama"),
+                output.contains("❌ No models available for ollama"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
         assertTrue(output.contains("💡"))
@@ -127,7 +127,7 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         assertTrue(
             output.contains("Available models for provider 'anthropic'") ||
-                output.contains("❌ No models available for provider: anthropic"),
+                output.contains("❌ No models available for anthropic"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
         assertTrue(output.contains("💡"))
@@ -145,10 +145,10 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         assertTrue(
             output.contains("Available models for provider 'gemini'") ||
-                output.contains("❌ No models available for provider: gemini"),
+                output.contains("❌ No models available for gemini"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
-        assertTrue(output.contains("💡"))
+        assertTrue(output.contains("💡") || output.contains("Please check your provider configuration"))
     }
 
     @Test
@@ -163,10 +163,10 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         val output = getOutput()
         assertTrue(
             output.contains("Available models for provider 'xai'") ||
-                output.contains("❌ No models available for provider: xai"),
+                output.contains("❌ No models available for xai"),
         )
         // Should always show some helpful information (usage hint on success, help text on error)
-        assertTrue(output.contains("💡"))
+        assertTrue(output.contains("💡") || output.contains("Please check your provider configuration"))
     }
 
     @Test

@@ -32,22 +32,15 @@ class ChatSessionExporterService(
      */
     fun exportToMarkdown(sessionId: String, filename: String): Result<Unit> {
         return try {
-            // Get session metadata
             val session = repository.getSession(sessionId)
                 ?: return Result.failure(Exception("Session not found: $sessionId"))
 
-            // Prepare file and write header
             val file = File(filename)
-            file.parentFile?.mkdirs() // Create parent directories if they don't exist
+            file.parentFile?.mkdirs()
 
             file.bufferedWriter().use { writer ->
-                // Write header
                 writeHeader(writer, session)
-
-                // Stream messages in batches and write to file
                 streamMessagesToFile(writer, sessionId)
-
-                // Write footer
                 writeFooter(writer)
             }
 
@@ -90,15 +83,13 @@ class ChatSessionExporterService(
         var messageCounter = 0
 
         do {
-            // Load messages in forward direction (oldest to newest)
             val (messages, nextCursor) = repository.getMessagesPaginated(
                 sessionId = sessionId,
                 limit = pageSize,
                 cursor = cursor,
-                direction = "forward",
+                direction = PaginationDirection.FORWARD,
             )
 
-            // Write this batch of messages to file immediately
             messages.forEach { message ->
                 messageCounter++
                 writeMessage(writer, message, messageCounter)
@@ -107,7 +98,6 @@ class ChatSessionExporterService(
             cursor = nextCursor
         } while (nextCursor != null)
 
-        // Store the total count for footer
         totalMessageCount = messageCounter
     }
 
@@ -141,13 +131,5 @@ class ChatSessionExporterService(
         writer.appendLine("*Exported on: $exportTime*")
     }
 
-    // Track total message count for footer
     private var totalMessageCount = 0
-
-    /**
-     * Close the repository connection.
-     */
-    fun close() {
-        repository.close()
-    }
 }

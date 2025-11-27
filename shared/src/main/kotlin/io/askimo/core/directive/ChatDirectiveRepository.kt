@@ -340,14 +340,4 @@ class ChatDirectiveRepository {
         }
         return directives
     }
-
-    /**
-     * Close the data source and release resources.
-     * Should be called when shutting down the application.
-     */
-    fun close() {
-        if (!hikariDataSource.isClosed) {
-            hikariDataSource.close()
-        }
-    }
 }
