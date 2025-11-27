@@ -25,13 +25,11 @@ object TokenCounter {
      * @param text The text to count tokens for
      * @return The number of tokens
      */
-    fun countTokens(text: String): Int {
-        return try {
-            encoding.countTokens(text)
-        } catch (e: Exception) {
-            // Fallback to rough estimation if tokenizer fails
-            (text.length / 4).coerceAtLeast(1)
-        }
+    fun countTokens(text: String): Int = try {
+        encoding.countTokens(text)
+    } catch (e: Exception) {
+        // Fallback to rough estimation if tokenizer fails
+        (text.length / 4).coerceAtLeast(1)
     }
 
     /**
@@ -67,17 +65,15 @@ object TokenCounter {
      * @param tokens The number of tokens
      * @return Formatted string (e.g., "1.2K tokens", "500 tokens")
      */
-    fun formatTokenCount(tokens: Int): String {
-        return when {
-            tokens < 1_000 -> "$tokens tokens"
-            tokens < 1_000_000 -> {
-                val rounded = (tokens / 100.0).toInt() / 10.0
-                "${rounded}K tokens"
-            }
-            else -> {
-                val rounded = (tokens / 100_000.0).toInt() / 10.0
-                "${rounded}M tokens"
-            }
+    fun formatTokenCount(tokens: Int): String = when {
+        tokens < 1_000 -> "$tokens tokens"
+        tokens < 1_000_000 -> {
+            val rounded = (tokens / 100.0).toInt() / 10.0
+            "${rounded}K tokens"
+        }
+        else -> {
+            val rounded = (tokens / 100_000.0).toInt() / 10.0
+            "${rounded}M tokens"
         }
     }
 
@@ -90,7 +86,7 @@ object TokenCounter {
     data class TokenInfo(
         val totalTokens: Int,
         val messageCount: Int,
-        val formattedCount: String
+        val formattedCount: String,
     )
 
     fun getTokenInfo(messages: List<ChatMessage>): TokenInfo {
@@ -98,8 +94,7 @@ object TokenCounter {
         return TokenInfo(
             totalTokens = totalTokens,
             messageCount = messages.size,
-            formattedCount = formatTokenCount(totalTokens)
+            formattedCount = formatTokenCount(totalTokens),
         )
     }
 }
-

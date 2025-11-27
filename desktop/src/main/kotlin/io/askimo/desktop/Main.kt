@@ -65,6 +65,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +81,7 @@ import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
@@ -179,6 +181,7 @@ fun app() {
     var attachments by remember { mutableStateOf(listOf<FileAttachment>()) }
     var sidebarWidth by remember { mutableStateOf(280.dp) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     val scope = rememberCoroutineScope()
 
     // Store input text per session ID to prevent cross-contamination
@@ -399,9 +402,31 @@ fun app() {
                         // Get current session ID before sending
                         val currentSessionId = chatViewModel.currentSessionId.value
 
-                        chatViewModel.sendMessage(message, fileAttachments)
+                        // Store editingMessage in local variable to avoid smart cast issues
+                        val messageBeingEdited = editingMessage
+
+                        if (messageBeingEdited != null && messageBeingEdited.id != null) {
+                            // Edit mode:
+                            // Store the original message ID BEFORE any operations
+                            val originalMessageId = messageBeingEdited.id
+
+                            // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
+                            //    This must happen BEFORE creating the new message
+                            chatViewModel.editMessage(originalMessageId, message, fileAttachments)
+
+                            // 2. Send the NEW message with updated content
+                            //    This creates a NEW active message (not marked as outdated)
+                            //    The new message will have editParentId linking to originalMessageId
+                            chatViewModel.sendMessage(message, fileAttachments)
+                        } else {
+                            // Normal mode: just send the message
+                            chatViewModel.sendMessage(message, fileAttachments)
+                        }
+
+                        // Clear input and edit state
                         inputText = TextFieldValue("")
                         attachments = emptyList()
+                        editingMessage = null // Clear edit mode
 
                         // Clear input text from session storage after sending
                         if (currentSessionId != null) {
@@ -425,6 +450,21 @@ fun app() {
                     attachments = attachments,
                     onAttachmentsChange = { attachments = it },
                     onNavigateToSettings = { currentView = View.SETTINGS },
+                    editingMessage = editingMessage,
+                    onEditMessage = { message ->
+                        editingMessage = message
+                        // Set text with cursor at the beginning (position 0)
+                        inputText = TextFieldValue(
+                            text = message.content,
+                            selection = TextRange(0),
+                        )
+                        attachments = message.attachments
+                    },
+                    onCancelEdit = {
+                        editingMessage = null
+                        inputText = TextFieldValue("")
+                        attachments = emptyList()
+                    },
                 )
             }
 
@@ -821,6 +861,9 @@ fun mainContent(
     attachments: List<FileAttachment>,
     onAttachmentsChange: (List<FileAttachment>) -> Unit,
     onNavigateToSettings: () -> Unit,
+    editingMessage: ChatMessage?,
+    onEditMessage: (ChatMessage) -> Unit,
+    onCancelEdit: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -863,6 +906,9 @@ fun mainContent(
                     },
                     selectedDirective = chatViewModel.selectedDirective,
                     onDirectiveSelected = { directiveId -> chatViewModel.setDirective(directiveId) },
+                    editingMessage = editingMessage,
+                    onCancelEdit = onCancelEdit,
+                    onEditMessage = onEditMessage,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

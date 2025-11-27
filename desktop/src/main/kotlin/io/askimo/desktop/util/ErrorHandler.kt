@@ -89,4 +89,3 @@ object ErrorHandler {
      */
     fun getCancellationMessage(): String = "Operation was cancelled."
 }
-

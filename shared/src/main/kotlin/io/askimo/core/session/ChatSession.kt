@@ -34,6 +34,8 @@ data class ChatMessage(
     val role: MessageRole,
     val content: String,
     val createdAt: LocalDateTime,
+    val isOutdated: Boolean = false,
+    val editParentId: String? = null,
 )
 
 data class ConversationSummary(

@@ -16,8 +16,8 @@ import io.askimo.core.session.ProviderTestResult
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
-import io.askimo.desktop.util.ErrorHandler
 import io.askimo.core.session.getConfigInfo
+import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

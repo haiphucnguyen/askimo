@@ -63,8 +63,8 @@ class StreamingService(
      * Thread closes automatically after completion or failure.
      */
     data class StreamingThread(
-        val threadId: String,        // Unique thread ID for this Q&A
-        val chatId: String,          // Which chat this belongs to
+        val threadId: String, // Unique thread ID for this Q&A
+        val chatId: String, // Which chat this belongs to
         val job: Job,
         private val _chunks: MutableStateFlow<List<String>>,
         private val _isComplete: MutableStateFlow<Boolean>,
@@ -169,7 +169,6 @@ class StreamingService(
                 // Save to database - use the specific chat ID
                 session.saveAiResponseToSession(fullResponse, chatId)
                 session.lastResponse = fullResponse
-
             } catch (e: Exception) {
                 // Mark as failed
                 thread.markFailed()
@@ -240,9 +239,7 @@ class StreamingService(
      * @param chatId The chat ID
      * @return The last completed threadId, or null if no completed thread
      */
-    fun getLastCompletedThreadId(chatId: String): String? {
-        return completedThreads[chatId]
-    }
+    fun getLastCompletedThreadId(chatId: String): String? = completedThreads[chatId]
 
     /**
      * Stop an active thread (user clicked stop button).
@@ -281,4 +278,3 @@ class StreamingService(
         chatToThreadMap.clear()
     }
 }
-

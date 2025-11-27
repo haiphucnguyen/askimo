@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ fun messageList(
     searchQuery: String = "",
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
+    onEditMessage: ((ChatMessage) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -142,14 +144,31 @@ fun messageList(
                 }
             }
 
-            messages.forEachIndexed { index, message ->
-                val isActiveResult = searchQuery.isNotBlank() && index == currentSearchResultIndex
-                messageBubble(
-                    message = message,
-                    searchQuery = searchQuery,
-                    isActiveSearchResult = isActiveResult,
-                    onMessageClick = onMessageClick,
-                )
+            // Group messages into active and outdated branches
+            val messageGroups = groupMessagesWithOutdatedBranches(messages)
+
+            var messageIndex = 0
+            messageGroups.forEach { group ->
+                when (group) {
+                    is MessageGroup.ActiveMessage -> {
+                        val isActiveResult = searchQuery.isNotBlank() && messageIndex == currentSearchResultIndex
+                        messageBubble(
+                            message = group.message,
+                            searchQuery = searchQuery,
+                            isActiveSearchResult = isActiveResult,
+                            onMessageClick = onMessageClick,
+                            onEditMessage = onEditMessage,
+                        )
+                        messageIndex++
+                    }
+                    is MessageGroup.OutdatedBranch -> {
+                        // Show collapsible outdated branch
+                        outdatedBranchComponent(
+                            messages = group.messages,
+                        )
+                        messageIndex += group.messages.size
+                    }
+                }
             }
 
             // Show "Thinking..." indicator when AI is processing but hasn't returned first token
@@ -192,6 +211,7 @@ fun messageBubble(
     searchQuery: String = "",
     isActiveSearchResult: Boolean = false,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
+    onEditMessage: ((ChatMessage) -> Unit)? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -300,26 +320,97 @@ fun messageBubble(
                     }
                 }
 
-                // Copy button for AI messages (shown on hover)
-                if (!message.isUser && isHovered) {
-                    themedTooltip(
-                        text = stringResource("message.copy"),
+                // Copy and Edit button bar for user messages (shown on hover)
+                if (message.isUser && isHovered) {
+                    Card(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp),
+                            .padding(top = 4.dp, end = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     ) {
-                        IconButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(message.content))
-                            },
-                            modifier = Modifier.size(32.dp),
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = stringResource("message.copy.description"),
-                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
+                            // Copy button
+                            themedTooltip(
+                                text = stringResource("message.copy"),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        clipboardManager.setText(AnnotatedString(message.content))
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = stringResource("message.copy.description"),
+                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+
+                            // Edit button
+                            themedTooltip(
+                                text = stringResource("message.edit"),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        onEditMessage?.invoke(message)
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource("message.edit.description"),
+                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Copy button bar for AI messages (shown on hover)
+                if (!message.isUser && isHovered) {
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 4.dp, end = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Copy button
+                            themedTooltip(
+                                text = stringResource("message.copy"),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        clipboardManager.setText(AnnotatedString(message.content))
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = stringResource("message.copy.description"),
+                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

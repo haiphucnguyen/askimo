@@ -59,6 +59,7 @@ import io.askimo.core.directive.ChatDirective
 import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
@@ -166,6 +167,9 @@ fun chatView(
     onJumpToMessage: (String, LocalDateTime) -> Unit = { _, _ -> },
     selectedDirective: String? = null,
     onDirectiveSelected: (String?) -> Unit = {},
+    editingMessage: ChatMessage? = null,
+    onCancelEdit: () -> Unit = {},
+    onEditMessage: (ChatMessage) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Initialize directive service
@@ -184,10 +188,20 @@ fun chatView(
     // Focus requester for search field
     val searchFocusRequester = remember { FocusRequester() }
 
+    // Focus requester for input field
+    val inputFocusRequester = remember { FocusRequester() }
+
     // Focus search field when search mode is activated
     LaunchedEffect(isSearchMode) {
         if (isSearchMode) {
             searchFocusRequester.requestFocus()
+        }
+    }
+
+    // Focus input field and position cursor at start when entering edit mode
+    LaunchedEffect(editingMessage) {
+        if (editingMessage != null) {
+            inputFocusRequester.requestFocus()
         }
     }
 
@@ -678,6 +692,7 @@ fun chatView(
                         searchQuery = searchQuery,
                         currentSearchResultIndex = currentSearchResultIndex,
                         onMessageClick = onJumpToMessage,
+                        onEditMessage = onEditMessage,
                     )
                 }
                 messages.isEmpty() -> {
@@ -697,6 +712,7 @@ fun chatView(
                         hasMoreMessages = hasMoreMessages,
                         isLoadingPrevious = isLoadingPrevious,
                         onLoadPrevious = onLoadPrevious,
+                        onEditMessage = onEditMessage,
                     )
                 }
             }
@@ -724,6 +740,55 @@ fun chatView(
                     onAttachmentsChange(attachments + attachment)
                 } catch (e: Exception) {
                     debug("Error reading file: ${e.message}", e)
+                }
+            }
+        }
+
+        // Edit mode banner (shown when editing a message)
+        if (editingMessage != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = ComponentColors.bannerCardColors(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = editingMessage.timestamp?.let { timestamp ->
+                                val formattedTime = TimeUtil.formatDisplay(timestamp)
+                                stringResource("message.editing.banner.from", formattedTime)
+                            } ?: stringResource("message.editing.banner"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                    IconButton(
+                        onClick = onCancelEdit,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource("message.cancel.edit"),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
@@ -798,6 +863,7 @@ fun chatView(
                     onValueChange = onInputTextChange,
                     modifier = Modifier
                         .weight(1f)
+                        .focusRequester(inputFocusRequester)
                         .onPreviewKeyEvent { keyEvent ->
                             val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
@@ -839,7 +905,7 @@ fun chatView(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Show stop button when loading, send button otherwise
+                // Show stop button when loading, send/update button otherwise
                 if (isLoading) {
                     IconButton(
                         onClick = onStopResponse,
@@ -852,20 +918,32 @@ fun chatView(
                         )
                     }
                 } else {
-                    IconButton(
-                        onClick = {
-                            if (inputText.text.isNotBlank()) {
-                                onSendMessage(inputText.text, attachments)
-                            }
+                    themedTooltip(
+                        text = if (editingMessage != null) {
+                            stringResource("message.update.regenerate")
+                        } else {
+                            stringResource("message.send")
                         },
-                        enabled = inputText.text.isNotBlank(),
-                        colors = ComponentColors.primaryIconButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                        )
+                        IconButton(
+                            onClick = {
+                                if (inputText.text.isNotBlank()) {
+                                    onSendMessage(inputText.text, attachments)
+                                }
+                            },
+                            enabled = inputText.text.isNotBlank(),
+                            colors = ComponentColors.primaryIconButtonColors(),
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
+                                contentDescription = if (editingMessage != null) {
+                                    stringResource("message.update.regenerate")
+                                } else {
+                                    stringResource("message.send")
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -7,6 +7,8 @@ package io.askimo.desktop.service
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
+import java.util.Locale
+import java.util.Properties
 
 /**
  * Service for managing chat interactions in the desktop application.
@@ -49,7 +51,7 @@ class ChatService {
             userMessage = userMessage,
             onChunkReceived = { _ ->
                 // Callback not used - UI subscribes directly to StreamingService
-            }
+            },
         )
     }
 
@@ -74,7 +76,7 @@ class ChatService {
      *
      * @param locale The user's selected locale (e.g., Locale.JAPANESE, Locale.ENGLISH)
      */
-    fun setLanguageDirective(locale: java.util.Locale) {
+    fun setLanguageDirective(locale: Locale) {
         val languageDirective = buildLanguageDirective(locale)
 
         // Replace any existing language directive with the new one
@@ -89,7 +91,7 @@ class ChatService {
      * @param locale The target locale
      * @return A complete language directive with fallback instructions
      */
-    private fun buildLanguageDirective(locale: java.util.Locale): String {
+    private fun buildLanguageDirective(locale: Locale): String {
         val languageCode = locale.language
 
         // Load the properties file for the target locale directly
@@ -135,8 +137,8 @@ class ChatService {
      * Load properties file for a specific locale.
      * Handles both language_country (ja_JP) and language-only (ja) formats.
      */
-    private fun loadPropertiesForLocale(locale: java.util.Locale): java.util.Properties {
-        val properties = java.util.Properties()
+    private fun loadPropertiesForLocale(locale: Locale): Properties {
+        val properties = Properties()
 
         val language = locale.language
         val country = locale.country

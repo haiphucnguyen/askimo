@@ -371,7 +371,8 @@ class Session(
 
             // Generate title from first user message
             if (role == MessageRole.USER) {
-                val messages = chatSessionRepository.getMessages(session.id)
+                // Only count active (non-outdated) user messages
+                val messages = chatSessionRepository.getActiveMessages(session.id)
                 if (messages.count { it.role == MessageRole.USER } == 1) {
                     chatSessionRepository.generateAndUpdateTitle(session.id, content)
                 }
@@ -432,7 +433,8 @@ class Session(
         }
 
         // 2. Add recent messages for conversation flow
-        val recentMessages = chatSessionRepository.getRecentMessages(sessionId, maxRecentMessages)
+        // Use database-level filtering to guarantee exact count of active messages
+        val recentMessages = chatSessionRepository.getRecentActiveMessages(sessionId, maxRecentMessages)
         contextMessages.addAll(recentMessages)
 
         return trimContextByTokens(contextMessages, maxTokensForContext)
@@ -531,8 +533,9 @@ class Session(
         // Get context from the SPECIFIC chat
         val chatSession = chatSessionRepository.getSession(chatId) ?: return userMessage
 
-        // 🔍 Count tokens for this chat session
-        val tokenInfo = TokenCounter.getTokenInfo(messages)
+        // 🔍 Count tokens for this chat session (only active messages)
+        val activeMessages = messages.filter { !it.isOutdated }
+        val tokenInfo = TokenCounter.getTokenInfo(activeMessages)
         debug("🔍 [Token Counter] Chat ID: $chatId")
         debug("🔍 [Token Counter] Messages: ${tokenInfo.messageCount}")
         debug("🔍 [Token Counter] Total tokens: ${tokenInfo.formattedCount} (${tokenInfo.totalTokens})")
@@ -704,10 +707,12 @@ class Session(
 
             val messagesToSummarize = if (lastSummarizedId.isEmpty()) {
                 // First summarization - get older messages, leave recent ones
-                val allMessages = chatSessionRepository.getMessages(sessionId)
+                // Use database-level filtering to get only active messages
+                val allMessages = chatSessionRepository.getActiveMessages(sessionId)
                 allMessages.dropLast(maxRecentMessages).takeLast(40)
             } else {
-                chatSessionRepository.getMessagesAfter(sessionId, lastSummarizedId, 40)
+                // Use database-level filtering to guarantee exactly 40 active messages
+                chatSessionRepository.getActiveMessagesAfter(sessionId, lastSummarizedId, 40)
             }
 
             if (messagesToSummarize.size >= 20) { // Only summarize if we have enough content

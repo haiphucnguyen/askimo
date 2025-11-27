@@ -87,10 +87,25 @@ class ChatSessionRepository {
                     role TEXT NOT NULL,
                     content TEXT NOT NULL,
                     created_at TEXT NOT NULL,
-                    FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
+                    is_outdated INTEGER DEFAULT 0,
+                    edit_parent_id TEXT,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions (id),
+                    FOREIGN KEY (edit_parent_id) REFERENCES chat_messages (id)
                 )
             """,
             )
+
+            // Add migration for existing databases - add new columns if they don't exist
+            try {
+                stmt.executeUpdate("ALTER TABLE chat_messages ADD COLUMN is_outdated INTEGER DEFAULT 0")
+            } catch (e: Exception) {
+                // Column already exists, ignore
+            }
+            try {
+                stmt.executeUpdate("ALTER TABLE chat_messages ADD COLUMN edit_parent_id TEXT")
+            } catch (e: Exception) {
+                // Column already exists, ignore
+            }
 
             stmt.executeUpdate(
                 """
@@ -220,8 +235,8 @@ class ChatSessionRepository {
                 // Insert message
                 conn.prepareStatement(
                     """
-                    INSERT INTO chat_messages (id, session_id, role, content, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO chat_messages (id, session_id, role, content, created_at, is_outdated, edit_parent_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 ).use { stmt ->
                     stmt.setString(1, message.id)
@@ -229,6 +244,8 @@ class ChatSessionRepository {
                     stmt.setString(3, message.role.value)
                     stmt.setString(4, message.content)
                     stmt.setString(5, message.createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    stmt.setInt(6, if (message.isOutdated) 1 else 0)
+                    stmt.setString(7, message.editParentId)
                     stmt.executeUpdate()
                 }
 
@@ -260,7 +277,7 @@ class ChatSessionRepository {
         dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT id, session_id, role, content, created_at
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                 FROM chat_messages
                 WHERE session_id = ?
                 ORDER BY created_at ASC
@@ -276,6 +293,8 @@ class ChatSessionRepository {
                             role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
                         ),
                     )
                 }
@@ -289,7 +308,7 @@ class ChatSessionRepository {
         dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT id, session_id, role, content, created_at
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                 FROM chat_messages
                 WHERE session_id = ?
                 ORDER BY created_at DESC
@@ -307,6 +326,49 @@ class ChatSessionRepository {
                             role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages.reversed() // Return in chronological order
+    }
+
+    /**
+     * Get recent active (non-outdated) messages with filtering at database level.
+     * This guarantees we get exactly the requested number of active messages.
+     *
+     * @param sessionId The session ID
+     * @param limit Number of active messages to retrieve (default: 20)
+     * @return List of active messages, ordered by creation time (oldest first)
+     */
+    fun getRecentActiveMessages(sessionId: String, limit: Int = 20): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
+                FROM chat_messages
+                WHERE session_id = ? AND is_outdated = 0
+                ORDER BY created_at DESC
+                LIMIT ?
+            """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                stmt.setInt(2, limit)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
                         ),
                     )
                 }
@@ -335,7 +397,7 @@ class ChatSessionRepository {
                 cursor == null && direction == "forward" -> {
                     // Start from the beginning (oldest messages)
                     """
-                    SELECT id, session_id, role, content, created_at
+                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                     FROM chat_messages
                     WHERE session_id = ?
                     ORDER BY created_at ASC
@@ -345,7 +407,7 @@ class ChatSessionRepository {
                 cursor == null && direction == "backward" -> {
                     // Start from the end (newest messages)
                     """
-                    SELECT id, session_id, role, content, created_at
+                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                     FROM chat_messages
                     WHERE session_id = ?
                     ORDER BY created_at DESC
@@ -355,7 +417,7 @@ class ChatSessionRepository {
                 direction == "forward" -> {
                     // Get messages after the cursor (newer messages)
                     """
-                    SELECT id, session_id, role, content, created_at
+                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                     FROM chat_messages
                     WHERE session_id = ? AND created_at > ?
                     ORDER BY created_at ASC
@@ -365,7 +427,7 @@ class ChatSessionRepository {
                 else -> {
                     // Get messages before the cursor (older messages)
                     """
-                    SELECT id, session_id, role, content, created_at
+                    SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                     FROM chat_messages
                     WHERE session_id = ? AND created_at < ?
                     ORDER BY created_at DESC
@@ -392,6 +454,8 @@ class ChatSessionRepository {
                             role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
                         ),
                     )
                 }
@@ -446,7 +510,7 @@ class ChatSessionRepository {
         dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT id, session_id, role, content, created_at
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                 FROM chat_messages
                 WHERE session_id = ? AND LOWER(content) LIKE LOWER(?)
                 ORDER BY created_at ASC
@@ -465,6 +529,8 @@ class ChatSessionRepository {
                             role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
                         ),
                     )
                 }
@@ -478,7 +544,7 @@ class ChatSessionRepository {
         dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT id, session_id, role, content, created_at
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
                 FROM chat_messages
                 WHERE session_id = ? AND created_at > (
                     SELECT created_at FROM chat_messages WHERE id = ?
@@ -499,6 +565,198 @@ class ChatSessionRepository {
                             role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
                             content = rs.getString("content"),
                             createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages
+    }
+
+    /**
+     * Get active (non-outdated) messages after a specific message with filtering at database level.
+     * This guarantees we get exactly the requested number of active messages.
+     *
+     * @param sessionId The session ID
+     * @param afterMessageId The message ID to start from (exclusive)
+     * @param limit Number of active messages to retrieve
+     * @return List of active messages after the specified message
+     */
+    fun getActiveMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
+                FROM chat_messages
+                WHERE session_id = ? AND is_outdated = 0 AND created_at > (
+                    SELECT created_at FROM chat_messages WHERE id = ?
+                )
+                ORDER BY created_at ASC
+                LIMIT ?
+            """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                stmt.setString(2, afterMessageId)
+                stmt.setInt(3, limit)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages
+    }
+
+    /**
+     * Mark a single message as outdated.
+     * This is used when editing a message to mark the original message as outdated.
+     *
+     * @param messageId The message ID to mark as outdated
+     * @return Number of messages marked (should be 1)
+     */
+    fun markMessageAsOutdated(messageId: String): Int = dataSource.connection.use { conn ->
+        conn.prepareStatement(
+            """
+                UPDATE chat_messages
+                SET is_outdated = 1
+                WHERE id = ?
+                """,
+        ).use { stmt ->
+            stmt.setString(1, messageId)
+            stmt.executeUpdate()
+        }
+    }
+
+    /**
+     * Mark messages as outdated starting from a specific message (exclusive).
+     * This is used when editing a message to mark all subsequent messages as outdated.
+     *
+     * @param sessionId The session ID
+     * @param fromMessageId The message ID from which to start marking as outdated (this message itself is not marked)
+     * @return Number of messages marked as outdated
+     */
+    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = dataSource.connection.use { conn ->
+        conn.prepareStatement(
+            """
+                UPDATE chat_messages
+                SET is_outdated = 1
+                WHERE session_id = ? AND created_at > (
+                    SELECT created_at FROM chat_messages WHERE id = ?
+                )
+                """,
+        ).use { stmt ->
+            stmt.setString(1, sessionId)
+            stmt.setString(2, fromMessageId)
+            stmt.executeUpdate()
+        }
+    }
+
+    /**
+     * Update a message's content and set its edit parent.
+     * Used when editing a message.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content
+     * @param editParentId The ID of the original message that was edited
+     */
+    fun updateMessageContent(messageId: String, newContent: String, editParentId: String?) {
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                UPDATE chat_messages
+                SET content = ?, edit_parent_id = ?
+                WHERE id = ?
+                """,
+            ).use { stmt ->
+                stmt.setString(1, newContent)
+                stmt.setString(2, editParentId)
+                stmt.setString(3, messageId)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    /**
+     * Get only active (non-outdated) messages for a session.
+     * This is used when building context for AI responses.
+     *
+     * @param sessionId The session ID
+     * @return List of active messages, ordered by creation time
+     */
+    fun getActiveMessages(sessionId: String): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
+                FROM chat_messages
+                WHERE session_id = ? AND is_outdated = 0
+                ORDER BY created_at ASC
+                """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
+                        ),
+                    )
+                }
+            }
+        }
+        return messages
+    }
+
+    /**
+     * Get outdated messages for a session.
+     * Used to show collapsed outdated branches in the UI.
+     *
+     * @param sessionId The session ID
+     * @return List of outdated messages, ordered by creation time
+     */
+    fun getOutdatedMessages(sessionId: String): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT id, session_id, role, content, created_at, is_outdated, edit_parent_id
+                FROM chat_messages
+                WHERE session_id = ? AND is_outdated = 1
+                ORDER BY created_at ASC
+                """,
+            ).use { stmt ->
+                stmt.setString(1, sessionId)
+                val rs = stmt.executeQuery()
+                while (rs.next()) {
+                    messages.add(
+                        ChatMessage(
+                            id = rs.getString("id"),
+                            sessionId = rs.getString("session_id"),
+                            role = MessageRole.entries.find { it.value == rs.getString("role") } ?: MessageRole.USER,
+                            content = rs.getString("content"),
+                            createdAt = LocalDateTime.parse(rs.getString("created_at")),
+                            isOutdated = rs.getInt("is_outdated") == 1,
+                            editParentId = rs.getString("edit_parent_id"),
                         ),
                     )
                 }

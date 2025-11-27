@@ -22,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
@@ -301,7 +300,6 @@ class ChatViewModel(
 
                 // Subscribe to this SPECIFIC thread (not just chatId)
                 subscribeToThread(threadId, sessionId)
-
             } catch (e: CancellationException) {
                 // Handle cancellation gracefully - only update if still on same session
                 if (_currentSessionId.value == sessionId) {
@@ -683,6 +681,93 @@ class ChatViewModel(
                 errorMessage = ErrorHandler.getUserFriendlyError(e, "jumping to message", "Failed to navigate to message. Please try again.")
                 isLoading = false
             }
+        }
+    }
+
+    /**
+     * Mark the original message and all subsequent messages as outdated.
+     * This should be called BEFORE creating the new edited message.
+     * Does NOT reload messages - caller should reload after creating new message.
+     *
+     * @param originalMessageId The ID of the original message being edited
+     * @return true if successful, false otherwise
+     */
+    suspend fun markOriginalAndSubsequentAsOutdated(originalMessageId: String): Boolean {
+        val sessionId = _currentSessionId.value ?: return false
+
+        return try {
+            withContext(Dispatchers.IO) {
+                val repo = ChatSessionRepository()
+
+                // 1. Mark the ORIGINAL message (being edited) as outdated
+                repo.markMessageAsOutdated(originalMessageId)
+
+                // 2. Mark ALL subsequent messages as outdated
+                val subsequentCount = repo.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
+                println("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
+
+                true
+            }
+        } catch (e: Exception) {
+            errorMessage = ErrorHandler.getUserFriendlyError(
+                e,
+                "editing message",
+                "Failed to mark messages as outdated.",
+            )
+            false
+        }
+    }
+
+    /**
+     * Edit a user message by marking the original and subsequent messages as outdated.
+     * Note: This does NOT create the new message - caller must call sendMessage() separately.
+     *
+     * @param messageId The ID of the original message to edit
+     * @param newContent The new content (not used, kept for compatibility)
+     * @param attachments Optional attachments (not used, kept for compatibility)
+     */
+    fun editMessage(messageId: String, newContent: String, attachments: List<FileAttachment> = emptyList()) {
+        scope.launch {
+            try {
+                markOriginalAndSubsequentAsOutdated(messageId)
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "editing message",
+                    "Failed to edit message. Please try again.",
+                )
+            }
+        }
+    }
+
+    /**
+     * Reload ALL messages (including outdated ones) from the current session.
+     * Outdated messages will be displayed inline with collapse/expand UI.
+     * This is used after editing a message to refresh the view.
+     */
+    private suspend fun reloadActiveMessages() {
+        val sessionId = _currentSessionId.value ?: return
+
+        withContext(Dispatchers.IO) {
+            val repo = ChatSessionRepository()
+            // Load ALL messages including outdated ones
+            val allMessages = repo.getMessages(sessionId)
+
+            // Convert to ChatMessage format
+            messages = allMessages.map { sessionMessage ->
+                ChatMessage(
+                    content = sessionMessage.content,
+                    isUser = sessionMessage.role == MessageRole.USER,
+                    id = sessionMessage.id,
+                    timestamp = sessionMessage.createdAt,
+                    isOutdated = sessionMessage.isOutdated,
+                    editParentId = sessionMessage.editParentId,
+                )
+            }
+
+            // Reset pagination state after reload
+            currentCursor = null
+            hasMoreMessages = false
         }
     }
 
