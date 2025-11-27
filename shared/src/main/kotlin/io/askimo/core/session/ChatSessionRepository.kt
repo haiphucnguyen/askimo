@@ -20,16 +20,29 @@ enum class PaginationDirection {
     BACKWARD,
 }
 
-class ChatSessionRepository {
+class ChatSessionRepository(
+    private val useInMemory: Boolean = false,
+) : AutoCloseable {
     private val hikariDataSource: HikariDataSource by lazy {
         DatabaseConnectionFactory.createSQLiteDataSource(
             databaseFileName = "chat_sessions.db",
             initializeDatabase = ::initializeDatabase,
+            useInMemory = useInMemory,
         )
     }
 
     private val dataSource: DataSource get() = hikariDataSource
     private val json = Json { ignoreUnknownKeys = true }
+
+    override fun close() {
+        try {
+            if (!hikariDataSource.isClosed) {
+                hikariDataSource.close()
+            }
+        } catch (_: UninitializedPropertyAccessException) {
+            // DataSource was never initialized, nothing to close
+        }
+    }
 
     private fun initializeDatabase(conn: Connection) {
         conn.createStatement().use { stmt ->

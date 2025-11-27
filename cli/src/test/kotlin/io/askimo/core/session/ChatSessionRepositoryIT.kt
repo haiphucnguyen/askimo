@@ -37,6 +37,9 @@ class ChatSessionRepositoryIT {
 
     @AfterEach
     fun tearDown() {
+        if (::repository.isInitialized) {
+            repository.close()
+        }
         testBaseScope.close()
     }
 
@@ -51,7 +54,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getSession(session.id)
         assertNotNull(retrieved)
-        assertEquals(session.id, retrieved!!.id)
+        assertEquals(session.id, retrieved.id)
         assertEquals(session.title, retrieved.title)
         assertEquals(session.createdAt, retrieved.createdAt)
         assertEquals(session.updatedAt, retrieved.updatedAt)
@@ -116,7 +119,7 @@ class ChatSessionRepositoryIT {
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        assertTrue(updatedSession!!.updatedAt.isAfter(originalUpdatedAt))
+        assertTrue(updatedSession.updatedAt.isAfter(originalUpdatedAt))
     }
 
     @Test
@@ -182,7 +185,7 @@ class ChatSessionRepositoryIT {
 
         val retrievedSummary = repository.getConversationSummary(session.id)
         assertNotNull(retrievedSummary)
-        assertEquals(summary.sessionId, retrievedSummary!!.sessionId)
+        assertEquals(summary.sessionId, retrievedSummary.sessionId)
         assertEquals(summary.keyFacts, retrievedSummary.keyFacts)
         assertEquals(summary.mainTopics, retrievedSummary.mainTopics)
         assertEquals(summary.recentContext, retrievedSummary.recentContext)
@@ -220,7 +223,7 @@ class ChatSessionRepositoryIT {
         // Then
         val retrievedSummary = repository.getConversationSummary(session.id)
         assertNotNull(retrievedSummary)
-        assertEquals(updatedSummary.keyFacts, retrievedSummary!!.keyFacts)
+        assertEquals(updatedSummary.keyFacts, retrievedSummary.keyFacts)
         assertEquals(updatedSummary.mainTopics, retrievedSummary.mainTopics)
         assertEquals(updatedSummary.recentContext, retrievedSummary.recentContext)
         assertEquals(updatedSummary.lastSummarizedMessageId, retrievedSummary.lastSummarizedMessageId)
@@ -242,7 +245,7 @@ class ChatSessionRepositoryIT {
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        assertNotEquals("Temporary Title", updatedSession!!.title)
+        assertNotEquals("Temporary Title", updatedSession.title)
         assertTrue(updatedSession.title.contains("What is the best way to test"))
     }
 
@@ -367,7 +370,7 @@ class ChatSessionRepositoryIT {
 
         val retrievedSummary = repository.getConversationSummary(session.id)
         assertNotNull(retrievedSummary)
-        assertEquals(complexSummary.keyFacts, retrievedSummary!!.keyFacts)
+        assertEquals(complexSummary.keyFacts, retrievedSummary.keyFacts)
         assertEquals(complexSummary.mainTopics, retrievedSummary.mainTopics)
         assertEquals(complexSummary.recentContext, retrievedSummary.recentContext)
     }
@@ -978,7 +981,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getFolder(folder.id)
         assertNotNull(retrieved)
-        assertEquals(folder.id, retrieved!!.id)
+        assertEquals(folder.id, retrieved.id)
         assertEquals(folder.name, retrieved.name)
     }
 
@@ -1010,7 +1013,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getFolder(childFolder.id)
         assertNotNull(retrieved)
-        assertEquals(parentFolder.id, retrieved!!.parentFolderId)
+        assertEquals(parentFolder.id, retrieved.parentFolderId)
     }
 
     @Test
@@ -1113,7 +1116,7 @@ class ChatSessionRepositoryIT {
 
         val updatedSession = repository.getSession(session.id)
         assertNotNull(updatedSession)
-        assertNull(updatedSession!!.folderId) // Moved to root
+        assertNull(updatedSession.folderId) // Moved to root
     }
 
     @Test
@@ -1127,7 +1130,7 @@ class ChatSessionRepositoryIT {
 
         val updatedChild = repository.getFolder(child.id)
         assertNotNull(updatedChild)
-        assertNull(updatedChild!!.parentFolderId) // Moved to root
+        assertNull(updatedChild.parentFolderId) // Moved to root
     }
 
     @Test
@@ -1327,9 +1330,9 @@ class ChatSessionRepositoryIT {
     fun `should get starred sessions ordered by sort order and updated time`() {
         val session1 = repository.createSession("Starred 1", isStarred = true, sortOrder = 10)
         Thread.sleep(10)
-        val session2 = repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
+        repository.createSession("Starred 2", isStarred = true, sortOrder = 5)
         Thread.sleep(10)
-        val session3 = repository.createSession("Starred 3", isStarred = true, sortOrder = 5)
+        repository.createSession("Starred 3", isStarred = true, sortOrder = 5)
 
         val starredSessions = repository.getStarredSessions()
 
@@ -1458,7 +1461,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getSession(session.id)
         assertNotNull(retrieved)
-        assertNotEquals(originalUpdatedAt, retrieved!!.updatedAt)
+        assertNotEquals(originalUpdatedAt, retrieved.updatedAt)
         assertTrue(retrieved.updatedAt.isAfter(originalUpdatedAt))
     }
 
@@ -1514,7 +1517,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getSession(session.id)
         assertNotNull(retrieved)
-        assertEquals(folder.id, retrieved!!.folderId)
+        assertEquals(folder.id, retrieved.folderId)
         assertTrue(retrieved.isStarred)
         assertEquals(5, retrieved.sortOrder)
     }
@@ -1558,7 +1561,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getSession(session.id)
         assertNotNull(retrieved)
-        assertNull(retrieved!!.folderId) // Moved to root
+        assertNull(retrieved.folderId) // Moved to root
         assertTrue(retrieved.isStarred) // Still starred
     }
 
@@ -1599,7 +1602,7 @@ class ChatSessionRepositoryIT {
 
         val afterFolderMove = repository.getSession(session.id)
         assertNotNull(afterFolderMove)
-        assertTrue(afterFolderMove!!.updatedAt.isAfter(originalUpdatedAt))
+        assertTrue(afterFolderMove.updatedAt.isAfter(originalUpdatedAt))
 
         Thread.sleep(10)
 
@@ -1607,7 +1610,7 @@ class ChatSessionRepositoryIT {
 
         val afterStarred = repository.getSession(session.id)
         assertNotNull(afterStarred)
-        assertTrue(afterStarred!!.updatedAt.isAfter(afterFolderMove.updatedAt))
+        assertTrue(afterStarred.updatedAt.isAfter(afterFolderMove.updatedAt))
     }
 
     @Test
@@ -1638,7 +1641,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = repository.getSession(session.id)
         assertNotNull(retrieved)
-        assertEquals("test-directive-id", retrieved!!.directiveId)
+        assertEquals("test-directive-id", retrieved.directiveId)
         assertEquals(folder.id, retrieved.folderId)
         assertTrue(retrieved.isStarred)
         assertEquals(3, retrieved.sortOrder)

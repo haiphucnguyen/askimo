@@ -18,19 +18,29 @@ object DatabaseConnectionFactory {
      *
      * @param databaseFileName The name of the database file (e.g., "chat_sessions.db")
      * @param initializeDatabase Optional callback to initialize the database schema
+     * @param useInMemory If true, creates an in-memory database (useful for testing)
      * @return A configured HikariDataSource
      */
     fun createSQLiteDataSource(
         databaseFileName: String,
         initializeDatabase: ((Connection) -> Unit)? = null,
+        useInMemory: Boolean = false,
     ): HikariDataSource {
-        val dbPath = AskimoHome.base().resolve(databaseFileName).toString()
+        val jdbcUrl = if (useInMemory) {
+            // Use in-memory database for tests to avoid file locking issues on Windows
+            // Use file URI with cache=shared so all connections in the pool share the same database
+            // Each repository instance will have its own isolated in-memory database
+            "jdbc:sqlite:file:memdb_${System.nanoTime()}?mode=memory&cache=shared"
+        } else {
+            val dbPath = AskimoHome.base().resolve(databaseFileName).toString()
+            "jdbc:sqlite:$dbPath"
+        }
 
         val config = HikariConfig().apply {
-            jdbcUrl = "jdbc:sqlite:$dbPath"
+            this.jdbcUrl = jdbcUrl
             driverClassName = "org.sqlite.JDBC"
-            maximumPoolSize = 10
-            minimumIdle = 2
+            maximumPoolSize = if (useInMemory) 1 else 10 // Single connection for in-memory
+            minimumIdle = if (useInMemory) 1 else 2
             connectionTimeout = 30000
             idleTimeout = 600000
             maxLifetime = 1800000
