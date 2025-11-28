@@ -20,8 +20,7 @@ import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -31,6 +30,8 @@ private const val DEFAULT_OLLAMA_EMBED_MODEL = "nomic-embed-text:latest"
 private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
 
 private val warnedOllamaOnce = AtomicBoolean(false)
+
+private val log = logger("EmbeddingModelFactory")
 
 fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider) {
     OPENAI -> {
@@ -79,7 +80,7 @@ private fun noteOllamaRequired(provider: ModelProvider) {
     if (warnedOllamaOnce.compareAndSet(false, true)) {
         val model = System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
         val url = System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-        info(
+        log.info(
             """
             ℹ️  ${provider.name} does not provide embeddings. Askimo uses local Ollama for RAG embeddings.
                • Ollama URL: $url
@@ -105,13 +106,13 @@ private fun ensureOllamaAvailable(
 
     // ⛓️ Pull synchronously; returns only when the model is ready
     if (!pullSync(baseUrl, model)) {
-        info("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
+        log.info("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
     }
 
     // One re-check (no polling needed since pullSync blocks)
     val after = getTags(baseUrl, readMs = 8_000) ?: error(notReachable(baseUrl, model))
     if (!hasModel(after, model)) {
-        info("❌ Ollama model '$model' still not listed after synchronous pull.")
+        log.info("❌ Ollama model '$model' still not listed after synchronous pull.")
     }
 }
 
@@ -136,7 +137,7 @@ private fun pullSync(
         ?.use { it.readText() }
     code in 200..299
 } catch (e: Exception) {
-    debug(e)
+    log.error("Failed to pull model $baseUrl / $model", e)
     false
 }
 
@@ -153,8 +154,8 @@ private fun getTags(
             doInput = true
         }
     conn.inputStream.bufferedReader().use { it.readText() }
-} catch (_: Exception) {
-    debug("Failed to connect to Ollama at $baseUrl")
+} catch (e: Exception) {
+    log.error("Failed to connect to Ollama at $baseUrl", e)
     null
 }
 

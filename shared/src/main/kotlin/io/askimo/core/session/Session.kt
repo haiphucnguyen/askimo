@@ -21,9 +21,7 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
-import io.askimo.core.util.TokenCounter
+import io.askimo.core.util.logger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -91,6 +89,7 @@ class Session(
     val params: SessionParams,
     val mode: SessionMode = SessionMode.CLI_INTERACTIVE,
 ) {
+    private val log = logger<Session>()
     private val memoryMap = mutableMapOf<String, ChatMemory>()
 
     var lastResponse: String? = null
@@ -328,7 +327,7 @@ class Session(
             retrievalAugmentor = rag,
             sessionMode = mode,
         )
-        info("RAG enabled for $model")
+        log.info("RAG enabled for $model")
         setChatService(upgraded)
     }
 
@@ -583,21 +582,12 @@ class Session(
 
         // 🔍 Count tokens for this chat session (only active messages)
         val activeMessages = messages.filter { !it.isOutdated }
-        val tokenInfo = TokenCounter.getTokenInfo(activeMessages)
-        debug("🔍 [Token Counter] Chat ID: $chatId")
-        debug("🔍 [Token Counter] Messages: ${tokenInfo.messageCount}")
-        debug("🔍 [Token Counter] Total tokens: ${tokenInfo.formattedCount} (${tokenInfo.totalTokens})")
 
         // Temporarily set currentChatSession to get context (but don't keep it)
         val previousSession = currentChatSession
         try {
             currentChatSession = chatSession
             val prompt = preparePromptWithContext(userMessage)
-
-            // 🔍 Count tokens in final prompt
-            val promptTokens = TokenCounter.countTokens(prompt)
-            debug("🔍 [Token Counter] Final prompt tokens: ${TokenCounter.formatTokenCount(promptTokens)} ($promptTokens)")
-
             return prompt
         } finally {
             currentChatSession = previousSession
@@ -725,7 +715,7 @@ class Session(
                     parts.add(sessionDirectiveText)
                 }
             } catch (e: Exception) {
-                debug("Error loading directive: ${e.message}", e)
+                log.error("Error loading directive: ${e.message}", e)
             }
         }
 
@@ -776,8 +766,8 @@ class Session(
                 chatSessionRepository.saveSummary(mergedSummary)
             }
         } catch (e: Exception) {
-            debug("Error while summarizing: ${e.message}", e)
-            println("Warning: Failed to create conversation summary: ${e.message}")
+            log.info("Warning: Failed to create conversation summary: ${e.message}")
+            log.error("Error while summarizing: ${e.message}", e)
         }
     }
 
@@ -820,7 +810,7 @@ class Session(
             val summaryResponse = getChatService().sendMessage(summaryPrompt)
             return parseAISummaryResponse(sessionId, summaryResponse, messages.last().id)
         } catch (e: Exception) {
-            debug("Error while generating summary: ${e.message}", e)
+            log.error("Error while generating summary: ${e.message}", e)
             return createFallbackSummary(sessionId, messages)
         }
     }

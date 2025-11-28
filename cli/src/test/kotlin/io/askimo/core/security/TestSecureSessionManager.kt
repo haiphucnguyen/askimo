@@ -13,8 +13,7 @@ import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.core.session.SessionParams
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.warn
+import io.askimo.core.util.logger
 
 /**
  * Test-specific secure session manager that uses safe provider names
@@ -30,6 +29,8 @@ import io.askimo.core.util.Logger.warn
  * API keys stored in their system keychain.
  */
 class TestSecureSessionManager {
+    private val log = logger<TestSecureSessionManager>()
+
     companion object {
         private const val ENCRYPTED_API_KEY_PREFIX = "encrypted:"
         private const val KEYCHAIN_API_KEY_PLACEHOLDER = "***keychain***"
@@ -99,9 +100,9 @@ class TestSecureSessionManager {
 
                 if (!result.success) {
                     hasInsecureKeys = true
-                    warn("Failed to migrate API key for test provider $safeProviderName to secure storage")
+                    log.warn("Failed to migrate API key for test provider $safeProviderName to secure storage")
                 } else {
-                    debug("Migrated API key for test provider $safeProviderName to ${result.method.name}")
+                    log.debug("Migrated API key for test provider $safeProviderName to ${result.method.name}")
                     updateApiKeyPlaceholder(settings, result.method)
                 }
             }
@@ -128,16 +129,16 @@ class TestSecureSessionManager {
         val secureKey = SecureApiKeyManager.retrieveApiKey(safeProviderName)
         if (secureKey != null) {
             settings.apiKey = secureKey
-            debug("Loaded API key for test provider $safeProviderName from secure storage")
+            log.debug("Loaded API key for test provider $safeProviderName from secure storage")
         } else if (currentKey.startsWith(ENCRYPTED_API_KEY_PREFIX)) {
             // Try to decrypt legacy encrypted key
             val encryptedPart = currentKey.removePrefix(ENCRYPTED_API_KEY_PREFIX)
             val decryptedKey = EncryptionManager.decrypt(encryptedPart)
             if (decryptedKey != null) {
                 settings.apiKey = decryptedKey
-                debug("Decrypted legacy API key for test provider $safeProviderName")
+                log.debug("Decrypted legacy API key for test provider $safeProviderName")
             } else {
-                warn("Failed to decrypt API key for test provider $safeProviderName")
+                log.warn("Failed to decrypt API key for test provider $safeProviderName")
                 settings.apiKey = ""
             }
         }
@@ -161,15 +162,15 @@ class TestSecureSessionManager {
             updateApiKeyPlaceholder(settings, result.method)
 
             // Show warning if not using keychain
-            result.warningMessage?.let { message -> warn(message) }
+            result.warningMessage?.let { message -> log.warn(message) }
         } else {
             // Fall back to encryption in the session file
             val encrypted = EncryptionManager.encrypt(apiKey)
             if (encrypted != null) {
                 settings.apiKey = "$ENCRYPTED_API_KEY_PREFIX$encrypted"
-                warn("⚠️ Storing encrypted API key for test provider $safeProviderName in session file (less secure)")
+                log.warn("⚠️ Storing encrypted API key for test provider $safeProviderName in session file (less secure)")
             } else {
-                warn("❌ Failed to encrypt API key for test provider $safeProviderName - will be stored as plain text")
+                log.warn("❌ Failed to encrypt API key for test provider $safeProviderName - will be stored as plain text")
             }
         }
     }

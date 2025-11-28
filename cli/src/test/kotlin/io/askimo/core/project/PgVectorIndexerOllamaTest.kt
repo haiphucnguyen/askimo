@@ -43,7 +43,7 @@ class PgVectorIndexerOllamaTest {
             // Apply common TestContainers configuration
             TestContainersConfig.ensureConfigured()
 
-            PgVectorPostgres("pgvector/pgvector:pg16").apply {
+            PgVectorPostgres("pgvector/pgvector:0.8.1-pg18-trixie").apply {
                 withDatabaseName("askimo_test")
                 withUsername("askimo")
                 withPassword("askimo")

@@ -4,9 +4,8 @@
  */
 package io.askimo.core.providers
 
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
+import io.askimo.core.util.logger
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -15,6 +14,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 
 object ProviderModelUtils {
+    private val log = logger<ProviderModelUtils>()
     fun fetchModels(
         apiKey: String,
         url: String,
@@ -38,8 +38,8 @@ object ProviderModelUtils {
                 .sorted()
         }
     } catch (e: Exception) {
-        info("⚠️ Failed to fetch models from $providerName: ${e.message}")
-        debug(e)
+        log.info("⚠️ Failed to fetch models from $providerName: ${e.message}")
+        log.error("Failed to fetch models from $providerName", e)
         emptyList()
     }
 }

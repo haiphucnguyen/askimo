@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender for end-user messages (INFO only) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appender for persistent logs -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/.askimo/logs/askimo-cli.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover -->
+            <fileNamePattern>${user.home}/.askimo/logs/askimo-cli.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Keep 7 days of history -->
+            <maxHistory>7</maxHistory>
+            <!-- Cap total log size at 100MB -->
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Async appender for better performance -->
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <appender-ref ref="FILE" />
+    </appender>
+
+    <!-- Suppress third-party library logs except errors -->
+    <logger name="org.eclipse.jetty" level="ERROR"/>
+    <logger name="org.testcontainers" level="ERROR"/>
+    <logger name="com.zaxxer.hikari" level="ERROR"/>
+    <logger name="org.jetbrains.exposed" level="ERROR"/>
+    <logger name="org.jetbrains" level="ERROR"/>
+    <logger name="io.netty" level="ERROR"/>
+    <logger name="org.apache.http" level="ERROR"/>
+    <logger name="kotlinx.coroutines" level="ERROR"/>
+
+    <!-- Askimo application logging -->
+    <logger name="io.askimo" level="DEBUG"/>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ASYNC" />
+    </root>
+</configuration>
+

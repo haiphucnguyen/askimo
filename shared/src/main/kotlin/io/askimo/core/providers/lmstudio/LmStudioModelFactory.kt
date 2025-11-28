@@ -16,16 +16,17 @@ import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import java.net.http.HttpClient
 import java.time.Duration
 
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
+    private val log = logger<LmStudioModelFactory>()
+
     override fun availableModels(settings: LmStudioSettings): List<String> = try {
-        info("ℹ️ Fetching models from LM Studio server at ${settings.baseUrl}")
+        log.info("ℹ️ Fetching models from LM Studio server at ${settings.baseUrl}")
 
         val models = fetchModels(
             apiKey = "lm-studio",
@@ -34,15 +35,15 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         )
 
         if (models.isEmpty()) {
-            info("⚠️ No models found. Make sure a model is loaded in LM Studio.")
+            log.info("⚠️ No models found. Make sure a model is loaded in LM Studio.")
         } else {
-            info("✓ Found ${models.size} model(s): ${models.joinToString(", ")}")
+            log.info("✓ Found ${models.size} model(s): ${models.joinToString(", ")}")
         }
 
         models
     } catch (e: Exception) {
-        info("⚠️ Failed to fetch models from LMStudio: ${e.message}")
-        debug(e)
+        log.info("⚠️ Failed to fetch models from LMStudio: ${e.message}")
+        log.debug("Error", e)
         emptyList()
     }
 

@@ -8,8 +8,7 @@ import io.askimo.core.session.MemoryPolicy
 import io.askimo.core.session.ParamKey
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -22,6 +21,7 @@ import org.jline.reader.ParsedLine
 class SetParamCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<SetParamCommandHandler>()
     override val keyword = ":set-param"
     override val description = "Set a model parameter (use :params --list for available keys)"
 
@@ -29,8 +29,8 @@ class SetParamCommandHandler(
         val args = line.words().drop(1)
 
         if (args.size != 2) {
-            info("Usage: :set-param <key> <value>")
-            info("Type :params --list to see valid keys and descriptions.")
+            log.info("Usage: :set-param <key> <value>")
+            log.info("Type :params --list to see valid keys and descriptions.")
             return
         }
 
@@ -39,7 +39,7 @@ class SetParamCommandHandler(
 
         val key = ParamKey.fromInput(keyInput)
         if (key == null) {
-            info("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
+            log.info("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
             return
         }
 
@@ -47,7 +47,7 @@ class SetParamCommandHandler(
             val provider = session.params.currentProvider
             val factory = session.getModelFactory(provider)
             if (factory == null) {
-                info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+                log.info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
                 return
             }
 
@@ -61,10 +61,10 @@ class SetParamCommandHandler(
             SessionConfigManager.save(session.params)
 
             session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
-            info("✅ '${key.key}' is updated")
+            log.info("✅ '${key.key}' is updated")
         } catch (e: IllegalArgumentException) {
-            info("❌ Invalid value for '$keyInput': ${e.message}")
-            debug(e)
+            log.info("❌ Invalid value for '$keyInput': ${e.message}")
+            log.error("Failed to set parameter '$keyInput'", e)
         }
     }
 }

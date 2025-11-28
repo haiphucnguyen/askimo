@@ -5,7 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.providers.ProviderRegistry
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -16,6 +16,7 @@ import org.jline.reader.ParsedLine
  * setting up their chat environment.
  */
 class ListProvidersCommandHandler : CommandHandler {
+    private val log = logger<ListProvidersCommandHandler>()
     override val keyword: String = ":providers"
 
     override val description: String = "List all supported model providers"
@@ -24,14 +25,14 @@ class ListProvidersCommandHandler : CommandHandler {
         val providers = ProviderRegistry.getSupportedProviders()
 
         if (providers.isEmpty()) {
-            info("⚠️  No model providers registered.")
+            log.info("⚠️  No model providers registered.")
             return
         }
 
-        info("Available Model Providers:")
+        log.info("Available Model Providers:")
         providers.forEach { provider ->
-            info("- ${provider.name.lowercase()}")
+            log.info("- ${provider.name.lowercase()}")
         }
-        info("Use `:set-provider <modelName>` to choose the active model.")
+        log.info("Use `:set-provider <modelName>` to choose the active model.")
     }
 }

@@ -9,8 +9,7 @@ import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -27,6 +26,7 @@ import java.nio.file.Paths
 class UseProjectCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<UseProjectCommandHandler>()
     override val keyword: String = ":use-project"
     override val description: String =
         "Activate a saved project (sets active pointer, session scope, and enables RAG).\n" +
@@ -36,53 +36,53 @@ class UseProjectCommandHandler(
         val args = line.words().drop(1)
         val key = args.firstOrNull()
         if (key.isNullOrBlank()) {
-            info("Usage: :use-project <project-name|project-id>")
+            log.info("Usage: :use-project <project-name|project-id>")
             return
         }
 
         // Resolve by id first, then by name (case-insensitive)
         val meta = ProjectStore.getById(key) ?: ProjectStore.getByName(key)
         if (meta == null) {
-            info("❌ Project '$key' not found. Use :projects to list.")
+            log.info("❌ Project '$key' not found. Use :projects to list.")
             return
         }
 
         val projectPath = Paths.get(meta.root)
         if (!Files.isDirectory(projectPath)) {
-            info("⚠️ Saved path does not exist anymore: ${meta.root}")
+            log.info("⚠️ Saved path does not exist anymore: ${meta.root}")
             return
         }
 
-        info("🐘 Ensuring Postgres+pgvector is running…")
+        log.info("🐘 Ensuring Postgres+pgvector is running…")
         var indexer: PgVectorIndexer? = null
         try {
             val pg = PostgresContainerManager.startIfNeeded()
-            info("✅ Postgres ready on ${pg.jdbcUrl}")
+            log.info("✅ Postgres ready on ${pg.jdbcUrl}")
 
             indexer = PgVectorIndexer(
                 projectId = meta.name,
                 session = session,
             )
         } catch (e: Exception) {
-            info("⚠️ Failed to start Postgres container: ${e.message}")
-            info("📝 Proceeding without vector indexing - you can enable it later when Docker is available.")
-            debug(e)
+            log.info("⚠️ Failed to start Postgres container: ${e.message}")
+            log.info("📝 Proceeding without vector indexing - you can enable it later when Docker is available.")
+            log.error("Failed to launch the vector db", e)
         }
 
         session.setScope(meta)
 
-        info("✅ Active project: '${meta.name}'  (id=${meta.id})")
-        info("   ↳ ${meta.root}")
+        log.info("✅ Active project: '${meta.name}'  (id=${meta.id})")
+        log.info("   ↳ ${meta.root}")
 
         if (indexer != null) {
             session.enableRagWith(indexer)
 
             // Start file watcher for the project (this will automatically stop any existing watcher)
             FileWatcherManager.startWatchingProject(projectPath, indexer)
-            info("👁️  File watcher started - changes will be automatically indexed.")
-            info("🧠 RAG enabled for '${meta.name}'.")
+            log.info("👁️  File watcher started - changes will be automatically indexed.")
+            log.info("🧠 RAG enabled for '${meta.name}'.")
         } else {
-            info("📝 Project activated without vector indexing. Start Docker and use indexing commands to enable RAG later.")
+            log.info("📝 Project activated without vector indexing. Start Docker and use indexing commands to enable RAG later.")
         }
     }
 }

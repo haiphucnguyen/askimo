@@ -21,22 +21,15 @@ import javax.sql.DataSource
  * This class provides common functionality for:
  * - Lazy initialization of HikariCP datasource
  * - Proper resource cleanup via AutoCloseable
- * - Support for in-memory databases (useful for testing)
  * - Database initialization on first connection
  *
  * Subclasses must implement:
  * - [databaseFileName] - The name of the SQLite database file
  * - [initializeDatabase] - Database schema initialization logic
- *
- * @param useInMemory If true, uses an in-memory database instead of file-based storage.
- *                    Useful for fast, isolated testing. Defaults to false.
  */
-abstract class AbstractSQLiteRepository(
-    private val useInMemory: Boolean = false,
-) : AutoCloseable {
+abstract class AbstractSQLiteRepository : AutoCloseable {
     /**
      * The name of the SQLite database file (e.g., "chat_sessions.db").
-     * Ignored if [useInMemory] is true.
      */
     protected abstract val databaseFileName: String
 
@@ -52,13 +45,13 @@ abstract class AbstractSQLiteRepository(
 
     /**
      * Lazy-initialized HikariCP datasource.
-     * Created on first access, using the configured database file or in-memory mode.
+     * Created on first access, using the configured database file.
      */
     private val hikariDataSource: HikariDataSource by lazy {
         DatabaseConnectionFactory.createSQLiteDataSource(
             databaseFileName = databaseFileName,
             initializeDatabase = ::initializeDatabase,
-            useInMemory = useInMemory,
+            useInMemory = false,
         )
     }
 

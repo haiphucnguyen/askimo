@@ -13,22 +13,23 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
 
 class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
+    private val log = logger<LocalAiModelFactory>()
+
     override fun availableModels(settings: LocalAiSettings): List<String> = try {
         // LocalAI doesn't have a direct API to list models like Ollama
         // Users typically need to configure models manually
         // Return an empty list or implement a custom API call if LocalAI supports it
-        info("⚠️ LocalAI model listing not implemented. Please configure models manually.")
+        log.info("⚠️ LocalAI model listing not implemented. Please configure models manually.")
         emptyList()
     } catch (e: Exception) {
-        info("⚠️ Failed to fetch models from LocalAI: ${e.message}")
-        debug(e)
+        log.info("⚠️ Failed to fetch models from LocalAI: ${e.message}")
+        log.error("Failed to fetch models", e)
         emptyList()
     }
 

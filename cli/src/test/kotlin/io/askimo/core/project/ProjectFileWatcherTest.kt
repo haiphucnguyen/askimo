@@ -4,7 +4,7 @@
  */
 package io.askimo.core.project
 
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +34,7 @@ import kotlin.test.assertTrue
  * Tests use generous delays to account for file system event timing variations.
  */
 class ProjectFileWatcherTest {
+    private val log = logger<ProjectFileWatcherTest>()
 
     @TempDir
     lateinit var tempDir: Path
@@ -275,7 +276,7 @@ class ProjectFileWatcherTest {
             }
             if (attempt == 9) {
                 // Last attempt - log for debugging
-                info("Directory registration attempt ${attempt + 1}: initial=$initialDirCount, current=$currentDirCount")
+                log.info("Directory registration attempt ${attempt + 1}: initial=$initialDirCount, current=$currentDirCount")
             }
         }
 

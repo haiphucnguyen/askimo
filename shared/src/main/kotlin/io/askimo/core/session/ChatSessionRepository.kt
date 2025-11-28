@@ -5,6 +5,7 @@
 package io.askimo.core.session
 
 import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.sqliteDatetime
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SortOrder
@@ -14,9 +15,7 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.lowerCase
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -42,8 +41,8 @@ object ChatFoldersTable : Table("chat_folders") {
     val color = varchar("color", 50).nullable()
     val icon = varchar("icon", 50).nullable()
     val sortOrder = integer("sort_order").default(0)
-    val createdAt = datetime("created_at")
-    val updatedAt = datetime("updated_at")
+    val createdAt = sqliteDatetime("created_at")
+    val updatedAt = sqliteDatetime("updated_at")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -54,8 +53,8 @@ object ChatFoldersTable : Table("chat_folders") {
 object ChatSessionsTable : Table("chat_sessions") {
     val id = varchar("id", 36)
     val title = varchar("title", SESSION_TITLE_MAX_LENGTH)
-    val createdAt = datetime("created_at")
-    val updatedAt = datetime("updated_at")
+    val createdAt = sqliteDatetime("created_at")
+    val updatedAt = sqliteDatetime("updated_at")
     val directiveId = varchar("directive_id", 36).nullable()
     val folderId = varchar("folder_id", 36).nullable()
     val isStarred = integer("is_starred").default(0)
@@ -72,7 +71,7 @@ object ChatMessagesTable : Table("chat_messages") {
     val sessionId = varchar("session_id", 36)
     val role = varchar("role", 50)
     val content = text("content")
-    val createdAt = datetime("created_at")
+    val createdAt = sqliteDatetime("created_at")
     val isOutdated = integer("is_outdated").default(0)
     val editParentId = varchar("edit_parent_id", 36).nullable()
 
@@ -88,14 +87,56 @@ object ConversationSummariesTable : Table("conversation_summaries") {
     val mainTopics = text("main_topics")
     val recentContext = text("recent_context")
     val lastSummarizedMessageId = varchar("last_summarized_message_id", 36)
-    val createdAt = datetime("created_at")
+    val createdAt = sqliteDatetime("created_at")
 
     override val primaryKey = PrimaryKey(sessionId)
 }
 
-class ChatSessionRepository(
-    useInMemory: Boolean = false,
-) : AbstractSQLiteRepository(useInMemory) {
+/**
+ * Extension function to map an Exposed ResultRow to a ChatSession object.
+ * Eliminates duplication of mapping logic throughout the repository.
+ */
+private fun org.jetbrains.exposed.sql.ResultRow.toChatSession(): ChatSession = ChatSession(
+    id = this[ChatSessionsTable.id],
+    title = this[ChatSessionsTable.title],
+    createdAt = this[ChatSessionsTable.createdAt],
+    updatedAt = this[ChatSessionsTable.updatedAt],
+    directiveId = this[ChatSessionsTable.directiveId],
+    folderId = this[ChatSessionsTable.folderId],
+    isStarred = this[ChatSessionsTable.isStarred] == 1,
+    sortOrder = this[ChatSessionsTable.sortOrder],
+)
+
+/**
+ * Extension function to map an Exposed ResultRow to a ChatMessage object.
+ * Eliminates duplication of mapping logic throughout the repository.
+ */
+private fun org.jetbrains.exposed.sql.ResultRow.toChatMessage(): ChatMessage = ChatMessage(
+    id = this[ChatMessagesTable.id],
+    sessionId = this[ChatMessagesTable.sessionId],
+    role = MessageRole.entries.find { it.value == this[ChatMessagesTable.role] } ?: MessageRole.USER,
+    content = this[ChatMessagesTable.content],
+    createdAt = this[ChatMessagesTable.createdAt],
+    isOutdated = this[ChatMessagesTable.isOutdated] == 1,
+    editParentId = this[ChatMessagesTable.editParentId],
+)
+
+/**
+ * Extension function to map an Exposed ResultRow to a ChatFolder object.
+ * Eliminates duplication of mapping logic throughout the repository.
+ */
+private fun org.jetbrains.exposed.sql.ResultRow.toChatFolder(): ChatFolder = ChatFolder(
+    id = this[ChatFoldersTable.id],
+    name = this[ChatFoldersTable.name],
+    parentFolderId = this[ChatFoldersTable.parentFolderId],
+    color = this[ChatFoldersTable.color],
+    icon = this[ChatFoldersTable.icon],
+    sortOrder = this[ChatFoldersTable.sortOrder],
+    createdAt = this[ChatFoldersTable.createdAt],
+    updatedAt = this[ChatFoldersTable.updatedAt],
+)
+
+class ChatSessionRepository : AbstractSQLiteRepository() {
     override val databaseFileName: String = "chat_sessions.db"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -213,18 +254,7 @@ class ChatSessionRepository(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
-            .map { row ->
-                ChatSession(
-                    id = row[ChatSessionsTable.id],
-                    title = row[ChatSessionsTable.title],
-                    createdAt = row[ChatSessionsTable.createdAt],
-                    updatedAt = row[ChatSessionsTable.updatedAt],
-                    directiveId = row[ChatSessionsTable.directiveId],
-                    folderId = row[ChatSessionsTable.folderId],
-                    isStarred = row[ChatSessionsTable.isStarred] == 1,
-                    sortOrder = row[ChatSessionsTable.sortOrder],
-                )
-            }
+            .map { it.toChatSession() }
     }
 
     fun getSession(sessionId: String): ChatSession? = transaction(database) {
@@ -232,18 +262,7 @@ class ChatSessionRepository(
             .selectAll()
             .where { ChatSessionsTable.id eq sessionId }
             .singleOrNull()
-            ?.let { row ->
-                ChatSession(
-                    id = row[ChatSessionsTable.id],
-                    title = row[ChatSessionsTable.title],
-                    createdAt = row[ChatSessionsTable.createdAt],
-                    updatedAt = row[ChatSessionsTable.updatedAt],
-                    directiveId = row[ChatSessionsTable.directiveId],
-                    folderId = row[ChatSessionsTable.folderId],
-                    isStarred = row[ChatSessionsTable.isStarred] == 1,
-                    sortOrder = row[ChatSessionsTable.sortOrder],
-                )
-            }
+            ?.toChatSession()
     }
     fun addMessage(message: ChatMessage): ChatMessage {
         // Inject server-controlled field: UUID
@@ -278,17 +297,7 @@ class ChatSessionRepository(
             .selectAll()
             .where { ChatMessagesTable.sessionId eq sessionId }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+            .map { it.toChatMessage() }
     }
 
     fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
@@ -297,17 +306,8 @@ class ChatSessionRepository(
             .where { ChatMessagesTable.sessionId eq sessionId }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
             .limit(limit)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }.reversed() // Return in chronological order
+            .map { it.toChatMessage() }
+            .reversed()
     }
 
     /**
@@ -324,17 +324,8 @@ class ChatSessionRepository(
             .where { (ChatMessagesTable.sessionId eq sessionId) and (ChatMessagesTable.isOutdated eq 0) }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
             .limit(limit)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }.reversed() // Return in chronological order
+            .map { it.toChatMessage() }
+            .reversed()
     }
 
     /**
@@ -379,19 +370,9 @@ class ChatSessionRepository(
         }
 
         // Fetch one extra to determine if there are more
-        val messages = orderedQuery
-            .limit(limit + 1)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+        val messages = query
+            .limit(limit + 1) // Fetch one extra to check for more
+            .map { it.toChatMessage() }
 
         // Check if there are more messages
         val hasMore = messages.size > limit
@@ -446,17 +427,7 @@ class ChatSessionRepository(
                 }
                 .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
                 .limit(limit)
-                .map { row ->
-                    ChatMessage(
-                        id = row[ChatMessagesTable.id],
-                        sessionId = row[ChatMessagesTable.sessionId],
-                        role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                        content = row[ChatMessagesTable.content],
-                        createdAt = row[ChatMessagesTable.createdAt],
-                        isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                        editParentId = row[ChatMessagesTable.editParentId],
-                    )
-                }
+                .map { it.toChatMessage() }
         }
     }
 
@@ -478,17 +449,7 @@ class ChatSessionRepository(
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .limit(limit)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+            .map { it.toChatMessage() }
     }
 
     /**
@@ -519,17 +480,7 @@ class ChatSessionRepository(
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .limit(limit)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+            .map { it.toChatMessage() }
     }
 
     /**
@@ -603,17 +554,7 @@ class ChatSessionRepository(
                     (ChatMessagesTable.isOutdated eq 0)
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+            .map { it.toChatMessage() }
     }
 
     /**
@@ -631,17 +572,7 @@ class ChatSessionRepository(
                     (ChatMessagesTable.isOutdated eq 1)
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .map { row ->
-                ChatMessage(
-                    id = row[ChatMessagesTable.id],
-                    sessionId = row[ChatMessagesTable.sessionId],
-                    role = MessageRole.entries.find { it.value == row[ChatMessagesTable.role] } ?: MessageRole.USER,
-                    content = row[ChatMessagesTable.content],
-                    createdAt = row[ChatMessagesTable.createdAt],
-                    isOutdated = row[ChatMessagesTable.isOutdated] == 1,
-                    editParentId = row[ChatMessagesTable.editParentId],
-                )
-            }
+            .map { it.toChatMessage() }
     }
 
     fun saveSummary(summary: ConversationSummary) {
@@ -791,18 +722,7 @@ class ChatSessionRepository(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
-            .map { row ->
-                ChatSession(
-                    id = row[ChatSessionsTable.id],
-                    title = row[ChatSessionsTable.title],
-                    createdAt = row[ChatSessionsTable.createdAt],
-                    updatedAt = row[ChatSessionsTable.updatedAt],
-                    directiveId = row[ChatSessionsTable.directiveId],
-                    folderId = row[ChatSessionsTable.folderId],
-                    isStarred = row[ChatSessionsTable.isStarred] == 1,
-                    sortOrder = row[ChatSessionsTable.sortOrder],
-                )
-            }
+            .map { it.toChatSession() }
     }
 
     /**
@@ -816,18 +736,7 @@ class ChatSessionRepository(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
-            .map { row ->
-                ChatSession(
-                    id = row[ChatSessionsTable.id],
-                    title = row[ChatSessionsTable.title],
-                    createdAt = row[ChatSessionsTable.createdAt],
-                    updatedAt = row[ChatSessionsTable.updatedAt],
-                    directiveId = row[ChatSessionsTable.directiveId],
-                    folderId = row[ChatSessionsTable.folderId],
-                    isStarred = row[ChatSessionsTable.isStarred] == 1,
-                    sortOrder = row[ChatSessionsTable.sortOrder],
-                )
-            }
+            .map { it.toChatSession() }
     }
 
     /**
@@ -877,18 +786,7 @@ class ChatSessionRepository(
                 ChatFoldersTable.sortOrder to SortOrder.ASC,
                 ChatFoldersTable.name to SortOrder.ASC,
             )
-            .map { row ->
-                ChatFolder(
-                    id = row[ChatFoldersTable.id],
-                    name = row[ChatFoldersTable.name],
-                    parentFolderId = row[ChatFoldersTable.parentFolderId],
-                    color = row[ChatFoldersTable.color],
-                    icon = row[ChatFoldersTable.icon],
-                    sortOrder = row[ChatFoldersTable.sortOrder],
-                    createdAt = row[ChatFoldersTable.createdAt],
-                    updatedAt = row[ChatFoldersTable.updatedAt],
-                )
-            }
+            .map { it.toChatFolder() }
     }
 
     /**
@@ -899,18 +797,7 @@ class ChatSessionRepository(
             .selectAll()
             .where { ChatFoldersTable.id eq folderId }
             .singleOrNull()
-            ?.let { row ->
-                ChatFolder(
-                    id = row[ChatFoldersTable.id],
-                    name = row[ChatFoldersTable.name],
-                    parentFolderId = row[ChatFoldersTable.parentFolderId],
-                    color = row[ChatFoldersTable.color],
-                    icon = row[ChatFoldersTable.icon],
-                    sortOrder = row[ChatFoldersTable.sortOrder],
-                    createdAt = row[ChatFoldersTable.createdAt],
-                    updatedAt = row[ChatFoldersTable.updatedAt],
-                )
-            }
+            ?.toChatFolder()
     }
 
     /**

@@ -4,7 +4,7 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -15,6 +15,7 @@ import org.jline.reader.ParsedLine
  * to discover the CLI's capabilities.
  */
 class HelpCommandHandler : CommandHandler {
+    private val log = logger<HelpCommandHandler>()
     override val keyword = ":help"
     override val description = "Show available commands"
 
@@ -32,7 +33,7 @@ class HelpCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val modeText = if (isNonInteractiveMode) "non-interactive" else "interactive"
 
-        info("Available commands ($modeText mode):\n")
+        log.info("Available commands ($modeText mode):\n")
 
         commands.forEach { handler ->
             val commandName = if (isNonInteractiveMode) {
@@ -45,11 +46,11 @@ class HelpCommandHandler : CommandHandler {
         }
 
         if (isNonInteractiveMode) {
-            info("\n💡 Multiple commands can be combined in a single invocation:")
-            info("   Example: askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4")
-            info("\nFor interactive mode, run 'askimo' without arguments and use ':command' format.")
+            log.info("\n💡 Multiple commands can be combined in a single invocation:")
+            log.info("   Example: askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4")
+            log.info("\nFor interactive mode, run 'askimo' without arguments and use ':command' format.")
         } else {
-            info("\nFor non-interactive mode, use 'askimo --command' format from command line.")
+            log.info("\nFor non-interactive mode, use 'askimo --command' format from command line.")
         }
     }
 
@@ -68,28 +69,28 @@ class HelpCommandHandler : CommandHandler {
         val additionalLines = lines.drop(1)
 
         // Format main command line
-        info("  ${commandName.padEnd(18)} - $mainDescription")
+        log.info("  ${commandName.padEnd(18)} - $mainDescription")
 
         // Format usage and additional lines with proper indentation
         additionalLines.forEach { line ->
             when {
                 line.trim().startsWith("Usage:") -> {
-                    info("${" ".repeat(22)}$line")
+                    log.info("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("Example:") -> {
-                    info("${" ".repeat(22)}$line")
+                    log.info("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("Options:") -> {
-                    info("${" ".repeat(22)}$line")
+                    log.info("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("--") -> {
-                    info("${" ".repeat(24)}$line")
+                    log.info("${" ".repeat(24)}$line")
                 }
                 line.trim().isNotEmpty() -> {
-                    info("${" ".repeat(22)}$line")
+                    log.info("${" ".repeat(22)}$line")
                 }
                 else -> {
-                    info("")
+                    log.info("")
                 }
             }
         }

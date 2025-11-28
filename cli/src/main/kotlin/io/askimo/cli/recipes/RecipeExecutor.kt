@@ -7,7 +7,7 @@ package io.askimo.cli.recipes
 import io.askimo.cli.LoadingIndicator
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.logger
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -29,6 +29,7 @@ class RecipeExecutor(
     private val registry: RecipeRegistry,
     private val tools: ToolRegistry,
 ) {
+    private val log = logger<RecipeExecutor>()
     data class RunOpts(
         val overrides: Map<String, String> = emptyMap(),
         val externalArgs: List<String> = emptyList(),
@@ -113,7 +114,7 @@ class RecipeExecutor(
                 tools.invoke(action.call.tool, resolvedArgs)
             }
         }
-        debug(formatted)
+        log.debug(formatted)
     }
 
     private fun resolveArgs(

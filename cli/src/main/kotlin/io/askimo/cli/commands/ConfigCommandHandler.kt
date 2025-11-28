@@ -7,7 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.session.Session
 import io.askimo.core.session.getConfigInfo
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 
@@ -21,24 +21,25 @@ import java.nio.file.Files
 class ConfigCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<ConfigCommandHandler>()
     override val keyword: String = ":config"
     override val description: String = "Show the current provider, model, and settings."
 
     override fun handle(line: ParsedLine) {
         val configInfo = session.getConfigInfo()
 
-        info("🔧 Current configuration:")
-        info("  Provider:    ${configInfo.provider}")
-        info("  Model:       ${configInfo.model}")
-        info("  Settings:")
+        log.info("🔧 Current configuration:")
+        log.info("  Provider:    ${configInfo.provider}")
+        log.info("  Model:       ${configInfo.model}")
+        log.info("  Settings:")
 
         configInfo.settingsDescription.forEach {
-            info("    $it")
+            log.info("    $it")
         }
 
         val scope = session.scope
         if (scope == null) {
-            info("  Active project: (none)")
+            log.info("  Active project: (none)")
         } else {
             val exists =
                 try {
@@ -48,9 +49,9 @@ class ConfigCommandHandler(
                 }
             val home = AskimoHome.userHome().toString()
             val rootDisp = scope.projectDir.toString().replaceFirst(home, "~")
-            info("  Active project:")
-            info("    Name:       ${scope.projectName}")
-            info("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
+            log.info("  Active project:")
+            log.info("    Name:       ${scope.projectName}")
+            log.info("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
         }
     }
 }

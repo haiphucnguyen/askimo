@@ -8,8 +8,7 @@ import io.askimo.core.security.KeychainManager.OperatingSystem.LINUX
 import io.askimo.core.security.KeychainManager.OperatingSystem.MACOS
 import io.askimo.core.security.KeychainManager.OperatingSystem.UNKNOWN
 import io.askimo.core.security.KeychainManager.OperatingSystem.WINDOWS
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.warn
+import io.askimo.core.util.logger
 import java.io.IOException
 
 /**
@@ -17,6 +16,7 @@ import java.io.IOException
  * Falls back to encrypted storage if keychain is not available.
  */
 object KeychainManager {
+    private val log = logger<KeychainManager>()
     private const val SERVICE_NAME = "askimo-cli"
 
     /**
@@ -35,12 +35,12 @@ object KeychainManager {
             LINUX -> storeLinuxKeyring(provider, apiKey)
             WINDOWS -> storeWindowsCredentialManager(provider, apiKey)
             UNKNOWN -> {
-                warn("Unknown operating system, keychain storage not available")
+                log.warn("Unknown operating system, keychain storage not available")
                 false
             }
         }
     } catch (e: Exception) {
-        debug("Failed to store API key in keychain: ${e.message}", e)
+        log.error("Failed to store API key in keychain: ${e.message}", e)
         false
     }
 
@@ -56,12 +56,12 @@ object KeychainManager {
             LINUX -> retrieveLinuxKeyring(provider)
             WINDOWS -> retrieveWindowsCredentialManager(provider)
             UNKNOWN -> {
-                debug("Unknown operating system, keychain retrieval not available")
+                log.debug("Unknown operating system, keychain retrieval not available")
                 null
             }
         }
     } catch (e: Exception) {
-        debug("Failed to retrieve API key from keychain: ${e.message}", e)
+        log.error("Failed to retrieve API key from keychain: ${e.message}", e)
         null
     }
 
@@ -79,7 +79,7 @@ object KeychainManager {
             UNKNOWN -> false
         }
     } catch (e: Exception) {
-        debug("Failed to remove API key from keychain: ${e.message}")
+        log.error("Failed to remove API key from keychain: ${e.message}", e)
         false
     }
 
@@ -172,7 +172,7 @@ object KeychainManager {
                 val exitCode = process.waitFor()
                 return exitCode == 0
             } catch (e: Exception) {
-                debug("Failed to store API key with secret-tool: ${e.message}")
+                log.error("Failed to store API key with secret-tool: ${e.message}", e)
                 return false
             }
         }
@@ -181,11 +181,11 @@ object KeychainManager {
         if (isCommandAvailable("gnome-keyring-daemon")) {
             // Implementation for gnome-keyring would go here
             // For now, return false to use encrypted fallback
-            debug("gnome-keyring-daemon available but not implemented")
+            log.debug("gnome-keyring-daemon available but not implemented")
             return false
         }
 
-        debug("No Linux keyring implementation available (secret-tool not found)")
+        log.debug("No Linux keyring implementation available (secret-tool not found)")
         return false
     }
 
@@ -210,16 +210,16 @@ object KeychainManager {
                         .trim()
                         .takeIf { it.isNotBlank() }
                 } else {
-                    debug("secret-tool lookup failed with exit code $exitCode for provider $provider")
+                    log.debug("secret-tool lookup failed with exit code $exitCode for provider $provider")
                     null
                 }
             } catch (e: Exception) {
-                debug("Failed to retrieve API key with secret-tool: ${e.message}")
+                log.error("Failed to retrieve API key with secret-tool: ${e.message}", e)
                 return null
             }
         }
 
-        debug("secret-tool not available for retrieving API key")
+        log.debug("secret-tool not available for retrieving API key")
         return null
     }
 
@@ -239,12 +239,12 @@ object KeychainManager {
                 val exitCode = process.waitFor()
                 return exitCode == 0
             } catch (e: Exception) {
-                debug("Failed to remove API key with secret-tool: ${e.message}")
+                log.error("Failed to remove API key with secret-tool: ${e.message}", e)
                 return false
             }
         }
 
-        debug("secret-tool not available for removing API key")
+        log.debug("secret-tool not available for removing API key")
         return false
     }
 
@@ -265,7 +265,7 @@ object KeychainManager {
             val exitCode = process.waitFor()
             return exitCode == 0
         } catch (e: Exception) {
-            debug("Failed to store API key with cmdkey: ${e.message}")
+            log.error("Failed to store API key with cmdkey: ${e.message}", e)
             return false
         }
     }
@@ -343,12 +343,12 @@ public class CredentialManager {
             if (exitCode == 0 && output.isNotBlank()) {
                 return output
             } else if (errorOutput.isNotBlank()) {
-                debug("PowerShell credential retrieval failed with exit code $exitCode: $errorOutput")
+                log.error("PowerShell credential retrieval failed with exit code $exitCode: $errorOutput")
             } else {
-                debug("PowerShell credential retrieval failed with exit code $exitCode (no error message)")
+                log.error("PowerShell credential retrieval failed with exit code $exitCode (no error message)")
             }
         } catch (e: Exception) {
-            debug("PowerShell credential retrieval failed: ${e.message}")
+            log.error("PowerShell credential retrieval failed: ${e.message}", e)
         }
 
         // PowerShell failed, check if credential exists via cmdkey
@@ -358,10 +358,10 @@ public class CredentialManager {
             val checkExitCode = checkProcess.waitFor()
 
             if (checkExitCode == 0 && checkOutput.contains(target)) {
-                debug("Credential exists in Windows Credential Manager but cannot be retrieved")
+                log.warn("Credential exists in Windows Credential Manager but cannot be retrieved")
             }
         } catch (e: Exception) {
-            debug("Failed to check credential existence: ${e.message}")
+            log.error("Failed to check credential existence: ${e.message}", e)
         }
 
         return null
@@ -379,7 +379,7 @@ public class CredentialManager {
             val exitCode = process.waitFor()
             return exitCode == 0
         } catch (e: Exception) {
-            debug("Failed to remove API key with cmdkey: ${e.message}")
+            log.error("Failed to remove API key with cmdkey: ${e.message}", e)
             return false
         }
     }

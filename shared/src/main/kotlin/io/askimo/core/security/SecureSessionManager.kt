@@ -9,14 +9,15 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod
 import io.askimo.core.session.SessionParams
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.warn
+import io.askimo.core.util.logger
 
 /**
  * Secure wrapper for SessionParams that handles API key storage/retrieval transparently.
  * API keys are stored in system keychain or encrypted storage instead of plain text.
  */
 class SecureSessionManager {
+    private val log = logger<SecureSessionManager>()
+
     companion object {
         private const val ENCRYPTED_API_KEY_PREFIX = "encrypted:"
         private const val KEYCHAIN_API_KEY_PLACEHOLDER = "***keychain***"
@@ -88,9 +89,9 @@ class SecureSessionManager {
 
                 if (!result.success) {
                     hasInsecureKeys = true
-                    warn("Failed to migrate API key for ${provider.name} to secure storage")
+                    log.warn("Failed to migrate API key for ${provider.name} to secure storage")
                 } else {
-                    debug("Migrated API key for ${provider.name} to ${result.method.name}")
+                    log.debug("Migrated API key for ${provider.name} to ${result.method.name}")
                     updateApiKeyPlaceholder(settings, result.method)
                 }
             }
@@ -114,16 +115,16 @@ class SecureSessionManager {
         val secureKey = SecureApiKeyManager.retrieveApiKey(provider.name.lowercase())
         if (secureKey != null) {
             settings.apiKey = secureKey
-            debug("Loaded API key for ${provider.name} from secure storage")
+            log.debug("Loaded API key for ${provider.name} from secure storage")
         } else if (currentKey.startsWith(ENCRYPTED_API_KEY_PREFIX)) {
             // Try to decrypt legacy encrypted key
             val encryptedPart = currentKey.removePrefix(ENCRYPTED_API_KEY_PREFIX)
             val decryptedKey = EncryptionManager.decrypt(encryptedPart)
             if (decryptedKey != null) {
                 settings.apiKey = decryptedKey
-                debug("Decrypted legacy API key for ${provider.name}")
+                log.debug("Decrypted legacy API key for ${provider.name}")
             } else {
-                warn("Failed to decrypt API key for ${provider.name}")
+                log.warn("Failed to decrypt API key for ${provider.name}")
                 settings.apiKey = ""
             }
         }
@@ -147,15 +148,15 @@ class SecureSessionManager {
             updateApiKeyPlaceholder(settings, result.method)
 
             // Show warning if not using keychain
-            result.warningMessage?.let { message -> warn(message) }
+            result.warningMessage?.let { message -> log.warn(message) }
         } else {
             // Fall back to encryption in the session file
             val encrypted = EncryptionManager.encrypt(apiKey)
             if (encrypted != null) {
                 settings.apiKey = "$ENCRYPTED_API_KEY_PREFIX$encrypted"
-                warn("⚠️ Storing encrypted API key for ${provider.name} in session file (less secure)")
+                log.warn("⚠️ Storing encrypted API key for ${provider.name} in session file (less secure)")
             } else {
-                warn("❌ Failed to encrypt API key for ${provider.name} - will be stored as plain text")
+                log.warn("❌ Failed to encrypt API key for ${provider.name} - will be stored as plain text")
             }
         }
     }

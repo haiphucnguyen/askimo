@@ -6,9 +6,8 @@ package io.askimo.core.session
 
 import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.appJson
+import io.askimo.core.util.logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.CREATE
@@ -22,6 +21,8 @@ import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
  * or encrypted storage instead of plain text.
  */
 object SessionConfigManager {
+    private val log = logger<SessionConfigManager>()
+
     /** Path to the configuration file in the user's home directory */
     private val configPath: Path = AskimoHome.sessionFile()
 
@@ -50,12 +51,12 @@ object SessionConfigManager {
                         appJson.decodeFromString<SessionParams>(it.readText())
                     }
                 } catch (e: Exception) {
-                    info("⚠️ Failed to parse config file at $configPath. Using default configuration.")
-                    debug(e)
+                    log.info("⚠️ Failed to parse config file at $configPath. Using default configuration.")
+                    log.error("Failed to parse config file", e)
                     SessionParams.noOp()
                 }
             } else {
-                info("⚠️ Config file not found at $configPath. Using default configuration.")
+                log.info("⚠️ Config file not found at $configPath. Using default configuration.")
                 SessionParams.noOp()
             }
 
@@ -64,7 +65,7 @@ object SessionConfigManager {
 
         // Show security report if there were API keys to migrate
         if (migrationResult.results.isNotEmpty()) {
-            migrationResult.getSecurityReport().forEach { debug(it) }
+            migrationResult.getSecurityReport().forEach { log.debug(it) }
         }
 
         // Load API keys from secure storage
@@ -94,17 +95,10 @@ object SessionConfigManager {
                     it.write(appJson.encodeToString(sanitizedParams))
                 }
             cached = params
-            info("Saving config to: $configPath successfully.")
+            log.info("Saving config to: $configPath successfully.")
         } catch (e: Exception) {
-            info("❌ Failed to save session config to $configPath: ${e.message}")
-            debug(e)
+            log.info("❌ Failed to save session config to $configPath: ${e.message}")
+            log.error("Failed to save session config to $configPath", e)
         }
-    }
-
-    /**
-     * Clears the in-memory cache (e.g., if user manually edits the config on disk).
-     */
-    fun clearCache() {
-        cached = null
     }
 }

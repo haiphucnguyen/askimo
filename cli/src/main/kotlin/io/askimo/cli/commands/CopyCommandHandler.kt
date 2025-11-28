@@ -5,7 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -18,6 +18,7 @@ import org.jline.reader.ParsedLine
 class CopyCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<CopyCommandHandler>()
     override val keyword: String = ":copy"
 
     override val description: String = "Copy the last AI response to the clipboard"
@@ -25,12 +26,12 @@ class CopyCommandHandler(
     override fun handle(line: ParsedLine) {
         val response = session.lastResponse
         if (response.isNullOrBlank()) {
-            info("⚠️ No response to copy. Ask something first.")
+            log.info("⚠️ No response to copy. Ask something first.")
             return
         }
 
         if (copyToClipboard(response)) {
-            info("✅ Copied last response to clipboard.")
+            log.info("✅ Copied last response to clipboard.")
         }
     }
 
@@ -61,20 +62,21 @@ class CopyCommandHandler(
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
                         else -> {
-                            info("⚠️ No clipboard utility found (xclip or xsel). Install one to enable copying.")
+                            log.info("⚠️ No clipboard utility found (xclip or xsel). Install one to enable copying.")
                             return false
                         }
                     }
                 }
                 else -> {
-                    info("⚠️ Clipboard not supported on this OS.")
+                    log.info("⚠️ Clipboard not supported on this OS.")
                     return false
                 }
             }
 
             true
         } catch (e: Exception) {
-            info("❌ Failed to copy to clipboard: ${e.message}")
+            log.info("❌ Failed to copy to clipboard: ${e.message}")
+            log.error("Failed to copy to clipboard", e)
             false
         }
     }

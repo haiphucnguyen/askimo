@@ -5,7 +5,7 @@
 package io.askimo.core.security
 
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.SecureRandom
@@ -21,6 +21,8 @@ import javax.crypto.spec.SecretKeySpec
  * Uses AES-256-GCM encryption with a key derived from system properties.
  */
 object EncryptionManager {
+    private val log = logger<EncryptionManager>()
+
     private const val ALGORITHM = "AES"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val GCM_IV_LENGTH = 12
@@ -50,7 +52,7 @@ object EncryptionManager {
         val combined = iv + encryptedData
         Base64.getEncoder().encodeToString(combined)
     } catch (e: Exception) {
-        debug("Failed to encrypt API key: ${e.message}")
+        log.error("Failed to encrypt API key: ${e.message}", e)
         null
     }
 
@@ -76,7 +78,7 @@ object EncryptionManager {
         val decryptedData = cipher.doFinal(encryptedData)
         String(decryptedData, Charsets.UTF_8)
     } catch (e: Exception) {
-        debug("Failed to decrypt API key: ${e.message}")
+        log.error("Failed to decrypt API key: ${e.message}", e)
         null
     }
 
@@ -113,7 +115,7 @@ object EncryptionManager {
             file.setReadable(true, true)
             file.setWritable(true, true)
         } catch (e: Exception) {
-            debug("Failed to set restrictive permissions on key file: ${e.message}")
+            log.error("Failed to set restrictive permissions on key file: ${e.message}", e)
         }
 
         return secretKey
@@ -139,7 +141,7 @@ object EncryptionManager {
             false
         }
     } catch (e: Exception) {
-        debug("Failed to delete encryption key: ${e.message}")
+        log.error("Failed to delete encryption key: ${e.message}", e)
         false
     }
 }

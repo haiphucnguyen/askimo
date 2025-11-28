@@ -10,9 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
-import java.nio.file.FileAlreadyExistsException
+import io.askimo.core.util.logger
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,6 +20,9 @@ import java.nio.file.attribute.PosixFilePermissions
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
+
+private object AppConfigObject
+private val log = logger<AppConfigObject>()
 
 data class PgVectorConfig(
     val url: String = "",
@@ -267,8 +268,8 @@ object AppConfig {
             try {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
-                info("Config parse failed at $path ")
-                debug(e)
+                log.info("Config parse failed at $path ")
+                log.error("Parse error: ", e)
                 envFallback()
             }
         } else {
@@ -327,12 +328,10 @@ object AppConfig {
             }
             Files.writeString(target, DEFAULT_YAML)
             // Best-effort log
-            info("📝 Created default config at $target")
-        } catch (e: FileAlreadyExistsException) {
-            debug(e)
+            log.info("📝 Created default config at $target")
         } catch (e: Exception) {
-            info("Failed to create default config at $target → ${e.message}")
-            debug(e)
+            log.info("Failed to create default config at $target")
+            log.error("Failed to create default config at $target ", e)
         }
     }
 
