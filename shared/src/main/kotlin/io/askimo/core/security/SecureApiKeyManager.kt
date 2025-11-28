@@ -8,8 +8,7 @@ import io.askimo.core.security.SecureApiKeyManager.StorageMethod.ENCRYPTED
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod.KEYCHAIN
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.warn
+import io.askimo.core.util.logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -19,6 +18,8 @@ import java.util.Properties
  * Provides warnings when API keys are stored insecurely.
  */
 object SecureApiKeyManager {
+    private val log = logger<SecureApiKeyManager>()
+
     private fun encryptedStorageFile(): Path = AskimoHome.base().resolve(".encrypted-keys")
 
     enum class StorageMethod {
@@ -46,7 +47,7 @@ object SecureApiKeyManager {
     ): StorageResult {
         // Try keychain first
         if (KeychainManager.storeApiKey(provider, apiKey)) {
-            debug("✅ API key for $provider stored securely in system keychain")
+            log.debug("✅ API key for $provider stored securely in system keychain")
             return StorageResult(true, KEYCHAIN)
         }
 
@@ -54,7 +55,7 @@ object SecureApiKeyManager {
         val encryptedKey = EncryptionManager.encrypt(apiKey)
         if (encryptedKey != null) {
             if (storeEncryptedKey(provider, encryptedKey)) {
-                warn("⚠️ System keychain not available. API key for $provider stored with encryption (less secure than keychain)")
+                log.warn("⚠️ System keychain not available. API key for $provider stored with encryption (less secure than keychain)")
                 return StorageResult(
                     success = true,
                     method = ENCRYPTED,
@@ -64,7 +65,7 @@ object SecureApiKeyManager {
         }
 
         // Both methods failed
-        warn("❌ Both keychain and encryption failed. API key for $provider will be stored as plain text")
+        log.warn("❌ Both keychain and encryption failed. API key for $provider will be stored as plain text")
         return StorageResult(
             success = false,
             method = INSECURE_FALLBACK,
@@ -133,7 +134,7 @@ object SecureApiKeyManager {
         saveEncryptedStorage(properties)
         true
     } catch (e: Exception) {
-        debug("Failed to store encrypted key for $provider: ${e.message}")
+        log.error("Failed to store encrypted key for $provider: ${e.message}", e)
         false
     }
 
@@ -145,7 +146,7 @@ object SecureApiKeyManager {
         val encryptedKey = properties.getProperty(provider) ?: return null
         EncryptionManager.decrypt(encryptedKey)
     } catch (e: Exception) {
-        debug("Failed to retrieve encrypted key for $provider: ${e.message}")
+        log.error("Failed to retrieve encrypted key for $provider: ${e.message}", e)
         null
     }
 
@@ -160,7 +161,7 @@ object SecureApiKeyManager {
         }
         removed
     } catch (e: Exception) {
-        debug("Failed to remove encrypted key for $provider: ${e.message}")
+        log.error("Failed to remove encrypted key for $provider: ${e.message}", e)
         false
     }
 
@@ -200,7 +201,7 @@ object SecureApiKeyManager {
             file.setReadable(true, true)
             file.setWritable(true, true)
         } catch (e: Exception) {
-            debug("Failed to set restrictive permissions on encrypted storage file: ${e.message}")
+            log.error("Failed to set restrictive permissions on encrypted storage file: ${e.message}", e)
         }
     }
 

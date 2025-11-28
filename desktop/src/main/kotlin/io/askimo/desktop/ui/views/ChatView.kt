@@ -57,9 +57,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.core.directive.ChatDirective
 import io.askimo.core.directive.ChatDirectiveService
-import io.askimo.core.util.Logger.debug
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
+import io.askimo.core.util.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
@@ -75,6 +75,9 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
+
+private object ChatViewObject
+private val log = logger<ChatViewObject>()
 
 // File attachment item composable
 @Composable
@@ -738,7 +741,7 @@ fun chatView(
                     )
                     onAttachmentsChange(attachments + attachment)
                 } catch (e: Exception) {
-                    debug("Error reading file: ${e.message}", e)
+                    log.error("Error reading file: ${e.message}", e)
                 }
             }
         }

@@ -32,10 +32,14 @@
     <!-- Askimo application logging - more verbose -->
     <logger name="io.askimo" level="DEBUG" />
 
-    <!-- Reduce verbosity for third-party libraries -->
-    <logger name="org.apache.http" level="WARN" />
-    <logger name="io.netty" level="WARN" />
-    <logger name="org.jetbrains" level="WARN" />
-    <logger name="kotlinx.coroutines" level="WARN" />
+    <!-- Suppress third-party library logs except errors -->
+    <logger name="org.apache.http" level="ERROR" />
+    <logger name="io.netty" level="ERROR" />
+    <logger name="org.jetbrains" level="ERROR" />
+    <logger name="org.jetbrains.exposed" level="ERROR" />
+    <logger name="kotlinx.coroutines" level="ERROR" />
+    <logger name="com.zaxxer.hikari" level="ERROR" />
+    <logger name="org.eclipse.jetty" level="ERROR" />
+    <logger name="org.testcontainers" level="ERROR" />
 </configuration>
 

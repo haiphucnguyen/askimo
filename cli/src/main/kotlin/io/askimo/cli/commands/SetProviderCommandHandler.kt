@@ -9,7 +9,7 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -23,13 +23,14 @@ import org.jline.reader.ParsedLine
 class SetProviderCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<SetProviderCommandHandler>()
     override val keyword: String = ":set-provider"
     override val description: String = "Set the current model provider (e.g., :set-provider openai)"
 
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            info("❌ Usage: :set-provider <provider>")
+            log.info("❌ Usage: :set-provider <provider>")
             return
         }
 
@@ -37,20 +38,20 @@ class SetProviderCommandHandler(
         val provider = runCatching { ModelProvider.valueOf(input) }.getOrNull()
 
         if (provider == null) {
-            info("❌ Unknown provider: '$input'")
-            info("💡 Use `:providers` to list all supported model providers.")
+            log.info("❌ Unknown provider: '$input'")
+            log.info("💡 Use `:providers` to list all supported model providers.")
             return
         }
 
         if (!ProviderRegistry.getSupportedProviders().contains(provider)) {
-            info("❌ Provider '$input' is not registered.")
-            info("💡 Use `:providers` to see which providers are currently available.")
+            log.info("❌ Provider '$input' is not registered.")
+            log.info("💡 Use `:providers` to see which providers are currently available.")
             return
         }
 
         val factory = session.getModelFactory(provider)
         if (factory == null) {
-            info("❌ No factory registered for provider: ${provider.name.lowercase()}")
+            log.info("❌ No factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
@@ -72,15 +73,15 @@ class SetProviderCommandHandler(
         SessionConfigManager.save(session.params)
         session.rebuildActiveChatService(KEEP_PER_PROVIDER_MODEL)
 
-        info("✅ Model provider set to: ${provider.name.lowercase()}")
-        info("💡 Use `:models` to list all available models for this provider.")
-        info("💡 Then use `:set-param model <modelName>` to choose one.")
+        log.info("✅ Model provider set to: ${provider.name.lowercase()}")
+        log.info("💡 Use `:models` to list all available models for this provider.")
+        log.info("💡 Then use `:set-param model <modelName>` to choose one.")
 
         val settings = session.getCurrentProviderSettings()
         if (!settings.validate()) {
-            info("⚠️  This provider isn't fully configured yet.")
-            info(settings.getSetupHelpText())
-            info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
+            log.info("⚠️  This provider isn't fully configured yet.")
+            log.info(settings.getSetupHelpText())
+            log.info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
         }
     }
 }

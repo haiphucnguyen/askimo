@@ -7,7 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -17,13 +17,14 @@ import org.jline.reader.ParsedLine
  * If no projects exist yet, it displays a friendly hint on how to create one.
  */
 class ListProjectsCommandHandler : CommandHandler {
+    private val log = logger<ListProjectsCommandHandler>()
     override val keyword: String = ":projects"
     override val description: String = "List all saved Askimo projects"
 
     override fun handle(line: ParsedLine) {
         val metas = ProjectStore.list()
         if (metas.isEmpty()) {
-            info("ℹ️  No projects saved yet. Use :create-project to add one.")
+            log.info("ℹ️  No projects saved yet. Use :create-project to add one.")
             return
         }
 
@@ -36,7 +37,7 @@ class ListProjectsCommandHandler : CommandHandler {
                     .thenBy { it.name.lowercase() },
             )
 
-        info("📚 Projects:")
+        log.info("📚 Projects:")
         projects.forEachIndexed { i, p ->
             val rootDisp = p.root.replaceFirst(home, "~")
             val exists =
@@ -51,7 +52,7 @@ class ListProjectsCommandHandler : CommandHandler {
                 }
             val missing = if (exists) "" else "  (missing)"
 
-            info(
+            log.info(
                 "%2d. %-20s  id=%s\n      ↳ %s%s".format(
                     i + 1,
                     p.name,

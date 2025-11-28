@@ -4,8 +4,7 @@
  */
 package io.askimo.core.project
 
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,6 +14,8 @@ import java.nio.file.Path
  * Manages the global file watcher instance, ensuring only one project is being watched at a time.
  */
 object FileWatcherManager {
+    private val log = logger<FileWatcherManager>()
+
     @Volatile
     private var currentWatcher: ProjectFileWatcher? = null
 
@@ -33,7 +34,7 @@ object FileWatcherManager {
             newWatcher.startWatching()
             currentWatcher = newWatcher
 
-            info("🔍 File watcher activated for project: $projectRoot")
+            log.info("🔍 File watcher activated for project: $projectRoot")
         }
     }
 
@@ -45,10 +46,10 @@ object FileWatcherManager {
             currentWatcher?.let { watcher ->
                 try {
                     watcher.stopWatching()
-                    info("🔍 File watcher stopped")
+                    log.info("🔍 File watcher stopped")
                 } catch (e: Exception) {
-                    info("⚠️ Error stopping file watcher: ${e.message}")
-                    debug(e)
+                    log.info("⚠️ Error stopping file watcher: ${e.message}")
+                    log.error("Error while stop watching", e)
                 }
             }
             currentWatcher = null

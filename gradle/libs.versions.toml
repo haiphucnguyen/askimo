@@ -17,7 +17,7 @@ jackson = "2.19.2"
 spotless = "8.0.0"
 shadow = "9.0.1"
 graalvmSvm = "25.0.1"
-sqlite = "3.50.3.0"
+sqlite = "3.51.0.0"
 hikaricp = "7.0.2"
 exposed = "0.61.0"
 compose = "1.9.3"
@@ -62,7 +62,6 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 
 # Logging
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
-slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 
 # Database and MCP SDK

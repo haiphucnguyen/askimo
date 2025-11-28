@@ -9,9 +9,8 @@ import io.askimo.cli.recipes.RecipeDef
 import io.askimo.cli.recipes.ToolRegistry
 import io.askimo.cli.recipes.VarCall
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.Yaml.yamlMapper
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -21,6 +20,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.readText
 
 class CreateRecipeCommandHandler : CommandHandler {
+    private val log = logger<CreateRecipeCommandHandler>()
     override val keyword: String = ":create-recipe"
     override val description: String =
         "Usage: :create-recipe <name?> -f <file.yml> OR :create-recipe <name?> -i\n" +
@@ -35,7 +35,7 @@ class CreateRecipeCommandHandler : CommandHandler {
         // If no -f and not interactive, show usage (retain previous behavior expected by tests)
         val hasTemplateFlag = args.contains("-f") || args.contains("--file")
         if (!hasTemplateFlag && !interactive) {
-            info("Usage: :create-recipe <name?> -f <file.yml> OR :create-recipe <name?> -i")
+            log.info("Usage: :create-recipe <name?> -f <file.yml> OR :create-recipe <name?> -i")
             return
         }
 
@@ -46,13 +46,13 @@ class CreateRecipeCommandHandler : CommandHandler {
 
         val (maybeName, templatePath) =
             parseArgs(args) ?: run {
-                info("Usage: :create-recipe <name?> -f <file.yml> OR :create-recipe <name?> -i")
+                log.info("Usage: :create-recipe <name?> -f <file.yml> OR :create-recipe <name?> -i")
                 return
             }
 
         val src = expandHome(templatePath!!)
         if (!src.exists()) {
-            info("❌ Template not found: $src")
+            log.info("❌ Template not found: $src")
             return
         }
 
@@ -60,7 +60,7 @@ class CreateRecipeCommandHandler : CommandHandler {
             try {
                 yamlMapper.readValue(src.readText(), RecipeDef::class.java)
             } catch (e: Exception) {
-                info("❌ Invalid YAML (${e.message})")
+                log.info("❌ Invalid YAML (${e.message})")
                 return
             }
 
@@ -69,7 +69,7 @@ class CreateRecipeCommandHandler : CommandHandler {
                 !maybeName.isNullOrBlank() -> maybeName
                 defFromFile.name.isNotBlank() -> defFromFile.name
                 else -> {
-                    info("❌ Recipe name missing. Provide it as first arg or in YAML `name:`.")
+                    log.info("❌ Recipe name missing. Provide it as first arg or in YAML `name:`.")
                     return
                 }
             }
@@ -79,7 +79,7 @@ class CreateRecipeCommandHandler : CommandHandler {
 
     // --- Interactive creation path ---
     private fun interactiveCreate(args: List<String>) {
-        info(
+        log.info(
             """
             🧪 Interactive recipe creation (PoC)
             Press Enter to accept defaults. Type END on its own line to finish multi-line sections.
@@ -122,8 +122,8 @@ class CreateRecipeCommandHandler : CommandHandler {
 
         // Tools list (empty => all allowed)
         val availableTools = ToolRegistry.defaults().keys().sorted()
-        info("Available tools: ${availableTools.joinToString(", ")}")
-        info(
+        log.info("Available tools: ${availableTools.joinToString(", ")}")
+        log.info(
             "Allowed tools help: Leave blank for ALL tools. Provide a comma list to restrict. Example: readFile,writeFile.\n" +
                 "If you restrict and then reference a tool outside the list, execution will error.",
         )
@@ -135,12 +135,12 @@ class CreateRecipeCommandHandler : CommandHandler {
                 .filter { it.isNotEmpty() }
                 .also { list ->
                     val unknown = list.filterNot { it in availableTools }
-                    if (unknown.isNotEmpty()) info("⚠️ Unknown tools ignored: ${unknown.joinToString(", ")}")
+                    if (unknown.isNotEmpty()) log.info("⚠️ Unknown tools ignored: ${unknown.joinToString(", ")}")
                 }.filter { it in availableTools }
 
         // Variables loop
         val vars = mutableMapOf<String, VarCall>()
-        info(
+        log.info(
             "Variables section: Each variable resolves BEFORE prompts are rendered.\n" +
                 "Use them to fetch context (diffs, file content, git status, etc.).\n" +
                 "Args may include placeholders ({{arg1}}, {{otherVar}}) which are substituted before the tool runs.\n" +
@@ -151,29 +151,29 @@ class CreateRecipeCommandHandler : CommandHandler {
             if (add != "y") break
             var varName = ask("  Variable name", "var${vars.size + 1}")
             if (varName == "?") {
-                info(
+                log.info(
                     "Example:\n  file_content:\n    tool: readFile\n    args: [\"{{arg1}}\"]\n  diff:\n    tool: stagedDiff\n    args: [\"--no-color\"]",
                 )
                 varName = ask("  Variable name", "var${vars.size + 1}")
             }
             if (varName.isBlank()) {
-                info("  Skipped (blank name).")
+                log.info("  Skipped (blank name).")
                 continue
             }
             if (!varName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))) {
-                info("  ❌ Invalid name '$varName' (must match [A-Za-z_][A-Za-z0-9_]*). Skipping.")
+                log.info("  ❌ Invalid name '$varName' (must match [A-Za-z_][A-Za-z0-9_]*). Skipping.")
                 continue
             }
             val toolName = ask("  Tool name", availableTools.firstOrNull() ?: "readFile")
             if (toolName !in availableTools) {
-                info("  ❌ Unknown tool '$toolName'. Skipping.")
+                log.info("  ❌ Unknown tool '$toolName'. Skipping.")
                 continue
             }
             val argsRaw = ask("  Args (comma-separated; placeholders allowed; blank = none)", "")
             val argList = argsRaw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
             val call =
                 if (argList.isEmpty()) VarCall(tool = toolName, args = null) else VarCall(tool = toolName, args = argList)
-            if (vars.containsKey(varName)) info("  ⚠️ Overwriting existing variable '$varName'.")
+            if (vars.containsKey(varName)) log.info("  ⚠️ Overwriting existing variable '$varName'.")
             vars[varName] = call
         }
 
@@ -183,8 +183,8 @@ class CreateRecipeCommandHandler : CommandHandler {
             default: String,
             help: String,
         ): String {
-            info(help)
-            info("Type END on a new line to finish entering $label. Leaving blank uses default.")
+            log.info(help)
+            log.info("Type END on a new line to finish entering $label. Leaving blank uses default.")
             val lines = mutableListOf<String>()
             while (true) {
                 val ln = reader.readLine() ?: break
@@ -241,18 +241,19 @@ class CreateRecipeCommandHandler : CommandHandler {
         try {
             Files.createDirectories(targetDir)
         } catch (e: Exception) {
-            info("❌ Cannot create recipes dir: $targetDir (${e.message})")
+            log.info("❌ Cannot create recipes dir: $targetDir")
+            log.error("Failed to create recipes dir", e)
             return
         }
 
         val dst = targetDir.resolve("${def.name}.yml")
         val fileExists = Files.exists(dst)
         if (fileExists) {
-            info("⚠️ Recipe '${def.name}' already exists at $dst")
-            info("Do you want to overwrite it? (y/n): ")
+            log.info("⚠️ Recipe '${def.name}' already exists at $dst")
+            log.info("Do you want to overwrite it? (y/n): ")
             val response = readLine()?.trim()?.lowercase()
             if (response != "y" && response != "yes") {
-                info("Operation cancelled. Choose a different name or delete the existing recipe first.")
+                log.info("Operation cancelled. Choose a different name or delete the existing recipe first.")
                 return
             }
         }
@@ -261,21 +262,21 @@ class CreateRecipeCommandHandler : CommandHandler {
             try {
                 yamlMapper.writerWithDefaultPrettyPrinter().writeValueAsString(def)
             } catch (e: Exception) {
-                info("❌ Failed to serialize YAML (${e.message})")
+                log.info("❌ Failed to serialize YAML (${e.message})")
                 return
             }
 
         try {
             Files.writeString(dst, yamlOut)
         } catch (e: Exception) {
-            info("❌ Failed to write: $dst (${e.message})")
-            debug(e)
+            log.info("❌ Failed to write: $dst (${e.message})")
+            log.error("Failed to write $dst", e)
             return
         }
 
         val action = if (fileExists) "Updated" else "Registered"
-        info("✅ $action recipe '${def.name}' at $dst")
-        info("➡  Run: askimo -r ${def.name} <arguments>")
+        log.info("✅ $action recipe '${def.name}' at $dst")
+        log.info("➡  Run: askimo -r ${def.name} <arguments>")
     }
 
     private fun parseArgs(args: List<String>): Pair<String?, String?>? {

@@ -13,8 +13,7 @@ import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,6 +34,8 @@ class PgVectorIndexer(
     private val projectId: String,
     private val session: Session,
 ) {
+    private val log = logger<PgVectorIndexer>()
+
     private val projectTable: String = "${AppConfig.pgVector.table}__${slug(projectId)}"
 
     private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
@@ -154,7 +155,7 @@ class PgVectorIndexer(
                         } catch (e: Throwable) {
                             failedChunks++
                             println("  ⚠️  Chunk failure ${filePath.fileName}[$idx/$total]: ${e.message}")
-                            debug(e)
+                            log.error("Chunked failed ${filePath.fileName}[$idx/$total]", e)
                         }
                     }
 
@@ -169,7 +170,7 @@ class PgVectorIndexer(
                 } catch (e: Exception) {
                     skippedFiles++
                     println("  ⚠️  Skipped ${filePath.fileName}: ${e.message}")
-                    debug(e)
+                    log.error("Failed to index ${filePath.fileName}", e)
                 }
             }
 
@@ -210,7 +211,7 @@ class PgVectorIndexer(
         }
 
         if (tooLargeToIndex(filePath)) {
-            info("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
+            log.info("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
             return
         }
 
@@ -244,8 +245,8 @@ class PgVectorIndexer(
                 embeddingStore.add(embedding.content(), seg)
                 throttle()
             } catch (e: Throwable) {
-                info("⚠️ Failed to index chunk $idx of ${filePath.fileName}: ${e.message}")
-                debug(e)
+                log.info("⚠️ Failed to index chunk $idx of ${filePath.fileName}: ${e.message}")
+                log.error("Failed to index chunk $idx of ${filePath.fileName}", e)
             }
         }
     }
@@ -271,13 +272,13 @@ class PgVectorIndexer(
                     stmt.setString(2, relativePath)
                     val deletedCount = stmt.executeUpdate()
                     if (deletedCount > 0) {
-                        debug("Removed $deletedCount chunks for file: $relativePath")
+                        log.debug("Removed $deletedCount chunks for file: $relativePath")
                     }
                 }
             }
         } catch (e: Exception) {
-            info("⚠️ Failed to remove file from index: $relativePath - ${e.message}")
-            debug(e)
+            log.info("⚠️ Failed to remove file from index: $relativePath - ${e.message}")
+            log.error("Failed to remove file from index: $relativePath", e)
         }
     }
 
@@ -518,8 +519,8 @@ class PgVectorIndexer(
                     try {
                         st.execute(sql.trimIndent())
                     } catch (e: Exception) {
-                        info("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
-                        debug(e)
+                        log.info("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
+                        log.error("Index failed", e)
                     }
                 }
             }

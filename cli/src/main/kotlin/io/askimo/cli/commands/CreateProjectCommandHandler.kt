@@ -9,8 +9,7 @@ import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.session.Session
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -18,6 +17,7 @@ import java.nio.file.Paths
 class CreateProjectCommandHandler(
     private val session: Session,
 ) : CommandHandler {
+    private val log = logger<CreateProjectCommandHandler>()
     override val keyword: String = ":create-project"
     override val description: String =
         "Create a project, auto-start Postgres+pgvector (Testcontainers), and index the folder.\n" +
@@ -27,52 +27,52 @@ class CreateProjectCommandHandler(
         val args = line.words().drop(1)
         val (name, dir) =
             parseArgs(args) ?: run {
-                info("Usage: :create-project -n <project-name> -d <project-folder>")
+                log.info("Usage: :create-project -n <project-name> -d <project-folder>")
                 return
             }
 
         val projectPath = Paths.get(dir).toAbsolutePath().normalize()
         if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
-            info("❌ Folder does not exist or is not a directory: $projectPath")
+            log.info("❌ Folder does not exist or is not a directory: $projectPath")
             return
         }
 
         if (ProjectStore.getByName(name) != null) {
-            info("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
+            log.info("⚠️ Project '$name' already exists. Use ':project $name' to activate it.")
             return
         }
 
-        info("🐘 Starting local Postgres+pgvector (Testcontainers)…")
+        log.info("🐘 Starting local Postgres+pgvector (Testcontainers)…")
         var indexer: PgVectorIndexer? = null
         try {
             val pg = PostgresContainerManager.startIfNeeded()
-            info("✅ Postgres ready on ${pg.jdbcUrl}")
+            log.info("✅ Postgres ready on ${pg.jdbcUrl}")
 
             indexer = PgVectorIndexer(
                 projectId = name,
                 session = session,
             )
 
-            info("🔎 Indexing project '$name' at $projectPath …")
+            log.info("🔎 Indexing project '$name' at $projectPath …")
             val count = indexer.indexProject(projectPath)
-            info("✅ Indexed $count documents into pgvector (project '$name').")
+            log.info("✅ Indexed $count documents into pgvector (project '$name').")
         } catch (e: Exception) {
-            info("⚠️ Failed to start Postgres container or index project: ${e.message}")
-            info("📝 Proceeding without vector indexing - you can index later when Docker is available.")
-            debug(e)
+            log.info("⚠️ Failed to start Postgres container or index project: ${e.message}")
+            log.info("📝 Proceeding without vector indexing - you can index later when Docker is available.")
+            log.error("Failed to create project", e)
         }
 
         val meta =
             try {
                 ProjectStore.create(name, projectPath.toString())
             } catch (e: IllegalStateException) {
-                info("⚠️ ${e.message}")
-                debug(e)
+                log.info("⚠️ ${e.message}")
+                log.error("Failed to create project", e)
                 ProjectStore.getByName(name) ?: return
             }
 
-        info("🗂️  Saved project '${meta.name}' as ${meta.id} → ${meta.root}")
-        info("⭐ Active project set to '${meta.name}'")
+        log.info("🗂️  Saved project '${meta.name}' as ${meta.id} → ${meta.root}")
+        log.info("⭐ Active project set to '${meta.name}'")
 
         // Keep existing session wiring (compat shim for old type if needed)
         session.setScope(meta)
@@ -82,10 +82,10 @@ class CreateProjectCommandHandler(
 
             // Start file watcher for the project
             FileWatcherManager.startWatchingProject(projectPath, indexer)
-            info("👁️  File watcher started - changes will be automatically indexed.")
-            info("🧠 RAG enabled for project '${meta.name}' (scope set).")
+            log.info("👁️  File watcher started - changes will be automatically indexed.")
+            log.info("🧠 RAG enabled for project '${meta.name}' (scope set).")
         } else {
-            info("📝 Project created without vector indexing. Start Docker and use indexing commands to enable RAG later.")
+            log.info("📝 Project created without vector indexing. Start Docker and use indexing commands to enable RAG later.")
         }
     }
 

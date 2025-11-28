@@ -4,7 +4,6 @@
  */
 package io.askimo.core.util
 
-import io.askimo.core.util.Logger.debug
 import kotlin.reflect.KClass
 
 /**
@@ -67,6 +66,8 @@ object RetryUtils {
  * Predefined retry configurations for common scenarios
  */
 object RetryPresets {
+    private val log = logger<RetryPresets>()
+
     /**
      * Retry configuration for recipe/LangChain4j transient errors
      */
@@ -95,7 +96,7 @@ object RetryPresets {
                         else ->
                             "Transient error: ${exception.message}"
                     }
-                debug("⚠️ $message (attempt $attempt/$maxAttempts). Retrying in ${delayMs}ms...")
+                log.debug("⚠️ $message (attempt $attempt/$maxAttempts). Retrying in ${delayMs}ms...")
             },
         )
 
@@ -113,7 +114,7 @@ object RetryPresets {
                     exception.javaClass.name.startsWith("dev.langchain4j")
             },
             onRetry = { attempt, maxAttempts, exception, delayMs ->
-                debug("⚠️ Streaming error: ${exception.message} (attempt $attempt/$maxAttempts). Retrying in ${delayMs}ms...")
+                log.debug("⚠️ Streaming error: ${exception.message} (attempt $attempt/$maxAttempts). Retrying in ${delayMs}ms...")
             },
         )
 }

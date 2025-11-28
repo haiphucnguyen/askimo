@@ -5,8 +5,7 @@
 package io.askimo.cli.util
 
 import io.askimo.cli.commands.CommandHandler
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -19,6 +18,8 @@ import org.jline.reader.ParsedLine
  * corresponding arguments in the order they appear on the command line.
  */
 object CompositeCommandExecutor {
+    private val log = logger<CompositeCommandExecutor>()
+
     /**
      * Detects if the arguments contain multiple non-interactive command flags.
      *
@@ -48,22 +49,22 @@ object CompositeCommandExecutor {
         val commands = parseCommands(args, handlers.keys)
 
         if (commands.isEmpty()) {
-            info("❌ No valid commands found")
+            log.info("❌ No valid commands found")
             return
         }
 
-        debug("🔄 Executing ${commands.size} command(s) in sequence")
+        log.debug("🔄 Executing ${commands.size} command(s) in sequence")
 
         // Execute commands in sequence
         for ((flag, cmdArgs) in commands) {
             val handler = handlers[flag]
             if (handler != null) {
-                debug("⚙️  Executing: $flag ${cmdArgs.joinToString(" ")}")
+                log.debug("⚙️  Executing: $flag ${cmdArgs.joinToString(" ")}")
                 val keyword = flagToKeyword(flag)
                 val parsedLine = createParsedLine(keyword, cmdArgs)
                 handler.handle(parsedLine)
             } else {
-                info("⚠️  Skipping unknown command: $flag")
+                log.info("⚠️  Skipping unknown command: $flag")
             }
         }
     }

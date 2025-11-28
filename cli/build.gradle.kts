@@ -43,7 +43,6 @@ dependencies {
     implementation(libs.commonmark)
     implementation(kotlin("stdlib"))
     implementation(project(":shared"))
-    runtimeOnly(libs.slf4j.nop)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
@@ -190,6 +189,7 @@ graalvmNative {
                     "--features=io.askimo.cli.graal.AskimoFeature",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
                     "--initialize-at-run-time=kotlinx.coroutines,kotlin.coroutines,io.askimo.core.project.ProjectFileWatcher",
+                    "-H:IncludeResources=logback.xml|logback-.*\\.xml",
                     "--allow-incomplete-classpath",
                     "-H:+ReportExceptionStackTraces",
                 ),

@@ -9,9 +9,11 @@ import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.logger
 
 object SessionFactory {
+    private val log = logger<SessionFactory>()
+
     @Volatile
     private var cached: Session? = null
 
@@ -54,7 +56,7 @@ object SessionFactory {
     }
 
     private fun buildSession(params: SessionParams, mode: SessionMode): Session {
-        debug("Building session with params: $params, mode: $mode")
+        log.debug("Building session with params: $params, mode: $mode")
 
         val session = Session(params, mode)
         val provider = session.params.currentProvider

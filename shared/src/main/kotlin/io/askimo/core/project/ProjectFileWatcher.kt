@@ -5,8 +5,7 @@
 package io.askimo.core.project
 
 import io.askimo.core.config.AppConfig
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,6 +39,7 @@ class ProjectFileWatcher(
     private val indexer: PgVectorIndexer,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) {
+    private val log = logger<ProjectFileWatcher>()
     private var watchService: WatchService? = null
     private var watchJob: Job? = null
     private val watchKeys = ConcurrentHashMap<WatchKey, Path>()
@@ -65,7 +65,7 @@ class ProjectFileWatcher(
      */
     fun startWatching() {
         if (isWatching) {
-            debug("File watcher is already running for: $projectRoot")
+            log.debug("File watcher is already running for: $projectRoot")
             return
         }
 
@@ -78,9 +78,9 @@ class ProjectFileWatcher(
                 watchForChanges()
             }
 
-            debug("📁 Started file watcher for project: $projectRoot")
+            log.debug("📁 Started file watcher for project: $projectRoot")
         } catch (e: Exception) {
-            debug("❌ Failed to start file watcher: ${e.message}", e)
+            log.error("❌ Failed to start file watcher: ${e.message}", e)
         }
     }
 
@@ -99,9 +99,9 @@ class ProjectFileWatcher(
             watchKeys.clear()
             watchService?.close()
             watchService = null
-            debug("📁 Stopped file watcher for project: $projectRoot")
+            log.debug("📁 Stopped file watcher for project: $projectRoot")
         } catch (e: Exception) {
-            debug("⚠️ Error stopping file watcher: ${e.message}", e)
+            log.error("⚠️ Error stopping file watcher: ${e.message}", e)
         }
     }
 
@@ -119,9 +119,9 @@ class ProjectFileWatcher(
                     }
                 },
             )
-            debug("📁 Registered directory tree: $start (${watchKeys.size} total directories)")
+            log.debug("📁 Registered directory tree: $start (${watchKeys.size} total directories)")
         } catch (e: Exception) {
-            debug("Error registering directory tree $start: ${e.message}", e)
+            log.error("Error registering directory tree $start: ${e.message}", e)
         }
     }
 
@@ -135,9 +135,9 @@ class ProjectFileWatcher(
                 StandardWatchEventKinds.ENTRY_DELETE,
             )
             watchKeys[watchKey] = dir
-            debug("📁 Registered directory: $dir")
+            log.debug("📁 Registered directory: $dir")
         } catch (e: Exception) {
-            debug("Failed to register directory for watching: $dir - ${e.message}")
+            log.error("Failed to register directory for watching: $dir - ${e.message}")
         }
     }
 
@@ -163,7 +163,7 @@ class ProjectFileWatcher(
         isWatching = false
         null
     } catch (e: Exception) {
-        debug("Error getting watch key: ${e.message}")
+        log.warn("Error getting watch key: ${e.message}", e)
         null
     }
 
@@ -175,7 +175,7 @@ class ProjectFileWatcher(
                 val kind = event.kind()
 
                 if (kind == StandardWatchEventKinds.OVERFLOW) {
-                    info("⚠️ Watch service overflow - some events may have been lost")
+                    log.info("⚠️ Watch service overflow - some events may have been lost")
                     continue
                 }
 
@@ -187,7 +187,7 @@ class ProjectFileWatcher(
                     Files.isDirectory(filePath) &&
                     !shouldSkipDirectory(filePath)
                 ) {
-                    debug("📁 Registering new directory for watching: $filePath")
+                    log.debug("📁 Registering new directory for watching: $filePath")
                     registerDirectoryTree(filePath)
                 }
 
@@ -199,7 +199,7 @@ class ProjectFileWatcher(
                 watchKeys.remove(watchKey)
             }
         } catch (e: Exception) {
-            debug("Error processing watch key events: ${e.message}")
+            log.error("Error processing watch key events: ${e.message}", e)
         }
     }
 
@@ -211,29 +211,29 @@ class ProjectFileWatcher(
 
         val relativePath = try {
             projectRoot.relativize(filePath).toString().replace('\\', '/')
-        } catch (_: Exception) {
-            debug("Could not relativize path: $filePath")
+        } catch (e: Exception) {
+            log.error("Could not relativize path: $filePath", e)
             return
         }
 
         try {
             when (kind) {
                 StandardWatchEventKinds.ENTRY_CREATE -> {
-                    debug("📄 File created: $relativePath")
+                    log.debug("📄 File created: $relativePath")
                     indexSingleFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_MODIFY -> {
-                    debug("📝 File modified: $relativePath")
+                    log.debug("📝 File modified: $relativePath")
                     reindexFileAsync(filePath, relativePath)
                 }
                 StandardWatchEventKinds.ENTRY_DELETE -> {
-                    debug("🗑️ File deleted: $relativePath")
+                    log.debug("🗑️ File deleted: $relativePath")
                     removeFileFromIndexAsync(relativePath)
                 }
             }
         } catch (e: Exception) {
-            info("⚠️ Failed to update index for $relativePath: ${e.message}")
-            debug(e)
+            log.info("⚠️ Failed to update index for $relativePath: ${e.message}")
+            log.debug("Error to update index for $relativePath", e)
         }
     }
 

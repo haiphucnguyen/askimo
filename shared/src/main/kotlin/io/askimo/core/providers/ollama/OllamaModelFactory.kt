@@ -13,13 +13,14 @@ import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
 import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
 
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
+    private val log = logger<OllamaModelFactory>()
+
     override fun availableModels(settings: OllamaSettings): List<String> = try {
         val process =
             ProcessBuilder("ollama", "list")
@@ -40,8 +41,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             }.filter { it.isNotBlank() }
             .distinct()
     } catch (e: Exception) {
-        info("⚠️ Failed to fetch models from Ollama: ${e.message}")
-        debug(e)
+        log.info("⚠️ Failed to fetch models from Ollama: ${e.message}")
+        log.error("Failed to fetch models from Ollama", e)
         emptyList()
     }
 

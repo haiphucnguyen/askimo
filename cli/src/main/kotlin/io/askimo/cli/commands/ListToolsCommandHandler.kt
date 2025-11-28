@@ -5,24 +5,26 @@
 package io.askimo.cli.commands
 
 import dev.langchain4j.agent.tool.Tool
-import io.askimo.core.util.Logger.info
+import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import org.jline.reader.ParsedLine
 
 class ListToolsCommandHandler : CommandHandler {
+    private val log = logger<ListToolsCommandHandler>()
+
     override val keyword = ":tools"
     override val description = "List all available tools"
 
     override fun handle(line: ParsedLine) {
         val providers = listOf(GitTools(), LocalFsTools)
 
-        info("🔧 Available Tools")
-        info("──────────────────────────────")
+        log.info("🔧 Available Tools")
+        log.info("──────────────────────────────")
 
         providers.forEach { provider ->
             val className = provider.javaClass.simpleName
-            info("\n📦 $className")
+            log.info("\n📦 $className")
 
             val tools = mutableListOf<Pair<String, String>>()
 
@@ -36,14 +38,14 @@ class ListToolsCommandHandler : CommandHandler {
             }
 
             tools.sortedBy { it.first }.forEach { (name, desc) ->
-                info("  • $name")
+                log.info("  • $name")
                 if (desc.isNotEmpty()) {
                     // Handle multi-line descriptions
                     desc.lines().forEachIndexed { index, line ->
                         if (index == 0) {
-                            info("    $line")
+                            log.info("    $line")
                         } else if (line.trim().isNotEmpty()) {
-                            info("    $line")
+                            log.info("    $line")
                         }
                     }
                 }
@@ -56,7 +58,7 @@ class ListToolsCommandHandler : CommandHandler {
             }
         }
 
-        info("\n──────────────────────────────")
-        info("Total: $totalCount tools")
+        log.info("\n──────────────────────────────")
+        log.info("Total: $totalCount tools")
     }
 }

@@ -5,12 +5,12 @@
 package io.askimo.core.directive
 
 import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.sqliteDatetime
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -27,7 +27,7 @@ object ChatDirectivesTable : Table("chat_directives") {
     val id = varchar("id", 36)
     val name = varchar("name", DIRECTIVE_NAME_MAX_LENGTH)
     val content = varchar("content", DIRECTIVE_CONTENT_MAX_LENGTH)
-    val createdAt = datetime("created_at")
+    val createdAt = sqliteDatetime("created_at")
 
     override val primaryKey = PrimaryKey(id)
 
@@ -37,11 +37,20 @@ object ChatDirectivesTable : Table("chat_directives") {
 }
 
 /**
+ * Extension function to map an Exposed ResultRow to a ChatDirective object.
+ * Eliminates duplication of mapping logic throughout the repository.
+ */
+private fun org.jetbrains.exposed.sql.ResultRow.toChatDirective(): ChatDirective = ChatDirective(
+    id = this[ChatDirectivesTable.id],
+    name = this[ChatDirectivesTable.name],
+    content = this[ChatDirectivesTable.content],
+    createdAt = this[ChatDirectivesTable.createdAt],
+)
+
+/**
  * Repository for managing chat directives stored in SQLite database.
  */
-class ChatDirectiveRepository(
-    useInMemory: Boolean = false,
-) : AbstractSQLiteRepository(useInMemory) {
+class ChatDirectiveRepository : AbstractSQLiteRepository() {
     override val databaseFileName: String = "chat_directives.db"
 
     private val database by lazy {
@@ -151,14 +160,7 @@ class ChatDirectiveRepository(
             .selectAll()
             .where { ChatDirectivesTable.id eq id }
             .singleOrNull()
-            ?.let { row ->
-                ChatDirective(
-                    id = row[ChatDirectivesTable.id],
-                    name = row[ChatDirectivesTable.name],
-                    content = row[ChatDirectivesTable.content],
-                    createdAt = row[ChatDirectivesTable.createdAt],
-                )
-            }
+            ?.toChatDirective()
     }
 
     /**
@@ -168,14 +170,7 @@ class ChatDirectiveRepository(
         ChatDirectivesTable
             .selectAll()
             .orderBy(ChatDirectivesTable.name to SortOrder.ASC)
-            .map { row ->
-                ChatDirective(
-                    id = row[ChatDirectivesTable.id],
-                    name = row[ChatDirectivesTable.name],
-                    content = row[ChatDirectivesTable.content],
-                    createdAt = row[ChatDirectivesTable.createdAt],
-                )
-            }
+            .map { it.toChatDirective() }
     }
 
     /**
@@ -236,14 +231,7 @@ class ChatDirectiveRepository(
         column = ChatDirectivesTable.id,
         values = ids,
         orderBy = ChatDirectivesTable.name to SortOrder.ASC,
-    ) { row ->
-        ChatDirective(
-            id = row[ChatDirectivesTable.id],
-            name = row[ChatDirectivesTable.name],
-            content = row[ChatDirectivesTable.content],
-            createdAt = row[ChatDirectivesTable.createdAt],
-        )
-    }
+    ) { it.toChatDirective() }
 
     /**
      * Get multiple directives by names.
@@ -253,12 +241,5 @@ class ChatDirectiveRepository(
         column = ChatDirectivesTable.name,
         values = names,
         orderBy = ChatDirectivesTable.name to SortOrder.ASC,
-    ) { row ->
-        ChatDirective(
-            id = row[ChatDirectivesTable.id],
-            name = row[ChatDirectivesTable.name],
-            content = row[ChatDirectivesTable.content],
-            createdAt = row[ChatDirectivesTable.createdAt],
-        )
-    }
+    ) { it.toChatDirective() }
 }

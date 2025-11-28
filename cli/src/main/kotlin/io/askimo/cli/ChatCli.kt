@@ -5,7 +5,6 @@
 package io.askimo.cli
 
 import io.askimo.cli.autocompleter.CliCommandCompleter
-import io.askimo.cli.commands.AgentCommandHandler
 import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
@@ -32,6 +31,7 @@ import io.askimo.cli.commands.VersionDisplayCommandHandler
 import io.askimo.cli.recipes.DefaultRecipeInitializer
 import io.askimo.cli.recipes.RecipeExecutor
 import io.askimo.cli.recipes.RecipeExecutor.RunOpts
+import io.askimo.cli.recipes.RecipeNotFoundException
 import io.askimo.cli.recipes.RecipeRegistry
 import io.askimo.cli.recipes.ToolRegistry
 import io.askimo.cli.util.CompositeCommandExecutor
@@ -41,11 +41,9 @@ import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
-import io.askimo.core.util.Logger.debug
-import io.askimo.core.util.Logger.info
-import io.askimo.core.util.Logger.warn
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
+import io.askimo.core.util.logger
 import org.jline.keymap.KeyMap
 import org.jline.reader.EOFError
 import org.jline.reader.LineReader
@@ -60,6 +58,9 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
+
+private object ChatCliLogger
+private val log = logger<ChatCliLogger>()
 
 fun main(args: Array<String>) {
     DefaultRecipeInitializer.initializeDefaultTemplates()
@@ -146,8 +147,8 @@ fun main(args: Array<String>) {
                 }
             try {
                 runYamlCommand(session, cliCommandName, overrides, externalArgs)
-            } catch (e: io.askimo.cli.recipes.RecipeNotFoundException) {
-                warn(e.message ?: "Recipe not found")
+            } catch (e: RecipeNotFoundException) {
+                log.warn(e.message ?: "Recipe not found")
             }
             return
         }
@@ -226,13 +227,10 @@ fun main(args: Array<String>) {
                 CreateProjectCommandHandler(session),
                 UseProjectCommandHandler(session),
                 DeleteProjectCommandHandler(),
-//                FileWatcherStatusCommandHandler(),
-//                StopWatcherCommandHandler(),
                 ListSessionsCommandHandler(),
                 NewSessionCommandHandler(session),
                 ResumeSessionCommandHandler(session),
                 DeleteSessionCommandHandler(),
-                AgentCommandHandler(session),
             )
 
             (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
@@ -283,8 +281,8 @@ fun main(args: Array<String>) {
             sendChatMessage(session, prompt, showIndicator = true)
         }
     } catch (e: IOException) {
-        info("❌ Error: ${e.message}")
-        debug(e)
+        log.info("❌ Error: ${e.message}")
+        log.error("Error", e)
     }
 }
 
@@ -465,7 +463,7 @@ private fun runYamlCommand(
             if (def.allowedTools.isEmpty()) {
                 ToolRegistry.defaults()
             } else {
-                debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
+                log.debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
                 ToolRegistry.defaults(allow = def.allowedTools.toSet())
             }
 

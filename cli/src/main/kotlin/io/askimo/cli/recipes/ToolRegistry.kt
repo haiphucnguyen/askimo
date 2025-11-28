@@ -5,7 +5,7 @@
 package io.askimo.cli.recipes
 
 import dev.langchain4j.agent.tool.Tool
-import io.askimo.core.util.Logger.debug
+import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import java.lang.Double
@@ -19,6 +19,7 @@ import kotlin.reflect.jvm.javaMethod
 class ToolRegistry private constructor(
     private val annotated: Map<String, Pair<Any, Method>>,
 ) {
+    private val log = logger<ToolRegistry>()
     fun invoke(
         name: String,
         args: Any?,
@@ -108,7 +109,7 @@ class ToolRegistry private constructor(
                     val paramName = kParam.name
                         ?: error("Parameter name is null for parameter at index $i in ${m.name}")
                     val raw = args[paramName]
-                    debug("Resolving parameter '$paramName' with value: $raw")
+                    log.debug("Resolving parameter '$paramName' with value: $raw")
                     callArgs[i] = coerce(raw, m.parameters[i].type)
                 }
                 m.invoke(target, *callArgs)

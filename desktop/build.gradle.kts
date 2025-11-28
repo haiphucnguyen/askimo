@@ -29,10 +29,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
-    // Logging
-    implementation(libs.slf4j.api)
-    implementation(libs.logback.classic)
-
     testImplementation(kotlin("test"))
     testImplementation(libs.koin.test)
     testImplementation(libs.koin.test.junit5)
