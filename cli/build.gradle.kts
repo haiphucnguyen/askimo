@@ -120,6 +120,10 @@ sourceSets {
     }
 }
 
+tasks.processTestResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 val author = property("author") as String
 val licenseId = property("licenseId") as String
 val homepage = property("homepage") as String

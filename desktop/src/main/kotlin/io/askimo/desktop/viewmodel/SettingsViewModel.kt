@@ -7,9 +7,11 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderRegistry
+import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ProviderTestResult
 import io.askimo.core.providers.SettingField
 import io.askimo.core.session.MemoryPolicy
@@ -18,6 +20,7 @@ import io.askimo.core.session.SessionConfigManager
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
 import io.askimo.core.session.getConfigInfo
+import io.askimo.core.util.logger
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +40,7 @@ import kotlinx.coroutines.withContext
 class SettingsViewModel(
     private val scope: CoroutineScope,
 ) {
+    private val log = logger<SettingsViewModel>()
     private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
 
     var provider by mutableStateOf<ModelProvider?>(null)
@@ -97,6 +101,15 @@ class SettingsViewModel(
         private set
 
     var connectionErrorHelp by mutableStateOf<String?>(null)
+        private set
+
+    var connectionTestSuccess by mutableStateOf(false)
+        private set
+
+    var showModelSelectionInProviderDialog by mutableStateOf(false)
+        private set
+
+    var pendingModelForNewProvider by mutableStateOf<String?>(null)
         private set
 
     init {
@@ -209,16 +222,32 @@ class SettingsViewModel(
                     val newSettings = existingSettings?.applyConfigFields(providerFieldValues)
                         ?: return@withContext ProviderTestResult.Failure("Failed to create settings")
 
-                    // Test connection (just validate for now)
-                    if (newSettings.validate()) {
-                        ProviderTestResult.Success
-                    } else {
-                        ProviderTestResult.Failure(
+                    // First validate the settings format
+                    if (!newSettings.validate()) {
+                        return@withContext ProviderTestResult.Failure(
                             message = "Cannot connect to ${provider.name.lowercase()} provider",
                             helpText = newSettings.getSetupHelpText(),
                         )
                     }
+
+                    // Actually test the connection by trying to fetch models
+                    val factory = ProviderRegistry.getFactory(provider)
+                        ?: return@withContext ProviderTestResult.Failure("No factory found for provider")
+
+                    @Suppress("UNCHECKED_CAST")
+                    val models = (factory as ChatModelFactory<ProviderSettings>).availableModels(newSettings)
+
+                    // If we got models, the connection works
+                    if (models.isNotEmpty()) {
+                        ProviderTestResult.Success
+                    } else {
+                        ProviderTestResult.Failure(
+                            message = "No models available for ${provider.name.lowercase()}",
+                            helpText = factory.getNoModelsHelpText(),
+                        )
+                    }
                 } catch (e: Exception) {
+                    log.error("Error testing provider connection", e)
                     val errorMsg = ErrorHandler.getUserFriendlyError(e, "testing provider connection", "Failed to test connection. Please check your settings.")
                     ProviderTestResult.Failure(errorMsg)
                 }
@@ -230,15 +259,89 @@ class SettingsViewModel(
                 is ProviderTestResult.Success -> {
                     connectionError = null
                     connectionErrorHelp = null
-                    successMessage = "Connection successful!"
-                    showSuccessMessage = true
+                    connectionTestSuccess = true
+                    // Automatically load models for provider selection flow
+                    showModelSelectionInProviderDialog = true
+                    loadModelsForSelectedProvider()
                 }
                 is ProviderTestResult.Failure -> {
                     connectionError = result.message
                     connectionErrorHelp = result.helpText
+                    connectionTestSuccess = false
                 }
             }
         }
+    }
+
+    /**
+     * Load models for the selected provider (used in provider dialog flow).
+     */
+    fun loadModelsForSelectedProvider() {
+        pendingModelForNewProvider = null
+        modelError = null
+        modelErrorHelp = null
+        isLoadingModels = true
+
+        scope.launch {
+            val provider = selectedProvider
+            if (provider == null) {
+                isLoadingModels = false
+                availableModels = emptyList()
+                modelError = "Provider not set"
+                modelErrorHelp = null
+                return@launch
+            }
+
+            withContext(Dispatchers.IO) {
+                val factory = ProviderRegistry.getFactory(provider)
+                if (factory == null) {
+                    isLoadingModels = false
+                    availableModels = emptyList()
+                    modelError = "No model factory registered for provider: ${provider.name.lowercase()}"
+                    modelErrorHelp = null
+                    return@withContext
+                }
+
+                // Get existing settings if available, otherwise use defaults
+                val existingSettings = session.params.providerSettings[provider]
+                    ?: factory.defaultSettings()
+
+                // Apply current field values to get the most up-to-date settings
+                val settings = existingSettings.applyConfigFields(providerFieldValues)
+
+                @Suppress("UNCHECKED_CAST")
+                val models = (factory as ChatModelFactory<ProviderSettings>)
+                    .availableModels(settings)
+
+                isLoadingModels = false
+
+                if (models.isEmpty()) {
+                    availableModels = emptyList()
+                    modelError = "No models available for ${provider.name.lowercase()}"
+                    modelErrorHelp = factory.getNoModelsHelpText()
+                } else {
+                    availableModels = models
+                    modelError = null
+                    modelErrorHelp = null
+                }
+            }
+        }
+    }
+
+    /**
+     * Select a model for the new provider (in provider dialog flow).
+     */
+    fun selectModelForNewProvider(model: String) {
+        pendingModelForNewProvider = model
+    }
+
+    /**
+     * Go back from model selection to provider configuration.
+     */
+    fun backToProviderConfiguration() {
+        showModelSelectionInProviderDialog = false
+        connectionTestSuccess = false
+        pendingModelForNewProvider = null
     }
 
     /**
@@ -281,9 +384,13 @@ class SettingsViewModel(
                         session.params.currentProvider = provider
                         session.setProviderSetting(provider, newSettings)
 
-                        var model = session.params.getModel(provider)
-                        if (model.isBlank()) {
-                            model = newSettings.defaultModel
+                        // Use the pending model selected by user, or fall back to existing/default
+                        var model = pendingModelForNewProvider
+                        if (model.isNullOrBlank()) {
+                            model = session.params.getModel(provider)
+                            if (model.isBlank()) {
+                                model = newSettings.defaultModel
+                            }
                         }
                         session.params.model = model
 
@@ -293,10 +400,12 @@ class SettingsViewModel(
                         ProviderTestResult.Success
                     } catch (e: Exception) {
                         ProviderTestResult.Failure("Failed to apply provider changes")
+                        log.error("Error applying provider changes", e)
                     }
                 } catch (e: Exception) {
                     val errorMsg = ErrorHandler.getUserFriendlyError(e, "applying provider change", "Failed to apply provider settings. Please try again.")
                     ProviderTestResult.Failure(errorMsg)
+                    log.error("Error applying provider change", e)
                 }
             }
 
@@ -330,6 +439,9 @@ class SettingsViewModel(
         providerFieldValues = emptyMap()
         connectionError = null
         connectionErrorHelp = null
+        connectionTestSuccess = false
+        showModelSelectionInProviderDialog = false
+        pendingModelForNewProvider = null
     }
 
     /**
@@ -365,7 +477,7 @@ class SettingsViewModel(
                 val settings = session.params.providerSettings[currentProvider] ?: factory.defaultSettings()
 
                 @Suppress("UNCHECKED_CAST")
-                val models = (factory as io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+                val models = (factory as ChatModelFactory<ProviderSettings>)
                     .availableModels(settings)
 
                 isLoadingModels = false

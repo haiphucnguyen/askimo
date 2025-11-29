@@ -9,6 +9,8 @@ import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.rag.content.Content
 import dev.langchain4j.service.TokenStream
 import dev.langchain4j.service.tool.ToolExecution
+import io.askimo.core.session.Session
+import io.askimo.core.session.SessionMode
 import java.util.function.Consumer
 
 /**
@@ -17,7 +19,9 @@ import java.util.function.Consumer
  * This implementation is used as a fallback when no chat model is configured.
  */
 object NoopChatService : ChatService {
-    private val CONFIGURATION_MESSAGE = """
+    var session: Session? = null
+
+    private val CLI_NO_PROVIDER_MESSAGE = """
         ⚠️  No AI provider configured yet!
 
         To start chatting, please configure a provider first:
@@ -26,6 +30,55 @@ object NoopChatService : ChatService {
 
         After setting a provider, you'll need to configure your API key or model settings.
     """.trimIndent()
+
+    private val CLI_NO_MODEL_MESSAGE = """
+        ⚠️  No model selected!
+
+        You have a provider configured, but no model is selected yet.
+
+        To start chatting:
+        1. Check available models: :models
+        2. Set a model: :set-param model <model_name>
+
+        Make sure your API key and provider settings are configured correctly.
+    """.trimIndent()
+
+    private val DESKTOP_NO_PROVIDER_MESSAGE = """
+        ⚠️  No AI provider configured yet!
+
+        To start chatting, please configure a provider first:
+
+        1. Open Settings from the menu or toolbar
+        2. Navigate to the Providers section
+        3. Select a provider and configure your API key
+        4. Choose a model from the available options
+
+        After configuration, you can start chatting with the AI assistant.
+    """.trimIndent()
+
+    private val DESKTOP_NO_MODEL_MESSAGE = """
+        ⚠️  No model selected!
+
+        You have a provider configured, but no model is selected yet.
+
+        To start chatting:
+        1. Open Settings from the menu or toolbar
+        2. Navigate to the Models section
+        3. Select a model from the available options
+
+        Make sure your API key and provider settings are configured correctly.
+    """.trimIndent()
+
+    private fun getConfigurationMessage(): String {
+        val currentProvider = session?.getActiveProvider() ?: ModelProvider.UNKNOWN
+        val isDesktop = session?.mode == SessionMode.DESKTOP
+
+        return if (currentProvider == ModelProvider.UNKNOWN) {
+            if (isDesktop) DESKTOP_NO_PROVIDER_MESSAGE else CLI_NO_PROVIDER_MESSAGE
+        } else {
+            if (isDesktop) DESKTOP_NO_MODEL_MESSAGE else CLI_NO_MODEL_MESSAGE
+        }
+    }
 
     override fun sendMessageStreaming(prompt: String): TokenStream {
         return object : TokenStream {
@@ -51,17 +104,18 @@ object NoopChatService : ChatService {
             override fun onRetrieved(contentHandler: Consumer<List<Content?>?>?): TokenStream = this
 
             override fun start() {
-                partialConsumer?.accept(CONFIGURATION_MESSAGE)
+                val message = getConfigurationMessage()
+                partialConsumer?.accept(message)
 
                 val response = ChatResponse.builder()
                     .id("noop-response")
                     .modelName("no-model")
-                    .aiMessage(AiMessage.from(CONFIGURATION_MESSAGE))
+                    .aiMessage(AiMessage.from(message))
                     .build()
                 completeConsumer?.accept(response)
             }
         }
     }
 
-    override fun sendMessage(prompt: String): String = CONFIGURATION_MESSAGE
+    override fun sendMessage(prompt: String): String = getConfigurationMessage()
 }

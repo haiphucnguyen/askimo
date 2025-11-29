@@ -5,6 +5,7 @@
 package io.askimo.desktop
 
 import androidx.compose.ui.window.FrameWindowScope
+import io.askimo.desktop.util.Platform
 import java.awt.Desktop
 import java.awt.Menu
 import java.awt.MenuBar
@@ -23,13 +24,12 @@ object NativeMenuBar {
         onShowAbout: () -> Unit,
     ) {
         val window = frameWindowScope.window
-        val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
 
         // Setup AWT menu bar for all platforms (includes Documentation)
         setupAWTMenuBar(window, onShowAbout)
 
         // On macOS, also register the About handler for the app menu
-        if (isMac) {
+        if (Platform.isMac) {
             setupMacAboutHandler(onShowAbout)
         }
     }

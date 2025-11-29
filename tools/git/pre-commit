@@ -1,3 +1,6 @@
+#!/bin/sh
+# This script installs the pre-commit hook for automatic code formatting
+
 cat > .git/hooks/pre-commit <<'EOF'
 #!/bin/sh
 echo "🔍 Running spotlessApply before commit..."
@@ -8,3 +11,9 @@ git add -u
 
 echo "✅ Spotless formatting applied."
 EOF
+
+# Make the hook executable
+chmod +x .git/hooks/pre-commit
+
+echo "✅ Pre-commit hook installed successfully!"
+echo "📝 The hook will run './gradlew spotlessApply' before each commit."

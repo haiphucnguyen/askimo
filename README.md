@@ -143,6 +143,16 @@ A flexible AI automation tool built for terminal workflows, scripting, and devel
 
 Get Askimo CLI: https://askimo.chat/cli
 
+## Support
+If you enjoy this project, here are a few simple ways to show support:
+
+* Star the repo — A quick ⭐️ at the top helps a lot and keeps the project growing.
+
+* Contribute — Spot a bug or want to improve something? Pull requests are always welcome.
+
+* Share feedback — Got ideas or suggestions? Feel free to open an issue or start a discussion.
+
+Thanks for being part of the journey! 🙌
 ## License
 
 Apache 2.0. See [LICENSE](./LICENSE).

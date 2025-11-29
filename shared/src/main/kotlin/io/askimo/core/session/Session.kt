@@ -16,6 +16,7 @@ import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
@@ -123,6 +124,9 @@ class Session(
      */
     fun setChatService(chatService: ChatService) {
         this.chatService = chatService
+        if (chatService is NoopChatService) {
+            (this.chatService as NoopChatService).session = this
+        }
     }
 
     /**
