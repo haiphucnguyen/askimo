@@ -80,7 +80,7 @@ class SetProviderCommandHandler(
         val settings = session.getCurrentProviderSettings()
         if (!settings.validate()) {
             log.info("⚠️  This provider isn't fully configured yet.")
-            log.info(settings.getSetupHelpText())
+            log.info(settings.getSetupHelpText(io.askimo.core.providers.DefaultMessageResolver.resolver))
             log.info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
         }
     }

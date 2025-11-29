@@ -107,7 +107,6 @@ class OllamaModelFactoryTest {
             println("✅ Tool call test passed - AI successfully used countEntries tool")
         } else {
             println("⚠️ Could not confirm tool was called, but AI responded: '$output'")
-            // Don't fail the test immediately - just log the concern
             assertTrue(true, "Test completed with response, tool calling verification unclear")
         }
     }

@@ -80,8 +80,12 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.VersionInfo
+import io.askimo.core.providers.ModelProvider
+import io.askimo.core.session.ChatSession
 import io.askimo.core.session.ChatSessionExporterService
 import io.askimo.core.session.SESSION_TITLE_MAX_LENGTH
+import io.askimo.core.session.Session
+import io.askimo.core.session.getConfigInfo
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.i18n.provideLocalization
@@ -92,6 +96,8 @@ import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.model.View
+import io.askimo.desktop.service.ChatService
+import io.askimo.desktop.service.SystemResourceMonitor
 import io.askimo.desktop.service.ThemePreferences
 import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
@@ -245,13 +251,13 @@ fun app() {
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
 
     // Get ChatService and Session directly from Koin (they're singletons)
-    val chatService = remember { koin.get<io.askimo.desktop.service.ChatService>() }
-    val session = remember { koin.get<io.askimo.core.session.Session>() }
+    val chatService = remember { koin.get<ChatService>() }
+    val session = remember { koin.get<Session>() }
 
     // Check if provider is set up
     var showProviderSetupDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (session.getActiveProvider() == io.askimo.core.providers.ModelProvider.UNKNOWN) {
+        if (session.getActiveProvider() == ModelProvider.UNKNOWN) {
             showProviderSetupDialog = true
         }
     }
@@ -420,7 +426,6 @@ fun app() {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
                                         val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
-                                        // Constrain width between 200dp and 500dp
                                         sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
                                     }
                                 },
@@ -453,6 +458,7 @@ fun app() {
                         chatViewModel = chatViewModel,
                         sessionsViewModel = sessionsViewModel,
                         settingsViewModel = settingsViewModel,
+                        session = session,
                         inputText = inputText,
                         onInputTextChange = { newText ->
                             inputText = newText
@@ -620,7 +626,7 @@ fun app() {
 @Composable
 fun bottomBar() {
     val koin = get()
-    val resourceMonitor = remember { koin.get<io.askimo.desktop.service.SystemResourceMonitor>() }
+    val resourceMonitor = remember { koin.get<SystemResourceMonitor>() }
     val scope = rememberCoroutineScope()
 
     // Collect resource states
@@ -1083,6 +1089,7 @@ fun mainContent(
     chatViewModel: ChatViewModel,
     sessionsViewModel: SessionsViewModel,
     settingsViewModel: SettingsViewModel,
+    session: Session,
     inputText: TextFieldValue,
     onInputTextChange: (TextFieldValue) -> Unit,
     onSendMessage: (String, List<FileAttachment>) -> Unit,
@@ -1101,7 +1108,7 @@ fun mainContent(
     ) {
         when (currentView) {
             View.CHAT, View.NEW_CHAT -> {
-                val configInfo = chatViewModel.getSessionConfigInfo()
+                val configInfo = session.getConfigInfo()
                 chatView(
                     messages = chatViewModel.messages,
                     inputText = inputText,
@@ -1157,7 +1164,7 @@ fun mainContent(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun sessionItemWithMenu(
-    session: io.askimo.core.session.ChatSession,
+    session: ChatSession,
     isSelected: Boolean,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
@@ -1227,84 +1234,68 @@ private fun sessionItemWithMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
-                themedTooltip(
-                    text = stringResource("session.export.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("session.export")) },
-                        onClick = {
-                            showMenu = false
-                            showExportChatSessionHistoryDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = stringResource("session.rename.title.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("session.rename.title")) },
-                        onClick = {
-                            showMenu = false
-                            showRenameDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = if (session.isStarred) stringResource("session.unstar") else stringResource("session.star"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
-                        onClick = {
-                            showMenu = false
-                            onStarSession(session.id, !session.isStarred)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = null,
-                                tint = if (session.isStarred) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = stringResource("session.delete.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("action.delete")) },
-                        onClick = {
-                            showMenu = false
-                            onDeleteSession(session.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text(stringResource("session.export")) },
+                    onClick = {
+                        showMenu = false
+                        showExportChatSessionHistoryDialog = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("session.rename.title")) },
+                    onClick = {
+                        showMenu = false
+                        showRenameDialog = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
+                    onClick = {
+                        showMenu = false
+                        onStarSession(session.id, !session.isStarred)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null,
+                            tint = if (session.isStarred) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete")) },
+                    onClick = {
+                        showMenu = false
+                        onDeleteSession(session.id)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
             }
         }
     }

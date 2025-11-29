@@ -65,11 +65,6 @@ class ChatService(
     }
 
     /**
-     * Get the current session for advanced operations.
-     */
-    fun getSession(): Session = session
-
-    /**
      * Set the language directive based on user's locale selection.
      * This constructs a comprehensive instruction for the AI to communicate in the specified language,
      * with a fallback to English if the language is not supported by the AI.

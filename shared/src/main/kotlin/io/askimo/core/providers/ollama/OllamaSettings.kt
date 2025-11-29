@@ -45,9 +45,11 @@ data class OllamaSettings(
         }
     }
 
-    override fun getConfigFields(): List<ProviderConfigField> = listOf(
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.ollama.setup.help")
+
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = listOf(
         ProviderConfigField.BaseUrlField(
-            description = "Ollama server URL (default: http://localhost:11434)",
+            description = messageResolver("provider.ollama.baseurl.description"),
             value = baseUrl,
         ),
     )

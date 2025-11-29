@@ -50,24 +50,20 @@ data class OpenAiSettings(
 
     override fun validate(): Boolean = apiKey.isNotBlank()
 
-    override fun getSetupHelpText(): String = """
-        💡 To use OpenAI, you need to provide an API key.
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.openai.setup.help")
 
-        1. Get your API key from: https://platform.openai.com/account/api-keys
-        2. Then set it in the Settings or using: :change-settings
-
-        Get an API key here: https://platform.openai.com/api-keys
-    """.trimIndent()
-
-    override fun getConfigFields(): List<ProviderConfigField> {
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> {
         val hasStoredKey = apiKey.isNotBlank() && (apiKey == "***keychain***" || apiKey.startsWith("encrypted:"))
+
+        val description = if (hasStoredKey) {
+            messageResolver("provider.openai.apikey.stored")
+        } else {
+            messageResolver("provider.openai.apikey.description")
+        }
+
         return listOf(
             ProviderConfigField.ApiKeyField(
-                description = if (hasStoredKey) {
-                    "API key already stored securely. Leave blank to keep existing key, or enter a new one to update."
-                } else {
-                    "Your OpenAI API key from https://platform.openai.com/account/api-keys"
-                },
+                description = description,
                 value = "",
                 hasExistingValue = hasStoredKey,
             ),

@@ -19,6 +19,7 @@ import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
 import io.askimo.core.session.getConfigInfo
 import io.askimo.core.util.logger
+import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -149,7 +150,7 @@ class SettingsViewModel(
             // Load existing settings and configuration fields
             val existingSettings = session.params.providerSettings[currentProvider]
                 ?: ProviderRegistry.getFactory(currentProvider)?.defaultSettings()
-            providerConfigFields = existingSettings?.getConfigFields() ?: emptyList()
+            providerConfigFields = existingSettings?.getConfigFields(LocalizationManager.messageResolver) ?: emptyList()
 
             // Initialize field values with existing or default values
             providerFieldValues = providerConfigFields.associate { field ->
@@ -181,7 +182,7 @@ class SettingsViewModel(
             ?: ProviderRegistry.getFactory(newProvider)?.defaultSettings()
 
         // Get configuration fields for the provider
-        providerConfigFields = existingSettings?.getConfigFields() ?: emptyList()
+        providerConfigFields = existingSettings?.getConfigFields(LocalizationManager.messageResolver) ?: emptyList()
 
         // Initialize field values with existing or default values
         providerFieldValues = providerConfigFields.associate { field ->
@@ -232,7 +233,7 @@ class SettingsViewModel(
                     if (!newSettings.validate()) {
                         return@withContext ProviderTestResult.Failure(
                             message = "Cannot connect to ${provider.name.lowercase()} provider",
-                            helpText = newSettings.getSetupHelpText(),
+                            helpText = newSettings.getSetupHelpText(LocalizationManager.messageResolver),
                         )
                     }
 
@@ -381,7 +382,7 @@ class SettingsViewModel(
                     if (!newSettings.validate()) {
                         return@withContext ProviderTestResult.Failure(
                             message = "Cannot connect to ${provider.name.lowercase()} provider",
-                            helpText = newSettings.getSetupHelpText(),
+                            helpText = newSettings.getSetupHelpText(LocalizationManager.messageResolver),
                         )
                     }
 

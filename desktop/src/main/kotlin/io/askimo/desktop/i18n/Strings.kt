@@ -167,6 +167,17 @@ object LocalizationManager {
     }
 
     /**
+     * Singleton message resolver for provider configuration and other i18n needs.
+     * This can be passed to provider settings methods to localize their configuration fields.
+     *
+     * Usage:
+     * ```kotlin
+     * val configFields = providerSettings.getConfigFields(LocalizationManager.messageResolver)
+     * ```
+     */
+    val messageResolver: (String) -> String = { key -> getString(key) }
+
+    /**
      * Load properties file for the current locale with UTF-8 encoding.
      * Supports both language_country (ja_JP) and language-only (ja) formats.
      */
