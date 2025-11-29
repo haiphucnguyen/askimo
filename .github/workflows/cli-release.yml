@@ -45,14 +45,14 @@ jobs:
         if: runner.os != 'Windows'
         env:
           DISABLE_DOCKER_TESTS: ${{ runner.os == 'macOS' && 'true' || 'false' }}
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean :cli:test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
 
       - name: Generate Graal metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true clean :cli:test
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" clean :cli:test
 
       - name: Upload test report
         if: always()
@@ -64,12 +64,12 @@ jobs:
 
       - name: Build native image (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :cli:nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" :cli:nativeCompile
 
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" -Pci=true :cli:nativeCompile
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" :cli:nativeCompile
 
       - name: Locate native binary path
         id: paths
@@ -152,10 +152,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Generate Graal metadata (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true clean :cli:test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
 
       - name: Build native image (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pci=true :cli:nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" :cli:nativeCompile
 
       - name: Locate native binary path
         id: arm_paths

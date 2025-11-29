@@ -45,9 +45,11 @@ data class LocalAiSettings(
         }
     }
 
-    override fun getConfigFields(): List<ProviderConfigField> = listOf(
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.localai.setup.help")
+
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = listOf(
         ProviderConfigField.BaseUrlField(
-            description = "LocalAI server URL (default: http://localhost:8080)",
+            description = messageResolver("provider.localai.baseurl.description"),
             value = baseUrl,
         ),
     )

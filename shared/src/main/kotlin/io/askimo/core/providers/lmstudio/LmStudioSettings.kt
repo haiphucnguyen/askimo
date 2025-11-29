@@ -45,9 +45,11 @@ data class LmStudioSettings(
         }
     }
 
-    override fun getConfigFields(): List<ProviderConfigField> = listOf(
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.lmstudio.setup.help")
+
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = listOf(
         ProviderConfigField.BaseUrlField(
-            description = "LM Studio server URL (default: http://localhost:1234/v1)",
+            description = messageResolver("provider.lmstudio.baseurl.description"),
             value = baseUrl,
         ),
     )

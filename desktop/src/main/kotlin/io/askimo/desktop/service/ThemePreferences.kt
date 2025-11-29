@@ -77,12 +77,33 @@ object ThemePreferences {
     }
 
     private fun loadLocale(): Locale {
-        val localeTag = prefs.get(LOCALE_KEY, Locale.getDefault().toLanguageTag())
-        return try {
-            Locale.forLanguageTag(localeTag)
-        } catch (e: Exception) {
-            Locale.getDefault()
+        // Check if user has saved a locale preference
+        val savedLocaleTag = prefs.get(LOCALE_KEY, null)
+
+        if (savedLocaleTag != null) {
+            // User has explicitly set a locale, use it
+            return try {
+                Locale.forLanguageTag(savedLocaleTag)
+            } catch (e: Exception) {
+                Locale.ENGLISH
+            }
         }
+
+        // No saved preference - check if system locale is supported
+        val systemLocale = Locale.getDefault()
+        val availableLocales = LocalizationManager.availableLocales
+
+        // Check if system locale (or its language) is available
+        val supportedLocale = availableLocales.keys.find { locale ->
+            // Exact match (language + country)
+            locale.language == systemLocale.language && locale.country == systemLocale.country
+        } ?: availableLocales.keys.find { locale ->
+            // Language-only match
+            locale.language == systemLocale.language
+        }
+
+        // Return supported locale or default to English
+        return supportedLocale ?: Locale.ENGLISH
     }
 
     private fun loadLogLevel(): LogLevel {

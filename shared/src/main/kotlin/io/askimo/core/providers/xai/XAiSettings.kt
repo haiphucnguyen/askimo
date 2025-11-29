@@ -57,24 +57,20 @@ data class XAiSettings(
 
     override fun validate(): Boolean = apiKey.isNotBlank()
 
-    override fun getSetupHelpText(): String = """
-        💡 To use xAI Grok, you need to provide an API key.
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.xai.setup.help")
 
-        1. Get your API key from: https://console.x.ai/
-        2. Then set it in the Settings or using: :change-settings
-
-        Learn more: https://docs.x.ai/
-    """.trimIndent()
-
-    override fun getConfigFields(): List<ProviderConfigField> {
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> {
         val hasStoredKey = apiKey.isNotBlank() && (apiKey == "***keychain***" || apiKey.startsWith("encrypted:"))
+
+        val description = if (hasStoredKey) {
+            messageResolver("provider.xai.apikey.stored")
+        } else {
+            messageResolver("provider.xai.apikey.description")
+        }
+
         return listOf(
             ProviderConfigField.ApiKeyField(
-                description = if (hasStoredKey) {
-                    "API key already stored securely. Leave blank to keep existing key, or enter a new one to update."
-                } else {
-                    "Your XAI API key from https://console.x.ai/"
-                },
+                description = description,
                 value = "",
                 hasExistingValue = hasStoredKey,
             ),

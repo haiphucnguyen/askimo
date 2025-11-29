@@ -57,24 +57,20 @@ data class GeminiSettings(
 
     override fun validate(): Boolean = apiKey.isNotBlank()
 
-    override fun getSetupHelpText(): String = """
-        💡 To use Google Gemini, you need to provide an API key.
+    override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.gemini.setup.help")
 
-        1. Get your API key from: https://aistudio.google.com/app/apikey
-        2. Then set it in the Settings or using: :change-settings
-
-        Learn more: https://ai.google.dev/gemini-api/docs/api-key
-    """.trimIndent()
-
-    override fun getConfigFields(): List<ProviderConfigField> {
+    override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> {
         val hasStoredKey = apiKey.isNotBlank() && (apiKey == "***keychain***" || apiKey.startsWith("encrypted:"))
+
+        val description = if (hasStoredKey) {
+            messageResolver("provider.gemini.apikey.stored")
+        } else {
+            messageResolver("provider.gemini.apikey.description")
+        }
+
         return listOf(
             ProviderConfigField.ApiKeyField(
-                description = if (hasStoredKey) {
-                    "API key already stored securely. Leave blank to keep existing key, or enter a new one to update."
-                } else {
-                    "Your Google Gemini API key from https://makersuite.google.com/"
-                },
+                description = description,
                 value = "",
                 hasExistingValue = hasStoredKey,
             ),

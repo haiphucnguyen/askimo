@@ -11,8 +11,6 @@ import io.askimo.core.session.ChatSessionRepository
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
 import io.askimo.core.session.PaginationDirection
-import io.askimo.core.session.SessionConfigInfo
-import io.askimo.core.session.getConfigInfo
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.service.ChatService
@@ -41,6 +39,7 @@ class ChatViewModel(
     private val chatService: ChatService,
     private val scope: CoroutineScope,
     private val repository: ChatSessionRepository,
+    private val session: io.askimo.core.session.Session,
 ) {
     var messages by mutableStateOf(listOf<ChatMessage>())
         private set
@@ -244,7 +243,7 @@ class ChatViewModel(
         // Get or create session ID
         val sessionId = _currentSessionId.value ?: run {
             // New chat - will get session ID after first message
-            chatService.getSession().currentChatSession?.id ?: "temp-" + System.currentTimeMillis()
+            session.currentChatSession?.id ?: ("temp-" + System.currentTimeMillis())
         }
 
         // Cancel any previous job to prevent old subscriptions from interfering
@@ -296,7 +295,7 @@ class ChatViewModel(
 
                 // Update session ID if this was a new chat
                 if (_currentSessionId.value == null) {
-                    val currentSession = chatService.getSession().currentChatSession
+                    val currentSession = session.currentChatSession
                     _currentSessionId.value = currentSession?.id ?: sessionId
                 }
 
@@ -396,7 +395,7 @@ class ChatViewModel(
 
                 val result = withContext(Dispatchers.IO) {
                     sessionService.resumeSessionPaginated(
-                        chatService.getSession(),
+                        session,
                         sessionId,
                         MESSAGE_PAGE_SIZE,
                     )
@@ -420,7 +419,6 @@ class ChatViewModel(
                     _currentSessionId.value = sessionId
 
                     // Load directive from the resumed session
-                    val session = chatService.getSession()
                     selectedDirective = session.currentChatSession?.directiveId
 
                     // Reset thinking state
@@ -789,7 +787,6 @@ class ChatViewModel(
         selectedDirective = null
 
         // Start a new session without a directive
-        val session = chatService.getSession()
         session.currentChatSession = null
 
         chatService.clearMemory()
@@ -801,13 +798,6 @@ class ChatViewModel(
     fun getCurrentSessionId(): String? = _currentSessionId.value
 
     /**
-     * Get the current session configuration info (provider and model).
-     *
-     * @return SessionConfigInfo containing provider, model, and settings description
-     */
-    fun getSessionConfigInfo(): SessionConfigInfo = chatService.getSession().getConfigInfo()
-
-    /**
      * Set the directive for the current or next chat session.
      * @param directiveId The directive ID to set (null to clear directive)
      */
@@ -815,7 +805,6 @@ class ChatViewModel(
         selectedDirective = directiveId
 
         // If there's an active session, update it immediately
-        val session = chatService.getSession()
         if (session.currentChatSession != null) {
             session.setCurrentSessionDirective(directiveId)
         }

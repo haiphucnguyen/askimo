@@ -42,6 +42,7 @@ val desktopModule = module {
             chatService = get(),
             scope = scope,
             repository = get(),
+            session = get(),
         )
     }
 

@@ -54,17 +54,19 @@ interface ProviderSettings {
      * Returns helpful guidance text to display when settings validation fails.
      * Each provider can provide specific instructions for setup.
      *
+     * @param messageResolver Function to resolve i18n message keys. For CLI, pass default English resolver.
      * @return Help text explaining how to properly configure this provider
      */
-    fun getSetupHelpText(): String = "Please check your provider configuration."
+    fun getSetupHelpText(messageResolver: (String) -> String): String = "Please check your provider configuration."
 
     /**
      * Returns the configuration fields required to set up this provider.
      * Each provider can define what fields users need to configure.
      *
+     * @param messageResolver Function to resolve i18n message keys. For CLI, pass default English resolver.
      * @return List of configuration fields for UI display
      */
-    fun getConfigFields(): List<ProviderConfigField> = emptyList()
+    fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = emptyList()
 
     /**
      * Applies configuration field values to create updated settings.
