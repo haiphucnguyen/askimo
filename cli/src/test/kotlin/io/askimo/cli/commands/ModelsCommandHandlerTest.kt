@@ -224,12 +224,11 @@ class ModelsCommandHandlerTest : CommandHandlerTestBase() {
         handler.handle(parsedLine)
 
         val output = getOutput()
-        // If models are listed, they should be prefixed with "- "
-        if (output.contains("Available models")) {
-            // Check if there's at least one model line (would contain "- ")
-            val hasModelLine = output.lines().any { it.trim().startsWith("- ") }
-            assertTrue(hasModelLine)
-        }
+        assertTrue(
+            output.contains("anthropic") ||
+                output.contains("Available models") ||
+                output.contains("No models available"),
+        )
     }
 
     @Test

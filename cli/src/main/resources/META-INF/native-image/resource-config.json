@@ -176,9 +176,6 @@
         "pattern": "\\Qlogback-test.xml\\E"
       },
       {
-        "pattern": "\\Qlogback.xml\\E"
-      },
-      {
         "pattern": "\\Qmockito-extensions/org.mockito.plugins.AnnotationEngine\\E"
       },
       {

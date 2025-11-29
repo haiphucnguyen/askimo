@@ -5,8 +5,6 @@
 package io.askimo.desktop.service
 
 import io.askimo.core.session.Session
-import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.SessionMode
 import java.util.Locale
 import java.util.Properties
 
@@ -15,9 +13,12 @@ import java.util.Properties
  *
  * This service provides a bridge between the UI and the core chat functionality,
  * handling session management and message streaming without JLine dependencies.
+ *
+ * @param session The singleton Session instance injected by DI
  */
-class ChatService {
-    private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
+class ChatService(
+    private val session: Session,
+) {
     private val streamingService: StreamingService = StreamingService(session)
 
     init {

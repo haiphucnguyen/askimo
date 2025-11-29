@@ -398,15 +398,6 @@ fun settingsView(
         )
     }
 
-    // Provider selection dialog
-    if (viewModel.showProviderDialog) {
-        providerSelectionDialog(
-            viewModel = viewModel,
-            onDismiss = { viewModel.closeProviderDialog() },
-            onSave = { viewModel.saveProvider() },
-        )
-    }
-
     // Log viewer dialog
     if (showLogViewerDialog) {
         logViewerDialog(
@@ -1262,7 +1253,7 @@ private fun enumFieldSetting(
 }
 
 @Composable
-private fun providerSelectionDialog(
+fun providerSelectionDialog(
     viewModel: SettingsViewModel,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
@@ -1273,6 +1264,8 @@ private fun providerSelectionDialog(
             Text(
                 text = if (viewModel.showModelSelectionInProviderDialog) {
                     stringResource("settings.model.select.title")
+                } else if (viewModel.isInitialSetup) {
+                    stringResource("provider.select.title")
                 } else {
                     stringResource("provider.change.title")
                 },

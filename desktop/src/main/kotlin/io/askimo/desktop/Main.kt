@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -99,6 +100,7 @@ import io.askimo.desktop.ui.theme.getDarkColorScheme
 import io.askimo.desktop.ui.theme.getLightColorScheme
 import io.askimo.desktop.ui.views.aboutDialog
 import io.askimo.desktop.ui.views.chatView
+import io.askimo.desktop.ui.views.providerSelectionDialog
 import io.askimo.desktop.ui.views.sessionsView
 import io.askimo.desktop.ui.views.settingsView
 import io.askimo.desktop.util.Platform
@@ -148,7 +150,6 @@ fun detectMacOSDarkMode(): Boolean {
 }
 
 fun main() {
-    // Initialize Koin for dependency injection
     startKoin {
         modules(allDesktopModules)
     }
@@ -243,8 +244,17 @@ fun app() {
     val sessionsViewModel = remember { koin.get<SessionsViewModel> { parametersOf(scope) } }
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
 
-    // Get ChatService directly from Koin (it's a singleton)
+    // Get ChatService and Session directly from Koin (they're singletons)
     val chatService = remember { koin.get<io.askimo.desktop.service.ChatService>() }
+    val session = remember { koin.get<io.askimo.core.session.Session>() }
+
+    // Check if provider is set up
+    var showProviderSetupDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (session.getActiveProvider() == io.askimo.core.providers.ModelProvider.UNKNOWN) {
+            showProviderSetupDialog = true
+        }
+    }
 
     // Set up callback to refresh sessions list when a message is complete
     chatViewModel.setOnMessageCompleteCallback {
@@ -555,6 +565,52 @@ fun app() {
                             Text(stringResource("action.no"))
                         }
                     },
+                )
+            }
+
+            // Provider setup required dialog
+            if (showProviderSetupDialog) {
+                AlertDialog(
+                    onDismissRequest = { }, // Cannot dismiss - must set up provider
+                    title = {
+                        Text(
+                            text = stringResource("provider.setup.required.title"),
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = stringResource("provider.setup.required.message"),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showProviderSetupDialog = false
+                                settingsViewModel.onChangeProvider(isInitialSetup = true)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Text(stringResource("provider.setup.required.button"))
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Provider selection dialog - available app-wide
+            if (settingsViewModel.showProviderDialog) {
+                providerSelectionDialog(
+                    viewModel = settingsViewModel,
+                    onDismiss = { settingsViewModel.closeProviderDialog() },
+                    onSave = { settingsViewModel.saveProvider() },
                 )
             }
         } // MaterialTheme

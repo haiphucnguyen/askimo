@@ -6,6 +6,11 @@ package io.askimo.core.project
 
 import dev.langchain4j.data.segment.TextSegment
 import io.askimo.core.providers.ModelProvider.OLLAMA
+import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.core.session.SessionFactory
+import io.askimo.core.session.SessionMode
+import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -41,7 +46,19 @@ class EmbeddingModelFactoryOllamaTest {
         System.setProperty("OLLAMA_URL", baseUrl)
         System.setProperty("OLLAMA_EMBED_MODEL", embedModel)
 
-        val model = getEmbeddingModel(OLLAMA)
+        // Create a session with OLLAMA provider configured
+        val ollamaSettings = OllamaSettings(baseUrl = baseUrl)
+        val params = SessionParams(
+            currentProvider = OLLAMA,
+            providerSettings = mutableMapOf(OLLAMA to ollamaSettings as ProviderSettings),
+        )
+        val session = SessionFactory.createSession(
+            params = params,
+            mode = SessionMode.CLI_PROMPT,
+            forceReload = true,
+        )
+
+        val model = getEmbeddingModel(session)
 
         val segment = TextSegment.from("hello world")
         val embedding = model.embed(segment).content().vector()

@@ -100,7 +100,6 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         }
 
         val chatService = builder.build()
-        // Wrap with CleanedLocalAiChatService to remove LocalAI control tokens
         return CleanedLocalAiChatService(chatService)
     }
 }

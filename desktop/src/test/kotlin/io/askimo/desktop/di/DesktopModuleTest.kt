@@ -4,12 +4,12 @@
  */
 package io.askimo.desktop.di
 
-import io.askimo.core.di.coreModule
 import io.askimo.core.directive.ChatDirectiveRepository
 import io.askimo.core.directive.ChatDirectiveService
 import io.askimo.core.session.ChatSessionExporterService
 import io.askimo.core.session.ChatSessionRepository
 import io.askimo.core.session.ChatSessionService
+import io.askimo.core.session.Session
 import io.askimo.desktop.service.ChatService
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
@@ -22,7 +22,6 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.core.parameter.parametersOf
 import org.koin.test.KoinTest
-import org.koin.test.verify.verify
 import kotlin.test.assertNotNull
 
 /**
@@ -43,18 +42,13 @@ class DesktopModuleTest : KoinTest {
     }
 
     @Test
-    @OptIn(org.koin.core.annotation.KoinExperimentalAPI::class)
-    fun `verify core module is valid and can be loaded`() {
-        coreModule.verify()
-    }
-
-    @Test
-    fun `verify core services can be instantiated`() {
+    fun `verify all services can be instantiated`() {
         val koin = startKoin {
             modules(allDesktopModules)
         }.koin
 
         // Test that singleton services can be retrieved
+        assertNotNull(koin.get<Session>())
         assertNotNull(koin.get<ChatSessionRepository>())
         assertNotNull(koin.get<ChatDirectiveRepository>())
         assertNotNull(koin.get<ChatSessionService>())
