@@ -17,8 +17,6 @@ import io.askimo.core.providers.SettingField
 import io.askimo.core.session.MemoryPolicy
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.SessionMode
 import io.askimo.core.session.getConfigInfo
 import io.askimo.core.util.logger
 import io.askimo.desktop.util.ErrorHandler
@@ -36,12 +34,15 @@ import kotlinx.coroutines.withContext
  * - Model information
  * - Settings descriptions
  * - Model selection with validation
+ *
+ * @param scope The coroutine scope for this ViewModel
+ * @param session The singleton Session instance injected by DI
  */
 class SettingsViewModel(
     private val scope: CoroutineScope,
+    private val session: Session,
 ) {
     private val log = logger<SettingsViewModel>()
-    private val session: Session = SessionFactory.createSession(mode = SessionMode.DESKTOP)
 
     var provider by mutableStateOf<ModelProvider?>(null)
         private set
@@ -112,6 +113,9 @@ class SettingsViewModel(
     var pendingModelForNewProvider by mutableStateOf<String?>(null)
         private set
 
+    var isInitialSetup by mutableStateOf(false)
+        private set
+
     init {
         loadConfiguration()
     }
@@ -127,10 +131,12 @@ class SettingsViewModel(
     }
 
     /**
-     * Handle the "Change Provider" action.
+     * Handle the "Change Provider" or "Select Provider" action.
      * Opens the provider selection dialog.
+     * @param isInitialSetup true if this is the initial provider setup (no provider configured yet)
      */
-    fun onChangeProvider() {
+    fun onChangeProvider(isInitialSetup: Boolean = false) {
+        this.isInitialSetup = isInitialSetup
         availableProviders = ProviderRegistry.getSupportedProviders().toList()
         connectionError = null
         connectionErrorHelp = null

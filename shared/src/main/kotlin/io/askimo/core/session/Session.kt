@@ -348,14 +348,13 @@ class Session(
                 // Persist session to database for interactive modes
                 chatSessionRepository.createSession(
                     ChatSession(
-                        id = "", // Will be auto-generated
+                        id = "",
                         title = "New Chat",
                         directiveId = directiveId,
                     ),
                 )
             }
             SessionMode.CLI_PROMPT -> {
-                // Create in-memory only session for non-interactive mode
                 ChatSession(
                     id = "temp-${System.currentTimeMillis()}",
                     title = "Temporary Session",
@@ -398,7 +397,6 @@ class Session(
      * @param content The content of the message
      */
     fun addChatMessage(role: MessageRole, content: String) {
-        // Skip persistence for CLI_PROMPT mode
         if (mode == SessionMode.CLI_PROMPT) {
             return
         }
@@ -413,9 +411,7 @@ class Session(
                 ),
             )
 
-            // Generate title from first user message
             if (role == MessageRole.USER) {
-                // Only count active (non-outdated) user messages
                 val messages = chatSessionRepository.getActiveMessages(session.id)
                 if (messages.count { it.role == MessageRole.USER } == 1) {
                     chatSessionRepository.generateAndUpdateTitle(session.id, content)

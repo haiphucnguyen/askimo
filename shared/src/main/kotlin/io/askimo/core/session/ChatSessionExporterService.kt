@@ -4,6 +4,7 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.util.logger
 import java.io.BufferedWriter
 import java.io.File
 import java.time.LocalDateTime
@@ -18,6 +19,7 @@ import java.time.format.DateTimeFormatter
 class ChatSessionExporterService(
     private val repository: ChatSessionRepository = ChatSessionRepository(),
 ) {
+    private val log = logger<ChatSessionExporterService>()
     private val timestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
     /**
@@ -46,6 +48,7 @@ class ChatSessionExporterService(
 
             Result.success(Unit)
         } catch (e: Exception) {
+            log.error("Failed to export session", e)
             Result.failure(Exception("Failed to export session: ${e.message}", e))
         }
     }
@@ -79,7 +82,7 @@ class ChatSessionExporterService(
      */
     private fun streamMessagesToFile(writer: BufferedWriter, sessionId: String) {
         var cursor: LocalDateTime? = null
-        val pageSize = 100 // Load 100 messages at a time
+        val pageSize = 100
         var messageCounter = 0
 
         do {

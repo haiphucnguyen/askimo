@@ -6,8 +6,10 @@ package io.askimo.core.session
 
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.sqliteDatetime
+import io.askimo.core.util.logger
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
@@ -96,7 +98,7 @@ object ConversationSummariesTable : Table("conversation_summaries") {
  * Extension function to map an Exposed ResultRow to a ChatSession object.
  * Eliminates duplication of mapping logic throughout the repository.
  */
-private fun org.jetbrains.exposed.sql.ResultRow.toChatSession(): ChatSession = ChatSession(
+private fun ResultRow.toChatSession(): ChatSession = ChatSession(
     id = this[ChatSessionsTable.id],
     title = this[ChatSessionsTable.title],
     createdAt = this[ChatSessionsTable.createdAt],
@@ -111,7 +113,7 @@ private fun org.jetbrains.exposed.sql.ResultRow.toChatSession(): ChatSession = C
  * Extension function to map an Exposed ResultRow to a ChatMessage object.
  * Eliminates duplication of mapping logic throughout the repository.
  */
-private fun org.jetbrains.exposed.sql.ResultRow.toChatMessage(): ChatMessage = ChatMessage(
+private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
     id = this[ChatMessagesTable.id],
     sessionId = this[ChatMessagesTable.sessionId],
     role = MessageRole.entries.find { it.value == this[ChatMessagesTable.role] } ?: MessageRole.USER,
@@ -125,7 +127,7 @@ private fun org.jetbrains.exposed.sql.ResultRow.toChatMessage(): ChatMessage = C
  * Extension function to map an Exposed ResultRow to a ChatFolder object.
  * Eliminates duplication of mapping logic throughout the repository.
  */
-private fun org.jetbrains.exposed.sql.ResultRow.toChatFolder(): ChatFolder = ChatFolder(
+private fun ResultRow.toChatFolder(): ChatFolder = ChatFolder(
     id = this[ChatFoldersTable.id],
     name = this[ChatFoldersTable.name],
     parentFolderId = this[ChatFoldersTable.parentFolderId],
@@ -137,6 +139,7 @@ private fun org.jetbrains.exposed.sql.ResultRow.toChatFolder(): ChatFolder = Cha
 )
 
 class ChatSessionRepository : AbstractSQLiteRepository() {
+    private val log = logger<ChatSessionRepository>()
     override val databaseFileName: String = "chat_sessions.db"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -265,14 +268,11 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
             ?.toChatSession()
     }
     fun addMessage(message: ChatMessage): ChatMessage {
-        // Inject server-controlled field: UUID
-        // createdAt will use the value from message (which defaults to LocalDateTime.now())
         val messageWithInjectedFields = message.copy(
             id = UUID.randomUUID().toString(),
         )
 
         transaction(database) {
-            // Insert message
             ChatMessagesTable.insert {
                 it[id] = messageWithInjectedFields.id
                 it[ChatMessagesTable.sessionId] = messageWithInjectedFields.sessionId
@@ -283,7 +283,6 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
                 it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
             }
 
-            // Update session's updated_at
             ChatSessionsTable.update({ ChatSessionsTable.id eq messageWithInjectedFields.sessionId }) {
                 it[updatedAt] = LocalDateTime.now()
             }
@@ -369,9 +368,8 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
             }
         }
 
-        // Fetch one extra to determine if there are more
-        val messages = query
-            .limit(limit + 1) // Fetch one extra to check for more
+        val messages = orderedQuery
+            .limit(limit + 1)
             .map { it.toChatMessage() }
 
         // Check if there are more messages
@@ -462,7 +460,6 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
      * @return List of active messages after the specified message
      */
     fun getActiveMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> = transaction(database) {
-        // First get the timestamp of the after message
         val afterTimestamp = ChatMessagesTable
             .select(ChatMessagesTable.createdAt)
             .where { ChatMessagesTable.id eq afterMessageId }
@@ -470,7 +467,6 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
             ?.get(ChatMessagesTable.createdAt)
             ?: return@transaction emptyList()
 
-        // Then get active messages after that timestamp
         ChatMessagesTable
             .selectAll()
             .where {
@@ -523,23 +519,6 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
     }
 
     /**
-     * Update a message's content and set its edit parent.
-     * Used when editing a message.
-     *
-     * @param messageId The ID of the message to update
-     * @param newContent The new content
-     * @param editParentId The ID of the original message that was edited
-     */
-    fun updateMessageContent(messageId: String, newContent: String, editParentId: String?) {
-        transaction(database) {
-            ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
-                it[content] = newContent
-                it[ChatMessagesTable.editParentId] = editParentId
-            }
-        }
-    }
-
-    /**
      * Get only active (non-outdated) messages for a session.
      * This is used when building context for AI responses.
      *
@@ -552,24 +531,6 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
             .where {
                 (ChatMessagesTable.sessionId eq sessionId) and
                     (ChatMessagesTable.isOutdated eq 0)
-            }
-            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .map { it.toChatMessage() }
-    }
-
-    /**
-     * Get outdated messages for a session.
-     * Used to show collapsed outdated branches in the UI.
-     *
-     * @param sessionId The session ID
-     * @return List of outdated messages, ordered by creation time
-     */
-    fun getOutdatedMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isOutdated eq 1)
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .map { it.toChatMessage() }
@@ -604,13 +565,13 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
                         createdAt = row[ConversationSummariesTable.createdAt],
                     )
                 } catch (e: Exception) {
-                    null // Return null if JSON parsing fails
+                    log.error("Failed to parse conversation summary JSON for session $sessionId", e)
+                    null
                 }
             }
     }
 
     private fun generateTitle(firstMessage: String): String {
-        // Simple title generation - take first SESSION_TITLE_MAX_LENGTH chars or first sentence
         val cleaned = firstMessage.trim().replace("\n", " ")
         return when {
             cleaned.length <= SESSION_TITLE_MAX_LENGTH -> cleaned
@@ -647,14 +608,14 @@ class ChatSessionRepository : AbstractSQLiteRepository() {
      * Delete a chat session and all its related data (messages and summaries)
      */
     fun deleteSession(sessionId: String): Boolean = transaction(database) {
-        // Delete conversation summaries
+        log.debug("Deleting session $sessionId")
         ConversationSummariesTable.deleteWhere { ConversationSummariesTable.sessionId eq sessionId }
 
-        // Delete chat messages
         ChatMessagesTable.deleteWhere { ChatMessagesTable.sessionId eq sessionId }
 
-        // Delete the session itself
-        ChatSessionsTable.deleteWhere { ChatSessionsTable.id eq sessionId } > 0
+        val deleted = ChatSessionsTable.deleteWhere { ChatSessionsTable.id eq sessionId } > 0
+        log.debug("Deleted session $sessionId and all related data")
+        deleted
     }
 
     /**

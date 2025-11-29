@@ -18,7 +18,7 @@ import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.UNKNOWN
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.openai.OpenAiSettings
-import io.askimo.core.session.SessionFactory
+import io.askimo.core.session.Session
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.logger
 import java.net.HttpURLConnection
@@ -33,9 +33,9 @@ private val warnedOllamaOnce = AtomicBoolean(false)
 
 private val log = logger("EmbeddingModelFactory")
 
-fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider) {
+fun getEmbeddingModel(session: Session): EmbeddingModel = when (session.getActiveProvider()) {
     OPENAI -> {
-        val openAiKey = (SessionFactory.createSession().getCurrentProviderSettings() as OpenAiSettings).apiKey
+        val openAiKey = (session.getCurrentProviderSettings() as OpenAiSettings).apiKey
         val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
 
         val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
@@ -51,13 +51,13 @@ fun getEmbeddingModel(provider: ModelProvider): EmbeddingModel = when (provider)
     }
 
     ANTHROPIC, GEMINI, XAI, LOCALAI, LMSTUDIO -> {
-        noteOllamaRequired(provider)
+        noteOllamaRequired(session.getActiveProvider())
         buildOllamaEmbeddingModel()
     }
 
     OLLAMA -> buildOllamaEmbeddingModel()
 
-    UNKNOWN -> error("Unsupported embedding provider: $provider")
+    UNKNOWN -> error("Unsupported embedding provider: ${session.getActiveProvider()}")
 }
 
 private fun buildOllamaEmbeddingModel(): EmbeddingModel {

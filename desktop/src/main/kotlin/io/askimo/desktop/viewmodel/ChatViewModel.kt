@@ -801,13 +801,6 @@ class ChatViewModel(
     fun getCurrentSessionId(): String? = _currentSessionId.value
 
     /**
-     * Clear the error message.
-     */
-    fun clearError() {
-        errorMessage = null
-    }
-
-    /**
      * Get the current session configuration info (provider and model).
      *
      * @return SessionConfigInfo containing provider, model, and settings description

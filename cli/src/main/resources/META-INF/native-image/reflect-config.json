@@ -91,34 +91,13 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "ch.qos.logback.classic.AsyncAppender",
-    "queryAllPublicMethods": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "ch.qos.logback.classic.Level",
-    "methods": [{ "name": "valueOf", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
     "name": "ch.qos.logback.classic.encoder.PatternLayoutEncoder",
     "queryAllPublicMethods": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "ch.qos.logback.classic.filter.LevelFilter",
-    "queryAllPublicMethods": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setLevel", "parameterTypes": ["ch.qos.logback.classic.Level"] }
-    ]
-  },
-  {
     "name": "ch.qos.logback.classic.util.DefaultJoranConfigurator",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "ch.qos.logback.core.AsyncAppenderBase",
-    "methods": [{ "name": "setQueueSize", "parameterTypes": ["int"] }]
   },
   {
     "name": "ch.qos.logback.core.ConsoleAppender",
@@ -139,15 +118,6 @@
     ]
   },
   {
-    "name": "ch.qos.logback.core.UnsynchronizedAppenderBase",
-    "methods": [
-      {
-        "name": "addFilter",
-        "parameterTypes": ["ch.qos.logback.core.filter.Filter"]
-      }
-    ]
-  },
-  {
     "name": "ch.qos.logback.core.encoder.Encoder",
     "methods": [{ "name": "valueOf", "parameterTypes": ["java.lang.String"] }]
   },
@@ -159,23 +129,6 @@
         "parameterTypes": ["ch.qos.logback.core.spi.ContextAware"]
       }
     ]
-  },
-  {
-    "name": "ch.qos.logback.core.filter.AbstractMatcherFilter",
-    "methods": [
-      {
-        "name": "setOnMatch",
-        "parameterTypes": ["ch.qos.logback.core.spi.FilterReply"]
-      },
-      {
-        "name": "setOnMismatch",
-        "parameterTypes": ["ch.qos.logback.core.spi.FilterReply"]
-      }
-    ]
-  },
-  {
-    "name": "ch.qos.logback.core.filter.Filter",
-    "methods": [{ "name": "valueOf", "parameterTypes": ["java.lang.String"] }]
   },
   {
     "name": "ch.qos.logback.core.pattern.PatternLayoutEncoderBase",
@@ -223,10 +176,6 @@
   },
   {
     "name": "ch.qos.logback.core.spi.ContextAware",
-    "methods": [{ "name": "valueOf", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "ch.qos.logback.core.spi.FilterReply",
     "methods": [{ "name": "valueOf", "parameterTypes": ["java.lang.String"] }]
   },
   {
@@ -725,8 +674,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4585,7 +4533,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$lblJ7Igm",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$rzDIyzqB",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

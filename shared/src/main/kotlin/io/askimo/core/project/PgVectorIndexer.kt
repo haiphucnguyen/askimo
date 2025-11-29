@@ -55,7 +55,7 @@ class PgVectorIndexer(
 
     private val commonExcludes = AppConfig.indexing.commonExcludes
 
-    private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session.getActiveProvider())
+    private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session)
 
     private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
 

@@ -17,13 +17,11 @@ import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.session.SessionMode
 import io.askimo.core.util.SystemPrompts.systemMessage
-import io.askimo.core.util.logger
 import io.askimo.tools.fs.LocalFsTools
 import java.net.http.HttpClient
 import java.time.Duration
 
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
-    private val log = logger<LmStudioModelFactory>()
 
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
@@ -50,7 +48,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             OpenAiStreamingChatModel
                 .builder()
                 .baseUrl(settings.baseUrl)
-                .apiKey("lm-studio") // LMStudio doesn't require a real API key but OpenAI client expects one
+                .apiKey("lm-studio")
                 .modelName(model)
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
