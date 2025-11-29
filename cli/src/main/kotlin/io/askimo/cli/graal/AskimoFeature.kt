@@ -4,6 +4,8 @@
  */
 package io.askimo.cli.graal
 
+import ch.qos.logback.classic.AsyncAppender
+import ch.qos.logback.classic.filter.LevelFilter
 import io.askimo.core.config.AppConfigData
 import io.askimo.core.config.ChatConfig
 import io.askimo.core.config.EmbeddingConfig
@@ -63,6 +65,8 @@ class AskimoFeature : Feature {
         }
 
         RuntimeClassInitialization.initializeAtRunTime("ch.qos.logback")
+        registerHierarchy(AsyncAppender::class.java)
+        registerAllDeclared(LevelFilter::class.java)
     }
 
     /** Register class + all declared constructors & methods for reflection. */
@@ -71,6 +75,25 @@ class AskimoFeature : Feature {
             RuntimeReflection.register(clazz)
             clazz.declaredConstructors.forEach { RuntimeReflection.register(it) }
             clazz.declaredMethods.forEach { RuntimeReflection.register(it) }
+        }
+    }
+
+    private fun registerHierarchy(vararg roots: Class<*>) {
+        roots.forEach { root ->
+            var current: Class<*>? = root
+            while (current != null && current != Any::class.java) {
+                RuntimeReflection.register(current)
+
+                current.declaredConstructors.forEach { ctor ->
+                    RuntimeReflection.register(ctor)
+                }
+
+                current.declaredMethods.forEach { method ->
+                    RuntimeReflection.register(method)
+                }
+
+                current = current.superclass
+            }
         }
     }
 }
