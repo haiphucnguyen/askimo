@@ -4,6 +4,8 @@
  */
 package io.askimo.desktop
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -23,14 +25,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowLeft
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -72,8 +74,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.VersionInfo
 import io.askimo.core.session.ChatSessionExporterService
 import io.askimo.core.session.SESSION_TITLE_MAX_LENGTH
 import io.askimo.desktop.di.allDesktopModules
@@ -96,6 +101,7 @@ import io.askimo.desktop.ui.views.aboutDialog
 import io.askimo.desktop.ui.views.chatView
 import io.askimo.desktop.ui.views.sessionsView
 import io.askimo.desktop.ui.views.settingsView
+import io.askimo.desktop.util.Platform
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
@@ -160,11 +166,44 @@ fun main() {
 
         var showAboutDialog by remember { mutableStateOf(false) }
 
+        // Load saved window state or use defaults
+        val savedWidth = ThemePreferences.getWindowWidth()
+        val savedHeight = ThemePreferences.getWindowHeight()
+        val savedX = ThemePreferences.getWindowX()
+        val savedY = ThemePreferences.getWindowY()
+        val isMaximized = ThemePreferences.isWindowMaximized()
+
+        val windowState = rememberWindowState(
+            width = if (savedWidth > 0) savedWidth.dp else 800.dp,
+            height = if (savedHeight > 0) savedHeight.dp else 600.dp,
+            position = if (savedX >= 0 && savedY >= 0) {
+                WindowPosition(savedX.dp, savedY.dp)
+            } else {
+                WindowPosition.Aligned(Alignment.Center)
+            },
+            placement = if (isMaximized) {
+                WindowPlacement.Maximized
+            } else {
+                WindowPlacement.Floating
+            },
+        )
+
+        // Save window state when it changes
+        LaunchedEffect(windowState.size, windowState.position, windowState.placement) {
+            ThemePreferences.saveWindowState(
+                width = windowState.size.width.value.toInt(),
+                height = windowState.size.height.value.toInt(),
+                x = windowState.position.x.value.toInt(),
+                y = windowState.position.y.value.toInt(),
+                isMaximized = windowState.placement == WindowPlacement.Maximized,
+            )
+        }
+
         Window(
             icon = icon,
             onCloseRequest = ::exitApplication,
             title = "Askimo",
-            state = rememberWindowState(width = 800.dp, height = 600.dp),
+            state = windowState,
         ) {
             LaunchedEffect(Unit) {
                 NativeMenuBar.setup(
@@ -258,230 +297,238 @@ fun app() {
             colorScheme = colorScheme,
             typography = customTypography,
         ) {
-            // Always show sidebar in expanded or collapsed mode
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onPreviewKeyEvent { keyEvent ->
-                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-
-                        when (shortcut) {
-                            AppShortcut.NEW_CHAT -> {
-                                chatViewModel.clearChat()
-                                inputText = TextFieldValue("")
-                                attachments = emptyList()
-                                currentView = View.CHAT
-                                true
-                            }
-                            AppShortcut.SEARCH_IN_CHAT -> {
-                                if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
-                                    chatViewModel.enableSearchMode()
-                                }
-                                true
-                            }
-                            AppShortcut.TOGGLE_CHAT_HISTORY -> {
-                                isSessionsExpanded = !isSessionsExpanded
-                                true
-                            }
-                            AppShortcut.OPEN_SETTINGS -> {
-                                currentView = View.SETTINGS
-                                true
-                            }
-                            AppShortcut.STOP_AI_RESPONSE -> {
-                                if (chatViewModel.isLoading) {
-                                    chatViewModel.cancelResponse()
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                            AppShortcut.QUIT_APPLICATION -> {
-                                showQuitDialog = true
-                                true
-                            }
-                            else -> false
-                        }
-                    },
+            Column(
+                modifier = Modifier.fillMaxSize(),
             ) {
-                // Observe current session ID
-                val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+                // Main content area with sidebar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .onPreviewKeyEvent { keyEvent ->
+                            val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                // Sidebar (expanded or collapsed)
-                sidebar(
-                    isExpanded = isSidebarExpanded,
-                    width = sidebarWidth,
-                    currentView = currentView,
-                    isSessionsExpanded = isSessionsExpanded,
-                    sessionsViewModel = sessionsViewModel,
-                    currentSessionId = currentSessionId,
-                    fontScale = fontSettings.fontSize.scale,
-                    onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
-                    onNewChat = {
-                        // Save current input text before clearing
-                        val currentSessionId = chatViewModel.currentSessionId.value
-                        if (currentSessionId != null && inputText.text.isNotBlank()) {
-                            sessionInputTexts[currentSessionId] = inputText
-                        }
-
-                        chatViewModel.clearChat()
-                        inputText = TextFieldValue("")
-                        currentView = View.CHAT
-                    },
-                    onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                    onNavigateToSessions = { currentView = View.SESSIONS },
-                    onResumeSession = { sessionId ->
-                        // Save current input text before switching
-                        val currentSessionId = chatViewModel.currentSessionId.value
-                        if (currentSessionId != null && inputText.text.isNotBlank()) {
-                            sessionInputTexts[currentSessionId] = inputText
-                        }
-
-                        chatViewModel.resumeSession(sessionId)
-
-                        // Restore input text for the new session
-                        inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
-
-                        currentView = View.CHAT
-                    },
-                    onDeleteSession = { sessionId ->
-                        sessionsViewModel.deleteSession(sessionId)
-                    },
-                    onStarSession = { sessionId, isStarred ->
-                        sessionsViewModel.updateSessionStarred(sessionId, isStarred)
-                    },
-                    onRenameSession = { sessionId, newTitle ->
-                        sessionsViewModel.renameSession(sessionId, newTitle)
-                    },
-                    onNavigateToSettings = { currentView = View.SETTINGS },
-                )
-
-                // Draggable divider
-                if (isSidebarExpanded) {
-                    Box(
-                        modifier = Modifier
-                            .width(8.dp)
-                            .fillMaxHeight()
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                            .pointerInput(Unit) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
-                                    // Constrain width between 200dp and 500dp
-                                    sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+                            when (shortcut) {
+                                AppShortcut.NEW_CHAT -> {
+                                    chatViewModel.clearChat()
+                                    inputText = TextFieldValue("")
+                                    attachments = emptyList()
+                                    currentView = View.CHAT
+                                    true
                                 }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        // Visual grip indicator
-                        Column(
+                                AppShortcut.SEARCH_IN_CHAT -> {
+                                    if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
+                                        chatViewModel.enableSearchMode()
+                                    }
+                                    true
+                                }
+                                AppShortcut.TOGGLE_CHAT_HISTORY -> {
+                                    isSessionsExpanded = !isSessionsExpanded
+                                    true
+                                }
+                                AppShortcut.OPEN_SETTINGS -> {
+                                    currentView = View.SETTINGS
+                                    true
+                                }
+                                AppShortcut.STOP_AI_RESPONSE -> {
+                                    if (chatViewModel.isLoading) {
+                                        chatViewModel.cancelResponse()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                AppShortcut.QUIT_APPLICATION -> {
+                                    showQuitDialog = true
+                                    true
+                                }
+                                else -> false
+                            }
+                        },
+                ) {
+                    // Observe current session ID
+                    val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+
+                    // Sidebar (expanded or collapsed)
+                    sidebar(
+                        isExpanded = isSidebarExpanded,
+                        width = sidebarWidth,
+                        currentView = currentView,
+                        isSessionsExpanded = isSessionsExpanded,
+                        sessionsViewModel = sessionsViewModel,
+                        currentSessionId = currentSessionId,
+                        fontScale = fontSettings.fontSize.scale,
+                        onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
+                        onNewChat = {
+                            // Save current input text before clearing
+                            val currentSessionId = chatViewModel.currentSessionId.value
+                            if (currentSessionId != null && inputText.text.isNotBlank()) {
+                                sessionInputTexts[currentSessionId] = inputText
+                            }
+
+                            chatViewModel.clearChat()
+                            inputText = TextFieldValue("")
+                            currentView = View.CHAT
+                        },
+                        onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
+                        onNavigateToSessions = { currentView = View.SESSIONS },
+                        onResumeSession = { sessionId ->
+                            // Save current input text before switching
+                            val currentSessionId = chatViewModel.currentSessionId.value
+                            if (currentSessionId != null && inputText.text.isNotBlank()) {
+                                sessionInputTexts[currentSessionId] = inputText
+                            }
+
+                            chatViewModel.resumeSession(sessionId)
+
+                            // Restore input text for the new session
+                            inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
+
+                            currentView = View.CHAT
+                        },
+                        onDeleteSession = { sessionId ->
+                            sessionsViewModel.deleteSession(sessionId)
+                        },
+                        onStarSession = { sessionId, isStarred ->
+                            sessionsViewModel.updateSessionStarred(sessionId, isStarred)
+                        },
+                        onRenameSession = { sessionId, newTitle ->
+                            sessionsViewModel.renameSession(sessionId, newTitle)
+                        },
+                        onNavigateToSettings = { currentView = View.SETTINGS },
+                    )
+
+                    // Draggable divider
+                    if (isSidebarExpanded) {
+                        Box(
                             modifier = Modifier
-                                .width(2.dp)
-                                .fillMaxHeight(0.1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                                .width(8.dp)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
+                                        // Constrain width between 200dp and 500dp
+                                        sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            repeat(3) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(2.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            shape = CircleShape,
-                                        ),
-                                )
+                            // Visual grip indicator
+                            Column(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .fillMaxHeight(0.1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                            ) {
+                                repeat(3) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(2.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                shape = CircleShape,
+                                            ),
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                // Main content
-                mainContent(
-                    currentView = currentView,
-                    chatViewModel = chatViewModel,
-                    sessionsViewModel = sessionsViewModel,
-                    settingsViewModel = settingsViewModel,
-                    inputText = inputText,
-                    onInputTextChange = { newText ->
-                        inputText = newText
-                        // Save to session storage as user types
-                        val currentSessionId = chatViewModel.currentSessionId.value
-                        if (currentSessionId != null) {
-                            if (newText.text.isNotBlank()) {
-                                sessionInputTexts[currentSessionId] = newText
+                    // Main content
+                    mainContent(
+                        currentView = currentView,
+                        chatViewModel = chatViewModel,
+                        sessionsViewModel = sessionsViewModel,
+                        settingsViewModel = settingsViewModel,
+                        inputText = inputText,
+                        onInputTextChange = { newText ->
+                            inputText = newText
+                            // Save to session storage as user types
+                            val currentSessionId = chatViewModel.currentSessionId.value
+                            if (currentSessionId != null) {
+                                if (newText.text.isNotBlank()) {
+                                    sessionInputTexts[currentSessionId] = newText
+                                } else {
+                                    sessionInputTexts.remove(currentSessionId)
+                                }
+                            }
+                        },
+                        onSendMessage = { message, fileAttachments ->
+                            // Get current session ID before sending
+                            val currentSessionId = chatViewModel.currentSessionId.value
+
+                            // Store editingMessage in local variable to avoid smart cast issues
+                            val messageBeingEdited = editingMessage
+
+                            if (messageBeingEdited != null && messageBeingEdited.id != null) {
+                                // Edit mode:
+                                // Store the original message ID BEFORE any operations
+                                val originalMessageId = messageBeingEdited.id
+
+                                // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
+                                //    This must happen BEFORE creating the new message
+                                chatViewModel.editMessage(originalMessageId, message, fileAttachments)
+
+                                // 2. Send the NEW message with updated content
+                                //    This creates a NEW active message (not marked as outdated)
+                                //    The new message will have editParentId linking to originalMessageId
+                                chatViewModel.sendMessage(message, fileAttachments)
                             } else {
+                                // Normal mode: just send the message
+                                chatViewModel.sendMessage(message, fileAttachments)
+                            }
+
+                            // Clear input and edit state
+                            inputText = TextFieldValue("")
+                            attachments = emptyList()
+                            editingMessage = null // Clear edit mode
+
+                            // Clear input text from session storage after sending
+                            if (currentSessionId != null) {
                                 sessionInputTexts.remove(currentSessionId)
                             }
-                        }
-                    },
-                    onSendMessage = { message, fileAttachments ->
-                        // Get current session ID before sending
-                        val currentSessionId = chatViewModel.currentSessionId.value
+                        },
+                        onResumeSession = { sessionId ->
+                            // Save current input text before switching
+                            val currentSessionId = chatViewModel.currentSessionId.value
+                            if (currentSessionId != null && inputText.text.isNotBlank()) {
+                                sessionInputTexts[currentSessionId] = inputText
+                            }
 
-                        // Store editingMessage in local variable to avoid smart cast issues
-                        val messageBeingEdited = editingMessage
+                            chatViewModel.resumeSession(sessionId)
 
-                        if (messageBeingEdited != null && messageBeingEdited.id != null) {
-                            // Edit mode:
-                            // Store the original message ID BEFORE any operations
-                            val originalMessageId = messageBeingEdited.id
+                            // Restore input text for the new session
+                            inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
 
-                            // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
-                            //    This must happen BEFORE creating the new message
-                            chatViewModel.editMessage(originalMessageId, message, fileAttachments)
+                            currentView = View.CHAT
+                        },
+                        attachments = attachments,
+                        onAttachmentsChange = { attachments = it },
+                        onNavigateToSettings = { currentView = View.SETTINGS },
+                        editingMessage = editingMessage,
+                        onEditMessage = { message ->
+                            editingMessage = message
+                            // Set text with cursor at the beginning (position 0)
+                            inputText = TextFieldValue(
+                                text = message.content,
+                                selection = TextRange(0),
+                            )
+                            attachments = message.attachments
+                        },
+                        onCancelEdit = {
+                            editingMessage = null
+                            inputText = TextFieldValue("")
+                            attachments = emptyList()
+                        },
+                    )
+                } // End of Row
 
-                            // 2. Send the NEW message with updated content
-                            //    This creates a NEW active message (not marked as outdated)
-                            //    The new message will have editParentId linking to originalMessageId
-                            chatViewModel.sendMessage(message, fileAttachments)
-                        } else {
-                            // Normal mode: just send the message
-                            chatViewModel.sendMessage(message, fileAttachments)
-                        }
-
-                        // Clear input and edit state
-                        inputText = TextFieldValue("")
-                        attachments = emptyList()
-                        editingMessage = null // Clear edit mode
-
-                        // Clear input text from session storage after sending
-                        if (currentSessionId != null) {
-                            sessionInputTexts.remove(currentSessionId)
-                        }
-                    },
-                    onResumeSession = { sessionId ->
-                        // Save current input text before switching
-                        val currentSessionId = chatViewModel.currentSessionId.value
-                        if (currentSessionId != null && inputText.text.isNotBlank()) {
-                            sessionInputTexts[currentSessionId] = inputText
-                        }
-
-                        chatViewModel.resumeSession(sessionId)
-
-                        // Restore input text for the new session
-                        inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
-
-                        currentView = View.CHAT
-                    },
-                    attachments = attachments,
-                    onAttachmentsChange = { attachments = it },
-                    onNavigateToSettings = { currentView = View.SETTINGS },
-                    editingMessage = editingMessage,
-                    onEditMessage = { message ->
-                        editingMessage = message
-                        // Set text with cursor at the beginning (position 0)
-                        inputText = TextFieldValue(
-                            text = message.content,
-                            selection = TextRange(0),
-                        )
-                        attachments = message.attachments
-                    },
-                    onCancelEdit = {
-                        editingMessage = null
-                        inputText = TextFieldValue("")
-                        attachments = emptyList()
-                    },
-                )
-            }
+                // Bottom bar
+                bottomBar()
+            } // End of Column
 
             // Quit confirmation dialog
             if (showQuitDialog) {
@@ -514,6 +561,93 @@ fun app() {
     } // ProvideLocalization
 }
 
+@Composable
+fun bottomBar() {
+    val koin = get()
+    val resourceMonitor = remember { koin.get<io.askimo.desktop.service.SystemResourceMonitor>() }
+    val scope = rememberCoroutineScope()
+
+    // Collect resource states
+    val memoryUsage by resourceMonitor.memoryUsageMB.collectAsState()
+    val cpuUsage by resourceMonitor.cpuUsagePercent.collectAsState()
+
+    // Start monitoring when the composable is first launched
+    LaunchedEffect(Unit) {
+        scope.launch {
+            resourceMonitor.startMonitoring(intervalMillis = 2000)
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        // Top border
+        HorizontalDivider()
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(ComponentColors.sidebarSurfaceColor())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Left side - system resources
+            themedTooltip(
+                text = stringResource("system.resources.tooltip", memoryUsage.toString(), "%.1f".format(cpuUsage)),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Memory usage
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource("system.memory") + ":",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "$memoryUsage MB",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+
+                    // CPU usage
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource("system.cpu") + ":",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "%.1f%%".format(cpuUsage),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+
+            // Right side - version info
+            Text(
+                text = "v${VersionInfo.version}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun sidebar(
@@ -534,11 +668,18 @@ fun sidebar(
     onRenameSession: (String, String) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
+    // Animated width for smooth transition
+    val targetWidth = if (isExpanded) width else 72.dp
+    val animatedWidth by animateDpAsState(
+        targetValue = targetWidth,
+        animationSpec = tween(durationMillis = 300),
+    )
+
     if (isExpanded) {
         // Expanded sidebar with full text
         Column(
             modifier = Modifier
-                .width(width)
+                .width(animatedWidth)
                 .fillMaxHeight()
                 .background(ComponentColors.sidebarSurfaceColor()),
         ) {
@@ -575,15 +716,19 @@ fun sidebar(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                IconButton(
-                    onClick = onToggleExpand,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                themedTooltip(
+                    text = stringResource("sidebar.collapse"),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardDoubleArrowLeft,
-                        contentDescription = "Collapse sidebar",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                    IconButton(
+                        onClick = onToggleExpand,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuOpen,
+                            contentDescription = stringResource("sidebar.collapse"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
             HorizontalDivider()
@@ -596,11 +741,8 @@ fun sidebar(
                     .padding(vertical = (8 * fontScale).dp),
             ) {
                 // New Chat
-                val isMac = remember { System.getProperty("os.name").contains("Mac", ignoreCase = true) }
-                val modKey = if (isMac) "⌘" else "Ctrl"
-
                 themedTooltip(
-                    text = "New Chat ($modKey+N)",
+                    text = stringResource("chat.new.tooltip", Platform.modifierKey),
                 ) {
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -789,7 +931,7 @@ fun sidebar(
         // Collapsed sidebar with icons only
         Column(
             modifier = Modifier
-                .width((72 * fontScale).dp)
+                .width(animatedWidth)
                 .fillMaxHeight()
                 .background(ComponentColors.sidebarSurfaceColor())
                 .border(
@@ -806,15 +948,19 @@ fun sidebar(
                     .padding(vertical = (16 * fontScale).dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                IconButton(
-                    onClick = onToggleExpand,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                themedTooltip(
+                    text = stringResource("sidebar.expand"),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardDoubleArrowRight,
-                        contentDescription = "Expand sidebar",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                    IconButton(
+                        onClick = onToggleExpand,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = stringResource("sidebar.expand"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
             HorizontalDivider()
@@ -827,38 +973,50 @@ fun sidebar(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // New Chat
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Add, contentDescription = "New Chat") },
-                    label = null,
-                    selected = false,
-                    onClick = onNewChat,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
-                )
+                themedTooltip(
+                    text = stringResource("chat.new.tooltip", Platform.modifierKey),
+                ) {
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Add, contentDescription = stringResource("chat.new")) },
+                        label = null,
+                        selected = false,
+                        onClick = onNewChat,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = ComponentColors.navigationRailItemColors(),
+                    )
+                }
 
                 // Sessions
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.History, contentDescription = "Sessions") },
-                    label = null,
-                    selected = currentView == View.SESSIONS,
-                    onClick = onNavigateToSessions,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
-                )
+                themedTooltip(
+                    text = stringResource("chat.sessions.tooltip"),
+                ) {
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.History, contentDescription = stringResource("chat.sessions")) },
+                        label = null,
+                        selected = currentView == View.SESSIONS,
+                        onClick = onNavigateToSessions,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = ComponentColors.navigationRailItemColors(),
+                    )
+                }
             }
 
             // Settings at bottom
             HorizontalDivider()
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                label = null,
-                selected = currentView == View.SETTINGS,
-                onClick = onNavigateToSettings,
-                modifier = Modifier
-                    .padding(vertical = (8 * fontScale).dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationRailItemColors(),
-            )
+            themedTooltip(
+                text = stringResource("settings.title"),
+            ) {
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource("settings.title")) },
+                    label = null,
+                    selected = currentView == View.SETTINGS,
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier
+                        .padding(vertical = (8 * fontScale).dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
+                )
+            }
         }
     }
 }

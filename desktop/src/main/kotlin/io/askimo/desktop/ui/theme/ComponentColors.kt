@@ -4,7 +4,9 @@
  */
 package io.askimo.desktop.ui.theme
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
 
 /**
  * Centralized component colors that use theme colors consistently.
@@ -260,7 +263,12 @@ object ComponentColors {
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
-                modifier = modifier,
+                modifier = modifier
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(4.dp),
+                    ),
                 content = content,
             )
         }

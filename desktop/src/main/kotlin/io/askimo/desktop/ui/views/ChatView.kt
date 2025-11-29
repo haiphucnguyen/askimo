@@ -70,6 +70,7 @@ import io.askimo.desktop.ui.components.messageList
 import io.askimo.desktop.ui.components.newDirectiveDialog
 import io.askimo.desktop.ui.components.themedTooltip
 import io.askimo.desktop.ui.theme.ComponentColors
+import io.askimo.desktop.util.Platform
 import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
 import java.awt.Frame
@@ -720,8 +721,6 @@ fun chatView(
             }
         }
 
-        HorizontalDivider()
-
         // File attachment handler
         val selectFileTitle = stringResource("chat.select.file")
         val openFileDialog = {
@@ -840,11 +839,8 @@ fun chatView(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Attach file button
-                val isMac = remember { System.getProperty("os.name").contains("Mac", ignoreCase = true) }
-                val modKey = if (isMac) "⌘" else "Ctrl"
-
                 themedTooltip(
-                    text = stringResource("chat.attach.file", modKey),
+                    text = stringResource("chat.attach.file", Platform.modifierKey),
                 ) {
                     IconButton(
                         onClick = openFileDialog,

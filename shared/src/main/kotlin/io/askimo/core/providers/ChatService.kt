@@ -14,6 +14,7 @@ import dev.langchain4j.service.UserMessage
  * providers, allowing the application to interact with various chat models through a unified API.
  */
 interface ChatService {
+
     /**
      * Streams the response from a language model for the given prompt.
      *

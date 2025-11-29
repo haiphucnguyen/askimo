@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
@@ -65,6 +68,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import io.askimo.core.logging.LogLevel
+import io.askimo.core.logging.LoggingService
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.SettingField
 import io.askimo.desktop.i18n.LocalizationManager
@@ -75,8 +80,14 @@ import io.askimo.desktop.model.FontSettings
 import io.askimo.desktop.model.FontSize
 import io.askimo.desktop.model.ThemeMode
 import io.askimo.desktop.service.ThemePreferences
+import io.askimo.desktop.ui.dialogs.logViewerDialog
 import io.askimo.desktop.ui.theme.ComponentColors
+import io.askimo.desktop.util.Platform
 import io.askimo.desktop.viewmodel.SettingsViewModel
+import org.slf4j.LoggerFactory
+import java.awt.Desktop
+import java.io.File
+import java.net.URI
 
 @Composable
 private fun Modifier.clickableCard(
@@ -84,7 +95,7 @@ private fun Modifier.clickableCard(
 ): Modifier {
     val shape = MaterialTheme.shapes.medium
     return this
-        .clip(shape) // Clip to rounded shape first
+        .clip(shape)
         .clickable(onClick = onClick)
         .pointerHoverIcon(PointerIcon.Hand)
 }
@@ -97,6 +108,7 @@ fun settingsView(
     val currentThemeMode by ThemePreferences.themeMode.collectAsState()
     val currentAccentColor by ThemePreferences.accentColor.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showLogViewerDialog by remember { mutableStateOf(false) }
 
     // Show success message
     LaunchedEffect(viewModel.showSuccessMessage) {
@@ -321,6 +333,21 @@ fun settingsView(
 
             fontSettingsCard()
 
+            // Log Level Section
+            Text(
+                text = stringResource("settings.log.level"),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+
+            logLevelCard()
+
+            // Log Viewer Section
+            logViewerCard(
+                onViewLogs = { showLogViewerDialog = true },
+            )
+
             // Keyboard Shortcuts Section
             Text(
                 text = stringResource("settings.shortcuts"),
@@ -377,6 +404,13 @@ fun settingsView(
             viewModel = viewModel,
             onDismiss = { viewModel.closeProviderDialog() },
             onSave = { viewModel.saveProvider() },
+        )
+    }
+
+    // Log viewer dialog
+    if (showLogViewerDialog) {
+        logViewerDialog(
+            onDismiss = { showLogViewerDialog = false },
         )
     }
 }
@@ -866,13 +900,24 @@ private fun modelSelectionDialog(
     onDismiss: () -> Unit,
     onSelectModel: (String) -> Unit,
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter models based on search query
+    val filteredModels = remember(viewModel.availableModels, searchQuery) {
+        if (searchQuery.isBlank()) {
+            viewModel.availableModels
+        } else {
+            viewModel.availableModels.filter { it.contains(searchQuery, ignoreCase = true) }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource("settings.model.select.title")) },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 when {
                     viewModel.isLoadingModels -> {
@@ -896,9 +941,7 @@ private fun modelSelectionDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             viewModel.modelErrorHelp?.let { helpText ->
-                                Card(
-                                    colors = ComponentColors.surfaceVariantCardColors(),
-                                ) {
+                                Card(colors = ComponentColors.surfaceVariantCardColors()) {
                                     Text(
                                         text = helpText,
                                         style = MaterialTheme.typography.bodySmall,
@@ -918,40 +961,98 @@ private fun modelSelectionDialog(
                         Text(
                             text = stringResource("settings.model.select", viewModel.provider?.name ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = 8.dp),
                         )
-                        viewModel.availableModels.forEach { model ->
-                            Card(
+
+                        // Current model display
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ComponentColors.surfaceVariantCardColors(),
+                        ) {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickableCard { onSelectModel(model) },
-                                colors = if (model == viewModel.model) {
-                                    ComponentColors.primaryCardColors()
-                                } else {
-                                    ComponentColors.surfaceVariantCardColors()
-                                },
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = model,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (model == viewModel.model) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                        text = stringResource("settings.model.current"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    if (model == viewModel.model) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = "Selected",
-                                        )
+                                    Text(
+                                        text = viewModel.model,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Simple search field
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(stringResource("settings.model.search.placeholder")) },
+                            label = { Text(stringResource("settings.model.search")) },
+                            singleLine = true,
+                            colors = ComponentColors.outlinedTextFieldColors(),
+                        )
+
+                        // Filtered models list
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (filteredModels.isEmpty()) {
+                                Text(
+                                    text = stringResource("settings.model.no.match"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            } else {
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                filteredModels.forEach { model ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickableCard { onSelectModel(model) },
+                                        colors = if (model == viewModel.model) {
+                                            ComponentColors.primaryCardColors()
+                                        } else {
+                                            ComponentColors.surfaceVariantCardColors()
+                                        },
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = model,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            if (model == viewModel.model) {
+                                                Icon(
+                                                    Icons.Default.CheckCircle,
+                                                    contentDescription = "Current model",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1170,202 +1271,167 @@ private fun providerSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource("provider.change.title"),
+                text = if (viewModel.showModelSelectionInProviderDialog) {
+                    stringResource("settings.model.select.title")
+                } else {
+                    stringResource("provider.change.title")
+                },
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
         text = {
-            var providerDropdownExpanded by remember { mutableStateOf(false) }
+            if (viewModel.showModelSelectionInProviderDialog) {
+                // Step 3: Model Selection with search and list
+                var searchQuery by remember { mutableStateOf("") }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = ComponentColors.bannerCardColors(),
-            ) {
+                // Filter models based on search query
+                val filteredModels = remember(viewModel.availableModels, searchQuery) {
+                    if (searchQuery.isBlank()) {
+                        viewModel.availableModels
+                    } else {
+                        viewModel.availableModels.filter { it.contains(searchQuery, ignoreCase = true) }
+                    }
+                }
+
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // Step 1: Provider selection dropdown
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = stringResource("provider.select.prompt"),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickableCard { providerDropdownExpanded = true },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
+                    when {
+                        viewModel.isLoadingModels -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource("provider.choose.placeholder"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = "Select provider",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                            }
-
-                            ComponentColors.themedDropdownMenu(
-                                expanded = providerDropdownExpanded,
-                                onDismissRequest = { providerDropdownExpanded = false },
-                            ) {
-                                viewModel.availableProviders.forEach { provider ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = provider.name.lowercase().replaceFirstChar { it.uppercase() },
-                                                style = MaterialTheme.typography.bodyLarge,
-                                            )
-                                        },
-                                        onClick = {
-                                            viewModel.selectProviderForChange(provider)
-                                            providerDropdownExpanded = false
-                                        },
-                                        leadingIcon = if (viewModel.selectedProvider == provider) {
-                                            {
-                                                Icon(
-                                                    Icons.Default.CheckCircle,
-                                                    contentDescription = "Selected",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                    )
-                                }
+                                CircularProgressIndicator()
+                                Text(
+                                    text = stringResource("settings.model.loading"),
+                                    modifier = Modifier.padding(start = 16.dp),
+                                )
                             }
                         }
-                    }
-
-                    // Step 2: Configuration fields (shown after provider is selected)
-                    if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                        Text(
-                            text = stringResource("provider.configure.prompt"),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-
-                        viewModel.providerConfigFields.forEach { field ->
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
+                        viewModel.modelError != null -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = field.label + if (field.required) " *" else "",
-                                    style = MaterialTheme.typography.labelLarge,
+                                    text = viewModel.modelError ?: "",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
-                                Text(
-                                    text = field.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-
-                                when (field) {
-                                    is ProviderConfigField.ApiKeyField -> {
-                                        OutlinedTextField(
-                                            value = viewModel.providerFieldValues[field.name] ?: "",
-                                            onValueChange = { viewModel.updateProviderField(field.name, it) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                            visualTransformation = PasswordVisualTransformation(),
-                                            placeholder = {
-                                                Text(
-                                                    if (field.hasExistingValue) {
-                                                        stringResource("provider.apikey.stored")
-                                                    } else {
-                                                        stringResource("provider.apikey.enter")
-                                                    },
-                                                )
-                                            },
-                                            trailingIcon = {
-                                                Row {
-                                                    if (field.hasExistingValue) {
-                                                        Icon(
-                                                            Icons.Default.CheckCircle,
-                                                            contentDescription = stringResource("provider.apikey.already.stored"),
-                                                            tint = MaterialTheme.colorScheme.primary,
-                                                        )
-                                                    }
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Icon(Icons.Default.Lock, contentDescription = "Password")
-                                                }
-                                            },
-                                            colors = ComponentColors.outlinedTextFieldColors(),
-                                        )
-                                    }
-                                    is ProviderConfigField.BaseUrlField -> {
-                                        OutlinedTextField(
-                                            value = viewModel.providerFieldValues[field.name] ?: "",
-                                            onValueChange = { viewModel.updateProviderField(field.name, it) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                            placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
-                                            colors = ComponentColors.outlinedTextFieldColors(),
+                                viewModel.modelErrorHelp?.let { helpText ->
+                                    Card(colors = ComponentColors.surfaceVariantCardColors()) {
+                                        Text(
+                                            text = helpText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.padding(12.dp),
                                         )
                                     }
                                 }
                             }
                         }
+                        viewModel.availableModels.isEmpty() -> {
+                            Text(
+                                text = stringResource("settings.model.none"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        else -> {
+                            Text(
+                                text = stringResource("settings.model.select", viewModel.selectedProvider?.name ?: ""),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
 
-                        // Connection error display
-                        if (viewModel.connectionError != null) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                ),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                            // Selected model display (if any)
+                            if (viewModel.pendingModelForNewProvider != null) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ComponentColors.surfaceVariantCardColors(),
                                 ) {
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.Top,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Icon(
-                                            Icons.Default.Warning,
-                                            contentDescription = "Error",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                        Column {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = viewModel.connectionError ?: "",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                text = stringResource("settings.model.selected"),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                            if (viewModel.connectionErrorHelp != null) {
-                                                Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = viewModel.pendingModelForNewProvider ?: "",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Simple search field
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text(stringResource("settings.model.search.placeholder")) },
+                                label = { Text(stringResource("settings.model.search")) },
+                                singleLine = true,
+                                colors = ComponentColors.outlinedTextFieldColors(),
+                            )
+
+                            // Filtered models list
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 400.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                if (filteredModels.isEmpty()) {
+                                    Text(
+                                        text = stringResource("settings.model.no.match"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(16.dp),
+                                    )
+                                } else {
+                                    if (searchQuery.isNotBlank()) {
+                                        Text(
+                                            text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    filteredModels.forEach { model ->
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickableCard { viewModel.selectModelForNewProvider(model) },
+                                            colors = if (model == viewModel.pendingModelForNewProvider) {
+                                                ComponentColors.primaryCardColors()
+                                            } else {
+                                                ComponentColors.surfaceVariantCardColors()
+                                            },
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
                                                 Text(
-                                                    text = viewModel.connectionErrorHelp ?: "",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                                                    text = model,
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
+                                                if (model == viewModel.pendingModelForNewProvider) {
+                                                    Icon(
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected model",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1374,28 +1440,280 @@ private fun providerSelectionDialog(
                         }
                     }
                 }
-            }
+            } else {
+                // Steps 1 & 2: Provider selection and configuration
+                var providerDropdownExpanded by remember { mutableStateOf(false) }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ComponentColors.bannerCardColors(),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        // Step 1: Provider selection dropdown
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = stringResource("provider.select.prompt"),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickableCard { providerDropdownExpanded = true },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource("provider.choose.placeholder"),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Select provider",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+
+                                ComponentColors.themedDropdownMenu(
+                                    expanded = providerDropdownExpanded,
+                                    onDismissRequest = { providerDropdownExpanded = false },
+                                ) {
+                                    viewModel.availableProviders.forEach { provider ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = provider.name.lowercase().replaceFirstChar { it.uppercase() },
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.selectProviderForChange(provider)
+                                                providerDropdownExpanded = false
+                                            },
+                                            leadingIcon = if (viewModel.selectedProvider == provider) {
+                                                {
+                                                    Icon(
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Step 2: Configuration fields (shown after provider is selected)
+                        if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                            Text(
+                                text = stringResource("provider.configure.prompt"),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+
+                            viewModel.providerConfigFields.forEach { field ->
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(
+                                        text = field.label + if (field.required) " *" else "",
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    Text(
+                                        text = field.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+
+                                    when (field) {
+                                        is ProviderConfigField.ApiKeyField -> {
+                                            OutlinedTextField(
+                                                value = viewModel.providerFieldValues[field.name] ?: "",
+                                                onValueChange = { viewModel.updateProviderField(field.name, it) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true,
+                                                visualTransformation = PasswordVisualTransformation(),
+                                                placeholder = {
+                                                    Text(
+                                                        if (field.hasExistingValue) {
+                                                            stringResource("provider.apikey.stored")
+                                                        } else {
+                                                            stringResource("provider.apikey.enter")
+                                                        },
+                                                    )
+                                                },
+                                                trailingIcon = {
+                                                    Row {
+                                                        if (field.hasExistingValue) {
+                                                            Icon(
+                                                                Icons.Default.CheckCircle,
+                                                                contentDescription = stringResource("provider.apikey.already.stored"),
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Icon(Icons.Default.Lock, contentDescription = "Password")
+                                                    }
+                                                },
+                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                            )
+
+                                            // Security assurance message
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 8.dp),
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                ),
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(12.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                                ) {
+                                                    Text(
+                                                        text = stringResource("provider.apikey.security.message"),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                    TextButton(
+                                                        onClick = {
+                                                            try {
+                                                                Desktop.getDesktop().browse(
+                                                                    URI("https://askimo.chat/blog/securing-user-data-in-askimo/"),
+                                                                )
+                                                            } catch (_: Exception) {
+                                                                // Silently fail if browser cannot be opened
+                                                            }
+                                                        },
+                                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                                        contentPadding = PaddingValues(0.dp),
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource("provider.apikey.security.link"),
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        is ProviderConfigField.BaseUrlField -> {
+                                            OutlinedTextField(
+                                                value = viewModel.providerFieldValues[field.name] ?: "",
+                                                onValueChange = { viewModel.updateProviderField(field.name, it) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true,
+                                                placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
+                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Connection error display
+                            if (viewModel.connectionError != null) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    ),
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.Top,
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Warning,
+                                                contentDescription = "Error",
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                            Column {
+                                                Text(
+                                                    text = viewModel.connectionError ?: "",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                                )
+                                                if (viewModel.connectionErrorHelp != null) {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Text(
+                                                        text = viewModel.connectionErrorHelp ?: "",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } // End of else block for provider configuration
         },
         confirmButton = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Test Connection button
-                if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
+                if (viewModel.showModelSelectionInProviderDialog) {
                     OutlinedButton(
-                        onClick = { viewModel.testConnection() },
-                        enabled = !viewModel.isTestingConnection,
+                        onClick = { viewModel.backToProviderConfiguration() },
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        if (viewModel.isTestingConnection) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource("settings.test.connection.testing"))
-                        } else {
-                            Text(stringResource("settings.test.connection"))
+                        Text(stringResource("action.back"))
+                    }
+                } else {
+                    if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { viewModel.testConnection() },
+                            enabled = !viewModel.isTestingConnection,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            if (viewModel.isTestingConnection) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource("settings.test.connection.testing"))
+                            } else {
+                                Text(stringResource("settings.test.connection"))
+                            }
                         }
                     }
                 }
@@ -1403,7 +1721,11 @@ private fun providerSelectionDialog(
                 // Save button
                 Button(
                     onClick = onSave,
-                    enabled = viewModel.selectedProvider != null && !viewModel.isTestingConnection,
+                    enabled = if (viewModel.showModelSelectionInProviderDialog) {
+                        viewModel.pendingModelForNewProvider != null
+                    } else {
+                        false
+                    },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     colors = ComponentColors.subtleButtonColors(),
                 ) {
@@ -1420,4 +1742,209 @@ private fun providerSelectionDialog(
             }
         },
     )
+}
+
+@Composable
+private fun logLevelCard() {
+    val currentLogLevel by ThemePreferences.logLevel.collectAsState()
+    var logLevelDropdownExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource("settings.log.level.description"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableCard { logLevelDropdownExpanded = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource("log.level.${currentLogLevel.name.lowercase()}"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = stringResource("log.level.${currentLogLevel.name.lowercase()}.description"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            )
+                        }
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Change log level",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = logLevelDropdownExpanded,
+                    onDismissRequest = { logLevelDropdownExpanded = false },
+                ) {
+                    LogLevel.entries.forEach { level ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(
+                                        text = stringResource("log.level.${level.name.lowercase()}"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = stringResource("log.level.${level.name.lowercase()}.description"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                            onClick = {
+                                ThemePreferences.setLogLevel(level)
+                                logLevelDropdownExpanded = false
+                            },
+                            leadingIcon = if (level == currentLogLevel) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun logViewerCard(
+    onViewLogs: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource("settings.log.viewer"),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+
+            Text(
+                text = stringResource("settings.log.viewer.description"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+            )
+
+            // Buttons Row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // View Logs Button
+                OutlinedButton(
+                    onClick = onViewLogs,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.subtleButtonColors(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource("settings.log.viewer.view"))
+                }
+
+                // Open Log Folder Button
+                OutlinedButton(
+                    onClick = {
+                        val logDir = LoggingService.getLogDirectory()
+                        openInFileManager(logDir.toFile())
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.subtleButtonColors(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource("settings.log.viewer.open_folder"))
+                }
+            }
+
+            // Show log file path
+            LoggingService.getLogFilePath()?.let { logPath ->
+                Text(
+                    text = stringResource("settings.log.viewer.path", logPath.toString()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Opens a file or directory in the system's file manager.
+ * Platform-aware implementation for macOS, Linux, and Windows.
+ */
+private fun openInFileManager(file: File) {
+    try {
+        when {
+            Platform.isMac -> {
+                Runtime.getRuntime().exec(arrayOf("open", file.absolutePath))
+            }
+            Platform.isLinux -> {
+                Runtime.getRuntime().exec(arrayOf("xdg-open", file.absolutePath))
+            }
+            Platform.isWindows -> {
+                Runtime.getRuntime().exec(arrayOf("explorer", file.absolutePath))
+            }
+            else -> {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(file)
+                }
+            }
+        }
+    } catch (e: Exception) {
+        LoggerFactory.getLogger("SettingsView")
+            .error("Failed to open log directory: ${file.absolutePath}", e)
+    }
 }

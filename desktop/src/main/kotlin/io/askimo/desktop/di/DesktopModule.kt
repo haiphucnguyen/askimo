@@ -6,6 +6,7 @@ package io.askimo.desktop.di
 
 import io.askimo.core.di.coreModule
 import io.askimo.desktop.service.ChatService
+import io.askimo.desktop.service.SystemResourceMonitor
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
@@ -18,6 +19,7 @@ import org.koin.dsl.module
  */
 val desktopModule = module {
     single { ChatService() }
+    single { SystemResourceMonitor() }
 
     // ViewModels - factory scope so each request gets a new instance with its own scope
     factory { (scope: CoroutineScope) ->

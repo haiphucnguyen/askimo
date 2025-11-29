@@ -13,6 +13,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import io.askimo.desktop.util.Platform
 
 /**
  * Centralized keyboard shortcut manager for the Askimo Desktop application.
@@ -22,10 +23,7 @@ object KeyMapManager {
     /**
      * Determines if the primary modifier key (Command on macOS, Ctrl on others) is pressed
      */
-    fun KeyEvent.isPrimaryModifierPressed(): Boolean {
-        val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
-        return if (isMac) isMetaPressed else isCtrlPressed
-    }
+    fun KeyEvent.isPrimaryModifierPressed(): Boolean = if (Platform.isMac) isMetaPressed else isCtrlPressed
 
     /**
      * Defines all application shortcuts
@@ -74,29 +72,28 @@ object KeyMapManager {
          * Returns a human-readable string for this shortcut
          */
         fun getDisplayString(): String {
-            val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
             val parts = mutableListOf<String>()
 
             if (requiresPrimaryModifier) {
-                parts.add(if (isMac) "⌘" else "Ctrl")
+                parts.add(Platform.modifierKey)
             }
             if (requiresShift) {
-                parts.add(if (isMac) "⇧" else "Shift")
+                parts.add(if (Platform.isMac) "⇧" else "Shift")
             }
             if (requiresAlt) {
-                parts.add(if (isMac) "⌥" else "Alt")
+                parts.add(if (Platform.isMac) "⌥" else "Alt")
             }
 
             // Special key names
             val keyName = when (key) {
-                Key.Enter -> if (isMac) "↵" else "Enter"
-                Key.Escape -> if (isMac) "⎋" else "Esc"
+                Key.Enter -> if (Platform.isMac) "↵" else "Enter"
+                Key.Escape -> if (Platform.isMac) "⎋" else "Esc"
                 Key.Comma -> ","
                 else -> key.keyCode.toInt().toChar().uppercaseChar().toString()
             }
             parts.add(keyName)
 
-            return parts.joinToString(if (isMac) "" else "+")
+            return parts.joinToString(if (Platform.isMac) "" else "+")
         }
     }
 

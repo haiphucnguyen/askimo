@@ -56,7 +56,7 @@ object SessionFactory {
     }
 
     private fun buildSession(params: SessionParams, mode: SessionMode): Session {
-        log.debug("Building session with params: $params, mode: $mode")
+        log.debug("Building session with params: {}, mode: {}", params, mode)
 
         val session = Session(params, mode)
         val provider = session.params.currentProvider
@@ -72,9 +72,14 @@ object SessionFactory {
         val memory = session.getOrCreateMemory(provider, modelName, settings)
 
         val chatService = if (factory != null) {
-            @Suppress("UNCHECKED_CAST")
-            (factory as ChatModelFactory<ProviderSettings>)
-                .create(modelName, settings, memory, sessionMode = mode)
+            try {
+                @Suppress("UNCHECKED_CAST")
+                (factory as ChatModelFactory<ProviderSettings>)
+                    .create(modelName, settings, memory, sessionMode = mode)
+            } catch (e: Exception) {
+                log.error("Failed to create chat service", e)
+                NoopChatService
+            }
         } else {
             NoopChatService
         }

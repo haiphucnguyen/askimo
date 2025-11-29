@@ -25,27 +25,11 @@ import java.time.Duration
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     private val log = logger<LmStudioModelFactory>()
 
-    override fun availableModels(settings: LmStudioSettings): List<String> = try {
-        log.info("ℹ️ Fetching models from LM Studio server at ${settings.baseUrl}")
-
-        val models = fetchModels(
-            apiKey = "lm-studio",
-            url = "${settings.baseUrl}/models",
-            providerName = ModelProvider.LMSTUDIO,
-        )
-
-        if (models.isEmpty()) {
-            log.info("⚠️ No models found. Make sure a model is loaded in LM Studio.")
-        } else {
-            log.info("✓ Found ${models.size} model(s): ${models.joinToString(", ")}")
-        }
-
-        models
-    } catch (e: Exception) {
-        log.info("⚠️ Failed to fetch models from LMStudio: ${e.message}")
-        log.debug("Error", e)
-        emptyList()
-    }
+    override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
+        apiKey = "lm-studio",
+        url = "${settings.baseUrl}/models",
+        providerName = ModelProvider.LMSTUDIO,
+    )
 
     override fun defaultSettings(): LmStudioSettings = LmStudioSettings(
         baseUrl = "http://localhost:1234/v1",
