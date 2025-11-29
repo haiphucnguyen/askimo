@@ -61,6 +61,8 @@ class AskimoFeature : Feature {
             projectFileWatcherClass.declaredMethods.forEach { RuntimeReflection.register(it) }
             projectFileWatcherClass.declaredConstructors.forEach { RuntimeReflection.register(it) }
         }
+
+        RuntimeClassInitialization.initializeAtRunTime("ch.qos.logback")
     }
 
     /** Register class + all declared constructors & methods for reflection. */

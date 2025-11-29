@@ -1234,84 +1234,68 @@ private fun sessionItemWithMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
-                themedTooltip(
-                    text = stringResource("session.export.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("session.export")) },
-                        onClick = {
-                            showMenu = false
-                            showExportChatSessionHistoryDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = stringResource("session.rename.title.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("session.rename.title")) },
-                        onClick = {
-                            showMenu = false
-                            showRenameDialog = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = if (session.isStarred) stringResource("session.unstar") else stringResource("session.star"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
-                        onClick = {
-                            showMenu = false
-                            onStarSession(session.id, !session.isStarred)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = null,
-                                tint = if (session.isStarred) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
-                themedTooltip(
-                    text = stringResource("session.delete.tooltip"),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("action.delete")) },
-                        onClick = {
-                            showMenu = false
-                            onDeleteSession(session.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text(stringResource("session.export")) },
+                    onClick = {
+                        showMenu = false
+                        showExportChatSessionHistoryDialog = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("session.rename.title")) },
+                    onClick = {
+                        showMenu = false
+                        showRenameDialog = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
+                    onClick = {
+                        showMenu = false
+                        onStarSession(session.id, !session.isStarred)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null,
+                            tint = if (session.isStarred) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete")) },
+                    onClick = {
+                        showMenu = false
+                        onDeleteSession(session.id)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
             }
         }
     }
