@@ -4,12 +4,12 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.NoopChatService
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.util.logger
 
 object SessionFactory {
     private val log = logger<SessionFactory>()

@@ -8,6 +8,9 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import io.askimo.core.config.AppConfig
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
 import io.askimo.core.providers.ModelProvider.GEMINI
@@ -20,7 +23,6 @@ import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.session.Session
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
-import io.askimo.core.util.logger
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
@@ -80,7 +82,7 @@ private fun noteOllamaRequired(provider: ModelProvider) {
     if (warnedOllamaOnce.compareAndSet(false, true)) {
         val model = System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
         val url = System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-        log.info(
+        log.display(
             """
             ℹ️  ${provider.name} does not provide embeddings. Askimo uses local Ollama for RAG embeddings.
                • Ollama URL: $url
@@ -106,13 +108,13 @@ private fun ensureOllamaAvailable(
 
     // ⛓️ Pull synchronously; returns only when the model is ready
     if (!pullSync(baseUrl, model)) {
-        log.info("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
+        log.display("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
     }
 
     // One re-check (no polling needed since pullSync blocks)
     val after = getTags(baseUrl, readMs = 8_000) ?: error(notReachable(baseUrl, model))
     if (!hasModel(after, model)) {
-        log.info("❌ Ollama model '$model' still not listed after synchronous pull.")
+        log.display("❌ Ollama model '$model' still not listed after synchronous pull.")
     }
 }
 
@@ -137,7 +139,7 @@ private fun pullSync(
         ?.use { it.readText() }
     code in 200..299
 } catch (e: Exception) {
-    log.error("Failed to pull model $baseUrl / $model", e)
+    log.displayError("Failed to pull model $baseUrl / $model", e)
     false
 }
 

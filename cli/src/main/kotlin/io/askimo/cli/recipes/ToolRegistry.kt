@@ -5,7 +5,7 @@
 package io.askimo.cli.recipes
 
 import dev.langchain4j.agent.tool.Tool
-import io.askimo.core.util.logger
+import io.askimo.core.logging.logger
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import java.lang.Double

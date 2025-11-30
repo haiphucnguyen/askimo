@@ -4,6 +4,7 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
@@ -13,7 +14,6 @@ import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.core.session.SessionParams
-import io.askimo.core.util.logger
 
 /**
  * Test-specific secure session manager that uses safe provider names

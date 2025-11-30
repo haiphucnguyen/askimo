@@ -4,8 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.project.FileWatcherManager
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -19,9 +20,9 @@ class StopWatcherCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         if (FileWatcherManager.isWatching()) {
             FileWatcherManager.stopCurrentWatcher()
-            log.info("🔍 File watcher stopped")
+            log.display("🔍 File watcher stopped")
         } else {
-            log.info("🔍 No file watcher is currently active")
+            log.display("🔍 No file watcher is currently active")
         }
     }
 }

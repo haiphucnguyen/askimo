@@ -4,8 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ProviderRegistry
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -25,14 +26,14 @@ class ListProvidersCommandHandler : CommandHandler {
         val providers = ProviderRegistry.getSupportedProviders()
 
         if (providers.isEmpty()) {
-            log.info("⚠️  No model providers registered.")
+            log.display("⚠️  No model providers registered.")
             return
         }
 
-        log.info("Available Model Providers:")
+        log.display("Available Model Providers:")
         providers.forEach { provider ->
-            log.info("- ${provider.name.lowercase()}")
+            log.display("- ${provider.name.lowercase()}")
         }
-        log.info("Use `:set-provider <modelName>` to choose the active model.")
+        log.display("Use `:set-provider <modelName>` to choose the active model.")
     }
 }

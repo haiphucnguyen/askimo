@@ -4,11 +4,13 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.session.MemoryPolicy
 import io.askimo.core.session.ParamKey
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -29,8 +31,8 @@ class SetParamCommandHandler(
         val args = line.words().drop(1)
 
         if (args.size != 2) {
-            log.info("Usage: :set-param <key> <value>")
-            log.info("Type :params --list to see valid keys and descriptions.")
+            log.display("Usage: :set-param <key> <value>")
+            log.display("Type :params --list to see valid keys and descriptions.")
             return
         }
 
@@ -39,7 +41,7 @@ class SetParamCommandHandler(
 
         val key = ParamKey.fromInput(keyInput)
         if (key == null) {
-            log.info("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
+            log.display("Unknown parameter: '$keyInput'. Try :params --list to see valid keys.")
             return
         }
 
@@ -47,7 +49,7 @@ class SetParamCommandHandler(
             val provider = session.params.currentProvider
             val factory = session.getModelFactory(provider)
             if (factory == null) {
-                log.info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+                log.display("❌ No model factory registered for provider: ${provider.name.lowercase()}")
                 return
             }
 
@@ -61,10 +63,9 @@ class SetParamCommandHandler(
             SessionConfigManager.save(session.params)
 
             session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
-            log.info("✅ '${key.key}' is updated")
+            log.display("✅ '${key.key}' is updated")
         } catch (e: IllegalArgumentException) {
-            log.info("❌ Invalid value for '$keyInput': ${e.message}")
-            log.error("Failed to set parameter '$keyInput'", e)
+            log.displayError("❌ Invalid value for '$keyInput': ${e.message}", e)
         }
     }
 }

@@ -4,10 +4,12 @@
  */
 package io.askimo.core.session
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.appJson
-import io.askimo.core.util.logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.CREATE
@@ -40,7 +42,6 @@ object SessionConfigManager {
      */
     fun load(): SessionParams {
         cached?.let {
-            // Load API keys from secure storage into the cached session
             return secureSessionManager.loadSecureSession(it)
         }
 
@@ -51,12 +52,11 @@ object SessionConfigManager {
                         appJson.decodeFromString<SessionParams>(it.readText())
                     }
                 } catch (e: Exception) {
-                    log.info("⚠️ Failed to parse config file at $configPath. Using default configuration.")
-                    log.error("Failed to parse config file", e)
+                    log.displayError("⚠️ Failed to parse config file at $configPath. Using default configuration.", e)
                     SessionParams.noOp()
                 }
             } else {
-                log.info("⚠️ Config file not found at $configPath. Using default configuration.")
+                log.display("⚠️ Config file not found at $configPath. Using default configuration.")
                 SessionParams.noOp()
             }
 
@@ -97,8 +97,7 @@ object SessionConfigManager {
             cached = params
             log.info("Saving config to: $configPath successfully.")
         } catch (e: Exception) {
-            log.info("❌ Failed to save session config to $configPath: ${e.message}")
-            log.error("Failed to save session config to $configPath", e)
+            log.displayError("❌ Failed to save session config to $configPath: ${e.message}", e)
         }
     }
 }

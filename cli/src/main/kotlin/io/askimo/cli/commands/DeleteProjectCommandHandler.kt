@@ -4,10 +4,12 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.project.PgVectorAdmin
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 class DeleteProjectCommandHandler : CommandHandler {
@@ -20,7 +22,7 @@ class DeleteProjectCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            log.info("Usage: :delete-project <project-name> | :delete-project --all")
+            log.display("Usage: :delete-project <project-name> | :delete-project --all")
             return
         }
 
@@ -38,44 +40,42 @@ class DeleteProjectCommandHandler : CommandHandler {
         // Lookup by name in the new per-project store
         val meta = ProjectStore.getByName(name)
         if (meta == null) {
-            log.info("❌ Project '$name' not found. Use :projects to list.")
+            log.display("❌ Project '$name' not found. Use :projects to list.")
             return
         }
 
         print("⚠️  Delete project '$name'? [y/N]: ")
         val confirm = readlnOrNull()?.trim()?.lowercase()
         if (confirm != "y") {
-            log.info("✋ Aborted.")
+            log.display("✋ Aborted.")
             return
         }
 
         // 1) Soft-delete the per-project file (moves to ~/.askimo/trash)
         val removed = ProjectStore.softDelete(meta.id)
         if (!removed) {
-            log.info("ℹ️  Project '${meta.name}' was not removed (already missing).")
+            log.display("ℹ️  Project '${meta.name}' was not removed (already missing).")
             return
         }
-        log.info("🗂️  Removed project '${meta.name}' (id=${meta.id}) from registry.")
+        log.display("🗂️  Removed project '${meta.name}' (id=${meta.id}) from registry.")
 
         // 2) Drop pgvector table for this project (still keyed by project *name* in MVP)
-        log.info("🐘 Ensuring Postgres+pgvector is running…")
+        log.display("🐘 Ensuring Postgres+pgvector is running…")
         val pg =
             try {
                 PostgresContainerManager.startIfNeeded()
             } catch (e: Exception) {
-                log.info("⚠️ Soft-deleted metadata, but could not connect to Postgres to drop embeddings: ${e.message}")
-                log.error("Failed to drop embeddings for '${meta.name}'", e)
+                log.displayError("⚠️ Soft-deleted metadata, but could not connect to Postgres to drop embeddings: ${e.message}", e)
                 return
             }
 
         try {
             val base = System.getenv("ASKIMO_EMBED_TABLE") ?: "askimo_embeddings"
-            val table = PgVectorAdmin.projectTableName(base, meta.name) // MVP: table keyed by name
+            val table = PgVectorAdmin.projectTableName(base, meta.name)
             PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, meta.name)
-            log.info("🧹 Dropped embeddings table \"$table\" for project '${meta.name}'.")
+            log.display("🧹 Dropped embeddings table \"$table\" for project '${meta.name}'.")
         } catch (e: Exception) {
-            log.info("⚠️ Metadata removed, but failed to drop embeddings for '${meta.name}': ${e.message}")
-            log.error("Failed to drop embeddings for '${meta.name}'", e)
+            log.displayError("⚠️ Metadata removed, but failed to drop embeddings for '${meta.name}': ${e.message}", e)
             return
         }
     }
@@ -84,23 +84,22 @@ class DeleteProjectCommandHandler : CommandHandler {
         val projects = try {
             ProjectStore.list()
         } catch (e: Exception) {
-            log.info("❌ Could not list projects: ${e.message}")
-            log.error("Failed to list projects", e)
+            log.displayError("❌ Could not list projects: ${e.message}", e)
             return
         }
 
         if (projects.isEmpty()) {
-            log.info("ℹ️  No projects found.")
+            log.display("ℹ️  No projects found.")
             return
         }
 
-        log.info("🗂️  Found ${projects.size} project(s) to delete:")
-        projects.forEachIndexed { i, p -> log.info("   ${i + 1}. ${p.name} (id=${p.id})") }
+        log.display("🗂️  Found ${projects.size} project(s) to delete:")
+        projects.forEachIndexed { i, p -> log.display("   ${i + 1}. ${p.name} (id=${p.id})") }
 
         print("⚠️  Delete ALL ${projects.size} project(s)? This cannot be undone! [y/N]: ")
         val confirm = readlnOrNull()?.trim()?.lowercase()
         if (confirm != "y") {
-            log.info("✋ Aborted.")
+            log.display("✋ Aborted.")
             return
         }
 
@@ -113,24 +112,22 @@ class DeleteProjectCommandHandler : CommandHandler {
                 val removed = ProjectStore.softDelete(meta.id)
                 if (removed) {
                     deletedCount++
-                    log.info("🗂️  Soft-deleted '${meta.name}' (id=${meta.id}).")
+                    log.display("🗂️  Soft-deleted '${meta.name}' (id=${meta.id}).")
                 } else {
-                    log.info("ℹ️  '${meta.name}' (id=${meta.id}) was already removed.")
+                    log.display("ℹ️  '${meta.name}' (id=${meta.id}) was already removed.")
                 }
             } catch (e: Exception) {
                 failedCount++
-                log.info("⚠️  Failed to remove '${meta.name}': ${e.message}")
-                log.error("Failed to remove ${meta.name}", e)
+                log.displayError("⚠️  Failed to remove '${meta.name}': ${e.message}", e)
             }
         }
 
         // 2) Drop all pgvector tables
-        log.info("🐘 Ensuring Postgres+pgvector is running…")
+        log.display("🐘 Ensuring Postgres+pgvector is running…")
         val pg = try {
             PostgresContainerManager.startIfNeeded()
         } catch (e: Exception) {
-            log.info("⚠️  Metadata removed, but could not connect to Postgres to drop embeddings: ${e.message}")
-            log.error("Failed to start docker", e)
+            log.displayError("⚠️  Metadata removed, but could not connect to Postgres to drop embeddings: ${e.message}", e)
             return
         }
 
@@ -143,19 +140,18 @@ class DeleteProjectCommandHandler : CommandHandler {
                 val table = PgVectorAdmin.projectTableName(base, meta.name)
                 PgVectorAdmin.dropProjectTable(pg.jdbcUrl, pg.username, pg.password, base, meta.name)
                 embeddingsDropped++
-                log.info("🧹 Dropped embeddings table \"$table\" for '${meta.name}'.")
+                log.display("🧹 Dropped embeddings table \"$table\" for '${meta.name}'.")
             } catch (e: Exception) {
                 embeddingsFailed++
-                log.info("⚠️  Failed to drop embeddings for '${meta.name}': ${e.message}")
-                log.error("Failed to drop embeddings for ${meta.name}", e)
+                log.displayError("⚠️  Failed to drop embeddings for '${meta.name}': ${e.message}", e)
             }
         }
 
         // Summary
         if (failedCount == 0 && embeddingsFailed == 0) {
-            log.info("✅ Successfully deleted all $deletedCount project(s) and their embeddings.")
+            log.display("✅ Successfully deleted all $deletedCount project(s) and their embeddings.")
         } else {
-            log.info("⚠️  Deleted $deletedCount project(s), failed $failedCount. Dropped $embeddingsDropped embeddings, failed $embeddingsFailed.")
+            log.display("⚠️  Deleted $deletedCount project(s), failed $failedCount. Dropped $embeddingsDropped embeddings, failed $embeddingsFailed.")
         }
     }
 }

@@ -4,6 +4,7 @@
  */
 package io.askimo.core.util
 
+import io.askimo.core.logging.logger
 import kotlin.reflect.KClass
 
 /**

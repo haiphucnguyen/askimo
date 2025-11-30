@@ -4,8 +4,8 @@
  */
 package io.askimo.cli.recipes
 
+import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.logger
 import java.nio.file.Files
 import kotlin.io.path.exists
 import kotlin.io.path.writeText

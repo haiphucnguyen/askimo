@@ -5,7 +5,8 @@
 package io.askimo.core.project
 
 import io.askimo.core.config.AppConfig
-import io.askimo.core.util.logger
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -137,7 +138,7 @@ class ProjectFileWatcher(
             watchKeys[watchKey] = dir
             log.debug("📁 Registered directory: $dir")
         } catch (e: Exception) {
-            log.error("Failed to register directory for watching: $dir - ${e.message}")
+            log.displayError("Failed to register directory for watching: $dir - ${e.message}", e)
         }
     }
 
@@ -232,8 +233,7 @@ class ProjectFileWatcher(
                 }
             }
         } catch (e: Exception) {
-            log.info("⚠️ Failed to update index for $relativePath: ${e.message}")
-            log.debug("Error to update index for $relativePath", e)
+            log.displayError("⚠️ Failed to update index for $relativePath: ${e.message}", e)
         }
     }
 

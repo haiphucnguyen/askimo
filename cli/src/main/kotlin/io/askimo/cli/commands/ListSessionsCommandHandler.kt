@@ -4,9 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.util.TimeUtil
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 class ListSessionsCommandHandler : CommandHandler {
@@ -24,13 +25,13 @@ class ListSessionsCommandHandler : CommandHandler {
         val pagedSessions = sessionService.getSessionsPaged(requestedPage, sessionsPerPage)
 
         if (pagedSessions.isEmpty) {
-            log.info("No chat sessions found.")
-            log.info("💡 Start a new conversation to create your first session!")
+            log.display("No chat sessions found.")
+            log.display("💡 Start a new conversation to create your first session!")
             return
         }
 
         if (requestedPage != pagedSessions.currentPage) {
-            log.info("❌ Invalid page number. Valid range: 1-${pagedSessions.totalPages}")
+            log.display("❌ Invalid page number. Valid range: 1-${pagedSessions.totalPages}")
             return
         }
 
@@ -40,20 +41,20 @@ class ListSessionsCommandHandler : CommandHandler {
     private fun displaySessionsPage(pagedSessions: io.askimo.core.session.PagedSessions) {
         val startIndex = (pagedSessions.currentPage - 1) * pagedSessions.pageSize
 
-        log.info("📋 Chat Sessions (Page ${pagedSessions.currentPage} of ${pagedSessions.totalPages})")
-        log.info("=".repeat(60))
+        log.display("📋 Chat Sessions (Page ${pagedSessions.currentPage} of ${pagedSessions.totalPages})")
+        log.display("=".repeat(60))
 
         pagedSessions.sessions.forEachIndexed { index, session ->
             val globalIndex = startIndex + index + 1
 
-            log.info("$globalIndex. ID: ${session.id}")
-            log.info("   Title: ${session.title}")
-            log.info("   Created: ${TimeUtil.formatDisplay(session.createdAt)}")
-            log.info("   Updated: ${TimeUtil.formatDisplay(session.updatedAt)}")
-            log.info("-".repeat(40))
+            log.display("$globalIndex. ID: ${session.id}")
+            log.display("   Title: ${session.title}")
+            log.display("   Created: ${TimeUtil.formatDisplay(session.createdAt)}")
+            log.display("   Updated: ${TimeUtil.formatDisplay(session.updatedAt)}")
+            log.display("-".repeat(40))
         }
 
-        log.info("💡 Tip: Use ':resume-session <session-id>' to resume any session")
+        log.display("💡 Tip: Use ':resume-session <session-id>' to resume any session")
 
         if (pagedSessions.totalPages > 1) {
             val navigationHints = mutableListOf<String>()
@@ -65,8 +66,8 @@ class ListSessionsCommandHandler : CommandHandler {
                 navigationHints.add(":sessions ${pagedSessions.currentPage + 1} (next)")
             }
 
-            log.info("📖 Navigation: ${navigationHints.joinToString(" | ")}")
-            log.info("   Or use: :sessions <page_number> (e.g., :sessions 3)")
+            log.display("📖 Navigation: ${navigationHints.joinToString(" | ")}")
+            log.display("   Or use: :sessions <page_number> (e.g., :sessions 3)")
         }
     }
 }

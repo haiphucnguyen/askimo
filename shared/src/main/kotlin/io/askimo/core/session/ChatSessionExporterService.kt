@@ -4,7 +4,7 @@
  */
 package io.askimo.core.session
 
-import io.askimo.core.util.logger
+import io.askimo.core.logging.logger
 import java.io.BufferedWriter
 import java.io.File
 import java.time.LocalDateTime

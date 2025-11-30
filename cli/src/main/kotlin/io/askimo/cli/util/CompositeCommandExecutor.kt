@@ -5,7 +5,8 @@
 package io.askimo.cli.util
 
 import io.askimo.cli.commands.CommandHandler
-import io.askimo.core.util.logger
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -49,7 +50,7 @@ object CompositeCommandExecutor {
         val commands = parseCommands(args, handlers.keys)
 
         if (commands.isEmpty()) {
-            log.info("❌ No valid commands found")
+            log.display("❌ No valid commands found")
             return
         }
 
@@ -64,7 +65,7 @@ object CompositeCommandExecutor {
                 val parsedLine = createParsedLine(keyword, cmdArgs)
                 handler.handle(parsedLine)
             } else {
-                log.info("⚠️  Skipping unknown command: $flag")
+                log.display("⚠️  Skipping unknown command: $flag")
             }
         }
     }

@@ -9,8 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.logger
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -268,8 +269,7 @@ object AppConfig {
             try {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
-                log.info("Config parse failed at $path ")
-                log.error("Parse error: ", e)
+                log.displayError("Config parse failed at $path ", e)
                 envFallback()
             }
         } else {
@@ -327,11 +327,9 @@ object AppConfig {
                 Files.createFile(target)
             }
             Files.writeString(target, DEFAULT_YAML)
-            // Best-effort log
             log.info("📝 Created default config at $target")
         } catch (e: Exception) {
-            log.info("Failed to create default config at $target")
-            log.error("Failed to create default config at $target ", e)
+            log.displayError("Failed to create default config at $target ", e)
         }
     }
 

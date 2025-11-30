@@ -4,11 +4,12 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.Session
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -31,7 +32,7 @@ class ModelsCommandHandler(
         val factory = ProviderRegistry.getFactory(provider)
 
         if (factory == null) {
-            log.info("❌ No model factory registered for provider: ${provider.name.lowercase()}")
+            log.display("❌ No model factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
@@ -41,12 +42,12 @@ class ModelsCommandHandler(
         val models = (factory as ChatModelFactory<ProviderSettings>).availableModels(settings)
 
         if (models.isEmpty()) {
-            log.info("❌ No models available for ${provider.name.lowercase()}")
-            log.info("\n💡 ${factory.getNoModelsHelpText()}")
+            log.display("❌ No models available for ${provider.name.lowercase()}")
+            log.display("\n💡 ${factory.getNoModelsHelpText()}")
         } else {
-            log.info("Available models for provider '${provider.name.lowercase()}':")
-            models.forEach { log.info("- $it") }
-            log.info("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
+            log.display("Available models for provider '${provider.name.lowercase()}':")
+            models.forEach { log.display("- $it") }
+            log.display("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
         }
     }
 }

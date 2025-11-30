@@ -4,11 +4,11 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.logging.logger
 import io.askimo.core.security.KeychainManager.OperatingSystem.LINUX
 import io.askimo.core.security.KeychainManager.OperatingSystem.MACOS
 import io.askimo.core.security.KeychainManager.OperatingSystem.UNKNOWN
 import io.askimo.core.security.KeychainManager.OperatingSystem.WINDOWS
-import io.askimo.core.util.logger
 import java.io.IOException
 
 /**

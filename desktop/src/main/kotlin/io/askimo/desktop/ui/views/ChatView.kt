@@ -57,9 +57,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.core.directive.ChatDirective
 import io.askimo.core.directive.ChatDirectiveService
+import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
-import io.askimo.core.util.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut

@@ -37,13 +37,14 @@ import io.askimo.cli.recipes.ToolRegistry
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionFactory
 import io.askimo.core.session.SessionMode
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
-import io.askimo.core.util.logger
 import org.jline.keymap.KeyMap
 import org.jline.reader.EOFError
 import org.jline.reader.LineReader
@@ -148,7 +149,7 @@ fun main(args: Array<String>) {
             try {
                 runYamlCommand(session, cliCommandName, overrides, externalArgs)
             } catch (e: RecipeNotFoundException) {
-                log.warn(e.message ?: "Recipe not found")
+                log.displayError(e.message ?: "Recipe not found")
             }
             return
         }
@@ -281,8 +282,7 @@ fun main(args: Array<String>) {
             sendChatMessage(session, prompt, showIndicator = true)
         }
     } catch (e: IOException) {
-        log.info("❌ Error: ${e.message}")
-        log.error("Error", e)
+        log.displayError("❌ Error: ${e.message}", e)
     }
 }
 

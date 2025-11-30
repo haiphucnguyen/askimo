@@ -1,16 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Console appender for end-user messages (INFO only) -->
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>INFO</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-        <encoder>
-            <pattern>%msg%n</pattern>
-        </encoder>
-    </appender>
 
     <!-- File appender for persistent logs -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -49,7 +38,6 @@
 
     <!-- Root logger configuration -->
     <root level="INFO">
-        <appender-ref ref="CONSOLE" />
         <appender-ref ref="ASYNC" />
     </root>
 </configuration>
