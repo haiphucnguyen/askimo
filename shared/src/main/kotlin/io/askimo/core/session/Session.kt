@@ -8,6 +8,8 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.config.AppConfig
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
@@ -22,7 +24,6 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.MemoryPolicy.RESET_FOR_THIS_COMBO
-import io.askimo.core.util.logger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -331,7 +332,7 @@ class Session(
             retrievalAugmentor = rag,
             sessionMode = mode,
         )
-        log.info("RAG enabled for $model")
+        log.display("RAG enabled for $model")
         setChatService(upgraded)
     }
 
@@ -728,7 +729,6 @@ class Session(
     }
 
     private fun triggerSummarizationIfNeeded() {
-        // No summarization needed for non-interactive CLI mode
         if (mode == SessionMode.CLI_PROMPT) {
             return
         }
@@ -738,6 +738,7 @@ class Session(
 
         // Summarize every N messages
         if (messageCount > summarizationThreshold && messageCount % summarizationThreshold == 0) {
+            log.debug("Summarizing older messages for session $sessionId")
             summarizeOlderMessages()
         }
     }
@@ -766,7 +767,6 @@ class Session(
                 chatSessionRepository.saveSummary(mergedSummary)
             }
         } catch (e: Exception) {
-            log.info("Warning: Failed to create conversation summary: ${e.message}")
             log.error("Error while summarizing: ${e.message}", e)
         }
     }

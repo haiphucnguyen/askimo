@@ -4,7 +4,7 @@
  */
 package io.askimo.core.project
 
-import io.askimo.core.util.logger
+import io.askimo.core.logging.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

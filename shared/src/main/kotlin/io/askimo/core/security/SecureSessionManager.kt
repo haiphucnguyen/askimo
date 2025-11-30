@@ -4,12 +4,12 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.security.SecureApiKeyManager.StorageMethod
 import io.askimo.core.session.SessionParams
-import io.askimo.core.util.logger
 
 /**
  * Secure wrapper for SessionParams that handles API key storage/retrieval transparently.

@@ -5,9 +5,9 @@
 package io.askimo.cli.recipes
 
 import io.askimo.cli.LoadingIndicator
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.session.Session
-import io.askimo.core.util.logger
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 

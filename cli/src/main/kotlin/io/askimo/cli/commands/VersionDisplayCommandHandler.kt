@@ -5,7 +5,8 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.VersionInfo
-import io.askimo.core.util.logger
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
 
 class VersionDisplayCommandHandler : CommandHandler {
@@ -15,7 +16,7 @@ class VersionDisplayCommandHandler : CommandHandler {
 
     override fun handle(line: ParsedLine) {
         val a = VersionInfo
-        log.info(
+        log.display(
             """
             ${a.name} ${a.version}
             Author: ${a.author}

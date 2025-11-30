@@ -5,8 +5,9 @@
 package io.askimo.cli.commands
 
 import io.askimo.cli.recipes.RecipeRegistry
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 
@@ -18,7 +19,7 @@ class ListRecipesCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val dir = AskimoHome.recipesDir()
         if (!Files.exists(dir)) {
-            log.info("ℹ️  No recipes registered yet.")
+            log.display("ℹ️  No recipes registered yet.")
             return
         }
 
@@ -30,12 +31,12 @@ class ListRecipesCommandHandler : CommandHandler {
                 .toList()
 
         if (files.isEmpty()) {
-            log.info("ℹ️  No recipes registered.")
+            log.display("ℹ️  No recipes registered.")
             return
         }
 
-        log.info("📦 Registered recipes (${files.size})")
-        log.info("──────────────────────────────")
+        log.display("📦 Registered recipes (${files.size})")
+        log.display("──────────────────────────────")
 
         val registry = RecipeRegistry()
         files.forEach { file ->
@@ -43,10 +44,10 @@ class ListRecipesCommandHandler : CommandHandler {
             try {
                 val recipe = registry.load(recipeName)
                 val description = recipe.description ?: "No description"
-                log.info("$recipeName - $description")
+                log.display("$recipeName - $description")
             } catch (e: Exception) {
                 // If we can't load the recipe, just show the name
-                log.info("$recipeName - (Unable to load description)")
+                log.display("$recipeName - (Unable to load description)")
                 log.error("Failed to load recipe $recipeName", e)
             }
         }

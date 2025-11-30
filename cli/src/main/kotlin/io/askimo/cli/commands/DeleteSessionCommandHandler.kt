@@ -4,8 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.session.ChatSessionService
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 class DeleteSessionCommandHandler : CommandHandler {
@@ -19,8 +20,8 @@ class DeleteSessionCommandHandler : CommandHandler {
         val args = line.words()
 
         if (args.size < 2) {
-            log.info("❌ Usage: :delete-session <session-id>")
-            log.info("💡 Tip: Use ':sessions' to list all available sessions")
+            log.display("❌ Usage: :delete-session <session-id>")
+            log.display("💡 Tip: Use ':sessions' to list all available sessions")
             return
         }
 
@@ -29,8 +30,8 @@ class DeleteSessionCommandHandler : CommandHandler {
         // Check if session exists first
         val session = sessionService.getSessionById(sessionId)
         if (session == null) {
-            log.info("❌ Session with ID '$sessionId' not found")
-            log.info("💡 Tip: Use ':sessions' to list all available sessions")
+            log.display("❌ Session with ID '$sessionId' not found")
+            log.display("💡 Tip: Use ':sessions' to list all available sessions")
             return
         }
 
@@ -38,9 +39,9 @@ class DeleteSessionCommandHandler : CommandHandler {
         val deleted = sessionService.deleteSession(sessionId)
 
         if (deleted) {
-            log.info("✅ Session '${session.title}' (ID: $sessionId) has been deleted successfully")
+            log.display("✅ Session '${session.title}' (ID: $sessionId) has been deleted successfully")
         } else {
-            log.info("❌ Failed to delete session with ID '$sessionId'")
+            log.display("❌ Failed to delete session with ID '$sessionId'")
         }
     }
 }

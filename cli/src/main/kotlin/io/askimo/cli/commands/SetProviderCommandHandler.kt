@@ -4,12 +4,13 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -30,7 +31,7 @@ class SetProviderCommandHandler(
     override fun handle(line: ParsedLine) {
         val args = line.words().drop(1)
         if (args.isEmpty()) {
-            log.info("❌ Usage: :set-provider <provider>")
+            log.display("❌ Usage: :set-provider <provider>")
             return
         }
 
@@ -38,20 +39,20 @@ class SetProviderCommandHandler(
         val provider = runCatching { ModelProvider.valueOf(input) }.getOrNull()
 
         if (provider == null) {
-            log.info("❌ Unknown provider: '$input'")
-            log.info("💡 Use `:providers` to list all supported model providers.")
+            log.display("❌ Unknown provider: '$input'")
+            log.display("💡 Use `:providers` to list all supported model providers.")
             return
         }
 
         if (!ProviderRegistry.getSupportedProviders().contains(provider)) {
-            log.info("❌ Provider '$input' is not registered.")
-            log.info("💡 Use `:providers` to see which providers are currently available.")
+            log.display("❌ Provider '$input' is not registered.")
+            log.display("💡 Use `:providers` to see which providers are currently available.")
             return
         }
 
         val factory = session.getModelFactory(provider)
         if (factory == null) {
-            log.info("❌ No factory registered for provider: ${provider.name.lowercase()}")
+            log.display("❌ No factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
@@ -73,15 +74,15 @@ class SetProviderCommandHandler(
         SessionConfigManager.save(session.params)
         session.rebuildActiveChatService(KEEP_PER_PROVIDER_MODEL)
 
-        log.info("✅ Model provider set to: ${provider.name.lowercase()}")
-        log.info("💡 Use `:models` to list all available models for this provider.")
-        log.info("💡 Then use `:set-param model <modelName>` to choose one.")
+        log.display("✅ Model provider set to: ${provider.name.lowercase()}")
+        log.display("💡 Use `:models` to list all available models for this provider.")
+        log.display("💡 Then use `:set-param model <modelName>` to choose one.")
 
         val settings = session.getCurrentProviderSettings()
         if (!settings.validate()) {
-            log.info("⚠️  This provider isn't fully configured yet.")
-            log.info(settings.getSetupHelpText(io.askimo.core.providers.DefaultMessageResolver.resolver))
-            log.info("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
+            log.display("⚠️  This provider isn't fully configured yet.")
+            log.display(settings.getSetupHelpText(io.askimo.core.providers.DefaultMessageResolver.resolver))
+            log.display("👉 Once you're ready, use `:set-param model <modelName>` to choose a model and start chatting.")
         }
     }
 }

@@ -4,10 +4,11 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.ProjectStore
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -24,7 +25,7 @@ class ListProjectsCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val metas = ProjectStore.list()
         if (metas.isEmpty()) {
-            log.info("ℹ️  No projects saved yet. Use :create-project to add one.")
+            log.display("ℹ️  No projects saved yet. Use :create-project to add one.")
             return
         }
 
@@ -37,7 +38,7 @@ class ListProjectsCommandHandler : CommandHandler {
                     .thenBy { it.name.lowercase() },
             )
 
-        log.info("📚 Projects:")
+        log.display("📚 Projects:")
         projects.forEachIndexed { i, p ->
             val rootDisp = p.root.replaceFirst(home, "~")
             val exists =
@@ -52,7 +53,7 @@ class ListProjectsCommandHandler : CommandHandler {
                 }
             val missing = if (exists) "" else "  (missing)"
 
-            log.info(
+            log.display(
                 "%2d. %-20s  id=%s\n      ↳ %s%s".format(
                     i + 1,
                     p.name,

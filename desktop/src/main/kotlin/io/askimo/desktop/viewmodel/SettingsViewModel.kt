@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
@@ -18,7 +19,6 @@ import io.askimo.core.session.MemoryPolicy
 import io.askimo.core.session.Session
 import io.askimo.core.session.SessionConfigManager
 import io.askimo.core.session.getConfigInfo
-import io.askimo.core.util.logger
 import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope

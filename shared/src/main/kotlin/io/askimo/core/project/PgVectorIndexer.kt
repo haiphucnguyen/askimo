@@ -12,8 +12,10 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import io.askimo.core.session.Session
-import io.askimo.core.util.logger
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -154,8 +156,7 @@ class PgVectorIndexer(
                             throttle()
                         } catch (e: Throwable) {
                             failedChunks++
-                            println("  ⚠️  Chunk failure ${filePath.fileName}[$idx/$total]: ${e.message}")
-                            log.error("Chunked failed ${filePath.fileName}[$idx/$total]", e)
+                            log.displayError("  ⚠️  Chunk failure ${filePath.fileName}[$idx/$total]: ${e.message}", e)
                         }
                     }
 
@@ -211,7 +212,7 @@ class PgVectorIndexer(
         }
 
         if (tooLargeToIndex(filePath)) {
-            log.info("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
+            log.display("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
             return
         }
 
@@ -245,8 +246,7 @@ class PgVectorIndexer(
                 embeddingStore.add(embedding.content(), seg)
                 throttle()
             } catch (e: Throwable) {
-                log.info("⚠️ Failed to index chunk $idx of ${filePath.fileName}: ${e.message}")
-                log.error("Failed to index chunk $idx of ${filePath.fileName}", e)
+                log.displayError("Failed to index chunk $idx of ${filePath.fileName}", e)
             }
         }
     }
@@ -277,8 +277,7 @@ class PgVectorIndexer(
                 }
             }
         } catch (e: Exception) {
-            log.info("⚠️ Failed to remove file from index: $relativePath - ${e.message}")
-            log.error("Failed to remove file from index: $relativePath", e)
+            log.displayError("Failed to remove file from index: $relativePath", e)
         }
     }
 
@@ -519,8 +518,7 @@ class PgVectorIndexer(
                     try {
                         st.execute(sql.trimIndent())
                     } catch (e: Exception) {
-                        log.info("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}")
-                        log.error("Index failed", e)
+                        log.displayError("Index ensure failed for: ${sql.lineSequence().firstOrNull()} → ${e.message}", e)
                     }
                 }
             }

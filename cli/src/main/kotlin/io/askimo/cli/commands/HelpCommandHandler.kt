@@ -4,7 +4,8 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.util.logger
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
 
 /**
@@ -33,7 +34,7 @@ class HelpCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val modeText = if (isNonInteractiveMode) "non-interactive" else "interactive"
 
-        log.info("Available commands ($modeText mode):\n")
+        log.display("Available commands ($modeText mode):\n")
 
         commands.forEach { handler ->
             val commandName = if (isNonInteractiveMode) {
@@ -46,11 +47,11 @@ class HelpCommandHandler : CommandHandler {
         }
 
         if (isNonInteractiveMode) {
-            log.info("\n💡 Multiple commands can be combined in a single invocation:")
-            log.info("   Example: askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4")
-            log.info("\nFor interactive mode, run 'askimo' without arguments and use ':command' format.")
+            log.display("\n💡 Multiple commands can be combined in a single invocation:")
+            log.display("   Example: askimo --set-provider openai --set-param api_key sk-abc123 --set-param model gpt-4")
+            log.display("\nFor interactive mode, run 'askimo' without arguments and use ':command' format.")
         } else {
-            log.info("\nFor non-interactive mode, use 'askimo --command' format from command line.")
+            log.display("\nFor non-interactive mode, use 'askimo --command' format from command line.")
         }
     }
 
@@ -69,28 +70,28 @@ class HelpCommandHandler : CommandHandler {
         val additionalLines = lines.drop(1)
 
         // Format main command line
-        log.info("  ${commandName.padEnd(18)} - $mainDescription")
+        log.display("  ${commandName.padEnd(18)} - $mainDescription")
 
         // Format usage and additional lines with proper indentation
         additionalLines.forEach { line ->
             when {
                 line.trim().startsWith("Usage:") -> {
-                    log.info("${" ".repeat(22)}$line")
+                    log.display("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("Example:") -> {
-                    log.info("${" ".repeat(22)}$line")
+                    log.display("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("Options:") -> {
-                    log.info("${" ".repeat(22)}$line")
+                    log.display("${" ".repeat(22)}$line")
                 }
                 line.trim().startsWith("--") -> {
-                    log.info("${" ".repeat(24)}$line")
+                    log.display("${" ".repeat(24)}$line")
                 }
                 line.trim().isNotEmpty() -> {
-                    log.info("${" ".repeat(22)}$line")
+                    log.display("${" ".repeat(22)}$line")
                 }
                 else -> {
-                    log.info("")
+                    log.display("")
                 }
             }
         }

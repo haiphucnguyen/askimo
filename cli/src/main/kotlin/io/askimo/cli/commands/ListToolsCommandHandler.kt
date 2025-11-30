@@ -5,7 +5,8 @@
 package io.askimo.cli.commands
 
 import dev.langchain4j.agent.tool.Tool
-import io.askimo.core.util.logger
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import org.jline.reader.ParsedLine
@@ -19,12 +20,12 @@ class ListToolsCommandHandler : CommandHandler {
     override fun handle(line: ParsedLine) {
         val providers = listOf(GitTools(), LocalFsTools)
 
-        log.info("🔧 Available Tools")
-        log.info("──────────────────────────────")
+        log.display("🔧 Available Tools")
+        log.display("──────────────────────────────")
 
         providers.forEach { provider ->
             val className = provider.javaClass.simpleName
-            log.info("\n📦 $className")
+            log.display("\n📦 $className")
 
             val tools = mutableListOf<Pair<String, String>>()
 
@@ -38,14 +39,14 @@ class ListToolsCommandHandler : CommandHandler {
             }
 
             tools.sortedBy { it.first }.forEach { (name, desc) ->
-                log.info("  • $name")
+                log.display("  • $name")
                 if (desc.isNotEmpty()) {
                     // Handle multi-line descriptions
                     desc.lines().forEachIndexed { index, line ->
                         if (index == 0) {
-                            log.info("    $line")
+                            log.display("    $line")
                         } else if (line.trim().isNotEmpty()) {
-                            log.info("    $line")
+                            log.display("    $line")
                         }
                     }
                 }
@@ -58,7 +59,7 @@ class ListToolsCommandHandler : CommandHandler {
             }
         }
 
-        log.info("\n──────────────────────────────")
-        log.info("Total: $totalCount tools")
+        log.display("\n──────────────────────────────")
+        log.display("Total: $totalCount tools")
     }
 }

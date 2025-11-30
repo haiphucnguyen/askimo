@@ -4,7 +4,9 @@
  */
 package io.askimo.core.project
 
-import io.askimo.core.util.logger
+import io.askimo.core.logging.display
+import io.askimo.core.logging.displayError
+import io.askimo.core.logging.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,7 +36,7 @@ object FileWatcherManager {
             newWatcher.startWatching()
             currentWatcher = newWatcher
 
-            log.info("🔍 File watcher activated for project: $projectRoot")
+            log.display("🔍 File watcher activated for project: $projectRoot")
         }
     }
 
@@ -46,10 +48,9 @@ object FileWatcherManager {
             currentWatcher?.let { watcher ->
                 try {
                     watcher.stopWatching()
-                    log.info("🔍 File watcher stopped")
+                    log.display("🔍 File watcher stopped")
                 } catch (e: Exception) {
-                    log.info("⚠️ Error stopping file watcher: ${e.message}")
-                    log.error("Error while stop watching", e)
+                    log.displayError("⚠️ Error stopping file watcher", e)
                 }
             }
             currentWatcher = null

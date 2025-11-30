@@ -4,10 +4,11 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.session.Session
 import io.askimo.core.session.getConfigInfo
 import io.askimo.core.util.AskimoHome
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 
@@ -28,18 +29,18 @@ class ConfigCommandHandler(
     override fun handle(line: ParsedLine) {
         val configInfo = session.getConfigInfo()
 
-        log.info("🔧 Current configuration:")
-        log.info("  Provider:    ${configInfo.provider}")
-        log.info("  Model:       ${configInfo.model}")
-        log.info("  Settings:")
+        log.display("🔧 Current configuration:")
+        log.display("  Provider:    ${configInfo.provider}")
+        log.display("  Model:       ${configInfo.model}")
+        log.display("  Settings:")
 
         configInfo.settingsDescription.forEach {
-            log.info("    $it")
+            log.display("    $it")
         }
 
         val scope = session.scope
         if (scope == null) {
-            log.info("  Active project: (none)")
+            log.display("  Active project: (none)")
         } else {
             val exists =
                 try {
@@ -49,9 +50,9 @@ class ConfigCommandHandler(
                 }
             val home = AskimoHome.userHome().toString()
             val rootDisp = scope.projectDir.toString().replaceFirst(home, "~")
-            log.info("  Active project:")
-            log.info("    Name:       ${scope.projectName}")
-            log.info("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
+            log.display("  Active project:")
+            log.display("    Name:       ${scope.projectName}")
+            log.display("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
         }
     }
 }

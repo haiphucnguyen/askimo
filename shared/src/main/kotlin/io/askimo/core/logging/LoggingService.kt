@@ -39,25 +39,17 @@ object LoggingService {
             LogLevel.TRACE -> Level.TRACE
         }
 
+        // Update root logger
         rootLogger.level = logbackLevel
+
+        // Update all existing loggers to ensure the change takes effect
+        loggerContext.loggerList.forEach { logger ->
+            logger.level = logbackLevel
+        }
 
         // Log the change (will be visible if new level permits)
         LoggerFactory.getLogger(LoggingService::class.java)
             .info("Log level changed to: ${level.name}")
-    }
-
-    /**
-     * Gets the current root logger level.
-     *
-     * @return The current log level
-     */
-    fun getCurrentLevel(): LogLevel = when (rootLogger.level) {
-        Level.ERROR -> LogLevel.ERROR
-        Level.WARN -> LogLevel.WARN
-        Level.INFO -> LogLevel.INFO
-        Level.DEBUG -> LogLevel.DEBUG
-        Level.TRACE -> LogLevel.TRACE
-        else -> LogLevel.INFO
     }
 
     /**

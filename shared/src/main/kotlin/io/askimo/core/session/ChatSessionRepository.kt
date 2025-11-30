@@ -6,7 +6,7 @@ package io.askimo.core.session
 
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.sqliteDatetime
-import io.askimo.core.util.logger
+import io.askimo.core.logging.logger
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow

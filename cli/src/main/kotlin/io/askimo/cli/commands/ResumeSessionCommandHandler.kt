@@ -4,10 +4,11 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.session.ChatSessionService
 import io.askimo.core.session.MessageRole
 import io.askimo.core.session.Session
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 class ResumeSessionCommandHandler(private val session: Session) : CommandHandler {
@@ -20,7 +21,7 @@ class ResumeSessionCommandHandler(private val session: Session) : CommandHandler
     override fun handle(line: ParsedLine) {
         val args = line.words()
         if (args.size < 2) {
-            log.info("❌ Usage: :resume-session <session-id>")
+            log.display("❌ Usage: :resume-session <session-id>")
             return
         }
 
@@ -28,17 +29,17 @@ class ResumeSessionCommandHandler(private val session: Session) : CommandHandler
         val result = sessionService.resumeSession(session, sessionId)
 
         if (result.success) {
-            log.info("✅ Resumed chat session: $sessionId")
+            log.display("✅ Resumed chat session: $sessionId")
             if (result.messages.isNotEmpty()) {
-                log.info("\n📝 All conversation history:")
+                log.display("\n📝 All conversation history:")
                 result.messages.forEach { msg ->
                     val prefix = if (msg.role == MessageRole.USER) "You" else "Assistant"
-                    log.info("$prefix: ${msg.content}")
-                    log.info("-".repeat(40))
+                    log.display("$prefix: ${msg.content}")
+                    log.display("-".repeat(40))
                 }
             }
         } else {
-            log.info("❌ ${result.errorMessage}")
+            log.display("❌ ${result.errorMessage}")
         }
     }
 }

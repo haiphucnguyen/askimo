@@ -4,8 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.logging.display
+import io.askimo.core.logging.logger
 import io.askimo.core.session.Session
-import io.askimo.core.util.logger
 import org.jline.reader.ParsedLine
 
 class NewSessionCommandHandler(private val session: Session) : CommandHandler {
@@ -15,6 +16,6 @@ class NewSessionCommandHandler(private val session: Session) : CommandHandler {
 
     override fun handle(line: ParsedLine) {
         session.startNewChatSession()
-        log.info("✨ Started new chat session: ${session.currentChatSession?.id}")
+        log.display("✨ Started new chat session: ${session.currentChatSession?.id}")
     }
 }
