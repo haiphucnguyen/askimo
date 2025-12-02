@@ -3,18 +3,13 @@
  * Copyright (c) 2025 Hai Nguyen
  */
 package io.askimo.desktop.di
-
-import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatFolderRepository
-import io.askimo.core.chat.repository.ChatMessageRepository
-import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.ConversationSummaryRepository
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.chat.ChatSessionManager
 import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.viewmodel.ChatViewModel
@@ -30,14 +25,14 @@ import org.koin.dsl.module
 val desktopModule = module {
     single<AppContext> { AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP) }
 
-    // Repository layer - each repository manages one table and auto-initializes on construction
-    single { ChatSessionRepository() }
-    single { ChatMessageRepository() }
-    single { ChatFolderRepository() }
-    single { ConversationSummaryRepository() }
-    single { ChatDirectiveRepository() }
+    single { DatabaseManager.getInstance() }
 
-    // Service layer - coordinates between repositories
+    single { get<DatabaseManager>().getChatSessionRepository() }
+    single { get<DatabaseManager>().getChatMessageRepository() }
+    single { get<DatabaseManager>().getChatFolderRepository() }
+    single { get<DatabaseManager>().getConversationSummaryRepository() }
+    single { get<DatabaseManager>().getChatDirectiveRepository() }
+
     single {
         ChatSessionService(
             sessionRepository = get(),
