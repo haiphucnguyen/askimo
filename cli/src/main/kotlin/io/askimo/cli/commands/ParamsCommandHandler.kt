@@ -4,11 +4,11 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.ParamKey
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.session.ParamKey
-import io.askimo.core.session.Session
 import io.askimo.core.util.Masking
 import org.jline.reader.ParsedLine
 
@@ -20,7 +20,7 @@ import org.jline.reader.ParsedLine
  * configured and their current values.
  */
 class ParamsCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<ParamsCommandHandler>()
     override val keyword = ":params"
@@ -35,8 +35,8 @@ class ParamsCommandHandler(
     }
 
     private fun showParams() {
-        val provider = session.getActiveProvider()
-        val settings = session.getCurrentProviderSettings()
+        val provider = appContext.getActiveProvider()
+        val settings = appContext.getCurrentProviderSettings()
         val model = resolveCurrentModel(settings)
 
         log.display("Provider : ${provider.name.lowercase()}")
@@ -72,8 +72,8 @@ class ParamsCommandHandler(
     }
 
     private fun listKeys() {
-        val provider = session.getActiveProvider()
-        val settings = session.getCurrentProviderSettings()
+        val provider = appContext.getActiveProvider()
+        val settings = appContext.getCurrentProviderSettings()
         val model = resolveCurrentModel(settings)
 
         log.display("Available parameter keys for $model ($provider):")
@@ -91,7 +91,7 @@ class ParamsCommandHandler(
     }
 
     private fun resolveCurrentModel(settings: ProviderSettings): String {
-        val m = session.params.model
+        val m = appContext.params.model
         return m.ifBlank { settings.defaultModel }
     }
 
@@ -99,7 +99,7 @@ class ParamsCommandHandler(
         key: ParamKey,
         settings: ProviderSettings,
     ): Any? = try {
-        key.getValue(session.params, settings)
+        key.getValue(appContext.params, settings)
     } catch (_: Exception) {
         "<?>"
     }

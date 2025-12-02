@@ -4,9 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.ChatSessionService
 import org.jline.reader.ParsedLine
 
 class DeleteSessionCommandHandler : CommandHandler {

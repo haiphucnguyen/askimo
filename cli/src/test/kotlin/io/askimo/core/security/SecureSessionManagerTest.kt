@@ -4,11 +4,11 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
-import io.askimo.core.session.SessionParams
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -70,13 +70,13 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should load session with empty API keys unchanged")
     fun testLoadSessionWithEmptyApiKeys() {
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "")
             providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = "")
         }
 
-        val loadedSession = secureSessionManager.loadSecureSession(sessionParams)
+        val loadedSession = secureSessionManager.loadSecureSession(appContextParams)
 
         // Should not modify empty API keys
         val openAiSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
@@ -90,12 +90,12 @@ class SecureSessionManagerTest {
     @DisplayName("Should save session and replace API keys with placeholders")
     fun testSaveSessionWithApiKeys() {
         val originalApiKey = "sk-test-api-key-12345"
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = originalApiKey)
         }
 
-        val savedSession = secureSessionManager.saveSecureSession(sessionParams)
+        val savedSession = secureSessionManager.saveSecureSession(appContextParams)
 
         val openAiSettings = savedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
 
@@ -112,13 +112,13 @@ class SecureSessionManagerTest {
     @DisplayName("Should handle round-trip save and load of API keys")
     fun testRoundTripSaveAndLoad() {
         val originalApiKey = "sk-test-round-trip-key-67890"
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = originalApiKey)
         }
 
         // Save the session (this should store the API key securely)
-        val savedSession = secureSessionManager.saveSecureSession(sessionParams)
+        val savedSession = secureSessionManager.saveSecureSession(appContextParams)
         val savedSettings = savedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
 
         // Verify the key was replaced with a placeholder during save
@@ -152,7 +152,7 @@ class SecureSessionManagerTest {
         val geminiKey = "ai-gemini-test-key"
         val xaiKey = "xai-test-key"
 
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = openAiKey)
             providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = geminiKey)
@@ -160,7 +160,7 @@ class SecureSessionManagerTest {
         }
 
         // Save all API keys
-        val savedSession = secureSessionManager.saveSecureSession(sessionParams)
+        val savedSession = secureSessionManager.saveSecureSession(appContextParams)
 
         // Verify all keys are replaced with placeholders
         val savedOpenAi = savedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
@@ -198,12 +198,12 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should handle keychain placeholder correctly")
     fun testKeychainPlaceholderHandling() {
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "***keychain***")
         }
 
-        val loadedSession = secureSessionManager.loadSecureSession(sessionParams)
+        val loadedSession = secureSessionManager.loadSecureSession(appContextParams)
 
         // Since there's no actual key stored, it should either remain as placeholder or be empty
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
@@ -223,12 +223,12 @@ class SecureSessionManagerTest {
         val encrypted = EncryptionManager.encrypt(originalKey)
         assertNotNull(encrypted, "Encryption should succeed")
 
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "encrypted:$encrypted")
         }
 
-        val loadedSession = secureSessionManager.loadSecureSession(sessionParams)
+        val loadedSession = secureSessionManager.loadSecureSession(appContextParams)
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
 
         // The SecureSessionManager logic tries secure storage first, then encrypted decryption
@@ -247,12 +247,12 @@ class SecureSessionManagerTest {
         // Clean up any existing keys first
         cleanupTestKeys()
 
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "encrypted:corrupted-invalid-base64-data-xyz")
         }
 
-        val loadedSession = secureSessionManager.loadSecureSession(sessionParams)
+        val loadedSession = secureSessionManager.loadSecureSession(appContextParams)
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
 
         // The behavior depends on whether there's a key in secure storage
@@ -278,13 +278,13 @@ class SecureSessionManagerTest {
         val openAiKey = "sk-migrate-test-key"
         val geminiKey = "ai-migrate-gemini-key"
 
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = openAiKey)
             providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = geminiKey)
         }
 
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(sessionParams)
+        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
 
         assertNotNull(migrationResult)
         assertTrue(migrationResult.results.isNotEmpty())
@@ -302,13 +302,13 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should not migrate already secure API keys")
     fun testSkipMigrationForSecureKeys() {
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "***keychain***")
             providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = "encrypted:someencrypteddata")
         }
 
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(sessionParams)
+        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
 
         // Should not attempt to migrate already secure keys
         assertTrue(migrationResult.results.isEmpty())
@@ -320,7 +320,7 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should handle empty session params gracefully")
     fun testEmptySessionParams() {
-        val emptyParams = SessionParams()
+        val emptyParams = AppContextParams()
 
         val loadedSession = secureSessionManager.loadSecureSession(emptyParams)
         assertNotNull(loadedSession)
@@ -339,7 +339,7 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should preserve non-API key settings during operations")
     fun testPreserveNonApiKeySettings() {
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             models[ModelProvider.OPENAI] = "gpt-4"
             models[ModelProvider.GEMINI] = "gemini-2.5-flash"
@@ -349,7 +349,7 @@ class SecureSessionManagerTest {
             )
         }
 
-        val savedSession = secureSessionManager.saveSecureSession(sessionParams)
+        val savedSession = secureSessionManager.saveSecureSession(appContextParams)
         val loadedSession = secureSessionManager.loadSecureSession(savedSession)
 
         // Non-API key settings should be preserved
@@ -364,12 +364,12 @@ class SecureSessionManagerTest {
     @Test
     @DisplayName("Should generate meaningful security report")
     fun testSecurityReportGeneration() {
-        val sessionParams = SessionParams().apply {
+        val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "sk-test-security-report")
         }
 
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(sessionParams)
+        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
         val securityReport = migrationResult.getSecurityReport()
 
         assertNotNull(securityReport)
@@ -388,7 +388,7 @@ class SecureSessionManagerTest {
     @DisplayName("Should handle session params copy correctly")
     fun testSessionParamsCopyBehavior() {
         val originalApiKey = "sk-original-key"
-        val originalParams = SessionParams().apply {
+        val originalParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = originalApiKey)
         }

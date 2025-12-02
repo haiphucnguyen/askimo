@@ -5,10 +5,10 @@
 package io.askimo.core.project
 
 import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextParams
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionMode
-import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
 import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,7 +40,6 @@ class PgVectorIndexerOllamaTest {
 
         @JvmStatic
         val postgres: PgVectorPostgres by lazy {
-            // Apply common TestContainers configuration
             TestContainersConfig.ensureConfigured()
 
             PgVectorPostgres("pgvector/pgvector:0.8.1-pg18-trixie").apply {
@@ -94,11 +93,11 @@ class PgVectorIndexerOllamaTest {
             """.trimIndent(),
         )
 
-        val session = Session(SessionParams(currentProvider = OLLAMA), SessionMode.CLI_PROMPT)
+        val appContext = AppContext(AppContextParams(currentProvider = OLLAMA), ExecutionMode.CLI_PROMPT)
         val indexer =
             PgVectorIndexer(
                 projectId = "pgvector-indexer-test",
-                session = session,
+                appContext = appContext,
             )
 
         val count = indexer.indexProject(tmp)

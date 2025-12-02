@@ -4,9 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.ChatSessionService
 import io.askimo.core.util.TimeUtil
 import org.jline.reader.ParsedLine
 
@@ -38,7 +39,7 @@ class ListSessionsCommandHandler : CommandHandler {
         displaySessionsPage(pagedSessions)
     }
 
-    private fun displaySessionsPage(pagedSessions: io.askimo.core.session.PagedSessions) {
+    private fun displaySessionsPage(pagedSessions: PagedSessions) {
         val startIndex = (pagedSessions.currentPage - 1) * pagedSessions.pageSize
 
         log.display("📋 Chat Sessions (Page ${pagedSessions.currentPage} of ${pagedSessions.totalPages})")

@@ -4,9 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionParams
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -17,23 +17,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
-    private lateinit var session: Session
+    private lateinit var appContext: AppContext
     private lateinit var handler: ClearMemoryCommandHandler
 
     @BeforeEach
     fun setUp() {
-        session = mock<Session>()
-        handler = ClearMemoryCommandHandler(session)
+        appContext = mock<AppContext>()
+        handler = ClearMemoryCommandHandler(appContext)
     }
 
     @Test
     fun `handle clears memory for active provider and model`() {
         val provider = ModelProvider.OPENAI
         val modelName = "gpt-4"
-        val params = mock<SessionParams>()
+        val params = mock<AppContextParams>()
 
-        whenever(session.getActiveProvider()) doReturn provider
-        whenever(session.params) doReturn params
+        whenever(appContext.getActiveProvider()) doReturn provider
+        whenever(appContext.params) doReturn params
         whenever(params.getModel(provider)) doReturn modelName
 
         val parsedLine = mockParsedLine(":clear")
@@ -41,7 +41,7 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
         handler.handle(parsedLine)
 
         // Verify that removeMemory was called with correct parameters
-        verify(session).removeMemory(provider, modelName)
+        verify(appContext).removeMemory(provider, modelName)
 
         // Verify console output
         val output = getOutput()
@@ -54,17 +54,17 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
     fun `handle clears memory for Ollama provider`() {
         val provider = ModelProvider.OLLAMA
         val modelName = "llama3.2"
-        val params = mock<SessionParams>()
+        val params = mock<AppContextParams>()
 
-        whenever(session.getActiveProvider()) doReturn provider
-        whenever(session.params) doReturn params
+        whenever(appContext.getActiveProvider()) doReturn provider
+        whenever(appContext.params) doReturn params
         whenever(params.getModel(provider)) doReturn modelName
 
         val parsedLine = mockParsedLine(":clear")
 
         handler.handle(parsedLine)
 
-        verify(session).removeMemory(provider, modelName)
+        verify(appContext).removeMemory(provider, modelName)
 
         val output = getOutput()
         assertTrue(output.contains("🧹 Chat memory cleared"))
@@ -76,17 +76,17 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
     fun `handle clears memory for Anthropic provider`() {
         val provider = ModelProvider.ANTHROPIC
         val modelName = "claude-3-5-sonnet-20241022"
-        val params = mock<SessionParams>()
+        val params = mock<AppContextParams>()
 
-        whenever(session.getActiveProvider()) doReturn provider
-        whenever(session.params) doReturn params
+        whenever(appContext.getActiveProvider()) doReturn provider
+        whenever(appContext.params) doReturn params
         whenever(params.getModel(provider)) doReturn modelName
 
         val parsedLine = mockParsedLine(":clear")
 
         handler.handle(parsedLine)
 
-        verify(session).removeMemory(provider, modelName)
+        verify(appContext).removeMemory(provider, modelName)
 
         val output = getOutput()
         assertTrue(output.contains("🧹 Chat memory cleared"))
@@ -98,17 +98,17 @@ class ClearMemoryCommandHandlerTest : CommandHandlerTestBase() {
     fun `handle clears memory for Gemini provider`() {
         val provider = ModelProvider.GEMINI
         val modelName = "gemini-2.0-flash-exp"
-        val params = mock<SessionParams>()
+        val params = mock<AppContextParams>()
 
-        whenever(session.getActiveProvider()) doReturn provider
-        whenever(session.params) doReturn params
+        whenever(appContext.getActiveProvider()) doReturn provider
+        whenever(appContext.params) doReturn params
         whenever(params.getModel(provider)) doReturn modelName
 
         val parsedLine = mockParsedLine(":clear")
 
         handler.handle(parsedLine)
 
-        verify(session).removeMemory(provider, modelName)
+        verify(appContext).removeMemory(provider, modelName)
 
         val output = getOutput()
         assertTrue(output.contains("🧹 Chat memory cleared"))

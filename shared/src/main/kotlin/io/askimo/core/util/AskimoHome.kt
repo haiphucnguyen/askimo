@@ -22,7 +22,6 @@ object AskimoHome {
 
     /** Returns the (possibly overridden) base Askimo directory. */
     fun base(): Path {
-        // Check for test override first
         testBaseOverride.get()?.let { return it }
 
         val override = System.getenv("ASKIMO_HOME")?.trim()?.takeIf { it.isNotEmpty() }

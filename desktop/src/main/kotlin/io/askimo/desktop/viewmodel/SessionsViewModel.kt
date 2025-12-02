@@ -7,8 +7,9 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import io.askimo.core.session.ChatSessionService
-import io.askimo.core.session.PagedSessions
+import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.chat.service.PagedSessions
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +36,7 @@ class SessionsViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    var recentSessions by mutableStateOf<List<io.askimo.core.session.ChatSession>>(emptyList())
+    var recentSessions by mutableStateOf<List<ChatSession>>(emptyList())
         private set
 
     var totalSessionCount by mutableStateOf(0)

@@ -4,12 +4,12 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 
 /**
@@ -20,7 +20,7 @@ import org.jline.reader.ParsedLine
  * provider correctly, with provider-specific instructions.
  */
 class ModelsCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<ModelsCommandHandler>()
     override val keyword: String = ":models"
@@ -28,7 +28,7 @@ class ModelsCommandHandler(
     override val description: String = "List available models for the current provider"
 
     override fun handle(line: ParsedLine) {
-        val provider = session.params.currentProvider
+        val provider = appContext.params.currentProvider
         val factory = ProviderRegistry.getFactory(provider)
 
         if (factory == null) {
@@ -36,7 +36,7 @@ class ModelsCommandHandler(
             return
         }
 
-        val settings = session.params.providerSettings[provider] ?: factory.defaultSettings()
+        val settings = appContext.params.providerSettings[provider] ?: factory.defaultSettings()
 
         @Suppress("UNCHECKED_CAST")
         val models = (factory as ChatModelFactory<ProviderSettings>).availableModels(settings)

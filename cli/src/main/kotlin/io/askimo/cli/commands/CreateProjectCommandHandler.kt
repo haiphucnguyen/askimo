@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
@@ -11,13 +12,12 @@ import io.askimo.core.project.FileWatcherManager
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
-import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
 import java.nio.file.Paths
 
 class CreateProjectCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<CreateProjectCommandHandler>()
     override val keyword: String = ":create-project"
@@ -52,7 +52,7 @@ class CreateProjectCommandHandler(
 
             indexer = PgVectorIndexer(
                 projectId = name,
-                session = session,
+                appContext = appContext,
             )
 
             log.display("🔎 Indexing project '$name' at $projectPath …")
@@ -77,10 +77,10 @@ class CreateProjectCommandHandler(
         log.display("⭐ Active project set to '${meta.name}'")
 
         // Keep existing session wiring (compat shim for old type if needed)
-        session.setScope(meta)
+        appContext.setScope(meta)
 
         if (indexer != null) {
-            session.enableRagWith(indexer)
+            appContext.enableRagWith(indexer)
 
             // Start file watcher for the project
             FileWatcherManager.startWatchingProject(projectPath, indexer)

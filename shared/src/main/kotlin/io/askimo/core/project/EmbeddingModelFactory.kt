@@ -8,6 +8,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
@@ -21,7 +22,6 @@ import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.UNKNOWN
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.openai.OpenAiSettings
-import io.askimo.core.session.Session
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.net.HttpURLConnection
 import java.net.URI
@@ -35,9 +35,9 @@ private val warnedOllamaOnce = AtomicBoolean(false)
 
 private val log = logger("EmbeddingModelFactory")
 
-fun getEmbeddingModel(session: Session): EmbeddingModel = when (session.getActiveProvider()) {
+fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext.getActiveProvider()) {
     OPENAI -> {
-        val openAiKey = (session.getCurrentProviderSettings() as OpenAiSettings).apiKey
+        val openAiKey = (appContext.getCurrentProviderSettings() as OpenAiSettings).apiKey
         val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
 
         val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
@@ -53,13 +53,13 @@ fun getEmbeddingModel(session: Session): EmbeddingModel = when (session.getActiv
     }
 
     ANTHROPIC, GEMINI, XAI, LOCALAI, LMSTUDIO -> {
-        noteOllamaRequired(session.getActiveProvider())
+        noteOllamaRequired(appContext.getActiveProvider())
         buildOllamaEmbeddingModel()
     }
 
     OLLAMA -> buildOllamaEmbeddingModel()
 
-    UNKNOWN -> error("Unsupported embedding provider: ${session.getActiveProvider()}")
+    UNKNOWN -> error("Unsupported embedding provider: ${appContext.getActiveProvider()}")
 }
 
 private fun buildOllamaEmbeddingModel(): EmbeddingModel {

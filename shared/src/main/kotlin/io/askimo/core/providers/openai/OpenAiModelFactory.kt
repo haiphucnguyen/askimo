@@ -9,13 +9,13 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
+import io.askimo.core.context.ExecutionMode
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
-import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
-import io.askimo.core.session.SessionMode
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
@@ -53,8 +53,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         settings: OpenAiSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
-        sessionMode: SessionMode,
-    ): ChatService {
+        executionMode: ExecutionMode,
+    ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -81,12 +81,12 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
         val builder =
             AiServices
-                .builder(ChatService::class.java)
+                .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
-                    if (sessionMode != SessionMode.DESKTOP) {
+                    if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
                 }

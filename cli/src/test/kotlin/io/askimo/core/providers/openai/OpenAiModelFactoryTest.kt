@@ -5,7 +5,7 @@
 package io.askimo.core.providers.openai
 
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
-import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class OpenAiModelFactoryTest {
 
-    private fun createChatService(): ChatService {
+    private fun createChatService(): ChatClient {
         val apiKey = System.getenv("OPENAI_API_KEY")
             ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
 
@@ -37,10 +37,10 @@ class OpenAiModelFactoryTest {
         )
     }
 
-    private fun sendPromptAndGetResponse(chatService: ChatService, prompt: String): String {
+    private fun sendPromptAndGetResponse(chatClient: ChatClient, prompt: String): String {
         println("Sending prompt: '$prompt'")
 
-        val output = chatService.sendStreamingMessageWithCallback(prompt) { _ ->
+        val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ ->
             print(".")
         }.trim()
 

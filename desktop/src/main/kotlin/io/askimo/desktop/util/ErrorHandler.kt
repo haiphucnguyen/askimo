@@ -23,7 +23,6 @@ object ErrorHandler {
      * @return A user-friendly error message suitable for display to end users
      */
     fun getUserFriendlyError(exception: Throwable, context: String): String {
-        // Log the technical details
         logger.error("Error during $context", exception)
 
         // Return user-friendly message based on exception type
@@ -59,7 +58,6 @@ object ErrorHandler {
      * @return A user-friendly error message
      */
     fun getUserFriendlyError(exception: Throwable, context: String, fallbackMessage: String): String {
-        // Log the technical details
         logger.error("Error during $context", exception)
 
         // Try to get a specific message first
@@ -72,16 +70,6 @@ object ErrorHandler {
         }
 
         return specificMessage ?: fallbackMessage
-    }
-
-    /**
-     * Log an error with context.
-     *
-     * @param exception The exception to log
-     * @param context A context string describing what operation failed
-     */
-    fun logError(exception: Throwable, context: String) {
-        logger.error("Error during $context", exception)
     }
 
     /**

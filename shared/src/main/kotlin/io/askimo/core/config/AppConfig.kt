@@ -60,18 +60,18 @@ data class IndexingConfig(
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
         "md", "txt", "gradle", "properties", "toml",
     ),
-    val projectTypes: List<io.askimo.core.config.ProjectType> = listOf(
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+    val projectTypes: List<ProjectType> = listOf(
+        ProjectType(
             name = "Gradle",
             markers = setOf("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradlew"),
             excludePaths = setOf("build/", ".gradle/", "out/", "bin/", ".kotlintest/", ".kotlin/"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Maven",
             markers = setOf("pom.xml", "mvnw"),
             excludePaths = setOf("target/", ".mvn/", "out/", "bin/"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Node.js",
             markers = setOf("package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"),
             excludePaths = setOf(
@@ -88,7 +88,7 @@ data class IndexingConfig(
                 ".vite/",
             ),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Python",
             markers = setOf("requirements.txt", "setup.py", "pyproject.toml", "Pipfile", "poetry.lock"),
             excludePaths = setOf(
@@ -109,27 +109,27 @@ data class IndexingConfig(
                 ".eggs/",
             ),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Go",
             markers = setOf("go.mod", "go.sum"),
             excludePaths = setOf("vendor/", "bin/", "pkg/"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Rust",
             markers = setOf("Cargo.toml", "Cargo.lock"),
             excludePaths = setOf("target/", "Cargo.lock"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "Ruby",
             markers = setOf("Gemfile", "Gemfile.lock", "Rakefile"),
             excludePaths = setOf("vendor/", ".bundle/", "tmp/", "log/"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = "PHP/Composer",
             markers = setOf("composer.json", "composer.lock"),
             excludePaths = setOf("vendor/", "var/cache/", "var/log/"),
         ),
-        _root_ide_package_.io.askimo.core.config.ProjectType(
+        ProjectType(
             name = ".NET",
             markers = setOf("*.csproj", "*.sln", "*.fsproj", "*.vbproj"),
             excludePaths = setOf("bin/", "obj/", "packages/", ".vs/", "Debug/", "Release/"),
@@ -176,6 +176,11 @@ data class ChatConfig(
     val summarizationThreshold: Int = 50,
 )
 
+data class DeveloperConfig(
+    val enabled: Boolean = false,
+    val active: Boolean = false,
+)
+
 data class ProxyConfig(
     val enabled: Boolean = false,
     val url: String = "",
@@ -183,23 +188,25 @@ data class ProxyConfig(
 )
 
 data class AppConfigData(
-    val pgvector: io.askimo.core.config.PgVectorConfig = _root_ide_package_.io.askimo.core.config.PgVectorConfig(),
-    val embedding: io.askimo.core.config.EmbeddingConfig = _root_ide_package_.io.askimo.core.config.EmbeddingConfig(),
-    val retry: io.askimo.core.config.RetryConfig = _root_ide_package_.io.askimo.core.config.RetryConfig(),
-    val throttle: io.askimo.core.config.ThrottleConfig = _root_ide_package_.io.askimo.core.config.ThrottleConfig(),
-    val indexing: io.askimo.core.config.IndexingConfig = _root_ide_package_.io.askimo.core.config.IndexingConfig(),
-    val chat: io.askimo.core.config.ChatConfig = _root_ide_package_.io.askimo.core.config.ChatConfig(),
+    val pgvector: PgVectorConfig = PgVectorConfig(),
+    val embedding: EmbeddingConfig = EmbeddingConfig(),
+    val retry: RetryConfig = RetryConfig(),
+    val throttle: ThrottleConfig = ThrottleConfig(),
+    val indexing: IndexingConfig = IndexingConfig(),
+    val chat: ChatConfig = ChatConfig(),
+    val developer: DeveloperConfig = DeveloperConfig(),
 )
 
 object AppConfig {
-    val pgVector: io.askimo.core.config.PgVectorConfig get() = delegate.pgvector
-    val embedding: io.askimo.core.config.EmbeddingConfig get() = delegate.embedding
-    val retry: io.askimo.core.config.RetryConfig get() = delegate.retry
-    val throttle: io.askimo.core.config.ThrottleConfig get() = delegate.throttle
-    val indexing: io.askimo.core.config.IndexingConfig get() = delegate.indexing
-    val chat: io.askimo.core.config.ChatConfig get() = delegate.chat
+    val pgVector: PgVectorConfig get() = delegate.pgvector
+    val embedding: EmbeddingConfig get() = delegate.embedding
+    val retry: RetryConfig get() = delegate.retry
+    val throttle: ThrottleConfig get() = delegate.throttle
+    val indexing: IndexingConfig get() = delegate.indexing
+    val chat: ChatConfig get() = delegate.chat
+    val developer: DeveloperConfig get() = delegate.developer
 
-    val proxy: io.askimo.core.config.ProxyConfig by lazy { loadProxyFromEnv() }
+    val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
 
     @Volatile private var cached: AppConfigData? = null
 
@@ -244,6 +251,10 @@ object AppConfig {
           max_recent_messages: ${'$'}{ASKIMO_CHAT_MAX_RECENT_MESSAGES:10}
           max_tokens_for_context: ${'$'}{ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT:3000}
           summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:50}
+
+        developer:
+          enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
+          active: ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
         """.trimIndent()
 
     // Lazy, thread-safe init
@@ -399,7 +410,12 @@ object AppConfig {
                 maxTokensForContext = envInt("ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT", 3000),
                 summarizationThreshold = envInt("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 50),
             )
-        return AppConfigData(pg, emb, r, t, idx, chat)
+        val dev =
+            DeveloperConfig(
+                enabled = System.getenv("ASKIMO_DEVELOPER_ENABLED")?.toBoolean() ?: false,
+                active = System.getenv("ASKIMO_DEVELOPER_ACTIVE")?.toBoolean() ?: false,
+            )
+        return AppConfigData(pg, emb, r, t, idx, chat, dev)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */

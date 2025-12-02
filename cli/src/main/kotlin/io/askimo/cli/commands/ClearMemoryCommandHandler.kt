@@ -4,9 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 
 /**
@@ -17,17 +17,17 @@ import org.jline.reader.ParsedLine
  * changing their model configuration.
  */
 class ClearMemoryCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<ClearMemoryCommandHandler>()
     override val keyword: String = ":clear"
     override val description: String = "Clear the current chat memory for the active provider/model."
 
     override fun handle(line: ParsedLine) {
-        val provider = session.getActiveProvider()
-        val modelName = session.params.getModel(provider)
+        val provider = appContext.getActiveProvider()
+        val modelName = appContext.params.getModel(provider)
 
-        session.removeMemory(provider, modelName)
+        appContext.removeMemory(provider, modelName)
 
         log.display("🧹 Chat memory cleared for $provider / $modelName")
     }

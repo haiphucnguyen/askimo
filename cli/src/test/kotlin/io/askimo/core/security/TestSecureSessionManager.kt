@@ -4,6 +4,7 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
@@ -13,7 +14,6 @@ import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
-import io.askimo.core.session.SessionParams
 
 /**
  * Test-specific secure session manager that uses safe provider names
@@ -40,11 +40,11 @@ class TestSecureSessionManager {
     /**
      * Loads session parameters and populates API keys from secure storage using test-safe provider names.
      */
-    fun loadSecureSession(sessionParams: SessionParams): SessionParams {
+    fun loadSecureSession(appContextParams: AppContextParams): AppContextParams {
         // Clone the session params with deep copy of provider settings
-        val secureParams = sessionParams.copy(
-            models = sessionParams.models.toMutableMap(),
-            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
+        val secureParams = appContextParams.copy(
+            models = appContextParams.models.toMutableMap(),
+            providerSettings = appContextParams.providerSettings.mapValues { (provider, settings) ->
                 deepCopyProviderSettings(provider, settings)
             }.toMutableMap(),
         )
@@ -62,11 +62,11 @@ class TestSecureSessionManager {
     /**
      * Saves session parameters, storing API keys securely using test-safe provider names.
      */
-    fun saveSecureSession(sessionParams: SessionParams): SessionParams {
+    fun saveSecureSession(appContextParams: AppContextParams): AppContextParams {
         // Clone the session params with deep copy of provider settings
-        val sanitizedParams = sessionParams.copy(
-            models = sessionParams.models.toMutableMap(),
-            providerSettings = sessionParams.providerSettings.mapValues { (provider, settings) ->
+        val sanitizedParams = appContextParams.copy(
+            models = appContextParams.models.toMutableMap(),
+            providerSettings = appContextParams.providerSettings.mapValues { (provider, settings) ->
                 deepCopyProviderSettings(provider, settings)
             }.toMutableMap(),
         )
@@ -84,11 +84,11 @@ class TestSecureSessionManager {
     /**
      * Migrates existing plain text API keys to secure storage using test-safe provider names.
      */
-    fun migrateExistingApiKeys(sessionParams: SessionParams): MigrationResult {
+    fun migrateExistingApiKeys(appContextParams: AppContextParams): MigrationResult {
         val results = mutableMapOf<ModelProvider, SecureApiKeyManager.StorageResult>()
         var hasInsecureKeys = false
 
-        sessionParams.providerSettings.forEach { (provider, settings) ->
+        appContextParams.providerSettings.forEach { (provider, settings) ->
             if (settings is HasApiKey && settings.apiKey.isNotBlank()) {
                 if (isUsingSecureStorage(settings.apiKey)) {
                     return@forEach

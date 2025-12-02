@@ -4,13 +4,13 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextConfigManager
+import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderRegistry
-import io.askimo.core.session.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionConfigManager
 import org.jline.reader.ParsedLine
 
 /**
@@ -22,7 +22,7 @@ import org.jline.reader.ParsedLine
  * accordingly.
  */
 class SetProviderCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<SetProviderCommandHandler>()
     override val keyword: String = ":set-provider"
@@ -50,35 +50,35 @@ class SetProviderCommandHandler(
             return
         }
 
-        val factory = session.getModelFactory(provider)
+        val factory = appContext.getModelFactory(provider)
         if (factory == null) {
             log.display("❌ No factory registered for provider: ${provider.name.lowercase()}")
             return
         }
 
         // ✅ Switch provider and apply default settings if not already stored
-        session.params.currentProvider = provider
-        val providerSettings = session.getOrCreateProviderSettings(provider)
-        session.setProviderSetting(
+        appContext.params.currentProvider = provider
+        val providerSettings = appContext.getOrCreateProviderSettings(provider)
+        appContext.setProviderSetting(
             provider,
             providerSettings,
         )
 
-        var model = session.params.getModel(provider)
+        var model = appContext.params.getModel(provider)
         if (model.isBlank()) {
             // Use default model if available, else the first discovered
             model = providerSettings.defaultModel
         }
-        session.params.model = model
+        appContext.params.model = model
 
-        SessionConfigManager.save(session.params)
-        session.rebuildActiveChatService(KEEP_PER_PROVIDER_MODEL)
+        AppContextConfigManager.save(appContext.params)
+        appContext.rebuildActiveChatClient(KEEP_PER_PROVIDER_MODEL)
 
         log.display("✅ Model provider set to: ${provider.name.lowercase()}")
         log.display("💡 Use `:models` to list all available models for this provider.")
         log.display("💡 Then use `:set-param model <modelName>` to choose one.")
 
-        val settings = session.getCurrentProviderSettings()
+        val settings = appContext.getCurrentProviderSettings()
         if (!settings.validate()) {
             log.display("⚠️  This provider isn't fully configured yet.")
             log.display(settings.getSetupHelpText(io.askimo.core.providers.DefaultMessageResolver.resolver))

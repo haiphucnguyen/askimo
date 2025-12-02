@@ -2023,6 +2023,432 @@
     ]
   },
   {
+    "name": "io.askimo.core.chat.repository.ChatDirectiveRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "should allow maximum length content", "parameterTypes": [] },
+      { "name": "should allow maximum length name", "parameterTypes": [] },
+      { "name": "should check if directive exists", "parameterTypes": [] },
+      { "name": "should delete existing directive", "parameterTypes": [] },
+      { "name": "should enforce maximum content length", "parameterTypes": [] },
+      { "name": "should enforce maximum name length", "parameterTypes": [] },
+      { "name": "should get multiple directives by ids", "parameterTypes": [] },
+      {
+        "name": "should get multiple directives by names",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle special characters in directive content",
+        "parameterTypes": []
+      },
+      {
+        "name": "should list all directives ordered by name",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when getting directives with empty ids list",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when getting directives with empty names list",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when deleting non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent directive",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save and retrieve a chat directive",
+        "parameterTypes": []
+      },
+      { "name": "should update existing directive", "parameterTypes": [] },
+      {
+        "name": "should update existing directive on save with same id",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatDirectiveRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatFolderRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "should create and retrieve a folder", "parameterTypes": [] },
+      {
+        "name": "should create folder with all properties",
+        "parameterTypes": []
+      },
+      { "name": "should create nested folders", "parameterTypes": [] },
+      { "name": "should delete folder successfully", "parameterTypes": [] },
+      {
+        "name": "should handle multiple levels of folder nesting",
+        "parameterTypes": []
+      },
+      {
+        "name": "should move child folders to root when deleting parent folder",
+        "parameterTypes": []
+      },
+      { "name": "should move folder to root", "parameterTypes": [] },
+      { "name": "should move session between folders", "parameterTypes": [] },
+      { "name": "should move session to root level", "parameterTypes": [] },
+      {
+        "name": "should move sessions to root when deleting folder",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve all folders ordered by sort order and name",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when deleting non-existent folder",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating folder with no changes",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating non-existent folder",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent folder",
+        "parameterTypes": []
+      },
+      {
+        "name": "should support sessions at root level (no folder)",
+        "parameterTypes": []
+      },
+      {
+        "name": "should support sessions in different folders",
+        "parameterTypes": []
+      },
+      { "name": "should update folder name", "parameterTypes": [] },
+      { "name": "should update folder parent", "parameterTypes": [] },
+      { "name": "should update folder properties", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatFolderRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatMessageRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "should add and retrieve messages for a session",
+        "parameterTypes": []
+      },
+      { "name": "should count messages correctly", "parameterTypes": [] },
+      {
+        "name": "should delete all messages for a session",
+        "parameterTypes": []
+      },
+      { "name": "should get only active messages", "parameterTypes": [] },
+      {
+        "name": "should get recent active messages with database filtering",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle different message roles correctly",
+        "parameterTypes": []
+      },
+      { "name": "should handle empty messages list", "parameterTypes": [] },
+      {
+        "name": "should limit recent messages correctly",
+        "parameterTypes": []
+      },
+      { "name": "should mark message as outdated", "parameterTypes": [] },
+      {
+        "name": "should mark messages as outdated after specific message",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not duplicate messages across pages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages backward from end",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate messages forward from start",
+        "parameterTypes": []
+      },
+      {
+        "name": "should paginate through entire message history forward",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve messages after specific message",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve recent messages in chronological order",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null cursor when no more messages",
+        "parameterTypes": []
+      },
+      { "name": "should search messages by content", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatMessageRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatSessionRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "should create and retrieve a chat session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should create session with default sort order",
+        "parameterTypes": []
+      },
+      { "name": "should create session with sort order", "parameterTypes": [] },
+      {
+        "name": "should create session with starred flag",
+        "parameterTypes": []
+      },
+      {
+        "name": "should create session without starred flag by default",
+        "parameterTypes": []
+      },
+      { "name": "should delete session successfully", "parameterTypes": [] },
+      { "name": "should get all starred sessions", "parameterTypes": [] },
+      {
+        "name": "should get starred sessions ordered by sort order and updated time",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not affect other sessions when deleting one",
+        "parameterTypes": []
+      },
+      {
+        "name": "should order sessions by starred, sort order, and updated time",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve all sessions ordered by updated_at desc",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when no starred sessions",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when deleting non-existent session",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating title with empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating title with only whitespace",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent session",
+        "parameterTypes": []
+      },
+      { "name": "should star a session", "parameterTypes": [] },
+      {
+        "name": "should touch session to update timestamp",
+        "parameterTypes": []
+      },
+      {
+        "name": "should trim whitespace when updating session title",
+        "parameterTypes": []
+      },
+      {
+        "name": "should truncate title to maximum length when updating",
+        "parameterTypes": []
+      },
+      { "name": "should unstar a session", "parameterTypes": [] },
+      { "name": "should update session sort order", "parameterTypes": [] },
+      { "name": "should update session title", "parameterTypes": [] },
+      {
+        "name": "should update session updated_at when changing title",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ChatSessionRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSummaryRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "should delete summary by session", "parameterTypes": [] },
+      {
+        "name": "should handle conversation summary with complex data",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle empty key facts and topics",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle special characters in summary data",
+        "parameterTypes": []
+      },
+      {
+        "name": "should maintain timestamp when saving summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return 0 when deleting non-existent summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return null for non-existent summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save and retrieve conversation summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should update conversation summary when saving again",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSummaryRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.service.ChatSessionServiceIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "should add message and update session timestamp through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should coordinate summary operations through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete folder and move child folders through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete folder and move sessions through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete session with all related data through service",
+        "parameterTypes": []
+      },
+      { "name": "should get messages through service", "parameterTypes": [] },
+      {
+        "name": "should get recent active messages through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should get sessions by folder through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should manage starred sessions through service",
+        "parameterTypes": []
+      },
+      {
+        "name": "should mark messages as outdated through service",
+        "parameterTypes": []
+      },
+      { "name": "should rename session through service", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.service.ChatSessionServiceIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.config.AppConfigData",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2036,7 +2462,8 @@
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
-          "io.askimo.core.config.ChatConfig"
+          "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.DeveloperConfig"
         ]
       },
       {
@@ -2048,6 +2475,7 @@
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.DeveloperConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2067,6 +2495,24 @@
           "int",
           "int",
           "int",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.DeveloperConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["boolean", "boolean"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2204,64 +2650,54 @@
     ]
   },
   {
-    "name": "io.askimo.core.directive.ChatDirectiveRepositoryIT",
+    "name": "io.askimo.core.context.AppContext",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      { "name": "should allow maximum length content", "parameterTypes": [] },
-      { "name": "should allow maximum length name", "parameterTypes": [] },
-      { "name": "should check if directive exists", "parameterTypes": [] },
-      { "name": "should delete existing directive", "parameterTypes": [] },
-      { "name": "should enforce maximum content length", "parameterTypes": [] },
-      { "name": "should enforce maximum name length", "parameterTypes": [] },
-      { "name": "should get multiple directives by ids", "parameterTypes": [] },
       {
-        "name": "should get multiple directives by names",
-        "parameterTypes": []
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.context.AppContextParams",
+          "io.askimo.core.context.ExecutionMode"
+        ]
       },
+      { "name": "getActiveProvider", "parameterTypes": [] },
+      { "name": "getLastResponse", "parameterTypes": [] },
+      { "name": "getParams", "parameterTypes": [] },
       {
-        "name": "should handle special characters in directive content",
-        "parameterTypes": []
-      },
+        "name": "removeMemory",
+        "parameterTypes": [
+          "io.askimo.core.providers.ModelProvider",
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.context.AppContextParams",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
       {
-        "name": "should list all directives ordered by name",
-        "parameterTypes": []
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.util.Map",
+          "io.askimo.core.providers.ModelProvider",
+          "java.util.Map",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
       },
+      { "name": "getCurrentProvider", "parameterTypes": [] },
       {
-        "name": "should return empty list when getting directives with empty ids list",
-        "parameterTypes": []
+        "name": "getModel",
+        "parameterTypes": ["io.askimo.core.providers.ModelProvider"]
       },
-      {
-        "name": "should return empty list when getting directives with empty names list",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when deleting non-existent directive",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating non-existent directive",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null for non-existent directive",
-        "parameterTypes": []
-      },
-      {
-        "name": "should save and retrieve a chat directive",
-        "parameterTypes": []
-      },
-      { "name": "should update existing directive", "parameterTypes": [] },
-      {
-        "name": "should update existing directive on save with same id",
-        "parameterTypes": []
-      },
-      { "name": "tearDown", "parameterTypes": [] }
+      { "name": "getProviderSettings", "parameterTypes": [] }
     ]
   },
   {
@@ -2285,7 +2721,10 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["java.lang.String", "io.askimo.core.session.Session"]
+        "parameterTypes": [
+          "java.lang.String",
+          "io.askimo.core.context.AppContext"
+        ]
       },
       {
         "name": "indexSingleFile",
@@ -2429,7 +2868,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatService",
+    "name": "io.askimo.core.providers.ChatClient",
     "queryAllPublicMethods": true
   },
   {
@@ -2991,400 +3430,6 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.session.ChatSessionRepositoryIT",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      {
-        "name": "should add and retrieve messages for a session",
-        "parameterTypes": []
-      },
-      { "name": "should count messages correctly", "parameterTypes": [] },
-      {
-        "name": "should create and retrieve a chat session",
-        "parameterTypes": []
-      },
-      { "name": "should create and retrieve a folder", "parameterTypes": [] },
-      {
-        "name": "should create database file in correct location",
-        "parameterTypes": []
-      },
-      {
-        "name": "should create folder with all properties",
-        "parameterTypes": []
-      },
-      { "name": "should create nested folders", "parameterTypes": [] },
-      {
-        "name": "should create session with default sort order",
-        "parameterTypes": []
-      },
-      { "name": "should create session with folder", "parameterTypes": [] },
-      { "name": "should create session with sort order", "parameterTypes": [] },
-      {
-        "name": "should create session with starred flag",
-        "parameterTypes": []
-      },
-      {
-        "name": "should create session without folder (root level)",
-        "parameterTypes": []
-      },
-      {
-        "name": "should create session without starred flag by default",
-        "parameterTypes": []
-      },
-      { "name": "should delete folder successfully", "parameterTypes": [] },
-      {
-        "name": "should delete folder without affecting starred status of sessions",
-        "parameterTypes": []
-      },
-      {
-        "name": "should delete multiple sessions independently",
-        "parameterTypes": []
-      },
-      {
-        "name": "should delete session and all its messages",
-        "parameterTypes": []
-      },
-      {
-        "name": "should delete session and its conversation summary",
-        "parameterTypes": []
-      },
-      { "name": "should delete session successfully", "parameterTypes": [] },
-      {
-        "name": "should delete session with all related data",
-        "parameterTypes": []
-      },
-      {
-        "name": "should generate and update session title",
-        "parameterTypes": []
-      },
-      {
-        "name": "should generate title ending with period for sentences",
-        "parameterTypes": []
-      },
-      {
-        "name": "should generate title with ellipsis for long messages",
-        "parameterTypes": []
-      },
-      { "name": "should get all starred sessions", "parameterTypes": [] },
-      {
-        "name": "should get root sessions (null folder)",
-        "parameterTypes": []
-      },
-      { "name": "should get sessions by folder", "parameterTypes": [] },
-      {
-        "name": "should get starred sessions from specific folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should get starred sessions ordered by sort order and updated time",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle complex folder hierarchy with starred sessions",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle conversation summary with complex data",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle database transactions correctly on failure",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle deletion of session with no messages",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle deletion of session with no summary",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle different message roles correctly",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle edge case with special characters in folder names",
-        "parameterTypes": []
-      },
-      { "name": "should handle empty messages list", "parameterTypes": [] },
-      { "name": "should handle empty sessions list", "parameterTypes": [] },
-      { "name": "should handle large page sizes", "parameterTypes": [] },
-      {
-        "name": "should handle pagination with different message roles",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle pagination with exact page size",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle pagination with single message",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle session with directive and folder together",
-        "parameterTypes": []
-      },
-      {
-        "name": "should handle session with folder and starred",
-        "parameterTypes": []
-      },
-      {
-        "name": "should limit recent messages correctly",
-        "parameterTypes": []
-      },
-      {
-        "name": "should maintain chronological order in backward pagination",
-        "parameterTypes": []
-      },
-      {
-        "name": "should maintain chronological order in forward pagination",
-        "parameterTypes": []
-      },
-      {
-        "name": "should maintain database integrity after deletion",
-        "parameterTypes": []
-      },
-      {
-        "name": "should maintain starred flag when moving between folders",
-        "parameterTypes": []
-      },
-      {
-        "name": "should move child folders to root when deleting parent folder",
-        "parameterTypes": []
-      },
-      { "name": "should move session between folders", "parameterTypes": [] },
-      { "name": "should move session to folder", "parameterTypes": [] },
-      {
-        "name": "should move session to root (null folder)",
-        "parameterTypes": []
-      },
-      {
-        "name": "should move sessions to root when deleting folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should not affect other sessions when deleting one",
-        "parameterTypes": []
-      },
-      {
-        "name": "should not duplicate messages across pages",
-        "parameterTypes": []
-      },
-      {
-        "name": "should order sessions by starred, sort order, and updated time",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate messages backward from end",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate messages backward with cursor",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate messages forward from start",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate messages forward with cursor",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate through entire message history backward",
-        "parameterTypes": []
-      },
-      {
-        "name": "should paginate through entire message history forward",
-        "parameterTypes": []
-      },
-      {
-        "name": "should retrieve all folders ordered by sort order and name",
-        "parameterTypes": []
-      },
-      {
-        "name": "should retrieve all sessions ordered by updated_at desc",
-        "parameterTypes": []
-      },
-      {
-        "name": "should retrieve messages after specific message",
-        "parameterTypes": []
-      },
-      {
-        "name": "should retrieve recent messages in chronological order",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return empty list and null cursor for empty session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return empty list for folder with no sessions",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return empty list when no starred sessions",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when deleting non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when deleting non-existent session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when moving non-existent session to folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when starring non-existent session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating folder with no changes",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating sort order of non-existent session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating title of non-existent session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating title with empty string",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating title with only whitespace",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null cursor when no more messages backward",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null cursor when no more messages forward",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null for non-existent conversation summary",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null for non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null for non-existent session",
-        "parameterTypes": []
-      },
-      {
-        "name": "should save and retrieve conversation summary",
-        "parameterTypes": []
-      },
-      { "name": "should star a session", "parameterTypes": [] },
-      {
-        "name": "should trim whitespace when updating session title",
-        "parameterTypes": []
-      },
-      {
-        "name": "should truncate title to maximum length when updating",
-        "parameterTypes": []
-      },
-      { "name": "should unstar a session", "parameterTypes": [] },
-      {
-        "name": "should update conversation summary when saving again",
-        "parameterTypes": []
-      },
-      { "name": "should update folder name", "parameterTypes": [] },
-      { "name": "should update folder parent", "parameterTypes": [] },
-      { "name": "should update folder properties", "parameterTypes": [] },
-      { "name": "should update session sort order", "parameterTypes": [] },
-      { "name": "should update session title", "parameterTypes": [] },
-      {
-        "name": "should update session updated_at when adding message",
-        "parameterTypes": []
-      },
-      {
-        "name": "should update session updated_at when changing folder or starred status",
-        "parameterTypes": []
-      },
-      {
-        "name": "should update session updated_at when changing title",
-        "parameterTypes": []
-      },
-      { "name": "should work with non-existent session", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.session.Session",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "io.askimo.core.session.SessionParams",
-          "io.askimo.core.session.SessionMode"
-        ]
-      },
-      { "name": "getActiveProvider", "parameterTypes": [] },
-      { "name": "getLastResponse", "parameterTypes": [] },
-      { "name": "getParams", "parameterTypes": [] },
-      {
-        "name": "removeMemory",
-        "parameterTypes": [
-          "io.askimo.core.providers.ModelProvider",
-          "java.lang.String"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "io.askimo.core.session.SessionParams",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "java.util.Map",
-          "io.askimo.core.providers.ModelProvider",
-          "java.util.Map",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
-      { "name": "getCurrentProvider", "parameterTypes": [] },
-      {
-        "name": "getModel",
-        "parameterTypes": ["io.askimo.core.providers.ModelProvider"]
-      },
-      { "name": "getProviderSettings", "parameterTypes": [] }
-    ]
   },
   {
     "name": "io.askimo.core.util.RetryUtilsTest",
@@ -4534,7 +4579,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$6Oo2iEsl",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$3dX2sdOZ",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

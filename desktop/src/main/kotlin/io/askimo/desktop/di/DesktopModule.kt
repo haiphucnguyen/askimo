@@ -3,17 +3,15 @@
  * Copyright (c) 2025 Hai Nguyen
  */
 package io.askimo.desktop.di
-
-import io.askimo.core.directive.ChatDirectiveRepository
-import io.askimo.core.directive.ChatDirectiveService
-import io.askimo.core.session.ChatSessionExporterService
-import io.askimo.core.session.ChatSessionRepository
-import io.askimo.core.session.ChatSessionService
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.SessionMode
-import io.askimo.desktop.service.ChatService
-import io.askimo.desktop.service.SystemResourceMonitor
+import io.askimo.core.chat.service.ChatDirectiveService
+import io.askimo.core.chat.service.ChatSessionExporterService
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.ExecutionMode
+import io.askimo.core.db.DatabaseManager
+import io.askimo.desktop.chat.ChatSessionManager
+import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
@@ -25,24 +23,41 @@ import org.koin.dsl.module
  * This module provides both core and desktop-specific dependencies.
  */
 val desktopModule = module {
-    single<Session> { SessionFactory.createSession(mode = SessionMode.DESKTOP) }
+    single<AppContext> { AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP) }
 
-    single { ChatSessionRepository() }
-    single { ChatDirectiveRepository() }
+    single { DatabaseManager.getInstance() }
 
-    single { ChatSessionService(repository = get()) }
-    single { ChatSessionExporterService(repository = get()) }
+    single { get<DatabaseManager>().getChatSessionRepository() }
+    single { get<DatabaseManager>().getChatMessageRepository() }
+    single { get<DatabaseManager>().getChatFolderRepository() }
+    single { get<DatabaseManager>().getConversationSummaryRepository() }
+    single { get<DatabaseManager>().getChatDirectiveRepository() }
+
+    single {
+        ChatSessionService(
+            sessionRepository = get(),
+            messageRepository = get(),
+            summaryRepository = get(),
+            folderRepository = get(),
+        )
+    }
+    single {
+        ChatSessionExporterService(
+            sessionRepository = get(),
+            messageRepository = get(),
+        )
+    }
     single { ChatDirectiveService(repository = get()) }
 
-    single { ChatService(session = get()) }
+    single { ChatSessionManager(appContext = get()) }
     single { SystemResourceMonitor() }
 
     factory { (scope: CoroutineScope) ->
         ChatViewModel(
-            chatService = get(),
+            chatSessionManager = get(),
             scope = scope,
-            repository = get(),
-            session = get(),
+            repository = get<ChatSessionService>(),
+            appContext = get(),
         )
     }
 
@@ -51,7 +66,7 @@ val desktopModule = module {
     }
 
     factory { (scope: CoroutineScope) ->
-        SettingsViewModel(scope = scope, session = get())
+        SettingsViewModel(scope = scope, appContext = get())
     }
 }
 

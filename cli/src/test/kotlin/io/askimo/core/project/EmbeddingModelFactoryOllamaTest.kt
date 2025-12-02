@@ -5,12 +5,12 @@
 package io.askimo.core.project
 
 import dev.langchain4j.data.segment.TextSegment
+import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.AppContextParams
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
-import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.SessionMode
-import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -48,13 +48,13 @@ class EmbeddingModelFactoryOllamaTest {
 
         // Create a session with OLLAMA provider configured
         val ollamaSettings = OllamaSettings(baseUrl = baseUrl)
-        val params = SessionParams(
+        val params = AppContextParams(
             currentProvider = OLLAMA,
             providerSettings = mutableMapOf(OLLAMA to ollamaSettings as ProviderSettings),
         )
-        val session = SessionFactory.createSession(
+        val session = AppContextFactory.createAppContext(
             params = params,
-            mode = SessionMode.CLI_PROMPT,
+            mode = ExecutionMode.CLI_PROMPT,
             forceReload = true,
         )
 

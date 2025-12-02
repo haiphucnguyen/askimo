@@ -25,7 +25,7 @@ object LoggingService {
     private val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME)
 
     /**
-     * Updates the root logger level.
+     * Updates the log level for io.askimo loggers only.
      * This change takes effect immediately without requiring application restart.
      *
      * @param level The desired log level
@@ -39,17 +39,20 @@ object LoggingService {
             LogLevel.TRACE -> Level.TRACE
         }
 
-        // Update root logger
-        rootLogger.level = logbackLevel
+        // Get or create the io.askimo logger and update its level
+        val askimoLogger = loggerContext.getLogger("io.askimo")
+        askimoLogger.level = logbackLevel
 
-        // Update all existing loggers to ensure the change takes effect
+        // Update all existing io.askimo loggers to ensure the change takes effect
         loggerContext.loggerList.forEach { logger ->
-            logger.level = logbackLevel
+            if (logger.name.startsWith("io.askimo")) {
+                logger.level = logbackLevel
+            }
         }
 
         // Log the change (will be visible if new level permits)
         LoggerFactory.getLogger(LoggingService::class.java)
-            .info("Log level changed to: ${level.name}")
+            .info("Log level changed to: ${level.name} for io.askimo loggers")
     }
 
     /**

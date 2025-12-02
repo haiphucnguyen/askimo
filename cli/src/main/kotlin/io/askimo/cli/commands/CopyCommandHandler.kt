@@ -4,9 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 
 /**
@@ -17,7 +17,7 @@ import org.jline.reader.ParsedLine
  * Windows, Linux). It helps users easily extract and reuse AI responses in other applications.
  */
 class CopyCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<CopyCommandHandler>()
     override val keyword: String = ":copy"
@@ -25,7 +25,7 @@ class CopyCommandHandler(
     override val description: String = "Copy the last AI response to the clipboard"
 
     override fun handle(line: ParsedLine) {
-        val response = session.lastResponse
+        val response = appContext.lastResponse
         if (response.isNullOrBlank()) {
             log.display("⚠️ No response to copy. Ask something first.")
             return

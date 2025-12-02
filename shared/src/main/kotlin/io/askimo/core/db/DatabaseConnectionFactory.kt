@@ -44,6 +44,7 @@ object DatabaseConnectionFactory {
             connectionTimeout = 30000
             idleTimeout = 600000
             maxLifetime = 1800000
+            connectionInitSql = "PRAGMA foreign_keys = ON;"
             addDataSourceProperty("cachePrepStmts", "true")
             addDataSourceProperty("prepStmtCacheSize", "250")
             addDataSourceProperty("prepStmtCacheSqlLimit", "2048")

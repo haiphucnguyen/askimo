@@ -5,9 +5,9 @@
 package io.askimo.cli.recipes
 
 import io.askimo.cli.LoadingIndicator
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
-import io.askimo.core.session.Session
 import org.jline.terminal.Terminal
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,7 +25,7 @@ object MiniTpl {
 }
 
 class RecipeExecutor(
-    private val session: Session,
+    private val appContext: AppContext,
     private val registry: RecipeRegistry,
     private val tools: ToolRegistry,
 ) {
@@ -86,8 +86,8 @@ class RecipeExecutor(
 
         val firstTokenSeen = AtomicBoolean(false)
         val output =
-            session
-                .getChatService()
+            appContext
+                .getChatClient()
                 .sendStreamingMessageWithCallback(prompt) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()

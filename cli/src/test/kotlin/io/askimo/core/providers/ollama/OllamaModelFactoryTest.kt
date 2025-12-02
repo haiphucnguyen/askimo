@@ -5,7 +5,7 @@
 package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
-import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.DisplayName
@@ -38,7 +38,7 @@ class OllamaModelFactoryTest {
         return baseUrl
     }
 
-    private fun createChatService(baseUrl: String): ChatService {
+    private fun createChatService(baseUrl: String): ChatClient {
         val settings = OllamaSettings(baseUrl = baseUrl)
         val memory = MessageWindowChatMemory.withMaxMessages(10)
 
@@ -50,10 +50,10 @@ class OllamaModelFactoryTest {
         )
     }
 
-    private fun sendPromptAndGetResponse(chatService: ChatService, prompt: String): String {
+    private fun sendPromptAndGetResponse(chatClient: ChatClient, prompt: String): String {
         println("Sending prompt: '$prompt'")
 
-        val output = chatService.sendStreamingMessageWithCallback(prompt) { _ ->
+        val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ ->
             print(".")
         }.trim()
 

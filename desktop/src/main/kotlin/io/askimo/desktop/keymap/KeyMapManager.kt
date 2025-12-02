@@ -13,6 +13,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import io.askimo.core.i18n.LocalizationManager
 import io.askimo.desktop.util.Platform
 
 /**
@@ -29,30 +30,35 @@ object KeyMapManager {
      * Defines all application shortcuts
      */
     enum class AppShortcut(
-        val description: String,
+        val descriptionKey: String,
         val key: Key,
         val requiresPrimaryModifier: Boolean = false,
         val requiresShift: Boolean = false,
         val requiresAlt: Boolean = false,
     ) {
         // Global shortcuts
-        NEW_CHAT("New Chat", Key.N, requiresPrimaryModifier = true),
-        SEARCH_IN_CHAT("Search in Chat", Key.F, requiresPrimaryModifier = true),
-        TOGGLE_CHAT_HISTORY("Toggle Chat History", Key.H, requiresPrimaryModifier = true),
-        OPEN_SETTINGS("Open Settings", Key.Comma, requiresPrimaryModifier = true),
-        STOP_AI_RESPONSE("Stop AI Response", Key.S, requiresPrimaryModifier = true),
-        QUIT_APPLICATION("Quit Application", Key.Q, requiresPrimaryModifier = true),
+        NEW_CHAT("shortcut.new.chat", Key.N, requiresPrimaryModifier = true),
+        SEARCH_IN_CHAT("shortcut.search.in.chat", Key.F, requiresPrimaryModifier = true),
+        TOGGLE_CHAT_HISTORY("shortcut.toggle.chat.history", Key.H, requiresPrimaryModifier = true),
+        OPEN_SETTINGS("shortcut.open.settings", Key.Comma, requiresPrimaryModifier = true),
+        STOP_AI_RESPONSE("shortcut.stop.ai.response", Key.S, requiresPrimaryModifier = true),
+        QUIT_APPLICATION("shortcut.quit.application", Key.Q, requiresPrimaryModifier = true),
 
         // Search shortcuts (platform-specific)
-        CLOSE_SEARCH("Close Search", Key.Escape),
-        NEXT_SEARCH_RESULT("Next Search Result", Key.G, requiresPrimaryModifier = true),
-        PREVIOUS_SEARCH_RESULT("Previous Search Result", Key.G, requiresPrimaryModifier = true, requiresShift = true),
+        CLOSE_SEARCH("shortcut.close.search", Key.Escape),
+        NEXT_SEARCH_RESULT("shortcut.next.search.result", Key.G, requiresPrimaryModifier = true),
+        PREVIOUS_SEARCH_RESULT("shortcut.previous.search.result", Key.G, requiresPrimaryModifier = true, requiresShift = true),
 
         // Input shortcuts
-        ATTACH_FILE("Attach File", Key.A, requiresPrimaryModifier = true),
-        SEND_MESSAGE("Send Message", Key.Enter),
-        NEW_LINE("New Line", Key.Enter, requiresShift = true),
+        ATTACH_FILE("shortcut.attach.file", Key.A, requiresPrimaryModifier = true),
+        SEND_MESSAGE("shortcut.send.message", Key.Enter),
+        NEW_LINE("shortcut.new.line", Key.Enter, requiresShift = true),
         ;
+
+        /**
+         * Gets the localized description for this shortcut
+         */
+        fun getDescription(): String = LocalizationManager.getString(descriptionKey)
 
         /**
          * Checks if this shortcut matches the given key event
@@ -110,7 +116,7 @@ object KeyMapManager {
      * Useful for displaying shortcuts in settings or help screens
      */
     fun getAllShortcuts(): Map<String, List<AppShortcut>> = mapOf(
-        "Global" to listOf(
+        LocalizationManager.getString("shortcut.category.global") to listOf(
             AppShortcut.NEW_CHAT,
             AppShortcut.SEARCH_IN_CHAT,
             AppShortcut.TOGGLE_CHAT_HISTORY,
@@ -118,12 +124,12 @@ object KeyMapManager {
             AppShortcut.STOP_AI_RESPONSE,
             AppShortcut.QUIT_APPLICATION,
         ),
-        "Search" to listOf(
+        LocalizationManager.getString("shortcut.category.search") to listOf(
             AppShortcut.CLOSE_SEARCH,
             AppShortcut.NEXT_SEARCH_RESULT,
             AppShortcut.PREVIOUS_SEARCH_RESULT,
         ),
-        "Input" to listOf(
+        LocalizationManager.getString("shortcut.category.input") to listOf(
             AppShortcut.ATTACH_FILE,
             AppShortcut.SEND_MESSAGE,
             AppShortcut.NEW_LINE,

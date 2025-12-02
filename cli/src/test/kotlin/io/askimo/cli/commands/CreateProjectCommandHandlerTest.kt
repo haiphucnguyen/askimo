@@ -4,10 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionParams
 import io.askimo.testcontainers.SharedOllama
 import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.AfterAll
@@ -57,9 +57,9 @@ class CreateProjectCommandHandlerTest : CommandHandlerTestBase() {
 
         val tempDir = Files.createTempDirectory("askimo-test-project").toAbsolutePath()
 
-        val session = Session(SessionParams.noOp())
-        session.params.currentProvider = ModelProvider.OLLAMA
-        val handler = CreateProjectCommandHandler(session)
+        val appContext = AppContext(AppContextParams.noOp())
+        appContext.params.currentProvider = ModelProvider.OLLAMA
+        val handler = CreateProjectCommandHandler(appContext)
 
         val projectName =
             "pg-test-project-" +

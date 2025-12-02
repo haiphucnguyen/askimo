@@ -4,9 +4,9 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionParams
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -16,17 +16,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ModelsCommandHandlerTest : CommandHandlerTestBase() {
-    private lateinit var session: Session
+    private lateinit var appContext: AppContext
     private lateinit var handler: ModelsCommandHandler
-    private lateinit var params: SessionParams
+    private lateinit var params: AppContextParams
 
     @BeforeEach
     fun setUp() {
-        session = mock<Session>()
-        params = mock<SessionParams>()
-        handler = ModelsCommandHandler(session)
+        appContext = mock<AppContext>()
+        params = mock<AppContextParams>()
+        handler = ModelsCommandHandler(appContext)
 
-        whenever(session.params) doReturn params
+        whenever(appContext.params) doReturn params
     }
 
     @Test

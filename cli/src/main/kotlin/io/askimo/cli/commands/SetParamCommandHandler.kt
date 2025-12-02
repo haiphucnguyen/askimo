@@ -4,13 +4,13 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextConfigManager
+import io.askimo.core.context.MemoryPolicy
+import io.askimo.core.context.ParamKey
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
-import io.askimo.core.session.MemoryPolicy
-import io.askimo.core.session.ParamKey
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionConfigManager
 import org.jline.reader.ParsedLine
 
 /**
@@ -21,7 +21,7 @@ import org.jline.reader.ParsedLine
  * updates the session configuration, and rebuilds the active chat model with the new settings.
  */
 class SetParamCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<SetParamCommandHandler>()
     override val keyword = ":set-param"
@@ -46,23 +46,23 @@ class SetParamCommandHandler(
         }
 
         try {
-            val provider = session.params.currentProvider
-            val factory = session.getModelFactory(provider)
+            val provider = appContext.params.currentProvider
+            val factory = appContext.getModelFactory(provider)
             if (factory == null) {
                 log.display("❌ No model factory registered for provider: ${provider.name.lowercase()}")
                 return
             }
 
             val providerSettings =
-                session.params.providerSettings
+                appContext.params.providerSettings
                     .getOrPut(provider) { factory.defaultSettings() }
 
-            key.applyTo(session.params, providerSettings, valueInput)
+            key.applyTo(appContext.params, providerSettings, valueInput)
 
-            session.params.providerSettings[provider] = providerSettings
-            SessionConfigManager.save(session.params)
+            appContext.params.providerSettings[provider] = providerSettings
+            AppContextConfigManager.save(appContext.params)
 
-            session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+            appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
             log.display("✅ '${key.key}' is updated")
         } catch (e: IllegalArgumentException) {
             log.displayError("❌ Invalid value for '$keyInput': ${e.message}", e)

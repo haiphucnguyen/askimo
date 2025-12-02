@@ -7,6 +7,11 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextConfigManager
+import io.askimo.core.context.MemoryPolicy
+import io.askimo.core.context.getConfigInfo
+import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
@@ -15,11 +20,6 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ProviderTestResult
 import io.askimo.core.providers.SettingField
-import io.askimo.core.session.MemoryPolicy
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionConfigManager
-import io.askimo.core.session.getConfigInfo
-import io.askimo.desktop.i18n.LocalizationManager
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,11 +37,11 @@ import kotlinx.coroutines.withContext
  * - Model selection with validation
  *
  * @param scope The coroutine scope for this ViewModel
- * @param session The singleton Session instance injected by DI
+ * @param appContext The singleton Session instance injected by DI
  */
 class SettingsViewModel(
     private val scope: CoroutineScope,
-    private val session: Session,
+    private val appContext: AppContext,
 ) {
     private val log = logger<SettingsViewModel>()
 
@@ -125,7 +125,7 @@ class SettingsViewModel(
      * Load the current configuration from the session.
      */
     fun loadConfiguration() {
-        val configInfo = session.getConfigInfo()
+        val configInfo = appContext.getConfigInfo()
         provider = configInfo.provider
         model = configInfo.model
         settingsDescription = configInfo.settingsDescription
@@ -148,7 +148,7 @@ class SettingsViewModel(
             selectedProvider = currentProvider
 
             // Load existing settings and configuration fields
-            val existingSettings = session.params.providerSettings[currentProvider]
+            val existingSettings = appContext.params.providerSettings[currentProvider]
                 ?: ProviderRegistry.getFactory(currentProvider)?.defaultSettings()
             providerConfigFields = existingSettings?.getConfigFields(LocalizationManager.messageResolver) ?: emptyList()
 
@@ -178,7 +178,7 @@ class SettingsViewModel(
         connectionErrorHelp = null
 
         // Get existing settings if available
-        val existingSettings = session.params.providerSettings[newProvider]
+        val existingSettings = appContext.params.providerSettings[newProvider]
             ?: ProviderRegistry.getFactory(newProvider)?.defaultSettings()
 
         // Get configuration fields for the provider
@@ -222,7 +222,7 @@ class SettingsViewModel(
             val result = withContext(Dispatchers.IO) {
                 try {
                     // Get existing settings if available
-                    val existingSettings = session.params.providerSettings[provider]
+                    val existingSettings = appContext.params.providerSettings[provider]
                         ?: ProviderRegistry.getFactory(provider)?.defaultSettings()
 
                     // Create updated settings
@@ -310,7 +310,7 @@ class SettingsViewModel(
                 }
 
                 // Get existing settings if available, otherwise use defaults
-                val existingSettings = session.params.providerSettings[provider]
+                val existingSettings = appContext.params.providerSettings[provider]
                     ?: factory.defaultSettings()
 
                 // Apply current field values to get the most up-to-date settings
@@ -371,7 +371,7 @@ class SettingsViewModel(
             val result = withContext(Dispatchers.IO) {
                 try {
                     // Get existing settings if available
-                    val existingSettings = session.params.providerSettings[provider]
+                    val existingSettings = appContext.params.providerSettings[provider]
                         ?: ProviderRegistry.getFactory(provider)?.defaultSettings()
 
                     // Create updated settings
@@ -388,21 +388,21 @@ class SettingsViewModel(
 
                     // Change provider (inline logic from ProviderService)
                     try {
-                        session.params.currentProvider = provider
-                        session.setProviderSetting(provider, newSettings)
+                        appContext.params.currentProvider = provider
+                        appContext.setProviderSetting(provider, newSettings)
 
                         // Use the pending model selected by user, or fall back to existing/default
                         var model = pendingModelForNewProvider
                         if (model.isNullOrBlank()) {
-                            model = session.params.getModel(provider)
+                            model = appContext.params.getModel(provider)
                             if (model.isBlank()) {
                                 model = newSettings.defaultModel
                             }
                         }
-                        session.params.model = model
+                        appContext.params.model = model
 
-                        SessionConfigManager.save(session.params)
-                        session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                        AppContextConfigManager.save(appContext.params)
+                        appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
 
                         ProviderTestResult.Success
                     } catch (e: Exception) {
@@ -481,7 +481,7 @@ class SettingsViewModel(
                     return@withContext
                 }
 
-                val settings = session.params.providerSettings[currentProvider] ?: factory.defaultSettings()
+                val settings = appContext.params.providerSettings[currentProvider] ?: factory.defaultSettings()
 
                 @Suppress("UNCHECKED_CAST")
                 val models = (factory as ChatModelFactory<ProviderSettings>)
@@ -508,7 +508,7 @@ class SettingsViewModel(
      */
     fun onChangeSettings() {
         provider?.let { currentProvider ->
-            val currentSettings = session.getCurrentProviderSettings()
+            val currentSettings = appContext.getCurrentProviderSettings()
             settingsFields = currentSettings.getFields()
             showSettingsDialog = true
         }
@@ -522,14 +522,14 @@ class SettingsViewModel(
             val success = withContext(Dispatchers.IO) {
                 try {
                     // Update the model in session params
-                    session.params.model = newModel
+                    appContext.params.model = newModel
 
                     // Persist the change to disk
-                    SessionConfigManager.save(session.params)
+                    AppContextConfigManager.save(appContext.params)
 
                     // Rebuild the chat service with the new model
                     // Use KEEP_PER_PROVIDER_MODEL to preserve conversation history
-                    session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                    appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
 
                     true
                 } catch (_: Exception) {
@@ -564,17 +564,17 @@ class SettingsViewModel(
     fun updateSettingsField(fieldName: String, value: String) {
         provider?.let { currentProvider ->
             scope.launch {
-                val currentSettings = session.getCurrentProviderSettings()
+                val currentSettings = appContext.getCurrentProviderSettings()
                 val updatedSettings = withContext(Dispatchers.IO) {
                     currentSettings.updateField(fieldName, value)
                 }
 
                 // Update session with new settings
-                session.setProviderSetting(currentProvider, updatedSettings)
+                appContext.setProviderSetting(currentProvider, updatedSettings)
 
                 // Rebuild chat service with new settings
                 withContext(Dispatchers.IO) {
-                    session.rebuildActiveChatService(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                    appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
                 }
 
                 // Reload configuration to refresh UI

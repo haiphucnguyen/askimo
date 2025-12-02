@@ -8,13 +8,13 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
-import io.askimo.core.providers.ChatService
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
-import io.askimo.core.session.SessionMode
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
@@ -64,8 +64,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         settings: OllamaSettings,
         memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
-        sessionMode: SessionMode,
-    ): ChatService {
+        executionMode: ExecutionMode,
+    ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -80,12 +80,12 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
 
         val builder =
             AiServices
-                .builder(ChatService::class.java)
+                .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
-                    if (sessionMode != SessionMode.DESKTOP) {
+                    if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
                 }
