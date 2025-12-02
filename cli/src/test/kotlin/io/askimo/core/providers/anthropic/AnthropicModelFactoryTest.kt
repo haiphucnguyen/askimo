@@ -5,7 +5,7 @@
 package io.askimo.core.providers.anthropic
 
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
-import io.askimo.core.providers.ChatService
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -31,7 +31,7 @@ class AnthropicModelFactoryTest {
         val settings = AnthropicSettings(apiKey = apiKey)
         val memory = MessageWindowChatMemory.withMaxMessages(10)
 
-        val chatService: ChatService =
+        val chatClient: ChatClient =
             AnthropicModelFactory().create(
                 model = "claude-sonnet-4-5",
                 settings = settings,
@@ -40,7 +40,7 @@ class AnthropicModelFactoryTest {
             )
 
         val prompt = "Reply with a single short word."
-        val output = chatService.sendStreamingMessageWithCallback(prompt) { _ -> }.trim()
+        val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ -> }.trim()
 
         assertTrue(output.isNotBlank(), "Expected a non-empty response from Anthropic, but got blank: '$output'")
     }

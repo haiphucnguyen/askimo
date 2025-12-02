@@ -4,9 +4,9 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.openai.OpenAiSettings
-import io.askimo.core.session.SessionParams
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -65,12 +65,12 @@ class SecureApiKeyStorageTest {
     @Test
     fun `test API key migration from plain text`() {
         // Create a session with a plain text API key
-        val sessionParams = SessionParams()
+        val appContextParams = AppContextParams()
         val openAiSettings = OpenAiSettings(apiKey = "sk-test-api-key-12345")
-        sessionParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
+        appContextParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
 
         // Migrate to secure storage
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(sessionParams)
+        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
 
         // Verify migration was attempted
         assertTrue(migrationResult.results.containsKey(ModelProvider.OPENAI))
@@ -89,9 +89,9 @@ class SecureApiKeyStorageTest {
         assumeTrue(osName.contains("mac"), "Keychain only supported on macOS")
 
         // Create a session with placeholder API key
-        val sessionParams = SessionParams()
+        val appContextParams = AppContextParams()
         val openAiSettings = OpenAiSettings(apiKey = "***keychain***")
-        sessionParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
+        appContextParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
 
         // Store a key in keychain using SAFE test provider name
         SecureApiKeyManager.storeApiKey(TEST_PROVIDER_NAME, "sk-actual-key-from-keychain")

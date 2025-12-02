@@ -17,7 +17,6 @@ class PostgresContainerManagerTest {
         @JvmStatic
         @AfterAll
         fun tearDownAll() {
-            // Make sure we stop the container after tests (a shutdown hook also exists).
             runCatching { PostgresContainerManager.startIfNeeded().stop() }
         }
     }
@@ -25,11 +24,9 @@ class PostgresContainerManagerTest {
     @Test
     fun `should start PostgresContainerManager and be running`() {
         TestContainersConfig.ensureConfigured()
-        // Skip if Docker is not available
         val dockerAvailable = runCatching { DockerClientFactory.instance().client() }.isSuccess
         assumeTrue(dockerAvailable, "Docker is not available; skipping PostgresContainerManager test")
 
-        // Try to start the container
         val pg =
             runCatching { PostgresContainerManager.startIfNeeded() }
                 .getOrElse { throwable ->

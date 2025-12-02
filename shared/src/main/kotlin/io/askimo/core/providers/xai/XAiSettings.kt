@@ -71,7 +71,7 @@ data class XAiSettings(
         return listOf(
             ProviderConfigField.ApiKeyField(
                 description = description,
-                value = "",
+                value = apiKey,
                 hasExistingValue = hasStoredKey,
             ),
         )

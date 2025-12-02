@@ -121,3 +121,144 @@ tasks.test {
 kotlin {
     jvmToolchain(21)
 }
+
+// Task to detect unused localization keys
+tasks.register("detectUnusedLocalizations") {
+    group = "verification"
+    description = "Detect unused localization keys in properties files"
+
+    doLast {
+        val i18nDir = file("src/main/resources/i18n")
+        val desktopSrcDir = file("src/main/kotlin")
+        val sharedSrcDir = file("../shared/src/main/kotlin")
+        val reportFile = file("${layout.buildDirectory.get()}/reports/unused-localizations.txt")
+
+        // Read all keys from messages.properties
+        val basePropertiesFile = file("$i18nDir/messages.properties")
+        if (!basePropertiesFile.exists()) {
+            println("❌ Base properties file not found: ${basePropertiesFile.path}")
+            return@doLast
+        }
+
+        val allKeys = mutableMapOf<String, String>() // key -> value
+
+        basePropertiesFile.forEachLine { line ->
+            val trimmed = line.trim()
+            if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && "=" in trimmed) {
+                val key = trimmed.substringBefore("=").trim()
+                val value = trimmed.substringAfter("=").trim()
+                allKeys[key] = value
+            }
+        }
+
+        println("📋 Found ${allKeys.size} localization keys in messages.properties")
+
+        // Scan all Kotlin files for key usage in both desktop and shared modules
+        val usedKeys = mutableSetOf<String>()
+        val keyUsageMap = mutableMapOf<String, MutableList<String>>() // key -> list of files
+
+        fun scanDirectory(
+            srcDir: File,
+            moduleName: String,
+        ) {
+            if (!srcDir.exists()) {
+                println("⚠️  Directory not found: ${srcDir.path}")
+                return
+            }
+
+            println("🔍 Scanning $moduleName module: ${srcDir.path}")
+            var fileCount = 0
+
+            srcDir
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .forEach { file ->
+                    fileCount++
+                    val content = file.readText()
+                    val relativePath = "$moduleName/${file.relativeTo(srcDir).path}"
+
+                    // Pattern 1: stringResource("key")
+                    Regex("""stringResource\s*\(\s*"([^"]+)"""").findAll(content).forEach { match ->
+                        val key = match.groupValues[1]
+                        usedKeys.add(key)
+                        keyUsageMap.getOrPut(key) { mutableListOf() }.add(relativePath)
+                    }
+
+                    // Pattern 2: LocalizationManager.getString("key")
+                    Regex("""LocalizationManager\.getString\s*\(\s*"([^"]+)"""").findAll(content).forEach { match ->
+                        val key = match.groupValues[1]
+                        usedKeys.add(key)
+                        keyUsageMap.getOrPut(key) { mutableListOf() }.add(relativePath)
+                    }
+                }
+
+            println("   Scanned $fileCount Kotlin files")
+        }
+
+        // Scan both modules
+        scanDirectory(desktopSrcDir, "desktop")
+        scanDirectory(sharedSrcDir, "shared")
+
+        println("✅ Found ${usedKeys.size} used keys across both modules")
+
+        // Find unused keys
+        val unusedKeys = allKeys.keys - usedKeys
+
+        // Generate report
+        reportFile.parentFile.mkdirs()
+        reportFile.writeText(
+            buildString {
+                appendLine("=".repeat(80))
+                appendLine("UNUSED LOCALIZATION KEYS REPORT")
+                appendLine("=".repeat(80))
+                appendLine("Generated: ${Instant.now()}")
+                appendLine("Total keys: ${allKeys.size}")
+                appendLine("Used keys: ${usedKeys.size}")
+                appendLine("Unused keys: ${unusedKeys.size}")
+                appendLine("=".repeat(80))
+                appendLine()
+
+                if (unusedKeys.isNotEmpty()) {
+                    appendLine("UNUSED KEYS:")
+                    appendLine("-".repeat(80))
+                    unusedKeys.sorted().forEach { key ->
+                        appendLine("Key: $key")
+                        appendLine("Value: ${allKeys[key]}")
+                        appendLine()
+                    }
+                } else {
+                    appendLine("✅ All localization keys are being used!")
+                }
+
+                appendLine()
+                appendLine("=".repeat(80))
+                appendLine("KEY USAGE DETAILS:")
+                appendLine("-".repeat(80))
+                usedKeys.sorted().forEach { key ->
+                    appendLine("Key: $key")
+                    val files = keyUsageMap[key] ?: emptyList()
+                    appendLine("Used in ${files.size} file(s):")
+                    files.forEach { file ->
+                        appendLine("  - $file")
+                    }
+                    appendLine()
+                }
+            },
+        )
+
+        println("\n📊 Report generated: ${reportFile.absolutePath}")
+
+        if (unusedKeys.isEmpty()) {
+            println("🎉 All localization keys are being used!")
+        } else {
+            println("⚠️  Found ${unusedKeys.size} unused localization keys\n")
+            println("Unused keys:")
+            unusedKeys.sorted().take(10).forEach { key ->
+                println("  - $key = ${allKeys[key]}")
+            }
+            if (unusedKeys.size > 10) {
+                println("  ... and ${unusedKeys.size - 10} more (see report)")
+            }
+        }
+    }
+}

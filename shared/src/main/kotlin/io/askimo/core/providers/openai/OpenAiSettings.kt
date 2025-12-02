@@ -64,7 +64,7 @@ data class OpenAiSettings(
         return listOf(
             ProviderConfigField.ApiKeyField(
                 description = description,
-                value = "",
+                value = apiKey,
                 hasExistingValue = hasStoredKey,
             ),
         )

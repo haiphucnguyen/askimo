@@ -22,26 +22,21 @@ class DefaultRecipeInitializerTest {
 
     @BeforeEach
     fun setUp() {
-        // Create a temporary directory for testing
         tempDir = Files.createTempDirectory("askimo-test")
         originalRecipesDir = AskimoHome.recipesDir()
 
-        // Mock the recipes directory to point to our temp directory
         System.setProperty("user.home", tempDir.toString())
     }
 
     @AfterEach
     fun tearDown() {
-        // Clean up temp directory
         tempDir.toFile().deleteRecursively()
     }
 
     @Test
     fun `should create gitcommit template when it doesn't exist`() {
-        // When
         DefaultRecipeInitializer.initializeDefaultTemplates()
 
-        // Then
         val recipesDir = tempDir.resolve(".askimo").resolve("recipes")
         val gitcommitFile = recipesDir.resolve("gitcommit.yml")
 
@@ -55,17 +50,14 @@ class DefaultRecipeInitializerTest {
 
     @Test
     fun `should not overwrite existing template`() {
-        // Given - create recipes directory and existing template
         val recipesDir = tempDir.resolve(".askimo").resolve("recipes")
         Files.createDirectories(recipesDir)
         val gitcommitFile = recipesDir.resolve("gitcommit.yml")
         val existingContent = "name: customGitCommit\nversion: 999"
         gitcommitFile.toFile().writeText(existingContent)
 
-        // When
         DefaultRecipeInitializer.initializeDefaultTemplates()
 
-        // Then
         val content = gitcommitFile.readText()
         assertTrue(content.contains("customGitCommit"), "Should preserve existing content")
         assertTrue(content.contains("version: 999"), "Should preserve existing version")

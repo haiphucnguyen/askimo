@@ -30,6 +30,22 @@ To build the application:
 ./gradlew desktop:build
 ```
 
+## Localization
+
+### Detecting Unused Localization Keys
+
+To find unused localization keys in your properties files:
+
+```bash
+./gradlew :desktop:detectUnusedLocalizations
+```
+
+This task will:
+- Scan all localization keys in `messages.properties`
+- Check usage across both desktop and shared modules
+- Generate a detailed report at `build/reports/unused-localizations.txt`
+- Display a summary with any unused keys
+
 ## Creating Native Distributions
 
 You can create native distributions for different platforms:

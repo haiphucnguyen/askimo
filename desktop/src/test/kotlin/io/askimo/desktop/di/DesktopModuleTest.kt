@@ -4,13 +4,13 @@
  */
 package io.askimo.desktop.di
 
-import io.askimo.core.directive.ChatDirectiveRepository
-import io.askimo.core.directive.ChatDirectiveService
-import io.askimo.core.session.ChatSessionExporterService
-import io.askimo.core.session.ChatSessionRepository
-import io.askimo.core.session.ChatSessionService
-import io.askimo.core.session.Session
-import io.askimo.desktop.service.ChatService
+import io.askimo.core.chat.repository.ChatDirectiveRepository
+import io.askimo.core.chat.repository.ChatSessionRepository
+import io.askimo.core.chat.service.ChatDirectiveService
+import io.askimo.core.chat.service.ChatSessionExporterService
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.AppContext
+import io.askimo.desktop.chat.ChatSessionManager
 import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
@@ -48,13 +48,13 @@ class DesktopModuleTest : KoinTest {
         }.koin
 
         // Test that singleton services can be retrieved
-        assertNotNull(koin.get<Session>())
+        assertNotNull(koin.get<AppContext>())
         assertNotNull(koin.get<ChatSessionRepository>())
         assertNotNull(koin.get<ChatDirectiveRepository>())
         assertNotNull(koin.get<ChatSessionService>())
         assertNotNull(koin.get<ChatSessionExporterService>())
         assertNotNull(koin.get<ChatDirectiveService>())
-        assertNotNull(koin.get<ChatService>())
+        assertNotNull(koin.get<ChatSessionManager>())
     }
 
     @Test

@@ -4,14 +4,14 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.ChatSessionService
-import io.askimo.core.session.MessageRole
-import io.askimo.core.session.Session
 import org.jline.reader.ParsedLine
 
-class ResumeSessionCommandHandler(private val session: Session) : CommandHandler {
+class ResumeSessionCommandHandler(private val appContext: AppContext) : CommandHandler {
     private val log = logger<ResumeSessionCommandHandler>()
     override val keyword = ":resume-session"
     override val description = "Resume a chat session by ID"
@@ -26,7 +26,7 @@ class ResumeSessionCommandHandler(private val session: Session) : CommandHandler
         }
 
         val sessionId = args[1]
-        val result = sessionService.resumeSession(session, sessionId)
+        val result = sessionService.resumeSession(appContext, sessionId)
 
         if (result.success) {
             log.display("✅ Resumed chat session: $sessionId")

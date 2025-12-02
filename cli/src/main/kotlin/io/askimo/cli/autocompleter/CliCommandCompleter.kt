@@ -4,7 +4,7 @@
  */
 package io.askimo.cli.autocompleter
 
-import io.askimo.core.session.ParamKey
+import io.askimo.core.context.ParamKey
 import org.jline.reader.Candidate
 import org.jline.reader.Completer
 import org.jline.reader.LineReader

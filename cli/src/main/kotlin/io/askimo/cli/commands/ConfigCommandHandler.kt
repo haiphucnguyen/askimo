@@ -4,10 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.getConfigInfo
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.session.Session
-import io.askimo.core.session.getConfigInfo
 import io.askimo.core.util.AskimoHome
 import org.jline.reader.ParsedLine
 import java.nio.file.Files
@@ -20,14 +20,14 @@ import java.nio.file.Files
  * of their chat environment.
  */
 class ConfigCommandHandler(
-    private val session: Session,
+    private val appContext: AppContext,
 ) : CommandHandler {
     private val log = logger<ConfigCommandHandler>()
     override val keyword: String = ":config"
     override val description: String = "Show the current provider, model, and settings."
 
     override fun handle(line: ParsedLine) {
-        val configInfo = session.getConfigInfo()
+        val configInfo = appContext.getConfigInfo()
 
         log.display("🔧 Current configuration:")
         log.display("  Provider:    ${configInfo.provider}")
@@ -38,7 +38,7 @@ class ConfigCommandHandler(
             log.display("    $it")
         }
 
-        val scope = session.scope
+        val scope = appContext.scope
         if (scope == null) {
             log.display("  Active project: (none)")
         } else {

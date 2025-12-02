@@ -37,12 +37,12 @@ import io.askimo.cli.recipes.ToolRegistry
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
-import io.askimo.core.session.Session
-import io.askimo.core.session.SessionFactory
-import io.askimo.core.session.SessionMode
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
 import org.jline.keymap.KeyMap
@@ -68,11 +68,11 @@ fun main(args: Array<String>) {
 
     // Determine the execution mode based on arguments
     val mode = when {
-        args.isNotEmpty() -> SessionMode.CLI_PROMPT
-        else -> SessionMode.CLI_INTERACTIVE
+        args.isNotEmpty() -> ExecutionMode.CLI_PROMPT
+        else -> ExecutionMode.CLI_INTERACTIVE
     }
 
-    val session = SessionFactory.createSession(mode = mode)
+    val session = AppContextFactory.createAppContext(mode = mode)
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =
@@ -287,7 +287,7 @@ fun main(args: Array<String>) {
 }
 
 private fun sendChatMessage(
-    session: Session,
+    appContext: AppContext,
     prompt: String,
     terminal: Terminal? = null,
     showIndicator: Boolean = true,
@@ -305,10 +305,10 @@ private fun sendChatMessage(
     val mdSink = MarkdownStreamingSink(actualTerminal, mdRenderer)
 
     // Prepare context and get the prompt to use
-    val promptWithContext = session.prepareContextAndGetPrompt(prompt)
+    val promptWithContext = appContext.prepareContextAndGetPrompt(prompt)
 
     // Stream the response directly for real-time display
-    val output = session.getChatService().sendStreamingMessageWithCallback(promptWithContext) { token ->
+    val output = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
         if (firstTokenSeen.compareAndSet(false, true)) {
             indicator?.stopWithElapsed()
             actualTerminal.flush()
@@ -324,7 +324,7 @@ private fun sendChatMessage(
     mdSink.finish()
 
     // Save the AI response to session
-    session.saveAiResponse(output)
+    appContext.saveAiResponse(output)
 
     return output
 }
@@ -443,7 +443,7 @@ private fun Array<String>.extractOverrides(flag: String): Map<String, String> {
 }
 
 private fun runYamlCommand(
-    session: Session,
+    appContext: AppContext,
     name: String,
     overrides: Map<String, String>,
     externalArgs: List<String> = emptyList(),
@@ -469,7 +469,7 @@ private fun runYamlCommand(
 
         val executor =
             RecipeExecutor(
-                session = session,
+                appContext = appContext,
                 registry = registry,
                 tools = toolRegistry,
             )

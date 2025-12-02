@@ -4,14 +4,17 @@
  */
 package io.askimo.core.util
 
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object TimeUtil {
     private val shortFmt = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
     private val timestampFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    private val instantDisplayFmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm:ss")
 
     fun stamp(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
@@ -38,5 +41,18 @@ object TimeUtil {
     fun format(dateTime: LocalDateTime, pattern: String, locale: Locale = Locale.getDefault()): String {
         val formatter = DateTimeFormatter.ofPattern(pattern, locale)
         return dateTime.format(formatter)
+    }
+
+    /**
+     * Formats an Instant to user's local time for display.
+     * Format: "MMM dd, HH:mm:ss" (e.g., "Nov 30, 14:30:45")
+     *
+     * @param instant The Instant to format
+     * @param locale The locale to use for formatting (defaults to system locale)
+     * @return The formatted time string in user's local timezone
+     */
+    fun formatInstantDisplay(instant: Instant, locale: Locale = Locale.getDefault()): String {
+        val formatter = instantDisplayFmt.withLocale(locale)
+        return instant.atZone(ZoneId.systemDefault()).format(formatter)
     }
 }

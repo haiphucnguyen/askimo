@@ -12,10 +12,10 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
-import io.askimo.core.session.Session
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -34,7 +34,7 @@ import kotlin.streams.asSequence
  */
 class PgVectorIndexer(
     private val projectId: String,
-    private val session: Session,
+    private val appContext: AppContext,
 ) {
     private val log = logger<PgVectorIndexer>()
 
@@ -57,7 +57,7 @@ class PgVectorIndexer(
 
     private val commonExcludes = AppConfig.indexing.commonExcludes
 
-    private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(session)
+    private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(appContext)
 
     private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
 
