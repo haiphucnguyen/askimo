@@ -60,7 +60,7 @@ private fun ResultRow.toChatSession(): ChatSession = ChatSession(
  * This repository focuses solely on the chat_sessions table operations.
  */
 class ChatSessionRepository internal constructor(
-    databaseManager: io.askimo.core.db.DatabaseManager = io.askimo.core.db.DatabaseManager.getInstance(),
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
 ) : AbstractSQLiteRepository(databaseManager) {
     private val log = logger<ChatSessionRepository>()
 

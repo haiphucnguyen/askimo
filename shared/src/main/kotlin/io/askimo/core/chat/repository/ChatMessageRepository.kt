@@ -58,7 +58,7 @@ private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
 )
 
 class ChatMessageRepository internal constructor(
-    databaseManager: io.askimo.core.db.DatabaseManager = io.askimo.core.db.DatabaseManager.getInstance(),
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
 ) : AbstractSQLiteRepository(databaseManager) {
 
     fun addMessage(message: ChatMessage): ChatMessage {

@@ -10,13 +10,10 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.ConversationSummary
-import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatMessageRepository
-import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.ConversationSummaryRepository
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.context.MemoryPolicy.RESET_FOR_THIS_COMBO
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.project.FileWatcherManager
@@ -38,6 +35,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
+import java.util.Locale
 
 /**
  * Controls what happens to the *chat memory* when the active [ChatClient] is re-created
@@ -104,9 +102,10 @@ class AppContext(
     var lastResponse: String? = null
 
     // Chat session support with intelligent context management
-    val chatSessionRepository = ChatSessionRepository()
-    val chatMessageRepository = ChatMessageRepository()
-    val conversationSummaryRepository = ConversationSummaryRepository()
+    private val databaseManager = DatabaseManager.getInstance()
+    val chatSessionRepository = databaseManager.getChatSessionRepository()
+    val chatMessageRepository = databaseManager.getChatMessageRepository()
+    val conversationSummaryRepository = databaseManager.getConversationSummaryRepository()
     var currentChatSession: ChatSession? = null
 
     /**
@@ -355,7 +354,6 @@ class AppContext(
     fun startNewChatSession(directiveId: String? = null): ChatSession {
         val session = when (mode) {
             ExecutionMode.CLI_INTERACTIVE, ExecutionMode.DESKTOP -> {
-                // Persist session to database for interactive modes
                 chatSessionRepository.createSession(
                     ChatSession(
                         id = "",
@@ -716,7 +714,7 @@ class AppContext(
         val directiveId = currentChatSession?.directiveId
         if (directiveId != null) {
             try {
-                val directiveRepository = ChatDirectiveRepository()
+                val directiveRepository = databaseManager.getChatDirectiveRepository()
                 val directive = directiveRepository.get(directiveId)
                 if (directive != null) {
                     val sessionDirectiveText = buildString {
@@ -908,5 +906,65 @@ class AppContext(
             lastSummarizedMessageId = newSummary.lastSummarizedMessageId,
             createdAt = newSummary.createdAt,
         )
+    }
+
+    /**
+     * Set the language directive based on user's locale selection.
+     * This constructs a comprehensive instruction for the AI to communicate in the specified language,
+     * with a fallback to English if the language is not supported by the AI.
+     *
+     * @param locale The user's selected locale (e.g., Locale.JAPANESE, Locale.ENGLISH)
+     */
+    fun setLanguageDirective(locale: Locale) {
+        systemDirective = buildLanguageDirective(locale)
+    }
+
+    /**
+     * Build a language directive instruction based on the locale.
+     * Uses LocalizationManager to access localized templates.
+     * Includes fallback to English if the AI doesn't support the target language.
+     *
+     * @param locale The target locale
+     * @return A complete language directive with fallback instructions
+     */
+    private fun buildLanguageDirective(locale: Locale): String {
+        // Temporarily set locale to get the correct translations
+        val previousLocale = Locale.getDefault()
+        io.askimo.core.i18n.LocalizationManager.setLocale(locale)
+
+        try {
+            val languageCode = locale.language
+
+            // For English, use simplified template without fallback
+            return if (languageCode == "en") {
+                io.askimo.core.i18n.LocalizationManager.getString("language.directive.english.only")
+            } else {
+                // Get the language display name
+                val languageDisplayName = io.askimo.core.i18n.LocalizationManager.getString("language.name.display")
+
+                // Get templates and format with language name
+                val instruction = io.askimo.core.i18n.LocalizationManager.getString(
+                    "language.directive.instruction",
+                    languageDisplayName,
+                    languageDisplayName,
+                    languageDisplayName,
+                    languageDisplayName,
+                )
+
+                val fallback = io.askimo.core.i18n.LocalizationManager.getString(
+                    "language.directive.fallback",
+                    languageDisplayName,
+                    languageDisplayName,
+                    languageDisplayName,
+                )
+
+                instruction + fallback
+            }
+        } finally {
+            // Restore previous locale if it was different
+            if (previousLocale != locale) {
+                io.askimo.core.i18n.LocalizationManager.setLocale(previousLocale)
+            }
+        }
     }
 }

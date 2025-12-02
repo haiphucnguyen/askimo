@@ -55,7 +55,6 @@ import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.providers.ModelProvider
-import io.askimo.desktop.chat.ChatSessionManager
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
@@ -81,6 +80,7 @@ import io.askimo.desktop.view.sessions.sessionsView
 import io.askimo.desktop.view.settings.providerSelectionDialog
 import io.askimo.desktop.view.settings.settingsView
 import io.askimo.desktop.viewmodel.ChatViewModel
+import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import org.jetbrains.skia.Image
@@ -239,13 +239,34 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     // Create ViewModels using Koin
     val koin = get()
-    val chatViewModel = remember { koin.get<ChatViewModel> { parametersOf(scope) } }
+    val sessionManager = remember { koin.get<SessionManager>() }
     val sessionsViewModel = remember { koin.get<SessionsViewModel> { parametersOf(scope) } }
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
 
-    // Get ChatService and Session directly from Koin (they're singletons)
-    val chatSessionManager = remember { koin.get<ChatSessionManager>() }
+    // Get AppContext directly from Koin (it's a singleton)
     val appContext = remember { koin.get<AppContext>() }
+
+    // Initialize with current session from AppContext or create a new one
+    LaunchedEffect(Unit) {
+        val currentSession = appContext.currentChatSession
+        if (currentSession != null) {
+            // Resume existing session
+            sessionManager.switchToSession(currentSession.id)
+        } else {
+            // Create a new empty session for new chat
+            val newSessionId = java.util.UUID.randomUUID().toString()
+            sessionManager.switchToSession(newSessionId)
+        }
+    }
+
+    // Get ChatViewModel for the current active session
+    // Observe sessionManager.activeSessionId as state
+    val activeSessionId = sessionManager.activeSessionId
+    val chatViewModel = remember(activeSessionId) {
+        activeSessionId?.let { sessionId ->
+            sessionManager.getOrCreateChatViewModel(sessionId)
+        }
+    }
 
     // Check if provider is set up
     var showProviderSetupDialog by remember { mutableStateOf(false) }
@@ -256,7 +277,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     // Set up callback to refresh sessions list when a message is complete
-    chatViewModel.setOnMessageCompleteCallback {
+    chatViewModel?.setOnMessageCompleteCallback {
         sessionsViewModel.loadRecentSessions()
     }
 
@@ -272,7 +293,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         LocalizationManager.setLocale(locale)
 
         // Set the language directive for AI communication
-        chatSessionManager.setLanguageDirective(locale)
+        appContext.setLanguageDirective(locale)
 
         // Rebuild menu bar with new locale strings
         frameWindowScope?.let { scope ->
@@ -291,12 +312,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 },
                 onNewChat = {
                     // Save current input text before clearing
-                    val currentSessionId = chatViewModel.currentSessionId.value
-                    if (currentSessionId != null && inputText.text.isNotBlank()) {
-                        sessionInputTexts[currentSessionId] = inputText
+                    chatViewModel?.let { vm ->
+                        val currentSessionId = vm.currentSessionId.value
+                        if (currentSessionId != null && inputText.text.isNotBlank()) {
+                            sessionInputTexts[currentSessionId] = inputText
+                        }
+                        vm.clearChat()
                     }
-
-                    chatViewModel.clearChat()
                     inputText = TextFieldValue("")
                     currentView = View.CHAT
                 },
@@ -338,12 +360,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     // Reusable function to handle session resumption
     val handleResumeSession: (String) -> Unit = { sessionId ->
         // Save current input text before switching
-        val currentSessionId = chatViewModel.currentSessionId.value
+        val currentSessionId = activeSessionId
         if (currentSessionId != null && inputText.text.isNotBlank()) {
             sessionInputTexts[currentSessionId] = inputText
         }
 
-        chatViewModel.resumeSession(sessionId)
+        // Switch to the session using SessionManager
+        sessionManager.switchToSession(sessionId)
 
         // Restore input text for the new session
         inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
@@ -402,14 +425,14 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
                                     when (shortcut) {
                                         AppShortcut.NEW_CHAT -> {
-                                            chatViewModel.clearChat()
+                                            chatViewModel?.clearChat()
                                             inputText = TextFieldValue("")
                                             attachments = emptyList()
                                             currentView = View.CHAT
                                             true
                                         }
                                         AppShortcut.SEARCH_IN_CHAT -> {
-                                            if (currentView == View.CHAT && !chatViewModel.isSearchMode) {
+                                            if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
                                                 chatViewModel.enableSearchMode()
                                             }
                                             true
@@ -423,7 +446,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                             true
                                         }
                                         AppShortcut.STOP_AI_RESPONSE -> {
-                                            if (chatViewModel.isLoading) {
+                                            if (chatViewModel?.isLoading == true) {
                                                 chatViewModel.cancelResponse()
                                                 true
                                             } else {
@@ -438,8 +461,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     }
                                 },
                         ) {
-                            // Observe current session ID
-                            val currentSessionId by chatViewModel.currentSessionId.collectAsState()
+                            // Observe current session ID from SessionManager
+                            val currentSessionId = activeSessionId
 
                             // Navigation sidebar (expanded or collapsed)
                             navigationSidebar(
@@ -453,12 +476,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                 onNewChat = {
                                     // Save current input text before clearing
-                                    val currentSessionId = chatViewModel.currentSessionId.value
-                                    if (currentSessionId != null && inputText.text.isNotBlank()) {
-                                        sessionInputTexts[currentSessionId] = inputText
+                                    chatViewModel?.let { vm ->
+                                        val sessionId = vm.currentSessionId.value
+                                        if (sessionId != null && inputText.text.isNotBlank()) {
+                                            sessionInputTexts[sessionId] = inputText
+                                        }
+                                        vm.clearChat()
                                     }
-
-                                    chatViewModel.clearChat()
                                     inputText = TextFieldValue("")
                                     currentView = View.CHAT
                                 },
@@ -466,7 +490,26 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                 onNavigateToSessions = { currentView = View.SESSIONS },
                                 onResumeSession = handleResumeSession,
                                 onDeleteSession = { sessionId ->
+                                    // 1. Clean up ViewModel and stop any active streaming
+                                    sessionManager.closeSession(sessionId)
+
+                                    // 2. Delete from database
                                     sessionsViewModel.deleteSession(sessionId)
+
+                                    // 3. If deleted active session, switch to another or create new
+                                    if (sessionManager.activeSessionId == null) {
+                                        val remainingSessions = sessionsViewModel.recentSessions
+                                            .filter { it.id != sessionId }
+
+                                        if (remainingSessions.isNotEmpty()) {
+                                            // Switch to first remaining session
+                                            sessionManager.switchToSession(remainingSessions.first().id)
+                                        } else {
+                                            // Create new empty session
+                                            val newSession = appContext.startNewChatSession()
+                                            sessionManager.switchToSession(newSession.id)
+                                        }
+                                    }
                                 },
                                 onStarSession = { sessionId, isStarred ->
                                     sessionsViewModel.updateSessionStarred(sessionId, isStarred)
@@ -515,61 +558,76 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                 }
                             }
 
-                            // Main content
-                            mainContent(
-                                currentView = currentView,
-                                chatViewModel = chatViewModel,
-                                sessionsViewModel = sessionsViewModel,
-                                settingsViewModel = settingsViewModel,
-                                appContext = appContext,
-                                inputText = inputText,
-                                onInputTextChange = { newText ->
-                                    inputText = newText
-                                    // Save to session storage as user types
-                                    val currentSessionId = chatViewModel.currentSessionId.value
-                                    if (currentSessionId != null) {
-                                        if (newText.text.isNotBlank()) {
-                                            sessionInputTexts[currentSessionId] = newText
-                                        } else {
-                                            sessionInputTexts.remove(currentSessionId)
+                            // Main content - only show when chatViewModel exists
+                            if (chatViewModel != null) {
+                                val viewModel = chatViewModel
+                                mainContent(
+                                    currentView = currentView,
+                                    chatViewModel = viewModel,
+                                    sessionsViewModel = sessionsViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    appContext = appContext,
+                                    inputText = inputText,
+                                    onInputTextChange = { newText ->
+                                        inputText = newText
+                                        // Save to session storage as user types
+                                        val currentSessionId = viewModel.currentSessionId.value
+                                        if (currentSessionId != null) {
+                                            if (newText.text.isNotBlank()) {
+                                                sessionInputTexts[currentSessionId] = newText
+                                            } else {
+                                                sessionInputTexts.remove(currentSessionId)
+                                            }
                                         }
-                                    }
-                                },
-                                onSendMessage = { message, fileAttachments ->
-                                    chatViewModel.sendOrEditMessage(
-                                        message = message,
-                                        attachments = fileAttachments,
-                                        editingMessage = editingMessage,
-                                    )
+                                    },
+                                    onSendMessage = { message, fileAttachments ->
+                                        viewModel.sendOrEditMessage(
+                                            message = message,
+                                            attachments = fileAttachments,
+                                            editingMessage = editingMessage,
+                                        )
 
-                                    // Clear UI state after sending
-                                    inputText = TextFieldValue("")
-                                    attachments = emptyList()
-                                    editingMessage = null
-                                    chatViewModel.currentSessionId.value?.let { sessionId ->
-                                        sessionInputTexts.remove(sessionId)
-                                    }
-                                },
-                                onResumeSession = handleResumeSession,
-                                attachments = attachments,
-                                onAttachmentsChange = { attachments = it },
-                                onNavigateToSettings = { currentView = View.SETTINGS },
-                                editingMessage = editingMessage,
-                                onEditMessage = { message ->
-                                    editingMessage = message
-                                    // Set text with cursor at the beginning (position 0)
-                                    inputText = TextFieldValue(
-                                        text = message.content,
-                                        selection = TextRange(0),
+                                        // Clear UI state after sending
+                                        inputText = TextFieldValue("")
+                                        attachments = emptyList()
+                                        editingMessage = null
+                                        viewModel.currentSessionId.value?.let { sessionId ->
+                                            sessionInputTexts.remove(sessionId)
+                                        }
+                                    },
+                                    onResumeSession = handleResumeSession,
+                                    attachments = attachments,
+                                    onAttachmentsChange = { attachments = it },
+                                    onNavigateToSettings = { currentView = View.SETTINGS },
+                                    editingMessage = editingMessage,
+                                    onEditMessage = { message ->
+                                        editingMessage = message
+                                        // Set text with cursor at the beginning (position 0)
+                                        inputText = TextFieldValue(
+                                            text = message.content,
+                                            selection = TextRange(0),
+                                        )
+                                        attachments = message.attachments
+                                    },
+                                    onCancelEdit = {
+                                        editingMessage = null
+                                        inputText = TextFieldValue("")
+                                        attachments = emptyList()
+                                    },
+                                )
+                            } else {
+                                // Empty state - show message to create or select a session
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "Select a session from the sidebar or start a new chat",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    attachments = message.attachments
-                                },
-                                onCancelEdit = {
-                                    editingMessage = null
-                                    inputText = TextFieldValue("")
-                                    attachments = emptyList()
-                                },
-                            )
+                                }
+                            }
                         } // End of Row (main content with sidebar)
 
                         // Bottom bar

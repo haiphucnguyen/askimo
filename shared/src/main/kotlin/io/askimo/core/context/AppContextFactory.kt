@@ -71,7 +71,7 @@ object AppContextFactory {
 
         val memory = appContext.getOrCreateMemory(provider, modelName, settings)
 
-        val chatService = if (factory != null) {
+        val chatClient = if (factory != null) {
             try {
                 @Suppress("UNCHECKED_CAST")
                 (factory as ChatModelFactory<ProviderSettings>)
@@ -83,7 +83,7 @@ object AppContextFactory {
         } else {
             NoopChatClient
         }
-        appContext.setChatClient(chatService)
+        appContext.setChatClient(chatClient)
 
         return appContext
     }

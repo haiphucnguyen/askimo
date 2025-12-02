@@ -52,7 +52,7 @@ private fun ResultRow.toChatFolder(): ChatFolder = ChatFolder(
 )
 
 class ChatFolderRepository internal constructor(
-    databaseManager: io.askimo.core.db.DatabaseManager = io.askimo.core.db.DatabaseManager.getInstance(),
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
 ) : AbstractSQLiteRepository(databaseManager) {
 
     /**
