@@ -7,10 +7,12 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
+import io.askimo.desktop.chat.ChatSessionManager
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.ErrorHandler
@@ -36,9 +38,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * - Resuming previous chat sessions
  */
 class ChatViewModel(
-    private val sessionManager: SessionManager,
+    private val chatSessionManager: ChatSessionManager,
     private val scope: CoroutineScope,
-    private val chatSessionService: ChatSessionService,
+    private val repository: ChatSessionService,
     private val appContext: AppContext,
 ) {
     var messages by mutableStateOf(listOf<ChatMessage>())
@@ -124,15 +126,15 @@ class ChatViewModel(
     fun getSpinnerFrame(): Char = spinnerFrames[thinkingFrameIndex % spinnerFrames.size]
 
     /**
-     * Subscribe to a SPECIFIC thread by sessionId.
+     * Subscribe to a SPECIFIC thread by threadId.
      * This ensures we only get chunks from THIS specific question, not old ones.
      */
-    private fun subscribeToThread(sessionId: String) {
-        // Cancel any existing subscription for this sessionId to prevent duplicates
-        activeSubscriptions[sessionId]?.cancel()
-        activeSubscriptions.remove(sessionId)
+    private fun subscribeToThread(threadId: String, chatId: String) {
+        // Cancel any existing subscription for this threadId to prevent duplicates
+        activeSubscriptions[threadId]?.cancel()
+        activeSubscriptions.remove(threadId)
 
-        val activeThread = sessionManager.getActiveThread(sessionId)
+        val activeThread = chatSessionManager.getActiveThread(threadId)
 
         if (activeThread != null) {
             // Check if chunks have been received yet
@@ -165,8 +167,8 @@ class ChatViewModel(
 
                 try {
                     activeThread.chunks.collect { chunks ->
-                        // STRICT CHECK: Only update UI if CURRENTLY viewing THIS EXACT session
-                        if (_currentSessionId.value == sessionId && chunks.isNotEmpty()) {
+                        // STRICT CHECK: Only update UI if CURRENTLY viewing THIS EXACT chatId
+                        if (_currentSessionId.value == chatId && chunks.isNotEmpty()) {
                             // First token received - stop thinking indicator
                             if (!firstTokenReceived) {
                                 firstTokenReceived = true
@@ -200,27 +202,27 @@ class ChatViewModel(
                         }
                     }
                 } finally {
-                    // Clean up this subscription when done
-                    activeSubscriptions.remove(sessionId)
+                    // Clean up this subscription when done (by threadId)
+                    activeSubscriptions.remove(threadId)
                 }
             }
 
-            // Track this subscription by sessionId
-            activeSubscriptions[sessionId] = subscriptionJob
+            // Track this subscription by threadId (not chatId!)
+            activeSubscriptions[threadId] = subscriptionJob
 
             // Monitor completion in a separate job
             scope.launch {
                 try {
                     activeThread.isComplete.collect { isComplete ->
-                        // Only update if still on this session
-                        if (_currentSessionId.value == sessionId && isComplete) {
+                        // Only update if still on this chat
+                        if (_currentSessionId.value == chatId && isComplete) {
                             isLoading = false
                             isThinking = false
                             stopThinkingTimer()
 
-                            // Cancel and clean up subscription when thread completes
-                            activeSubscriptions[sessionId]?.cancel()
-                            activeSubscriptions.remove(sessionId)
+                            // Cancel and clean up subscription when thread completes (by threadId)
+                            activeSubscriptions[threadId]?.cancel()
+                            activeSubscriptions.remove(threadId)
                         }
                     }
                 } catch (e: CancellationException) {
@@ -280,23 +282,9 @@ class ChatViewModel(
         if (message.isBlank() || isLoading) return
 
         // Get or create session ID
+        val isNewSession = _currentSessionId.value == null
         val sessionId = _currentSessionId.value ?: run {
-            val existingSession = appContext.currentChatSession
-            if (existingSession != null) {
-                existingSession.id
-            } else {
-                // Create new session in database BEFORE sending message
-                // This ensures the session exists when AI response tries to save messages
-                try {
-                    val newSession = appContext.startNewChatSession(directiveId = selectedDirective)
-                    println("Created new session: ${newSession.id}")
-                    newSession.id
-                } catch (e: Exception) {
-                    println("Failed to create session: ${e.message}")
-                    e.printStackTrace()
-                    UUID.randomUUID().toString()
-                }
-            }
+            appContext.currentChatSession?.id ?: UUID.randomUUID().toString()
         }
 
         // Cancel any previous job to prevent old subscriptions from interfering
@@ -334,9 +322,26 @@ class ChatViewModel(
 
         currentJob = scope.launch {
             try {
-                val threadId = sessionManager.sendMessage(sessionId, fullMessage)
+                // If this is a new session, create it in the database first
+                if (isNewSession) {
+                    repository.createSession(
+                        ChatSession(
+                            id = sessionId,
+                            title = "New Chat",
+                            createdAt = LocalDateTime.now(),
+                            updatedAt = LocalDateTime.now(),
+                            directiveId = selectedDirective,
+                        ),
+                    )
+                    // Update the current session ID
+                    _currentSessionId.value = sessionId
+                }
+
+                // Start streaming in background - creates new thread for this Q&A
+                val threadId = chatSessionManager.sendMessage(fullMessage, sessionId)
 
                 if (threadId == null) {
+                    // Either max concurrent streams reached OR chat already has active question
                     errorMessage = "Please wait for the current response to complete before asking another question."
                     isLoading = false
                     isThinking = false
@@ -344,13 +349,23 @@ class ChatViewModel(
                     return@launch
                 }
 
+                // Update session ID if this was a new chat
                 if (_currentSessionId.value == null) {
                     val currentSession = appContext.currentChatSession
                     _currentSessionId.value = currentSession?.id ?: sessionId
                 }
 
-                subscribeToThread(sessionId)
+                // Subscribe to this SPECIFIC thread (not just chatId)
+                subscribeToThread(threadId, sessionId)
+            } catch (e: CancellationException) {
+                if (_currentSessionId.value == sessionId) {
+                    isLoading = false
+                    isThinking = false
+                    stopThinkingTimer()
+                    errorMessage = ErrorHandler.getCancellationMessage()
+                }
             } catch (e: Exception) {
+                // Only update if still on same session
                 if (_currentSessionId.value == sessionId) {
                     errorMessage = ErrorHandler.getUserFriendlyError(e, "sending message")
                     isLoading = false
@@ -380,7 +395,7 @@ class ChatViewModel(
             activeSubscriptions.clear()
 
             // Stop the streaming thread
-            sessionManager.stopStream(chatId)
+            chatSessionManager.stopStream(chatId)
         }
     }
 
@@ -465,11 +480,11 @@ class ChatViewModel(
                     isThinking = false
                     stopThinkingTimer()
 
-                    // Subscribe to active thread if this session is streaming
-                    val activeThread = sessionManager.getActiveThread(sessionId)
+                    // Subscribe to active thread if this chat is streaming
+                    val activeThread = chatSessionManager.getActiveThreadForChat(sessionId)
                     if (activeThread != null) {
-                        // This session has an active thread - subscribe to it
-                        subscribeToThread(sessionId)
+                        // This chat has an active thread - subscribe to it
+                        subscribeToThread(activeThread.threadId, sessionId)
                     }
                 } else {
                     errorMessage = result.errorMessage
@@ -666,7 +681,7 @@ class ChatViewModel(
 
                 val afterMessages = withContext(Dispatchers.IO) {
                     // Load messages after the target
-                    val (after, _) = chatSessionService.getMessagesPaginated(
+                    val (after, _) = repository.getMessagesPaginated(
                         sessionId = _currentSessionId.value!!,
                         limit = halfPageSize,
                         cursor = messageTimestamp,
@@ -677,7 +692,7 @@ class ChatViewModel(
 
                 // Get the target message itself
                 val allSessionMessages = withContext(Dispatchers.IO) {
-                    chatSessionService.getMessages(_currentSessionId.value!!)
+                    repository.getMessages(_currentSessionId.value!!)
                 }
                 val targetMessage = allSessionMessages.find { it.id == messageId }
 
@@ -728,10 +743,10 @@ class ChatViewModel(
         return try {
             withContext(Dispatchers.IO) {
                 // 1. Mark the ORIGINAL message (being edited) as outdated
-                chatSessionService.markMessageAsOutdated(originalMessageId)
+                repository.markMessageAsOutdated(originalMessageId)
 
                 // 2. Mark ALL subsequent messages as outdated
-                val subsequentCount = chatSessionService.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
+                val subsequentCount = repository.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
                 println("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
 
                 true
@@ -791,10 +806,7 @@ class ChatViewModel(
         // Start a new session without a directive
         appContext.currentChatSession = null
 
-        // Clear conversation memory
-        val provider = appContext.getActiveProvider()
-        val modelName = appContext.params.getModel(provider)
-        appContext.removeMemory(provider, modelName)
+        chatSessionManager.clearMemory()
     }
 
     /**
@@ -814,32 +826,5 @@ class ChatViewModel(
             appContext.setCurrentSessionDirective(directiveId)
         }
         // Otherwise, the directive will be applied when a new session is started
-    }
-
-    /**
-     * Clean up all resources when this ViewModel is removed from cache.
-     * This is called by SessionManager when the ViewModel needs to be evicted.
-     */
-    fun cleanup() {
-        // Cancel any ongoing operations
-        currentJob?.cancel()
-        currentJob = null
-
-        // Cancel all subscriptions
-        activeSubscriptions.values.forEach { it.cancel() }
-        activeSubscriptions.clear()
-
-        // Stop timers
-        stopThinkingTimer()
-
-        // Clear state to free memory
-        messages = emptyList()
-        currentResponse = ""
-        isLoading = false
-        isThinking = false
-        errorMessage = null
-        searchResults = emptyList()
-
-        println("Cleaned up ChatViewModel for session: ${_currentSessionId.value}")
     }
 }

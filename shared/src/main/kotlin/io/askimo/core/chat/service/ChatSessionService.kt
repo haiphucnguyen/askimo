@@ -102,6 +102,14 @@ class ChatSessionService(
     fun getSessionById(sessionId: String): ChatSession? = sessionRepository.getSession(sessionId)
 
     /**
+     * Create a new session.
+     *
+     * @param session The session to create
+     * @return The created session with generated ID (if not provided)
+     */
+    fun createSession(session: ChatSession): ChatSession = sessionRepository.createSession(session)
+
+    /**
      * Delete a session and all its related data (messages and summaries).
      * This method coordinates the deletion across multiple repositories.
      *

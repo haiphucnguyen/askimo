@@ -66,7 +66,7 @@ class ChatSessionRepository internal constructor(
 
     fun createSession(session: ChatSession): ChatSession {
         val sessionWithInjectedFields = session.copy(
-            id = UUID.randomUUID().toString(),
+            id = session.id.ifBlank { UUID.randomUUID().toString() },
         )
 
         transaction(database) {
