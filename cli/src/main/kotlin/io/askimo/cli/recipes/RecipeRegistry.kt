@@ -25,6 +25,19 @@ class RecipeRegistry(
             .use { yamlMapper.readValue(it, RecipeDef::class.java) }
             .fixWhenField()
     }
+
+    fun loadFromFile(filePath: String): RecipeDef {
+        val file = Path.of(filePath)
+        if (!Files.exists(file)) {
+            throw RecipeNotFoundException(
+                "Recipe file not found: $filePath",
+            )
+        }
+        return Files
+            .newBufferedReader(file)
+            .use { yamlMapper.readValue(it, RecipeDef::class.java) }
+            .fixWhenField()
+    }
 }
 
 private fun RecipeDef.fixWhenField(): RecipeDef = this

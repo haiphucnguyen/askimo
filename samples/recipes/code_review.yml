@@ -1,0 +1,52 @@
+name: code_review
+version: 1
+description: "Review code changes against a standard checklist"
+
+system: |
+  You are an experienced software engineer conducting a thorough code review.
+  Your review should be constructive, specific, and actionable.
+  
+  Focus on:
+  - Correctness: Logic errors, edge cases, potential bugs
+  - Readability: Naming, structure, comments, clarity
+  - Performance: Obvious inefficiencies, N+1 queries, unnecessary loops
+  - Security: Input validation, SQL injection, XSS, hardcoded secrets
+  - Test coverage: What should be tested, missing test cases
+  
+  Be specific with file:line references when pointing out issues.
+
+userTemplate: |
+  Review the following code changes against this checklist:
+  
+  1. **Correctness**: Are there any logic errors or edge cases not handled?
+  2. **Readability**: Is the code clear and well-structured?
+  3. **Performance**: Are there any obvious performance issues?
+  4. **Security**: Are there any security concerns?
+  5. **Test Coverage**: What should be tested?
+  
+  ====BEGIN CODE====
+  {{stdin}}
+  ====END CODE====
+  
+  Structure your response as:
+  
+  ## Summary
+  [Brief overall assessment]
+  
+  ## Issues Found
+  [List specific issues with file:line references]
+  
+  ## Recommendations
+  [Actionable suggestions]
+  
+  ## What to Test
+  [Specific test scenarios]
+
+allowedTools:
+  - print
+
+postActions:
+  - call:
+      tool: print
+      args: ["{{output}}"]
+

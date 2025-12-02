@@ -294,15 +294,9 @@ class ChatViewModel(
                 } catch (e: Exception) {
                     println("Failed to create session: ${e.message}")
                     e.printStackTrace()
-                    // Fallback to generated ID if session creation fails
                     UUID.randomUUID().toString()
                 }
             }
-        }
-
-        // Update current session ID immediately
-        if (_currentSessionId.value == null) {
-            _currentSessionId.value = sessionId
         }
 
         // Cancel any previous job to prevent old subscriptions from interfering

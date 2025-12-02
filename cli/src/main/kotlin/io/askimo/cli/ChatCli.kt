@@ -154,6 +154,27 @@ fun main(args: Array<String>) {
             return
         }
 
+        val recipeFile = args.getFlagValue("-f", "--recipe-file")
+        if (recipeFile != null) {
+            val overrides = args.extractOverrides("--set")
+            // Extract external args: all args after the file path that are not flags or overrides
+            val recipeFlagIndex = args.indexOfFirst { it == "-f" || it == "--recipe-file" }
+            val externalArgs =
+                if (recipeFlagIndex != -1 && recipeFlagIndex + 2 <= args.size) {
+                    args
+                        .drop(recipeFlagIndex + 2)
+                        .filter { !it.startsWith("--") && !it.startsWith("-") && !it.contains("=") }
+                } else {
+                    emptyList()
+                }
+            try {
+                runYamlFileCommand(session, recipeFile, overrides, externalArgs)
+            } catch (e: RecipeNotFoundException) {
+                log.displayError(e.message ?: "Recipe file not found")
+            }
+            return
+        }
+
         val promptText = args.getFlagValue("-p", "--prompt")
         if (promptText != null) {
             val stdinText = readStdinIfAny()
@@ -477,6 +498,56 @@ private fun runYamlCommand(
         RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
             executor.run(
                 name = name,
+                opts = RunOpts(
+                    overrides = overrides,
+                    externalArgs = externalArgs,
+                    stdinContent = stdinContent.ifEmpty { null },
+                ),
+            )
+        }
+
+        indicator.stopWithElapsed()
+    } catch (e: Exception) {
+        indicator.stopWithElapsed()
+        throw e
+    }
+}
+
+private fun runYamlFileCommand(
+    appContext: AppContext,
+    filePath: String,
+    overrides: Map<String, String>,
+    externalArgs: List<String> = emptyList(),
+) {
+    val terminal = TerminalBuilder.builder().system(true).build()
+    val argsText = if (externalArgs.isNotEmpty()) " with arguments $externalArgs" else ""
+    val indicator = LoadingIndicator(terminal, "Running recipe file '$filePath'$argsText…", "Recipe completed").apply { start() }
+
+    try {
+        // Read stdin if available
+        val stdinContent = readStdinIfAny()
+
+        val registry = RecipeRegistry()
+        // Load recipe definition directly from file
+        val def = registry.loadFromFile(filePath)
+        val toolRegistry =
+            if (def.allowedTools.isEmpty()) {
+                ToolRegistry.defaults()
+            } else {
+                log.debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
+                ToolRegistry.defaults(allow = def.allowedTools.toSet())
+            }
+
+        val executor =
+            RecipeExecutor(
+                appContext = appContext,
+                registry = registry,
+                tools = toolRegistry,
+            )
+
+        RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
+            executor.run(
+                name = def.name,
                 opts = RunOpts(
                     overrides = overrides,
                     externalArgs = externalArgs,
