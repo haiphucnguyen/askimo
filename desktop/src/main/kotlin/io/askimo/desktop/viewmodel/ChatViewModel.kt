@@ -97,12 +97,10 @@ class ChatViewModel(
     // Key = threadId, Value = subscription Job
     private val activeSubscriptions = mutableMapOf<String, Job>()
 
-    // Pagination state
     private var currentCursor: LocalDateTime? = null
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId
 
-    // Spinner frames matching CLI implementation
     private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
 
     companion object {
@@ -135,15 +133,12 @@ class ChatViewModel(
         val activeThread = sessionManager.getActiveThread(sessionId)
 
         if (activeThread != null) {
-            // Check if chunks have been received yet
             val hasChunks = activeThread.chunks.value.isNotEmpty()
 
             if (!hasChunks) {
-                // Still in "thinking" phase - show thinking indicator
                 isThinking = true
                 startThinkingTimer()
             } else {
-                // Chunks already available - display them immediately
                 val streamingContent = activeThread.chunks.value.joinToString("")
                 val lastMessage = messages.lastOrNull()
                 if (lastMessage != null && !lastMessage.isUser) {
@@ -165,9 +160,7 @@ class ChatViewModel(
 
                 try {
                     activeThread.chunks.collect { chunks ->
-                        // STRICT CHECK: Only update UI if CURRENTLY viewing THIS EXACT session
                         if (_currentSessionId.value == sessionId && chunks.isNotEmpty()) {
-                            // First token received - stop thinking indicator
                             if (!firstTokenReceived) {
                                 firstTokenReceived = true
                                 isThinking = false
@@ -177,16 +170,13 @@ class ChatViewModel(
                             val streamingContent = chunks.joinToString("")
                             currentResponse = streamingContent
 
-                            // Update the AI message
                             val lastMessage = messages.lastOrNull()
                             if (lastMessage != null && !lastMessage.isUser) {
-                                // Update existing AI message
                                 messages = messages.dropLast(1) + ChatMessage(
                                     content = streamingContent,
                                     isUser = false,
                                 )
                             } else {
-                                // Add new AI message
                                 messages = messages + ChatMessage(
                                     content = streamingContent,
                                     isUser = false,
@@ -195,7 +185,6 @@ class ChatViewModel(
 
                             isLoading = false
 
-                            // Notify that message exchange is complete (for refreshing sidebar)
                             onMessageComplete?.invoke()
                         }
                     }
@@ -285,8 +274,6 @@ class ChatViewModel(
             if (existingSession != null) {
                 existingSession.id
             } else {
-                // Create new session in database BEFORE sending message
-                // This ensures the session exists when AI response tries to save messages
                 try {
                     val newSession = appContext.startNewChatSession(directiveId = selectedDirective)
                     println("Created new session: ${newSession.id}")
@@ -294,18 +281,15 @@ class ChatViewModel(
                 } catch (e: Exception) {
                     println("Failed to create session: ${e.message}")
                     e.printStackTrace()
-                    // Fallback to generated ID if session creation fails
                     UUID.randomUUID().toString()
                 }
             }
         }
 
-        // Update current session ID immediately
         if (_currentSessionId.value == null) {
             _currentSessionId.value = sessionId
         }
 
-        // Cancel any previous job to prevent old subscriptions from interfering
         currentJob?.cancel()
         currentJob = null
 
@@ -316,26 +300,20 @@ class ChatViewModel(
         isThinking = true
         thinkingElapsedSeconds = 0
 
-        // Add user message to the list (for display purposes)
         messages = messages + ChatMessage(
             content = message,
             isUser = true,
             attachments = attachments,
         )
 
-        // Trim messages if they exceed the buffer threshold
         if (messages.size > MESSAGE_BUFFER_THRESHOLD) {
-            // Keep only the most recent MESSAGE_PAGE_SIZE messages
             messages = messages.takeLast(MESSAGE_PAGE_SIZE)
-            // Reset pagination state since we're trimming
             currentCursor = null
             hasMoreMessages = false
         }
 
-        // Start thinking timer
         startThinkingTimer()
 
-        // Construct the full message with attachments for AI
         val fullMessage = constructMessageWithAttachments(message, attachments)
 
         currentJob = scope.launch {
@@ -428,15 +406,12 @@ class ChatViewModel(
     fun resumeSession(sessionId: String): Boolean {
         scope.launch {
             try {
-                // IMPORTANT: Cancel ALL old subscriptions before switching
-                // Clear all subscriptions to prevent any old threads from updating UI
                 activeSubscriptions.values.forEach { it.cancel() }
                 activeSubscriptions.clear()
 
                 isLoading = true
                 errorMessage = null
 
-                // Clear search state when switching sessions
                 clearSearch()
 
                 val result = withContext(Dispatchers.IO) {
@@ -448,13 +423,15 @@ class ChatViewModel(
                 }
 
                 if (result.success) {
-                    // Convert session messages to chat messages
                     messages = result.messages.map { sessionMessage ->
                         ChatMessage(
                             content = sessionMessage.content,
                             isUser = sessionMessage.role == MessageRole.USER,
                             id = sessionMessage.id,
                             timestamp = sessionMessage.createdAt,
+                            isOutdated = sessionMessage.isOutdated,
+                            editParentId = sessionMessage.editParentId,
+                            isEdited = sessionMessage.isEdited,
                         )
                     }
                     // Store pagination state
@@ -471,10 +448,8 @@ class ChatViewModel(
                     isThinking = false
                     stopThinkingTimer()
 
-                    // Subscribe to active thread if this session is streaming
                     val activeThread = sessionManager.getActiveThread(sessionId)
                     if (activeThread != null) {
-                        // This session has an active thread - subscribe to it
                         subscribeToThread(sessionId)
                     }
                 } else {
@@ -511,13 +486,15 @@ class ChatViewModel(
                     )
                 }
 
-                // Convert and prepend messages
                 val chatMessages = previousMessages.map { sessionMessage ->
                     ChatMessage(
                         content = sessionMessage.content,
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -548,11 +525,8 @@ class ChatViewModel(
         searchQuery = query
 
         if (query.isBlank()) {
-            // Clear search results but keep search mode active
             searchResults = emptyList()
             currentSearchResultIndex = 0
-            // DON'T set isSearchMode = false here!
-            // User must close search with the X button
             return
         }
 
@@ -572,6 +546,9 @@ class ChatViewModel(
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -701,6 +678,9 @@ class ChatViewModel(
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -733,10 +713,8 @@ class ChatViewModel(
 
         return try {
             withContext(Dispatchers.IO) {
-                // 1. Mark the ORIGINAL message (being edited) as outdated
                 chatSessionService.markMessageAsOutdated(originalMessageId)
 
-                // 2. Mark ALL subsequent messages as outdated
                 val subsequentCount = chatSessionService.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
                 println("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
 
@@ -804,11 +782,6 @@ class ChatViewModel(
     }
 
     /**
-     * Get the current session ID.
-     */
-    fun getCurrentSessionId(): String? = _currentSessionId.value
-
-    /**
      * Set the directive for the current or next chat session.
      * @param directiveId The directive ID to set (null to clear directive)
      */
@@ -819,7 +792,38 @@ class ChatViewModel(
         if (appContext.currentChatSession != null) {
             appContext.setCurrentSessionDirective(directiveId)
         }
-        // Otherwise, the directive will be applied when a new session is started
+    }
+
+    /**
+     * Update the content of an AI message and mark it as edited.
+     * This allows users to edit AI responses after they are generated.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content for the message
+     */
+    fun updateAIMessageContent(messageId: String, newContent: String) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    chatSessionService.updateMessageContent(messageId, newContent)
+                }
+
+                // Update the message in the local state
+                messages = messages.map { message ->
+                    if (message.id == messageId) {
+                        message.copy(content = newContent, isEdited = true)
+                    } else {
+                        message
+                    }
+                }
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "updating message",
+                    "Failed to update message. Please try again.",
+                )
+            }
+        }
     }
 
     /**

@@ -141,17 +141,13 @@ private fun fileAttachmentItem(
 @Composable
 fun chatView(
     messages: List<ChatMessage>,
-    inputText: TextFieldValue,
-    onInputTextChange: (TextFieldValue) -> Unit,
-    onSendMessage: (String, List<FileAttachment>) -> Unit,
+    onSendMessage: (String, List<FileAttachment>, ChatMessage?) -> Unit,
     onStopResponse: () -> Unit = {},
     isLoading: Boolean = false,
     isThinking: Boolean = false,
     thinkingElapsedSeconds: Int = 0,
     spinnerFrame: Char = '⠋',
     errorMessage: String? = null,
-    attachments: List<FileAttachment> = emptyList(),
-    onAttachmentsChange: (List<FileAttachment>) -> Unit = {},
     provider: String? = null,
     model: String? = null,
     onNavigateToSettings: () -> Unit = {},
@@ -170,11 +166,24 @@ fun chatView(
     onJumpToMessage: (String, LocalDateTime) -> Unit = { _, _ -> },
     selectedDirective: String? = null,
     onDirectiveSelected: (String?) -> Unit = {},
-    editingMessage: ChatMessage? = null,
-    onCancelEdit: () -> Unit = {},
-    onEditMessage: (ChatMessage) -> Unit = {},
+    onUpdateAIMessage: (String, String) -> Unit = { _, _ -> },
+    initialInputText: TextFieldValue = TextFieldValue(""),
+    initialAttachments: List<FileAttachment> = emptyList(),
+    initialEditingMessage: ChatMessage? = null,
+    onStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
+    // Internal state management for ChatView
+    var inputText by remember(initialInputText) { mutableStateOf(initialInputText) }
+    var attachments by remember(initialAttachments) { mutableStateOf(initialAttachments) }
+    var editingMessage by remember(initialEditingMessage) { mutableStateOf(initialEditingMessage) }
+    var editingAIMessage by remember { mutableStateOf<ChatMessage?>(null) }
+
+    // Notify parent of state changes
+    LaunchedEffect(inputText, attachments, editingMessage) {
+        onStateChange(inputText, attachments, editingMessage)
+    }
+
     val directiveService = remember {
         GlobalContext.get().get<ChatDirectiveService>()
     }
@@ -694,7 +703,20 @@ fun chatView(
                         searchQuery = searchQuery,
                         currentSearchResultIndex = currentSearchResultIndex,
                         onMessageClick = onJumpToMessage,
-                        onEditMessage = onEditMessage,
+                        onEditMessage = { message ->
+                            if (message.isUser) {
+                                // User message - set editing mode
+                                editingMessage = message
+                                inputText = TextFieldValue(
+                                    text = message.content,
+                                    selection = TextRange(0),
+                                )
+                                attachments = message.attachments
+                            } else {
+                                // AI message - show edit dialog
+                                editingAIMessage = message
+                            }
+                        },
                     )
                 }
                 messages.isEmpty() -> {
@@ -714,7 +736,20 @@ fun chatView(
                         hasMoreMessages = hasMoreMessages,
                         isLoadingPrevious = isLoadingPrevious,
                         onLoadPrevious = onLoadPrevious,
-                        onEditMessage = onEditMessage,
+                        onEditMessage = { message ->
+                            if (message.isUser) {
+                                // User message - set editing mode
+                                editingMessage = message
+                                inputText = TextFieldValue(
+                                    text = message.content,
+                                    selection = TextRange(0),
+                                )
+                                attachments = message.attachments
+                            } else {
+                                // AI message - show edit dialog
+                                editingAIMessage = message
+                            }
+                        },
                     )
                 }
             }
@@ -737,7 +772,7 @@ fun chatView(
                         mimeType = file.extension,
                         size = file.length(),
                     )
-                    onAttachmentsChange(attachments + attachment)
+                    attachments = attachments + attachment
                 } catch (e: Exception) {
                     log.error("Error reading file: ${e.message}", e)
                 }
@@ -769,7 +804,7 @@ fun chatView(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = editingMessage.timestamp?.let { timestamp ->
+                            text = editingMessage?.timestamp?.let { timestamp ->
                                 val formattedTime = TimeUtil.formatDisplay(timestamp)
                                 stringResource("message.editing.banner.from", formattedTime)
                             } ?: stringResource("message.editing.banner"),
@@ -778,7 +813,11 @@ fun chatView(
                         )
                     }
                     IconButton(
-                        onClick = onCancelEdit,
+                        onClick = {
+                            editingMessage = null
+                            inputText = TextFieldValue("")
+                            attachments = emptyList()
+                        },
                         modifier = Modifier
                             .size(32.dp)
                             .pointerHoverIcon(PointerIcon.Hand),
@@ -826,7 +865,7 @@ fun chatView(
                         fileAttachmentItem(
                             attachment = attachment,
                             onRemove = {
-                                onAttachmentsChange(attachments - attachment)
+                                attachments = attachments - attachment
                             },
                         )
                     }
@@ -857,7 +896,7 @@ fun chatView(
 
                 OutlinedTextField(
                     value = inputText,
-                    onValueChange = onInputTextChange,
+                    onValueChange = { inputText = it },
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(inputFocusRequester)
@@ -872,18 +911,19 @@ fun chatView(
                                     val textAfterCursor = inputText.text.substring(cursorPosition)
                                     val newText = textBeforeCursor + "\n" + textAfterCursor
                                     val newCursorPosition = cursorPosition + 1
-                                    onInputTextChange(
-                                        TextFieldValue(
-                                            text = newText,
-                                            selection = TextRange(newCursorPosition),
-                                        ),
+                                    inputText = TextFieldValue(
+                                        text = newText,
+                                        selection = TextRange(newCursorPosition),
                                     )
                                     true
                                 }
                                 AppShortcut.SEND_MESSAGE -> {
-                                    // Enter without Shift: send message
                                     if (inputText.text.isNotBlank() && !isLoading) {
-                                        onSendMessage(inputText.text, attachments)
+                                        onSendMessage(inputText.text, attachments, editingMessage)
+
+                                        inputText = TextFieldValue("")
+                                        attachments = emptyList()
+                                        editingMessage = null
                                     }
                                     true
                                 }
@@ -902,7 +942,6 @@ fun chatView(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Show stop button when loading, send/update button otherwise
                 if (isLoading) {
                     IconButton(
                         onClick = onStopResponse,
@@ -925,7 +964,10 @@ fun chatView(
                         IconButton(
                             onClick = {
                                 if (inputText.text.isNotBlank()) {
-                                    onSendMessage(inputText.text, attachments)
+                                    onSendMessage(inputText.text, attachments, editingMessage)
+                                    inputText = TextFieldValue("")
+                                    attachments = emptyList()
+                                    editingMessage = null
                                 }
                             },
                             enabled = inputText.text.isNotBlank(),
@@ -945,5 +987,17 @@ fun chatView(
                 }
             }
         }
+    }
+
+    editingAIMessage?.let { message ->
+        aiMessageEditDialog(
+            message = message,
+            onDismiss = { editingAIMessage = null },
+            onSave = { newContent ->
+                message.id?.let { messageId ->
+                    onUpdateAIMessage(messageId, newContent)
+                }
+            },
+        )
     }
 }

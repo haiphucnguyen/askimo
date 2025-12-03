@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ConversationSummaryRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.context.AppContext
+import io.askimo.core.i18n.LocalizationManager
 import java.time.LocalDateTime
 
 /**
@@ -100,6 +101,14 @@ class ChatSessionService(
      * Get a session by ID.
      */
     fun getSessionById(sessionId: String): ChatSession? = sessionRepository.getSession(sessionId)
+
+    /**
+     * Create a new session.
+     *
+     * @param session The session to create
+     * @return The created session with generated ID (if not provided)
+     */
+    fun createSession(session: ChatSession): ChatSession = sessionRepository.createSession(session)
 
     /**
      * Delete a session and all its related data (messages and summaries).
@@ -199,6 +208,15 @@ class ChatSessionService(
     fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
 
     /**
+     * Update the content of a message and mark it as edited.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content for the message
+     * @return Number of messages updated (should be 1)
+     */
+    fun updateMessageContent(messageId: String, newContent: String): Int = messageRepository.updateMessageContent(messageId, newContent)
+
+    /**
      * Get only active (non-outdated) messages for a session.
      *
      * @param sessionId The session ID
@@ -242,7 +260,7 @@ class ChatSessionService(
             ResumeSessionResult(
                 success = false,
                 sessionId = sessionId,
-                errorMessage = "Session not found: $sessionId",
+                errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
             )
         }
     }
@@ -280,7 +298,7 @@ class ChatSessionService(
                 messages = emptyList(),
                 cursor = null,
                 hasMore = false,
-                errorMessage = "Session not found: $sessionId",
+                errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
             )
         }
     }

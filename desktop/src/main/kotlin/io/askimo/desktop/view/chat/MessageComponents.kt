@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -25,12 +28,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,10 +56,12 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
+import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.highlightSearchText
 import io.askimo.desktop.view.components.markdownText
 import io.askimo.desktop.view.components.themedTooltip
@@ -296,8 +306,6 @@ fun messageBubble(
                                 }
                             }
                         } else {
-                            // AI messages: markdown rendering with selection enabled
-                            // Note: Highlighting in markdown is more complex, so we show plain text with highlighting if search is active
                             SelectionContainer {
                                 if (searchQuery.isNotBlank()) {
                                     Text(
@@ -327,7 +335,6 @@ fun messageBubble(
                     }
                 }
 
-                // Copy and Edit button bar for user messages (shown on hover)
                 if (message.isUser && isHovered) {
                     Card(
                         modifier = Modifier
@@ -362,7 +369,6 @@ fun messageBubble(
                                 }
                             }
 
-                            // Edit button
                             themedTooltip(
                                 text = stringResource("message.edit"),
                             ) {
@@ -384,7 +390,7 @@ fun messageBubble(
                     }
                 }
 
-                // Copy button bar for AI messages (shown on hover)
+                // Copy and Edit button bar for AI messages (shown on hover)
                 if (!message.isUser && isHovered) {
                     Card(
                         modifier = Modifier
@@ -418,9 +424,43 @@ fun messageBubble(
                                     )
                                 }
                             }
+
+                            // Edit button for AI messages
+                            themedTooltip(
+                                text = stringResource("message.ai.edit"),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        onEditMessage?.invoke(message)
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource("message.ai.edit.description"),
+                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
+            }
+        }
+
+        // Show edited indicator if message has been edited
+        if (message.isEdited && !message.isUser) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = stringResource("message.edited.indicator"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp),
+                )
             }
         }
     }
@@ -457,6 +497,80 @@ private fun fileAttachmentChip(attachment: FileAttachment) {
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun aiMessageEditDialog(
+    message: ChatMessage,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var editedContent by remember { mutableStateOf(message.content) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .width(700.dp)
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Title
+                Text(
+                    text = stringResource("message.ai.edit"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                // Scrollable content field with consistent styling
+                OutlinedTextField(
+                    value = editedContent,
+                    onValueChange = { editedContent = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = ComponentColors.outlinedTextFieldColors(),
+                    label = { Text(stringResource("message.ai.edit.content.label")) },
+                )
+
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        colors = ComponentColors.primaryTextButtonColors(),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text(stringResource("action.cancel"))
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            onSave(editedContent)
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text(stringResource("action.save"))
+                    }
+                }
             }
         }
     }

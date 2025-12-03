@@ -147,11 +147,23 @@ class DatabaseManager private constructor(
                     created_at TEXT NOT NULL,
                     is_outdated INTEGER DEFAULT 0,
                     edit_parent_id TEXT,
+                    is_edited INTEGER DEFAULT 0,
                     FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE,
                     FOREIGN KEY (edit_parent_id) REFERENCES chat_messages (id) ON DELETE SET NULL
                 )
                 """,
             )
+
+            // Migration: Add is_edited column if it doesn't exist (for existing databases)
+            try {
+                stmt.executeUpdate(
+                    """
+                    ALTER TABLE chat_messages ADD COLUMN is_edited INTEGER DEFAULT 0
+                    """,
+                )
+            } catch (e: Exception) {
+                // Column already exists, ignore the error
+            }
         }
     }
 
@@ -188,7 +200,6 @@ class DatabaseManager private constructor(
         }
     }
 
-    // Lazy singleton repository instances - using _instance suffix to avoid JVM signature clash
     private val _chatSessionRepository: ChatSessionRepository by lazy {
         ChatSessionRepository(this)
     }

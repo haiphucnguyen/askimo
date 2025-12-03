@@ -87,6 +87,7 @@ fun navigationSidebar(
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
     // Animated width for smooth transition
@@ -112,6 +113,7 @@ fun navigationSidebar(
             onDeleteSession = onDeleteSession,
             onStarSession = onStarSession,
             onRenameSession = onRenameSession,
+            onExportSession = onExportSession,
             onNavigateToSettings = onNavigateToSettings,
         )
     } else {
@@ -143,6 +145,7 @@ private fun expandedNavigationSidebar(
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
     Column(
@@ -262,6 +265,7 @@ private fun expandedNavigationSidebar(
                     onDeleteSession = onDeleteSession,
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
+                    onExportSession = onExportSession,
                 )
             }
         }
@@ -392,6 +396,7 @@ private fun sessionsList(
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
 ) {
     var isStarredExpanded by remember { mutableStateOf(true) }
 
@@ -468,6 +473,7 @@ private fun sessionsList(
                                 onDeleteSession = onDeleteSession,
                                 onStarSession = onStarSession,
                                 onRenameSession = onRenameSession,
+                                onExportSession = onExportSession,
                             )
                         }
                     }
@@ -494,6 +500,7 @@ private fun sessionsList(
                     onDeleteSession = onDeleteSession,
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
+                    onExportSession = onExportSession,
                 )
             }
 
@@ -530,6 +537,7 @@ private fun sessionItemWithMenu(
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -596,7 +604,7 @@ private fun sessionItemWithMenu(
                     text = { Text(stringResource("session.export")) },
                     onClick = {
                         showMenu = false
-                        // Export functionality moved to SessionsView
+                        onExportSession(session.id)
                     },
                     leadingIcon = {
                         Icon(
@@ -610,10 +618,7 @@ private fun sessionItemWithMenu(
                     text = { Text(stringResource("session.rename.title")) },
                     onClick = {
                         showMenu = false
-                        // Note: Rename dialog is shown in Main.kt, this just triggers the callback
-                        // The actual implementation needs to be added in Main.kt to show a rename dialog
-                        // For now, we'll just call the callback with the current title as a placeholder
-                        // onRenameSession(session.id, session.title)
+                        onRenameSession(session.id, session.title ?: "")
                     },
                     leadingIcon = {
                         Icon(

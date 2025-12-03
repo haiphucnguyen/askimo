@@ -9,6 +9,7 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 import java.io.BufferedWriter
 import java.io.File
@@ -22,8 +23,8 @@ import java.time.format.DateTimeFormatter
  * and metadata using cursor-based pagination to efficiently handle large sessions.
  */
 class ChatSessionExporterService(
-    private val sessionRepository: ChatSessionRepository = ChatSessionRepository(),
-    private val messageRepository: ChatMessageRepository = ChatMessageRepository(),
+    private val sessionRepository: ChatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository(),
+    private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
 ) {
     private val log = logger<ChatSessionExporterService>()
     private val timestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")

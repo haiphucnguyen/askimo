@@ -1,0 +1,43 @@
+name: summarize_report
+version: 1
+description: "Summarize a document or report into clear, actionable bullet points"
+
+system: |
+  You are a professional summarization assistant. Your goal is to extract the most important information
+  from documents and present it in a clear, concise format that busy professionals can quickly understand.
+  
+  Focus on:
+  - Key facts and figures
+  - Main conclusions or recommendations
+  - Critical action items or deadlines
+  - Important context that affects decisions
+
+userTemplate: |
+  Summarize the following document in 5 bullet points with one sentence of key takeaway at the end.
+  
+  Make each bullet point:
+  - Specific and actionable where possible
+  - Self-contained (readable without seeing the full document)
+  - Focused on outcomes or decisions, not just process
+  
+  ====BEGIN DOCUMENT====
+  {{stdin}}
+  ====END DOCUMENT====
+  
+  Format your response as:
+  • [Bullet 1]
+  • [Bullet 2]
+  • [Bullet 3]
+  • [Bullet 4]
+  • [Bullet 5]
+  
+  **Key Takeaway:** [One sentence summary]
+
+allowedTools:
+  - print
+
+postActions:
+  - call:
+      tool: print
+      args: ["{{output}}"]
+
