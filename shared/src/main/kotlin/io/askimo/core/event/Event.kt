@@ -34,7 +34,7 @@ sealed interface DeveloperEvent : Event {
  */
 enum class EventSource {
     STREAMING,
-    SESSION,
     CHAT,
     DATABASE,
+    SYSTEM,
 }

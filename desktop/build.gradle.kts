@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 group = rootProject.group
@@ -26,6 +27,7 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.commonmark.ext.autolink)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
