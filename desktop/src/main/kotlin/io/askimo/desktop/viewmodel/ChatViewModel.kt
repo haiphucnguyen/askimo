@@ -429,6 +429,9 @@ class ChatViewModel(
                             isUser = sessionMessage.role == MessageRole.USER,
                             id = sessionMessage.id,
                             timestamp = sessionMessage.createdAt,
+                            isOutdated = sessionMessage.isOutdated,
+                            editParentId = sessionMessage.editParentId,
+                            isEdited = sessionMessage.isEdited,
                         )
                     }
                     // Store pagination state
@@ -489,6 +492,9 @@ class ChatViewModel(
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -540,6 +546,9 @@ class ChatViewModel(
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -669,6 +678,9 @@ class ChatViewModel(
                         isUser = sessionMessage.role == MessageRole.USER,
                         id = sessionMessage.id,
                         timestamp = sessionMessage.createdAt,
+                        isOutdated = sessionMessage.isOutdated,
+                        editParentId = sessionMessage.editParentId,
+                        isEdited = sessionMessage.isEdited,
                     )
                 }
 
@@ -770,11 +782,6 @@ class ChatViewModel(
     }
 
     /**
-     * Get the current session ID.
-     */
-    fun getCurrentSessionId(): String? = _currentSessionId.value
-
-    /**
      * Set the directive for the current or next chat session.
      * @param directiveId The directive ID to set (null to clear directive)
      */
@@ -785,7 +792,38 @@ class ChatViewModel(
         if (appContext.currentChatSession != null) {
             appContext.setCurrentSessionDirective(directiveId)
         }
-        // Otherwise, the directive will be applied when a new session is started
+    }
+
+    /**
+     * Update the content of an AI message and mark it as edited.
+     * This allows users to edit AI responses after they are generated.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content for the message
+     */
+    fun updateAIMessageContent(messageId: String, newContent: String) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    chatSessionService.updateMessageContent(messageId, newContent)
+                }
+
+                // Update the message in the local state
+                messages = messages.map { message ->
+                    if (message.id == messageId) {
+                        message.copy(content = newContent, isEdited = true)
+                    } else {
+                        message
+                    }
+                }
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "updating message",
+                    "Failed to update message. Please try again.",
+                )
+            }
+        }
     }
 
     /**

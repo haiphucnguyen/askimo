@@ -15,4 +15,5 @@ data class ChatMessage(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val isOutdated: Boolean = false,
     val editParentId: String? = null,
+    val isEdited: Boolean = false,
 )

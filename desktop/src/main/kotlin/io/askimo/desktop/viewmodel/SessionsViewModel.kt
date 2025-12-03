@@ -23,6 +23,8 @@ import kotlinx.coroutines.withContext
 class SessionsViewModel(
     private val scope: CoroutineScope,
     private val sessionService: ChatSessionService = ChatSessionService(),
+    private val sessionManager: SessionManager? = null,
+    private val onCreateNewSession: (() -> String)? = null,
 ) {
     companion object {
         const val MAX_SIDEBAR_SESSIONS = 50
@@ -41,6 +43,26 @@ class SessionsViewModel(
         private set
 
     var totalSessionCount by mutableStateOf(0)
+        private set
+
+    // Export dialog state
+    var showExportDialog by mutableStateOf(false)
+        private set
+
+    var exportSessionId by mutableStateOf<String?>(null)
+        private set
+
+    var exportDefaultFilename by mutableStateOf("")
+        private set
+
+    // Rename dialog state
+    var showRenameDialog by mutableStateOf(false)
+        private set
+
+    var renameSessionId by mutableStateOf<String?>(null)
+        private set
+
+    var renameCurrentTitle by mutableStateOf("")
         private set
 
     private val sessionsPerPage = 10
@@ -132,7 +154,63 @@ class SessionsViewModel(
     }
 
     /**
-     * Delete a session and refresh the list.
+     * Delete a session with full cleanup including session manager state and automatic session switching.
+     *
+     * This method:
+     * 1. Closes the session in SessionManager (stops any active streaming)
+     * 2. Deletes the session from the database
+     * 3. If the deleted session was active, switches to another session or creates a new one
+     * 4. Refreshes the session list
+     */
+    fun deleteSessionWithCleanup(sessionId: String) {
+        scope.launch {
+            try {
+                // 1. Clean up ViewModel and stop any active streaming
+                sessionManager?.closeSession(sessionId)
+
+                // 2. Delete from database
+                val deleted = withContext(Dispatchers.IO) {
+                    sessionService.deleteSession(sessionId)
+                }
+
+                if (deleted) {
+                    // 3. If deleted active session, switch to another or create new
+                    if (sessionManager?.activeSessionId == null) {
+                        // Refresh to get updated list first
+                        val updatedSessions = withContext(Dispatchers.IO) {
+                            sessionService.getAllSessionsSorted().take(MAX_SIDEBAR_SESSIONS)
+                        }
+
+                        if (updatedSessions.isNotEmpty()) {
+                            // Switch to first remaining session
+                            sessionManager?.switchToSession(updatedSessions.first().id)
+                        } else {
+                            // Create new empty session
+                            val newSessionId = onCreateNewSession?.invoke()
+                            if (newSessionId != null) {
+                                sessionManager?.switchToSession(newSessionId)
+                            }
+                        }
+                    }
+
+                    // 4. Refresh the session list
+                    refresh()
+                } else {
+                    errorMessage = LocalizationManager.getString("sessions.error.not.found")
+                }
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "deleting session",
+                    LocalizationManager.getString("sessions.error.deleting"),
+                )
+            }
+        }
+    }
+
+    /**
+     * Simple delete a session and refresh the list (without session manager cleanup).
+     * Used when session manager is not available or cleanup is not needed.
      */
     fun deleteSession(sessionId: String) {
         scope.launch {
@@ -180,9 +258,48 @@ class SessionsViewModel(
     }
 
     /**
-     * Rename a session's title and refresh the list.
+     * Show the rename dialog for a session.
      */
-    fun renameSession(sessionId: String, newTitle: String) {
+    fun showRenameDialog(sessionId: String) {
+        scope.launch {
+            try {
+                // Find the session to get the current title
+                val session = withContext(Dispatchers.IO) {
+                    sessionService.getSessionById(sessionId)
+                } ?: run {
+                    errorMessage = LocalizationManager.getString("sessions.error.not.found")
+                    return@launch
+                }
+
+                // Set state to show dialog
+                renameSessionId = sessionId
+                renameCurrentTitle = session.title ?: ""
+                showRenameDialog = true
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "preparing rename",
+                    "Failed to prepare rename: ${e.message}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Dismiss the rename dialog.
+     */
+    fun dismissRenameDialog() {
+        showRenameDialog = false
+        renameSessionId = null
+        renameCurrentTitle = ""
+    }
+
+    /**
+     * Execute the actual rename after user confirms new title.
+     */
+    fun executeRename(newTitle: String) {
+        val sessionId = renameSessionId ?: return
+
         scope.launch {
             try {
                 val updated = withContext(Dispatchers.IO) {
@@ -190,6 +307,7 @@ class SessionsViewModel(
                 }
                 if (updated) {
                     refresh()
+                    dismissRenameDialog()
                 } else {
                     errorMessage = LocalizationManager.getString("sessions.error.rename.failed")
                 }
@@ -198,6 +316,81 @@ class SessionsViewModel(
                     e,
                     "renaming session",
                     LocalizationManager.getString("sessions.error.renaming"),
+                )
+            }
+        }
+    }
+
+    /**
+     * Export a session to markdown format.
+     * Shows a styled file save dialog to choose export location.
+     */
+    fun exportSession(sessionId: String) {
+        scope.launch {
+            try {
+                // Find the session to get the title for default filename
+                val session = withContext(Dispatchers.IO) {
+                    sessionService.getSessionById(sessionId)
+                } ?: run {
+                    errorMessage = LocalizationManager.getString("sessions.error.not.found")
+                    return@launch
+                }
+
+                // Sanitize title for filename
+                val defaultFilename = (session.title ?: "session").replace(Regex("[^a-zA-Z0-9-_\\s]"), "_") + ".md"
+
+                // Set state to show dialog
+                exportSessionId = sessionId
+                exportDefaultFilename = defaultFilename
+                showExportDialog = true
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "preparing export",
+                    "Failed to prepare export: ${e.message}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Dismiss the export dialog.
+     */
+    fun dismissExportDialog() {
+        showExportDialog = false
+        exportSessionId = null
+        exportDefaultFilename = ""
+    }
+
+    /**
+     * Execute the actual export after user confirms file location.
+     */
+    fun executeExport(fullPath: String) {
+        val sessionId = exportSessionId ?: return
+
+        scope.launch {
+            try {
+                // Export in background
+                val result = withContext(Dispatchers.IO) {
+                    val exporterService = io.askimo.core.chat.service.ChatSessionExporterService()
+                    exporterService.exportToMarkdown(sessionId, fullPath)
+                }
+
+                result.onFailure { error ->
+                    errorMessage = ErrorHandler.getUserFriendlyError(
+                        error,
+                        "exporting session",
+                        "Failed to export session: ${error.message}",
+                    )
+                }
+
+                // Close dialog on success
+                dismissExportDialog()
+            } catch (e: Exception) {
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "exporting session",
+                    "Failed to export session: ${e.message}",
                 )
             }
         }

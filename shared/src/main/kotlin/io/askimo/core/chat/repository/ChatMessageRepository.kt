@@ -40,6 +40,7 @@ object ChatMessagesTable : Table("chat_messages") {
     val createdAt = sqliteDatetime("created_at")
     val isOutdated = integer("is_outdated").default(0)
     val editParentId = varchar("edit_parent_id", 36).nullable()
+    val isEdited = integer("is_edited").default(0)
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -55,6 +56,7 @@ private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
     createdAt = this[ChatMessagesTable.createdAt],
     isOutdated = this[ChatMessagesTable.isOutdated] == 1,
     editParentId = this[ChatMessagesTable.editParentId],
+    isEdited = this[ChatMessagesTable.isEdited] == 1,
 )
 
 class ChatMessageRepository internal constructor(
@@ -75,6 +77,7 @@ class ChatMessageRepository internal constructor(
                 it[createdAt] = messageWithInjectedFields.createdAt
                 it[ChatMessagesTable.isOutdated] = if (messageWithInjectedFields.isOutdated) 1 else 0
                 it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
+                it[ChatMessagesTable.isEdited] = if (messageWithInjectedFields.isEdited) 1 else 0
             }
         }
 
@@ -324,6 +327,21 @@ class ChatMessageRepository internal constructor(
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .map { it.toChatMessage() }
+    }
+
+    /**
+     * Update the content of a message and mark it as edited.
+     * This is used when a user edits an AI response message.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content for the message
+     * @return Number of messages updated (should be 1)
+     */
+    fun updateMessageContent(messageId: String, newContent: String): Int = transaction(database) {
+        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
+            it[content] = newContent
+            it[isEdited] = 1
+        }
     }
 
     /**

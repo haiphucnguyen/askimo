@@ -13,7 +13,8 @@ data class ChatMessage(
     val id: String? = null,
     val timestamp: LocalDateTime? = null,
     val isOutdated: Boolean = false,
-    val editParentId: String? = null, // ID of the message that was edited to create this branch
+    val editParentId: String? = null,
+    val isEdited: Boolean = false,
 )
 
 data class FileAttachment(

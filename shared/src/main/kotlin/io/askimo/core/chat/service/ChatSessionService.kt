@@ -208,6 +208,15 @@ class ChatSessionService(
     fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
 
     /**
+     * Update the content of a message and mark it as edited.
+     *
+     * @param messageId The ID of the message to update
+     * @param newContent The new content for the message
+     * @return Number of messages updated (should be 1)
+     */
+    fun updateMessageContent(messageId: String, newContent: String): Int = messageRepository.updateMessageContent(messageId, newContent)
+
+    /**
      * Get only active (non-outdated) messages for a session.
      *
      * @param sessionId The session ID

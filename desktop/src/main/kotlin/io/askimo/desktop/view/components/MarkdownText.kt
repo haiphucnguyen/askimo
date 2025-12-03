@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.view.components.CodeHighlighter
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
@@ -308,24 +311,31 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
 
         // Copy button (shown on hover)
         if (isHovered) {
-            themedTooltip(
-                text = "Copy code",
+            Card(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp),
+                    .padding(top = 4.dp, end = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
             ) {
-                IconButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(codeBlock.literal))
-                    },
-                    modifier = Modifier.size(32.dp),
+                themedTooltip(
+                    text = stringResource("code.copy"),
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy code",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                    IconButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(codeBlock.literal))
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource("code.copy.description"),
+                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

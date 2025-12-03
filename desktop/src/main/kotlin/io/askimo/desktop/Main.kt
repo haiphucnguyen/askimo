@@ -40,7 +40,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
@@ -74,8 +73,10 @@ import io.askimo.desktop.view.chat.chatView
 import io.askimo.desktop.view.components.NativeMenuBar
 import io.askimo.desktop.view.components.eventLogPanel
 import io.askimo.desktop.view.components.eventLogWindow
+import io.askimo.desktop.view.components.fileSaveDialog
 import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
+import io.askimo.desktop.view.components.renameSessionDialog
 import io.askimo.desktop.view.sessions.sessionsView
 import io.askimo.desktop.view.settings.providerSelectionDialog
 import io.askimo.desktop.view.settings.settingsView
@@ -185,19 +186,26 @@ fun main() {
  * Position where the Event Log panel can be docked
  */
 enum class EventLogDockPosition {
-    BOTTOM, // Horizontal panel at the bottom
-    LEFT, // Vertical panel on the left
-    RIGHT, // Vertical panel on the right
+    BOTTOM,
+    LEFT,
+    RIGHT,
 }
+
+/**
+ * Data class to hold chat view state per session for restoration when switching
+ */
+data class ChatViewState(
+    val inputText: TextFieldValue = TextFieldValue(""),
+    val attachments: List<FileAttachment> = emptyList(),
+    val editingMessage: ChatMessage? = null,
+)
 
 @Composable
 @Preview
 fun app(frameWindowScope: FrameWindowScope? = null) {
-    var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var currentView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
-    var attachments by remember { mutableStateOf(listOf<FileAttachment>()) }
     var sidebarWidth by remember { mutableStateOf(280.dp) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -205,7 +213,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showEventLogPanel by remember { mutableStateOf(false) }
     var eventLogDockPosition by remember { mutableStateOf(EventLogDockPosition.BOTTOM) }
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
-    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+
+    // Store chat state per session for restoration when switching
+    val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
 
     // ===== EVENT ARCHITECTURE =====
     // 1. Event Log Window/Panel (eventLogEvents): Shows ONLY developer events
@@ -234,33 +244,32 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
     val scope = rememberCoroutineScope()
 
-    // Store input text per session ID to prevent cross-contamination
-    val sessionInputTexts = remember { mutableStateMapOf<String, TextFieldValue>() }
-
-    // Create ViewModels using Koin
     val koin = get()
-    val sessionManager = remember { koin.get<SessionManager>() }
-    val sessionsViewModel = remember { koin.get<SessionsViewModel> { parametersOf(scope) } }
-    val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
 
-    // Get AppContext directly from Koin (it's a singleton)
     val appContext = remember { koin.get<AppContext>() }
 
-    // Initialize with current session from AppContext or create a new one
+    val sessionManager = remember { koin.get<SessionManager>() }
+    val sessionsViewModel = remember {
+        koin.get<SessionsViewModel> {
+            parametersOf(
+                scope,
+                sessionManager,
+                { appContext.startNewChatSession().id }, // onCreateNewSession callback
+            )
+        }
+    }
+    val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
+
     LaunchedEffect(Unit) {
         val currentSession = appContext.currentChatSession
         if (currentSession != null) {
-            // Resume existing session
             sessionManager.switchToSession(currentSession.id)
         } else {
-            // Create a new empty session for new chat
             val newSessionId = java.util.UUID.randomUUID().toString()
             sessionManager.switchToSession(newSessionId)
         }
     }
 
-    // Get ChatViewModel for the current active session
-    // Observe sessionManager.activeSessionId as state
     val activeSessionId = sessionManager.activeSessionId
     val chatViewModel = remember(activeSessionId) {
         activeSessionId?.let { sessionId ->
@@ -268,7 +277,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    // Check if provider is set up
     var showProviderSetupDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (appContext.getActiveProvider() == ModelProvider.UNKNOWN) {
@@ -276,7 +284,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    // Set up callback to refresh sessions list when a message is complete
     chatViewModel?.setOnMessageCompleteCallback {
         sessionsViewModel.loadRecentSessions()
     }
@@ -289,13 +296,10 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     // React to locale changes - update menu bar and language settings
     LaunchedEffect(locale, frameWindowScope) {
-        // Update LocalizationManager with new locale
         LocalizationManager.setLocale(locale)
 
-        // Set the language directive for AI communication
         appContext.setLanguageDirective(locale)
 
-        // Rebuild menu bar with new locale strings
         frameWindowScope?.let { scope ->
             NativeMenuBar.setup(
                 frameWindowScope = scope,
@@ -311,15 +315,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     }
                 },
                 onNewChat = {
-                    // Save current input text before clearing
-                    chatViewModel?.let { vm ->
-                        val currentSessionId = vm.currentSessionId.value
-                        if (currentSessionId != null && inputText.text.isNotBlank()) {
-                            sessionInputTexts[currentSessionId] = inputText
-                        }
-                        vm.clearChat()
-                    }
-                    inputText = TextFieldValue("")
+                    chatViewModel?.clearChat()
                     currentView = View.CHAT
                 },
                 onShowSettings = {
@@ -329,17 +325,14 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    // State to track system theme - detect when needed
     var isSystemInDarkMode by remember { mutableStateOf(detectMacOSDarkMode()) }
 
-    // Detect system theme when switching to SYSTEM mode
     LaunchedEffect(themeMode) {
         if (themeMode == ThemeMode.SYSTEM) {
             isSystemInDarkMode = detectMacOSDarkMode()
         }
     }
 
-    // Calculate actual dark mode based on theme preference
     val useDarkMode = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -352,24 +345,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         getLightColorScheme(accentColor)
     }
 
-    // Create custom typography based on font settings
     val customTypography = remember(fontSettings) {
         createCustomTypography(fontSettings)
     }
 
     // Reusable function to handle session resumption
     val handleResumeSession: (String) -> Unit = { sessionId ->
-        // Save current input text before switching
-        val currentSessionId = activeSessionId
-        if (currentSessionId != null && inputText.text.isNotBlank()) {
-            sessionInputTexts[currentSessionId] = inputText
-        }
-
-        // Switch to the session using SessionManager
         sessionManager.switchToSession(sessionId)
-
-        // Restore input text for the new session
-        inputText = sessionInputTexts[sessionId] ?: TextFieldValue("")
 
         currentView = View.CHAT
     }
@@ -409,13 +391,11 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                         )
                     }
 
-                    // Main content column
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
                     ) {
-                        // Main content area with sidebar
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -426,8 +406,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     when (shortcut) {
                                         AppShortcut.NEW_CHAT -> {
                                             chatViewModel?.clearChat()
-                                            inputText = TextFieldValue("")
-                                            attachments = emptyList()
                                             currentView = View.CHAT
                                             true
                                         }
@@ -461,10 +439,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     }
                                 },
                         ) {
-                            // Observe current session ID from SessionManager
                             val currentSessionId = activeSessionId
 
-                            // Navigation sidebar (expanded or collapsed)
                             navigationSidebar(
                                 isExpanded = isSidebarExpanded,
                                 width = sidebarWidth,
@@ -475,47 +451,23 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                 fontScale = fontSettings.fontSize.scale,
                                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                 onNewChat = {
-                                    // Save current input text before clearing
-                                    chatViewModel?.let { vm ->
-                                        val sessionId = vm.currentSessionId.value
-                                        if (sessionId != null && inputText.text.isNotBlank()) {
-                                            sessionInputTexts[sessionId] = inputText
-                                        }
-                                        vm.clearChat()
-                                    }
-                                    inputText = TextFieldValue("")
+                                    chatViewModel?.clearChat()
                                     currentView = View.CHAT
                                 },
                                 onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
                                 onNavigateToSessions = { currentView = View.SESSIONS },
                                 onResumeSession = handleResumeSession,
                                 onDeleteSession = { sessionId ->
-                                    // 1. Clean up ViewModel and stop any active streaming
-                                    sessionManager.closeSession(sessionId)
-
-                                    // 2. Delete from database
-                                    sessionsViewModel.deleteSession(sessionId)
-
-                                    // 3. If deleted active session, switch to another or create new
-                                    if (sessionManager.activeSessionId == null) {
-                                        val remainingSessions = sessionsViewModel.recentSessions
-                                            .filter { it.id != sessionId }
-
-                                        if (remainingSessions.isNotEmpty()) {
-                                            // Switch to first remaining session
-                                            sessionManager.switchToSession(remainingSessions.first().id)
-                                        } else {
-                                            // Create new empty session
-                                            val newSession = appContext.startNewChatSession()
-                                            sessionManager.switchToSession(newSession.id)
-                                        }
-                                    }
+                                    sessionsViewModel.deleteSessionWithCleanup(sessionId)
                                 },
                                 onStarSession = { sessionId, isStarred ->
                                     sessionsViewModel.updateSessionStarred(sessionId, isStarred)
                                 },
-                                onRenameSession = { sessionId, newTitle ->
-                                    sessionsViewModel.renameSession(sessionId, newTitle)
+                                onRenameSession = { sessionId, _ ->
+                                    sessionsViewModel.showRenameDialog(sessionId)
+                                },
+                                onExportSession = { sessionId ->
+                                    sessionsViewModel.exportSession(sessionId)
                                 },
                                 onNavigateToSettings = { currentView = View.SETTINGS },
                             )
@@ -537,7 +489,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         },
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    // Visual grip indicator
                                     Column(
                                         modifier = Modifier
                                             .width(2.dp)
@@ -560,63 +511,26 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
                             // Main content - only show when chatViewModel exists
                             if (chatViewModel != null) {
-                                val viewModel = chatViewModel
                                 mainContent(
                                     currentView = currentView,
-                                    chatViewModel = viewModel,
+                                    chatViewModel = chatViewModel,
                                     sessionsViewModel = sessionsViewModel,
                                     settingsViewModel = settingsViewModel,
                                     appContext = appContext,
-                                    inputText = inputText,
-                                    onInputTextChange = { newText ->
-                                        inputText = newText
-                                        // Save to session storage as user types
-                                        val currentSessionId = viewModel.currentSessionId.value
-                                        if (currentSessionId != null) {
-                                            if (newText.text.isNotBlank()) {
-                                                sessionInputTexts[currentSessionId] = newText
-                                            } else {
-                                                sessionInputTexts.remove(currentSessionId)
-                                            }
-                                        }
-                                    },
-                                    onSendMessage = { message, fileAttachments ->
-                                        viewModel.sendOrEditMessage(
-                                            message = message,
-                                            attachments = fileAttachments,
-                                            editingMessage = editingMessage,
-                                        )
-
-                                        // Clear UI state after sending
-                                        inputText = TextFieldValue("")
-                                        attachments = emptyList()
-                                        editingMessage = null
-                                        viewModel.currentSessionId.value?.let { sessionId ->
-                                            sessionInputTexts.remove(sessionId)
-                                        }
-                                    },
                                     onResumeSession = handleResumeSession,
-                                    attachments = attachments,
-                                    onAttachmentsChange = { attachments = it },
                                     onNavigateToSettings = { currentView = View.SETTINGS },
-                                    editingMessage = editingMessage,
-                                    onEditMessage = { message ->
-                                        editingMessage = message
-                                        // Set text with cursor at the beginning (position 0)
-                                        inputText = TextFieldValue(
-                                            text = message.content,
-                                            selection = TextRange(0),
-                                        )
-                                        attachments = message.attachments
-                                    },
-                                    onCancelEdit = {
-                                        editingMessage = null
-                                        inputText = TextFieldValue("")
-                                        attachments = emptyList()
+                                    sessionChatState = sessionChatStates[activeSessionId],
+                                    onChatStateChange = { inputText, attachments, editingMessage ->
+                                        activeSessionId?.let { sessionId ->
+                                            sessionChatStates[sessionId] = ChatViewState(
+                                                inputText = inputText,
+                                                attachments = attachments,
+                                                editingMessage = editingMessage,
+                                            )
+                                        }
                                     },
                                 )
                             } else {
-                                // Empty state - show message to create or select a session
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
                                     contentAlignment = Alignment.Center,
@@ -710,7 +624,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             // Provider setup required dialog
             if (showProviderSetupDialog) {
                 ComponentColors.themedAlertDialog(
-                    onDismissRequest = { }, // Cannot dismiss - must set up provider
+                    onDismissRequest = { },
                     title = {
                         Text(
                             text = stringResource("provider.setup.required.title"),
@@ -741,7 +655,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
-            // Provider selection dialog - available app-wide
             if (settingsViewModel.showProviderDialog) {
                 providerSelectionDialog(
                     viewModel = settingsViewModel,
@@ -753,6 +666,29 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             // About Dialog
             if (showAboutDialog) {
                 aboutDialog(onDismiss = { showAboutDialog = false })
+            }
+
+            // Export Session Dialog
+            if (sessionsViewModel.showExportDialog) {
+                fileSaveDialog(
+                    title = stringResource("session.export"),
+                    defaultFilename = sessionsViewModel.exportDefaultFilename,
+                    onDismiss = { sessionsViewModel.dismissExportDialog() },
+                    onSave = { fullPath ->
+                        sessionsViewModel.executeExport(fullPath)
+                    },
+                )
+            }
+
+            // Rename Session Dialog
+            if (sessionsViewModel.showRenameDialog) {
+                renameSessionDialog(
+                    currentTitle = sessionsViewModel.renameCurrentTitle,
+                    onDismiss = { sessionsViewModel.dismissRenameDialog() },
+                    onRename = { newTitle ->
+                        sessionsViewModel.executeRename(newTitle)
+                    },
+                )
             }
 
             // Event Log Window (Developer Mode - Detached)
@@ -777,16 +713,10 @@ fun mainContent(
     sessionsViewModel: SessionsViewModel,
     settingsViewModel: SettingsViewModel,
     appContext: AppContext,
-    inputText: TextFieldValue,
-    onInputTextChange: (TextFieldValue) -> Unit,
-    onSendMessage: (String, List<FileAttachment>) -> Unit,
     onResumeSession: (String) -> Unit,
-    attachments: List<FileAttachment>,
-    onAttachmentsChange: (List<FileAttachment>) -> Unit,
     onNavigateToSettings: () -> Unit,
-    editingMessage: ChatMessage?,
-    onEditMessage: (ChatMessage) -> Unit,
-    onCancelEdit: () -> Unit,
+    sessionChatState: ChatViewState?,
+    onChatStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -798,17 +728,19 @@ fun mainContent(
                 val configInfo = appContext.getConfigInfo()
                 chatView(
                     messages = chatViewModel.messages,
-                    inputText = inputText,
-                    onInputTextChange = onInputTextChange,
-                    onSendMessage = onSendMessage,
+                    onSendMessage = { message, fileAttachments, editingMsg ->
+                        chatViewModel.sendOrEditMessage(
+                            message = message,
+                            attachments = fileAttachments,
+                            editingMessage = editingMsg,
+                        )
+                    },
                     onStopResponse = { chatViewModel.cancelResponse() },
                     isLoading = chatViewModel.isLoading,
                     isThinking = chatViewModel.isThinking,
                     thinkingElapsedSeconds = chatViewModel.thinkingElapsedSeconds,
                     spinnerFrame = chatViewModel.getSpinnerFrame(),
                     errorMessage = chatViewModel.errorMessage,
-                    attachments = attachments,
-                    onAttachmentsChange = onAttachmentsChange,
                     provider = configInfo.provider.name,
                     model = configInfo.model,
                     onNavigateToSettings = onNavigateToSettings,
@@ -829,9 +761,13 @@ fun mainContent(
                     },
                     selectedDirective = chatViewModel.selectedDirective,
                     onDirectiveSelected = { directiveId -> chatViewModel.setDirective(directiveId) },
-                    editingMessage = editingMessage,
-                    onCancelEdit = onCancelEdit,
-                    onEditMessage = onEditMessage,
+                    onUpdateAIMessage = { messageId, newContent ->
+                        chatViewModel.updateAIMessageContent(messageId, newContent)
+                    },
+                    initialInputText = sessionChatState?.inputText ?: TextFieldValue(""),
+                    initialAttachments = sessionChatState?.attachments ?: emptyList(),
+                    initialEditingMessage = sessionChatState?.editingMessage,
+                    onStateChange = onChatStateChange,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
