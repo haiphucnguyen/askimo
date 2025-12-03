@@ -30,11 +30,12 @@ object NativeMenuBar {
         onNewChat: () -> Unit,
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
+        onCheckForUpdates: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onShowSettings, onShowEventLog)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onShowSettings, onShowEventLog, onCheckForUpdates)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -63,6 +64,7 @@ object NativeMenuBar {
         onNewChat: () -> Unit,
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
+        onCheckForUpdates: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -112,6 +114,15 @@ object NativeMenuBar {
                 },
             )
             helpMenu.add(docsItem)
+
+            // Check for Updates
+            val checkUpdatesItem = MenuItem(LocalizationManager.getString("menu.help.check.updates"))
+            checkUpdatesItem.addActionListener(
+                ActionListener {
+                    onCheckForUpdates()
+                },
+            )
+            helpMenu.add(checkUpdatesItem)
 
             // Event Log (Developer Tools)
             val eventLogItem = MenuItem(LocalizationManager.getString("menu.eventlog"))

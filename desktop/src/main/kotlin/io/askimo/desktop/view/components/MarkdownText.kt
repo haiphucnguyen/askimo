@@ -63,6 +63,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.view.components.CodeHighlighter
+import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableCell
@@ -99,7 +100,7 @@ fun markdownText(
     modifier: Modifier = Modifier,
 ) {
     val parser = Parser.builder()
-        .extensions(listOf(TablesExtension.create()))
+        .extensions(listOf(TablesExtension.create(), AutolinkExtension.create()))
         .build()
     val document = parser.parse(markdown)
 

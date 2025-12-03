@@ -67,6 +67,7 @@ import io.askimo.desktop.theme.ThemeMode
 import io.askimo.desktop.theme.createCustomTypography
 import io.askimo.desktop.theme.getDarkColorScheme
 import io.askimo.desktop.theme.getLightColorScheme
+import io.askimo.desktop.ui.dialog.updateCheckDialog
 import io.askimo.desktop.view.View
 import io.askimo.desktop.view.about.aboutDialog
 import io.askimo.desktop.view.chat.chatView
@@ -84,6 +85,7 @@ import io.askimo.desktop.viewmodel.ChatViewModel
 import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
+import io.askimo.desktop.viewmodel.UpdateViewModel
 import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
@@ -97,13 +99,11 @@ import kotlin.system.exitProcess
  */
 fun detectMacOSDarkMode(): Boolean {
     return try {
-        // Check if we're on macOS
         val osName = System.getProperty("os.name")
         if (!osName.contains("Mac", ignoreCase = true)) {
             return false
         }
 
-        // Execute the defaults command to check AppleInterfaceStyle
         val process = ProcessBuilder(
             "defaults",
             "read",
@@ -216,29 +216,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
-
-    // ===== EVENT ARCHITECTURE =====
-    // 1. Event Log Window/Panel (eventLogEvents): Shows ONLY developer events
-    //    - Used by: eventLogWindow() and eventLogPanel()
-    //    - Purpose: Developer tool to monitor system events (API calls, debug logs, etc.)
-    //    - Collects from: EventBus.developerEvents ONLY
-    //
-    // 2. Notification Icon (notificationIcon()): Shows ONLY user events
-    //    - Used by: notificationIcon() -> eventPopupContent()
-    //    - Purpose: User-facing notifications and alerts
-    //    - Collects from: EventBus.userEvents ONLY
-    // ==============================
-
-    // Shared event list for both attached panel and detached window
-    // Event Log collects ONLY developer events for debugging purposes
     val eventLogEvents = remember { mutableStateListOf<Event>() }
 
-    // Collect ONLY developer events for Event Log (developer tool)
     LaunchedEffect(Unit) {
         EventBus.developerEvents.collect { event ->
-            eventLogEvents.add(0, event) // Add to beginning (newest first)
+            eventLogEvents.add(0, event)
             if (eventLogEvents.size > 1000) {
-                eventLogEvents.removeAt(1000) // Keep last 1000
+                eventLogEvents.removeAt(1000)
             }
         }
     }
@@ -259,6 +243,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
+    val updateViewModel = remember { koin.get<UpdateViewModel> { parametersOf(scope) } }
 
     LaunchedEffect(Unit) {
         val currentSession = appContext.currentChatSession
@@ -267,6 +252,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         } else {
             val newSessionId = java.util.UUID.randomUUID().toString()
             sessionManager.switchToSession(newSessionId)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(5000)
+        updateViewModel.checkForUpdates(silent = true)
+
+        while (true) {
+            kotlinx.coroutines.delay(24 * 60 * 60 * 1000L) // 24 hours
+            updateViewModel.checkForUpdates(silent = true)
         }
     }
 
@@ -321,6 +316,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 onShowSettings = {
                     currentView = View.SETTINGS
                 },
+                onCheckForUpdates = {
+                    updateViewModel.checkForUpdates(silent = false)
+                },
             )
         }
     }
@@ -349,7 +347,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         createCustomTypography(fontSettings)
     }
 
-    // Reusable function to handle session resumption
     val handleResumeSession: (String) -> Unit = { sessionId ->
         sessionManager.switchToSession(sessionId)
 
@@ -542,10 +539,14 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     )
                                 }
                             }
-                        } // End of Row (main content with sidebar)
+                        }
 
                         // Bottom bar
-                        footerBar()
+                        footerBar(
+                            onShowUpdateDetails = {
+                                updateViewModel.showUpdateDialogForExistingRelease()
+                            },
+                        )
 
                         // Event Log Panel - BOTTOM position
                         if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.BOTTOM) {
@@ -666,6 +667,15 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             // About Dialog
             if (showAboutDialog) {
                 aboutDialog(onDismiss = { showAboutDialog = false })
+            }
+
+            if (updateViewModel.showUpdateDialog || updateViewModel.errorMessage != null) {
+                updateCheckDialog(
+                    viewModel = updateViewModel,
+                    onDismiss = {
+                        updateViewModel.dismissUpdateDialog()
+                    },
+                )
             }
 
             // Export Session Dialog

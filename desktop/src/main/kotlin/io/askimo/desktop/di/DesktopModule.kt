@@ -11,9 +11,11 @@ import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.monitoring.SystemResourceMonitor
+import io.askimo.desktop.service.UpdateService
 import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
+import io.askimo.desktop.viewmodel.UpdateViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import org.koin.dsl.module
@@ -70,6 +72,14 @@ val desktopModule = module {
 
     factory { (scope: CoroutineScope) ->
         SettingsViewModel(scope = scope, appContext = get())
+    }
+
+    single { UpdateService() }
+    factory { (scope: CoroutineScope) ->
+        UpdateViewModel(
+            scope = scope,
+            updateService = get(),
+        )
     }
 }
 
