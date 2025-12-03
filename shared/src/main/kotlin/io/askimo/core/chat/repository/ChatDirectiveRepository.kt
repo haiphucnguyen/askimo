@@ -52,7 +52,7 @@ private fun ResultRow.toChatDirective(): ChatDirective = ChatDirective(
  * Repository for managing chat directives stored in SQLite database.
  */
 class ChatDirectiveRepository internal constructor(
-    databaseManager: io.askimo.core.db.DatabaseManager = io.askimo.core.db.DatabaseManager.getInstance(),
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
 ) : AbstractSQLiteRepository(databaseManager) {
 
     /**

@@ -10,9 +10,8 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.db.DatabaseManager
-import io.askimo.desktop.chat.ChatSessionManager
 import io.askimo.desktop.monitoring.SystemResourceMonitor
-import io.askimo.desktop.viewmodel.ChatViewModel
+import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -49,15 +48,14 @@ val desktopModule = module {
     }
     single { ChatDirectiveService(repository = get()) }
 
-    single { ChatSessionManager(appContext = get()) }
     single { SystemResourceMonitor() }
 
-    factory { (scope: CoroutineScope) ->
-        ChatViewModel(
-            chatSessionManager = get(),
-            scope = scope,
-            repository = get<ChatSessionService>(),
+    // SessionManager - manages multiple ChatViewModel instances AND streaming infrastructure
+    single {
+        io.askimo.desktop.viewmodel.SessionManager(
+            chatSessionService = get(),
             appContext = get(),
+            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()),
         )
     }
 

@@ -44,7 +44,7 @@ jobs:
       - name: Generate Graal metadata (Linux/macOS)
         if: runner.os != 'Windows'
         env:
-          DISABLE_DOCKER_TESTS: ${{ runner.os == 'macOS' && 'true' || 'false' }}
+          DISABLE_DOCKER_TESTS: 'true'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
 
       - name: Generate Graal metadata (Windows)

@@ -4,14 +4,13 @@
  */
 package io.askimo.desktop.di
 
-import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
-import io.askimo.desktop.chat.ChatSessionManager
-import io.askimo.desktop.viewmodel.ChatViewModel
+import io.askimo.desktop.di.allDesktopModules
+import io.askimo.desktop.monitoring.SystemResourceMonitor
+import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -47,14 +46,12 @@ class DesktopModuleTest : KoinTest {
             modules(allDesktopModules)
         }.koin
 
-        // Test that singleton services can be retrieved
         assertNotNull(koin.get<AppContext>())
-        assertNotNull(koin.get<ChatSessionRepository>())
-        assertNotNull(koin.get<ChatDirectiveRepository>())
+        assertNotNull(koin.get<SystemResourceMonitor>())
+        assertNotNull(koin.get<SessionManager>())
         assertNotNull(koin.get<ChatSessionService>())
         assertNotNull(koin.get<ChatSessionExporterService>())
         assertNotNull(koin.get<ChatDirectiveService>())
-        assertNotNull(koin.get<ChatSessionManager>())
     }
 
     @Test
@@ -65,8 +62,8 @@ class DesktopModuleTest : KoinTest {
 
         val scope = CoroutineScope(Dispatchers.Default)
 
-        // Test that ViewModels can be created with parameters
-        assertNotNull(koin.get<ChatViewModel> { parametersOf(scope) })
+        assertNotNull(koin.get<SessionManager>())
+
         assertNotNull(koin.get<SessionsViewModel> { parametersOf(scope) })
         assertNotNull(koin.get<SettingsViewModel> { parametersOf(scope) })
     }
