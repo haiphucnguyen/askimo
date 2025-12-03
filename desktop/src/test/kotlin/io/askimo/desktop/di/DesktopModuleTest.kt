@@ -61,10 +61,19 @@ class DesktopModuleTest : KoinTest {
         }.koin
 
         val scope = CoroutineScope(Dispatchers.Default)
+        val sessionManager = koin.get<SessionManager>()
 
-        assertNotNull(koin.get<SessionManager>())
+        assertNotNull(sessionManager)
 
-        assertNotNull(koin.get<SessionsViewModel> { parametersOf(scope) })
+        assertNotNull(
+            koin.get<SessionsViewModel> {
+                parametersOf(
+                    scope,
+                    sessionManager,
+                    { "test-session-id" },
+                )
+            },
+        )
         assertNotNull(koin.get<SettingsViewModel> { parametersOf(scope) })
     }
 }
