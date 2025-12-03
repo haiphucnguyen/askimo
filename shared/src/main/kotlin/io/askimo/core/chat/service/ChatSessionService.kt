@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ConversationSummaryRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.context.AppContext
+import io.askimo.core.i18n.LocalizationManager
 import java.time.LocalDateTime
 
 /**
@@ -250,7 +251,7 @@ class ChatSessionService(
             ResumeSessionResult(
                 success = false,
                 sessionId = sessionId,
-                errorMessage = "Session not found: $sessionId",
+                errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
             )
         }
     }
@@ -288,7 +289,7 @@ class ChatSessionService(
                 messages = emptyList(),
                 cursor = null,
                 hasMore = false,
-                errorMessage = "Session not found: $sessionId",
+                errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
             )
         }
     }

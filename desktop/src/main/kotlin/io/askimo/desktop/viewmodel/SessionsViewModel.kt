@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
+import io.askimo.core.i18n.LocalizationManager
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,11 @@ class SessionsViewModel(
                 }
                 pagedSessions = result
             } catch (e: Exception) {
-                errorMessage = ErrorHandler.getUserFriendlyError(e, "loading sessions", "Failed to load sessions. Please try again.")
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "loading sessions",
+                    LocalizationManager.getString("sessions.error.loading"),
+                )
             } finally {
                 isLoading = false
             }
@@ -136,13 +141,16 @@ class SessionsViewModel(
                     sessionService.deleteSession(sessionId)
                 }
                 if (deleted) {
-                    // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Session not found."
+                    errorMessage = LocalizationManager.getString("sessions.error.not.found")
                 }
             } catch (e: Exception) {
-                errorMessage = ErrorHandler.getUserFriendlyError(e, "deleting session", "Failed to delete session. Please try again.")
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "deleting session",
+                    LocalizationManager.getString("sessions.error.deleting"),
+                )
             }
         }
     }
@@ -157,13 +165,16 @@ class SessionsViewModel(
                     sessionService.updateSessionStarred(sessionId, isStarred)
                 }
                 if (updated) {
-                    // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Session not found."
+                    errorMessage = LocalizationManager.getString("sessions.error.not.found")
                 }
             } catch (e: Exception) {
-                errorMessage = ErrorHandler.getUserFriendlyError(e, "updating session", "Failed to update session. Please try again.")
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "updating session",
+                    LocalizationManager.getString("sessions.error.updating"),
+                )
             }
         }
     }
@@ -178,13 +189,16 @@ class SessionsViewModel(
                     sessionService.renameTitle(sessionId, newTitle)
                 }
                 if (updated) {
-                    // Refresh the current page
                     refresh()
                 } else {
-                    errorMessage = "Failed to rename session."
+                    errorMessage = LocalizationManager.getString("sessions.error.rename.failed")
                 }
             } catch (e: Exception) {
-                errorMessage = ErrorHandler.getUserFriendlyError(e, "renaming session", "Failed to rename session. Please try again.")
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "renaming session",
+                    LocalizationManager.getString("sessions.error.renaming"),
+                )
             }
         }
     }
