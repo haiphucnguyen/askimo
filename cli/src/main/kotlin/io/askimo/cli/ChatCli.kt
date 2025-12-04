@@ -29,11 +29,13 @@ import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.commands.VersionDisplayCommandHandler
 import io.askimo.cli.recipes.DefaultRecipeInitializer
+import io.askimo.cli.recipes.RecipeDef
 import io.askimo.cli.recipes.RecipeExecutor
 import io.askimo.cli.recipes.RecipeExecutor.RunOpts
 import io.askimo.cli.recipes.RecipeNotFoundException
 import io.askimo.cli.recipes.RecipeRegistry
 import io.askimo.cli.recipes.ToolRegistry
+import io.askimo.cli.service.CliUpdateService
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
@@ -45,6 +47,9 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jline.keymap.KeyMap
 import org.jline.reader.EOFError
 import org.jline.reader.LineReader
@@ -241,6 +246,9 @@ fun main(args: Array<String>) {
             terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
             terminal.flush()
 
+            // Check for updates silently in the background
+            checkForUpdatesAsync()
+
             // Create command handlers for interactive mode (shared + interactive-only commands)
             val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
                 CopyCommandHandler(session),
@@ -359,6 +367,11 @@ private fun readStdinIfAny(
     if (System.console() != null) return ""
 
     val inStream = System.`in`
+
+    // Check if stdin has data available (non-blocking check)
+    // This prevents the read() call from blocking indefinitely
+    if (inStream.available() == 0) return ""
+
     val buf = ByteArray(8192)
     val baos = java.io.ByteArrayOutputStream()
     var total = 0
@@ -373,17 +386,15 @@ private fun readStdinIfAny(
             total += allowed
         }
         if (total >= maxBytes) {
-            // Drain the remainder without storing (optional)
             while (inStream.read(buf) != -1) { /* discard */ }
             break
         }
     }
 
-    if (total == 0) return "" // nothing came through
+    if (total == 0) return ""
 
     var text = baos.toString(java.nio.charset.StandardCharsets.UTF_8)
 
-    // Keep only last N lines if huge (log-friendly)
     if (tailLines > 0) {
         val lines = text.split('\n')
         if (lines.size > tailLines) {
@@ -401,7 +412,6 @@ private fun buildPrompt(
 ): String = if (stdinText.isBlank()) {
     userPrompt.ifBlank { "Analyze the following input (no stdin provided)." }
 } else {
-    // Attach the piped input as context
     buildString {
         appendLine(userPrompt.ifBlank { "Analyze the following input:" })
         appendLine()
@@ -411,6 +421,21 @@ private fun buildPrompt(
         appendLine("--- End input ---")
         appendLine()
         appendLine("Return concise, actionable findings.")
+    }
+}
+
+/**
+ * Check for updates asynchronously in the background.
+ * Only shows notification if a new version is available.
+ */
+private fun checkForUpdatesAsync() {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val updateService = CliUpdateService()
+            updateService.checkAndNotifyUpdate()
+        } catch (e: Exception) {
+            log.debug("Update check failed: ${e.message}")
+        }
     }
 }
 
@@ -469,48 +494,15 @@ private fun runYamlCommand(
     overrides: Map<String, String>,
     externalArgs: List<String> = emptyList(),
 ) {
-    val terminal = TerminalBuilder.builder().system(true).build()
-    val argsText = if (externalArgs.isNotEmpty()) " with arguments $externalArgs" else ""
-    val indicator = LoadingIndicator(terminal, "Running recipe '$name'$argsText…", "Recipe completed").apply { start() }
-
-    try {
-        // Read stdin if available
-        val stdinContent = readStdinIfAny()
-
-        val registry = RecipeRegistry()
-        // Load once to inspect allowedTools (empty ⇒ all tools)
-        val def = registry.load(name)
-        val toolRegistry =
-            if (def.allowedTools.isEmpty()) {
-                ToolRegistry.defaults()
-            } else {
-                log.debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
-                ToolRegistry.defaults(allow = def.allowedTools.toSet())
-            }
-
-        val executor =
-            RecipeExecutor(
-                appContext = appContext,
-                registry = registry,
-                tools = toolRegistry,
-            )
-
-        RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
-            executor.run(
-                name = name,
-                opts = RunOpts(
-                    overrides = overrides,
-                    externalArgs = externalArgs,
-                    stdinContent = stdinContent.ifEmpty { null },
-                ),
-            )
-        }
-
-        indicator.stopWithElapsed()
-    } catch (e: Exception) {
-        indicator.stopWithElapsed()
-        throw e
-    }
+    val registry = RecipeRegistry()
+    val def = registry.load(name)
+    executeRecipe(
+        appContext = appContext,
+        recipeDef = def,
+        displayName = name,
+        overrides = overrides,
+        externalArgs = externalArgs,
+    )
 }
 
 private fun runYamlFileCommand(
@@ -519,35 +511,50 @@ private fun runYamlFileCommand(
     overrides: Map<String, String>,
     externalArgs: List<String> = emptyList(),
 ) {
+    val registry = RecipeRegistry()
+    val def = registry.loadFromFile(filePath)
+    executeRecipe(
+        appContext = appContext,
+        recipeDef = def,
+        displayName = filePath,
+        overrides = overrides,
+        externalArgs = externalArgs,
+    )
+}
+
+private fun executeRecipe(
+    appContext: AppContext,
+    recipeDef: RecipeDef,
+    displayName: String,
+    overrides: Map<String, String>,
+    externalArgs: List<String>,
+) {
     val terminal = TerminalBuilder.builder().system(true).build()
     val argsText = if (externalArgs.isNotEmpty()) " with arguments $externalArgs" else ""
-    val indicator = LoadingIndicator(terminal, "Running recipe file '$filePath'$argsText…", "Recipe completed").apply { start() }
+    val indicator = LoadingIndicator(terminal, "Running recipe '$displayName'$argsText…", "Recipe completed").apply { start() }
 
     try {
         // Read stdin if available
         val stdinContent = readStdinIfAny()
 
-        val registry = RecipeRegistry()
-        // Load recipe definition directly from file
-        val def = registry.loadFromFile(filePath)
         val toolRegistry =
-            if (def.allowedTools.isEmpty()) {
+            if (recipeDef.allowedTools.isEmpty()) {
                 ToolRegistry.defaults()
             } else {
-                log.debug("🔒 Restricting tools to: ${def.allowedTools.sorted().joinToString(", ")}")
-                ToolRegistry.defaults(allow = def.allowedTools.toSet())
+                log.debug("🔒 Restricting tools to: ${recipeDef.allowedTools.sorted().joinToString(", ")}")
+                ToolRegistry.defaults(allow = recipeDef.allowedTools.toSet())
             }
 
         val executor =
             RecipeExecutor(
                 appContext = appContext,
-                registry = registry,
+                registry = RecipeRegistry(),
                 tools = toolRegistry,
             )
 
         RetryUtils.retry(RECIPE_EXECUTOR_TRANSIENT_ERRORS) {
             executor.run(
-                name = def.name,
+                def = recipeDef,
                 opts = RunOpts(
                     overrides = overrides,
                     externalArgs = externalArgs,

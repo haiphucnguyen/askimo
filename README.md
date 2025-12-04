@@ -54,7 +54,6 @@ Askimo is both:
 
 * A command-line automation tool
 
-
 ## Demo
 
 ### Askimo Desktop Chat
@@ -109,7 +108,6 @@ Askimo works with any OpenAI-compatible API endpoint.
 | Works offline (local models) | ✅ | ✅ | ✅ | ❌ |
 
 
-
 ## Askimo Products
 
 ### Askimo Desktop
@@ -142,6 +140,32 @@ A flexible AI automation tool built for terminal workflows, scripting, and devel
 - Extensible provider and command architecture
 
 Get Askimo CLI: https://askimo.chat/cli
+
+## 🌐 Language Support
+
+Askimo Desktop is fully localized into:
+
+* English (en)
+
+* Simplified Chinese (zh_CN)
+
+* Traditional Chinese (zh_TW)
+
+* Japanese (ja_JP)
+
+* Korean (ko_KR)
+
+* French (fr)
+
+* Spanish (es)
+
+* German (de)
+
+* Portuguese – Brazil (pt_BR)
+
+* Vietnamese (vi)
+
+More languages coming soon.
 
 ## Support
 If you enjoy this project, here are a few simple ways to show support:

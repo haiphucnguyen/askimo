@@ -36,8 +36,6 @@ You can keep recipes in your project (e.g., `recipes/`) or a shared folder. Aski
   - `askimo -f ./recipes/my-recipe.yml`
 - From an installed recipe by name:
   - `askimo -r my-recipe`
-- Using the Desktop app:
-  - Open Askimo Desktop → Recipes → Pick a recipe → Run.
 
 If your recipe expects inputs, you can pass them as additional arguments after the recipe name or file path.
 

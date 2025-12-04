@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.logging.logger
-import io.askimo.desktop.service.ReleaseInfo
+import io.askimo.core.service.UpdateInfo
 import io.askimo.desktop.service.UpdateService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +27,7 @@ class UpdateViewModel(
     var isChecking by mutableStateOf(false)
         private set
 
-    var releaseInfo by mutableStateOf<ReleaseInfo?>(null)
+    var releaseInfo by mutableStateOf<UpdateInfo?>(null)
         private set
 
     var errorMessage by mutableStateOf<String?>(null)

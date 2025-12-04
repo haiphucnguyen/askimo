@@ -23,6 +23,9 @@
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiStreamingChatModelBuilderFactory\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.service.ParameterNameResolver\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.service.guardrail.spi.GuardrailServiceBuilderFactory\\E"
       },
       {

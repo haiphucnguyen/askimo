@@ -30,7 +30,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             apiKey = apiKey,
             url = url,
             providerName = GEMINI,
-        )
+        ).map { it.removePrefix("models/") }
     }
 
     override fun defaultSettings(): GeminiSettings = GeminiSettings()
@@ -60,7 +60,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .streamingChatModel(chatModel)
                 .chatMemory(memory)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }

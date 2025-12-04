@@ -183,8 +183,6 @@ class ChatViewModel(
                                 )
                             }
 
-                            isLoading = false
-
                             onMessageComplete?.invoke()
                         }
                     }
@@ -451,12 +449,13 @@ class ChatViewModel(
                     val activeThread = sessionManager.getActiveThread(sessionId)
                     if (activeThread != null) {
                         subscribeToThread(sessionId)
+                    } else {
+                        isLoading = false
                     }
                 } else {
                     errorMessage = result.errorMessage
+                    isLoading = false
                 }
-
-                isLoading = false
             } catch (e: Exception) {
                 errorMessage = ErrorHandler.getUserFriendlyError(e, "resuming session", "Failed to load session. Please try again.")
                 isLoading = false

@@ -32,51 +32,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
-/**
- * Centralized component colors that use theme colors consistently.
- * This ensures all interactive components use the custom accent color properly.
- *
- * ## Three-Level Color Hierarchy:
- *
- * 1. **Prominent (30% accent opacity)** - primaryCardColors()
- *    - Selected items, active states, important headers
- *    - Text color: onPrimaryContainer
- *
- * 2. **Subtle (15% accent opacity)** - bannerCardColors()
- *    - Section banners, informational headers, list items
- *    - Text color: onSecondaryContainer
- *
- * 3. **Neutral (0% accent)** - surfaceVariantCardColors()
- *    - Unselected items, inactive states, general content
- *    - Text color: onSurfaceVariant
- *
- * ## Usage Rules:
- *
- * 1. Always use these functions instead of CardDefaults.cardColors() directly
- * 2. Always set explicit color/tint on Text/Icon components
- * 3. Match text colors to card type (see examples below)
- *
- * ## Examples:
- *
- * ```kotlin
- * // Prominent
- * Card(colors = ComponentColors.primaryCardColors()) {
- *     Text("Selected", color = MaterialTheme.colorScheme.onPrimaryContainer)
- * }
- *
- * // Subtle
- * Card(colors = ComponentColors.bannerCardColors()) {
- *     Text("Section", color = MaterialTheme.colorScheme.onSecondaryContainer)
- * }
- *
- * // Neutral
- * Card(colors = ComponentColors.surfaceVariantCardColors()) {
- *     Text("Default", color = MaterialTheme.colorScheme.onSurfaceVariant)
- * }
- * ```
- *
- * See docs/THEME_COLOR_GUIDE.md for complete documentation.
- */
 object ComponentColors {
 
     /**

@@ -40,11 +40,9 @@ class RecipeExecutor(
     )
 
     fun run(
-        name: String,
+        def: RecipeDef,
         opts: RunOpts = RunOpts(),
     ) {
-        val def = registry.load(name)
-
         // 1) baseline vars (defaults ⊕ overrides)
         val vars = def.defaults.toMutableMap().apply { putAll(opts.overrides) }
 
