@@ -103,6 +103,22 @@ class ChatSessionService(
     fun getSessionById(sessionId: String): ChatSession? = sessionRepository.getSession(sessionId)
 
     /**
+     * Get a session by ID, creating it if it doesn't exist.
+     * This ensures a session always exists in the database before operations.
+     *
+     * @param sessionId The ID of the session
+     * @return The existing or newly created session
+     */
+    fun getOrCreateSession(sessionId: String): ChatSession = getSessionById(sessionId) ?: createSession(
+        ChatSession(
+            id = sessionId,
+            title = LocalizationManager.getString("chat.new_chat"),
+            createdAt = LocalDateTime.now(),
+            updatedAt = LocalDateTime.now(),
+        ),
+    )
+
+    /**
      * Create a new session.
      *
      * @param session The session to create

@@ -281,11 +281,20 @@ class SessionManager(
     /**
      * Switch to a different session.
      * No cancellation needed - each ViewModel manages its own state independently.
+     * Ensures the session exists in the database before creating the ViewModel.
      *
      * @param sessionId The session ID to switch to
      */
     fun switchToSession(sessionId: String) {
         activeSessionId = sessionId
+
+        // Ensure session exists in database before creating ViewModel and resuming
+        scope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                chatSessionService.getOrCreateSession(sessionId)
+            }
+        }
+
         val viewModel = getOrCreateChatViewModel(sessionId)
         viewModel.resumeSession(sessionId)
     }
@@ -297,7 +306,6 @@ class SessionManager(
      * 2. If all are active or streaming, remove the oldest non-active ViewModel
      */
     private fun cleanupInactiveViewModels() {
-        // Find ViewModels that are safe to remove (not active, not streaming)
         val inactiveViewModels = chatViewModels.filter { (sessionId, _) ->
             sessionId != activeSessionId && !activeThreads.containsKey(sessionId)
         }
