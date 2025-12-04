@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
@@ -22,8 +23,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -269,8 +272,28 @@ class ChatViewModel(
         if (message.isBlank() || isLoading) return
 
         val sessionId = _currentSessionId.value ?: run {
-            log.error("sendMessage called but _currentSessionId is null - this should never happen!")
-            return
+            val newSessionId = UUID.randomUUID().toString()
+            _currentSessionId.value = newSessionId
+
+            runBlocking {
+                withContext(Dispatchers.IO) {
+                    try {
+                        chatSessionService.createSession(
+                            ChatSession(
+                                id = newSessionId,
+                                title = "New Chat",
+                                createdAt = LocalDateTime.now(),
+                                updatedAt = LocalDateTime.now(),
+                            ),
+                        )
+                        log.debug("Created new session: $newSessionId")
+                    } catch (e: Exception) {
+                        log.error("Failed to create session: ${e.message}", e)
+                    }
+                }
+            }
+
+            newSessionId
         }
 
         currentJob?.cancel()

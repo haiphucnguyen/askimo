@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.ChatEvent
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -221,7 +223,6 @@ class SessionManager(
                 appContext.saveAiResponseToSession(failedResponse, sessionId)
                 log.error("Streaming thread $threadId failed for session $sessionId: ${e.message}", e)
             } finally {
-                // Thread cleanup: remove from registry
                 activeThreads.remove(sessionId)
                 log.debug("Thread $threadId cleaned up. Active streams: ${activeThreads.size}")
             }
@@ -265,9 +266,8 @@ class SessionManager(
             cleanupInactiveViewModels()
         }
 
-        // Create new ViewModel (no longer needs ChatSessionManager)
         val viewModel = ChatViewModel(
-            sessionManager = this, // Pass SessionManager instead
+            sessionManager = this,
             scope = scope,
             chatSessionService = chatSessionService,
             appContext = appContext,
@@ -279,19 +279,36 @@ class SessionManager(
     }
 
     /**
-     * Switch to a different session.
+     * Switch to an existing session.
      * No cancellation needed - each ViewModel manages its own state independently.
-     * Ensures the session exists in the database before creating the ViewModel.
      *
-     * @param sessionId The session ID to switch to
+     * @param sessionId The session ID to switch to (must already exist in database)
      */
     fun switchToSession(sessionId: String) {
         activeSessionId = sessionId
+        val viewModel = getOrCreateChatViewModel(sessionId)
+        viewModel.resumeSession(sessionId)
+    }
 
-        // Ensure session exists in database before creating ViewModel and resuming
-        scope.launch {
+    /**
+     * Create and switch to a new session.
+     * Creates the session in the database synchronously before setting up the ViewModel.
+     *
+     * @param sessionId The new session ID to create
+     */
+    fun createNewSession(sessionId: String) {
+        activeSessionId = sessionId
+
+        kotlinx.coroutines.runBlocking {
             kotlinx.coroutines.withContext(Dispatchers.IO) {
-                chatSessionService.getOrCreateSession(sessionId)
+                chatSessionService.createSession(
+                    ChatSession(
+                        id = sessionId,
+                        title = "New Chat",
+                        createdAt = LocalDateTime.now(),
+                        updatedAt = LocalDateTime.now(),
+                    ),
+                )
             }
         }
 

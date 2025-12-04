@@ -91,6 +91,7 @@ import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
+import java.util.UUID
 import kotlin.system.exitProcess
 
 /**
@@ -250,8 +251,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         if (currentSession != null) {
             sessionManager.switchToSession(currentSession.id)
         } else {
-            val newSessionId = java.util.UUID.randomUUID().toString()
-            sessionManager.switchToSession(newSessionId)
+            val newSessionId = UUID.randomUUID().toString()
+            sessionManager.createNewSession(newSessionId)
         }
     }
 
