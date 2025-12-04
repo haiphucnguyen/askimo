@@ -60,6 +60,12 @@
     "name": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
   },
   {
+    "name": "[Ldev.langchain4j.model.googleai.GeminiContent;"
+  },
+  {
+    "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
+  },
+  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -1032,61 +1038,6 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiAttributionSourceId",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiBlob",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiBlockReason",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiCandidate",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "dev.langchain4j.model.googleai.GeminiContent",
-          "dev.langchain4j.model.googleai.GeminiFinishReason",
-          "java.util.List",
-          "dev.langchain4j.model.googleai.GeminiCitationMetadata",
-          "java.lang.Integer",
-          "java.util.List",
-          "java.lang.Integer"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiCitationMetadata",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiCitationSource",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiCodeExecutionResult",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.googleai.GeminiContent",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1096,29 +1047,77 @@
         "name": "<init>",
         "parameterTypes": ["java.util.List", "java.lang.String"]
       },
-      { "name": "getParts", "parameterTypes": [] },
-      { "name": "getRole", "parameterTypes": [] }
+      { "name": "parts", "parameterTypes": [] },
+      { "name": "role", "parameterTypes": [] }
     ]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiExecutableCode",
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiBlob",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionCall",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionResponse",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFileData",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiExecutableCode",
+          "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiCodeExecutionResult",
+          "java.lang.Boolean",
+          "java.lang.String"
+        ]
+      },
+      { "name": "codeExecutionResult", "parameterTypes": [] },
+      { "name": "executableCode", "parameterTypes": [] },
+      { "name": "fileData", "parameterTypes": [] },
+      { "name": "functionCall", "parameterTypes": [] },
+      { "name": "functionResponse", "parameterTypes": [] },
+      { "name": "inlineData", "parameterTypes": [] },
+      { "name": "text", "parameterTypes": [] },
+      { "name": "thought", "parameterTypes": [] },
+      { "name": "thoughtSignature", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiBlob",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiFileData",
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiCodeExecutionResult",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiFinishReason",
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiCodeExecutionResult$GeminiOutcome",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiFunctionCall",
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiExecutableCode",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiExecutableCode$GeminiLanguage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFileData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionCall",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
@@ -1127,8 +1126,18 @@
         "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.util.Map"]
       },
-      { "name": "getArgs", "parameterTypes": [] },
-      { "name": "getName", "parameterTypes": [] }
+      { "name": "args", "parameterTypes": [] },
+      { "name": "name", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionResponse",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "name", "parameterTypes": [] },
+      { "name": "response", "parameterTypes": [] }
     ]
   },
   {
@@ -1137,19 +1146,9 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "getDescription", "parameterTypes": [] },
-      { "name": "getName", "parameterTypes": [] },
-      { "name": "getParameters", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiFunctionResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "getName", "parameterTypes": [] },
-      { "name": "getResponse", "parameterTypes": [] }
+      { "name": "description", "parameterTypes": [] },
+      { "name": "name", "parameterTypes": [] },
+      { "name": "parameters", "parameterTypes": [] }
     ]
   },
   {
@@ -1158,14 +1157,36 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "cachedContent", "parameterTypes": [] },
       { "name": "contents", "parameterTypes": [] },
       { "name": "generationConfig", "parameterTypes": [] },
+      { "name": "model", "parameterTypes": [] },
       { "name": "safetySettings", "parameterTypes": [] },
       { "name": "systemInstruction", "parameterTypes": [] },
       { "name": "toolConfig", "parameterTypes": [] },
       { "name": "tools", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "codeExecution", "parameterTypes": [] },
+      { "name": "functionDeclarations", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiCodeExecution",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiToolConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse",
@@ -1179,8 +1200,43 @@
           "java.lang.String",
           "java.lang.String",
           "java.util.List",
-          "dev.langchain4j.model.googleai.GeminiPromptFeedback",
-          "dev.langchain4j.model.googleai.GeminiUsageMetadata"
+          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUsageMetadata"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "dev.langchain4j.model.googleai.GeminiContent",
+          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate$GeminiFinishReason"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate$GeminiFinishReason",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUsageMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.Integer",
+          "java.lang.Integer",
+          "java.lang.Integer"
         ]
       }
     ]
@@ -1209,87 +1265,6 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiGroundingAttribution",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiGroundingPassageId",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiHarmBlockThreshold",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiHarmCategory",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiLanguage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiOutcome",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiPart",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "dev.langchain4j.model.googleai.GeminiBlob",
-          "dev.langchain4j.model.googleai.GeminiFunctionCall",
-          "dev.langchain4j.model.googleai.GeminiFunctionResponse",
-          "dev.langchain4j.model.googleai.GeminiFileData",
-          "dev.langchain4j.model.googleai.GeminiExecutableCode",
-          "dev.langchain4j.model.googleai.GeminiCodeExecutionResult",
-          "java.lang.Boolean",
-          "java.lang.String"
-        ]
-      },
-      { "name": "getCodeExecutionResult", "parameterTypes": [] },
-      { "name": "getExecutableCode", "parameterTypes": [] },
-      { "name": "getFileData", "parameterTypes": [] },
-      { "name": "getFunctionCall", "parameterTypes": [] },
-      { "name": "getFunctionResponse", "parameterTypes": [] },
-      { "name": "getInlineData", "parameterTypes": [] },
-      { "name": "getText", "parameterTypes": [] },
-      { "name": "getThoughtSignature", "parameterTypes": [] },
-      { "name": "isThought", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiPromptFeedback",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiSafetyRating",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiSafetySetting",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.googleai.GeminiSchema",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1307,42 +1282,15 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiSemanticRetrieverChunk",
+    "name": "dev.langchain4j.model.googleai.GeminiThinkingConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiTool",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "getCodeExecution", "parameterTypes": [] },
-      { "name": "getFunctionDeclarations", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "dev.langchain4j.model.googleai.GeminiType",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiUsageMetadata",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.Integer",
-          "java.lang.Integer",
-          "java.lang.Integer",
-          "java.lang.Integer"
-        ]
-      }
-    ]
   },
   {
     "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
@@ -4153,12 +4101,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.ImmutableCollections$List12",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "java.util.ImmutableCollections$ListN",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -4579,7 +4521,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$3dX2sdOZ",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$qfiVO9gr",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

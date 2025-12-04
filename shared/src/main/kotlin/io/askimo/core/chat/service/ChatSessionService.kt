@@ -274,31 +274,42 @@ class ChatSessionService(
      * @return ResumeSessionPaginatedResult containing success status, messages, cursor, and any error
      */
     fun resumeSessionPaginated(appContext: AppContext, sessionId: String, limit: Int): ResumeSessionPaginatedResult {
-        val success = appContext.resumeChatSession(sessionId)
+        // Check if session exists in database first
+        val existingSession = sessionRepository.getSession(sessionId)
 
-        return if (success) {
-            // Get the most recent messages in backward direction (newest first)
-            val (messages, cursor) = messageRepository.getMessagesPaginated(
-                sessionId = sessionId,
-                limit = limit,
-                cursor = null,
-                direction = PaginationDirection.BACKWARD,
-            )
-            ResumeSessionPaginatedResult(
-                success = true,
-                sessionId = sessionId,
-                messages = messages,
-                cursor = cursor,
-                hasMore = cursor != null,
-            )
+        return if (existingSession != null) {
+            val success = appContext.resumeChatSession(sessionId)
+            if (success) {
+                val (messages, cursor) = messageRepository.getMessagesPaginated(
+                    sessionId = sessionId,
+                    limit = limit,
+                    cursor = null,
+                    direction = PaginationDirection.BACKWARD,
+                )
+                ResumeSessionPaginatedResult(
+                    success = true,
+                    sessionId = sessionId,
+                    messages = messages,
+                    cursor = cursor,
+                    hasMore = cursor != null,
+                )
+            } else {
+                ResumeSessionPaginatedResult(
+                    success = false,
+                    sessionId = sessionId,
+                    messages = emptyList(),
+                    cursor = null,
+                    hasMore = false,
+                    errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
+                )
+            }
         } else {
             ResumeSessionPaginatedResult(
-                success = false,
+                success = true,
                 sessionId = sessionId,
                 messages = emptyList(),
                 cursor = null,
                 hasMore = false,
-                errorMessage = LocalizationManager.getString("session.resume.error.not.found", sessionId),
             )
         }
     }

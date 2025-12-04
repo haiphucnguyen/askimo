@@ -118,9 +118,30 @@ class ChatSessionRepository internal constructor(
         val cleaned = firstMessage.trim().replace("\n", " ")
         return when {
             cleaned.length <= SESSION_TITLE_MAX_LENGTH -> cleaned
-            cleaned.contains(". ") -> cleaned.substringBefore(". ") + "."
-            cleaned.contains("? ") -> cleaned.substringBefore("? ") + "?"
-            cleaned.contains("! ") -> cleaned.substringBefore("! ") + "!"
+            cleaned.contains(". ") -> {
+                val candidate = cleaned.substringBefore(". ") + "."
+                if (candidate.length <= SESSION_TITLE_MAX_LENGTH) {
+                    candidate
+                } else {
+                    cleaned.take(SESSION_TITLE_MAX_LENGTH - 3) + "..."
+                }
+            }
+            cleaned.contains("? ") -> {
+                val candidate = cleaned.substringBefore("? ") + "?"
+                if (candidate.length <= SESSION_TITLE_MAX_LENGTH) {
+                    candidate
+                } else {
+                    cleaned.take(SESSION_TITLE_MAX_LENGTH - 3) + "..."
+                }
+            }
+            cleaned.contains("! ") -> {
+                val candidate = cleaned.substringBefore("! ") + "!"
+                if (candidate.length <= SESSION_TITLE_MAX_LENGTH) {
+                    candidate
+                } else {
+                    cleaned.take(SESSION_TITLE_MAX_LENGTH - 3) + "..."
+                }
+            }
             else -> cleaned.take(SESSION_TITLE_MAX_LENGTH - 3) + "..."
         }
     }

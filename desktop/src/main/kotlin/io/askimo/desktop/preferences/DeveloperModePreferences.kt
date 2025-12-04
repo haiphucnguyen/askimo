@@ -33,25 +33,16 @@ object DeveloperModePreferences {
      */
     fun isEnabled(): Boolean = AppConfig.developer.enabled
 
-    /**
-     * Check if developer mode is currently active.
-     * This is only relevant if developer mode is enabled.
-     */
-    fun isActiveAndEnabled(): Boolean = isEnabled() && _isActive.value
-
     private fun loadActiveState(): Boolean {
-        // If not enabled in config, always return false
         if (!AppConfig.developer.enabled) {
             return false
         }
 
-        // Check if there's a saved preference, otherwise use config default
         return prefs.getBoolean(DEVELOPER_MODE_ACTIVE_KEY, AppConfig.developer.active)
     }
 
     fun setActive(active: Boolean) {
         if (!isEnabled()) {
-            // Don't allow activation if not enabled in config
             return
         }
 

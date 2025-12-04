@@ -918,7 +918,7 @@ fun chatView(
                                     true
                                 }
                                 AppShortcut.SEND_MESSAGE -> {
-                                    if (inputText.text.isNotBlank() && !isLoading) {
+                                    if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
                                         onSendMessage(inputText.text, attachments, editingMessage)
 
                                         inputText = TextFieldValue("")
@@ -942,7 +942,7 @@ fun chatView(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
-                if (isLoading) {
+                if (isLoading || isThinking) {
                     IconButton(
                         onClick = onStopResponse,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

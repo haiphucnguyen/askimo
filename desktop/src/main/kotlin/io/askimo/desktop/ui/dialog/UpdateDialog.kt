@@ -27,8 +27,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.askimo.core.service.UpdateInfo
 import io.askimo.desktop.i18n.stringResource
-import io.askimo.desktop.service.ReleaseInfo
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.markdownText
 import io.askimo.desktop.viewmodel.UpdateViewModel
@@ -94,7 +94,7 @@ private fun checkingForUpdatesDialog(onDismiss: () -> Unit) {
 
 @Composable
 private fun newVersionDialog(
-    releaseInfo: ReleaseInfo,
+    releaseInfo: UpdateInfo,
     currentVersion: String,
     onDownload: () -> Unit,
     onLater: () -> Unit,
@@ -150,7 +150,7 @@ private fun newVersionDialog(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                             )
                             Text(
-                                text = releaseInfo.version,
+                                text = releaseInfo.latestVersion,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
