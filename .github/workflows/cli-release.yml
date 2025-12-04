@@ -152,6 +152,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Generate Graal metadata (arm64)
+        env:
+          DISABLE_DOCKER_TESTS: 'true'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
 
       - name: Build native image (arm64)
