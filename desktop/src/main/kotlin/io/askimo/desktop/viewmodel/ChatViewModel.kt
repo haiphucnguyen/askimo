@@ -11,6 +11,7 @@ import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
+import io.askimo.core.logging.logger
 import io.askimo.desktop.model.ChatMessage
 import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.ErrorHandler
@@ -23,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
-import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -41,6 +41,8 @@ class ChatViewModel(
     private val chatSessionService: ChatSessionService,
     private val appContext: AppContext,
 ) {
+    private val log = logger<ChatViewModel>()
+
     var messages by mutableStateOf(listOf<ChatMessage>())
         private set
 
@@ -266,26 +268,9 @@ class ChatViewModel(
     fun sendMessage(message: String, attachments: List<FileAttachment> = emptyList()) {
         if (message.isBlank() || isLoading) return
 
-        // Get or create session ID
         val sessionId = _currentSessionId.value ?: run {
-            val existingSession = appContext.currentChatSession
-            if (existingSession != null) {
-                existingSession.id
-            } else {
-                try {
-                    val newSession = appContext.startNewChatSession(directiveId = selectedDirective)
-                    println("Created new session: ${newSession.id}")
-                    newSession.id
-                } catch (e: Exception) {
-                    println("Failed to create session: ${e.message}")
-                    e.printStackTrace()
-                    UUID.randomUUID().toString()
-                }
-            }
-        }
-
-        if (_currentSessionId.value == null) {
-            _currentSessionId.value = sessionId
+            log.error("sendMessage called but _currentSessionId is null - this should never happen!")
+            return
         }
 
         currentJob?.cancel()
@@ -402,6 +387,8 @@ class ChatViewModel(
      * @return true if successful, false otherwise
      */
     fun resumeSession(sessionId: String): Boolean {
+        _currentSessionId.value = sessionId
+
         scope.launch {
             try {
                 activeSubscriptions.values.forEach { it.cancel() }
@@ -435,9 +422,6 @@ class ChatViewModel(
                     // Store pagination state
                     currentCursor = result.cursor
                     hasMoreMessages = result.hasMore
-
-                    // Update current session ID AFTER cancelling old subscriptions
-                    _currentSessionId.value = sessionId
 
                     // Load directive from the resumed session
                     selectedDirective = appContext.currentChatSession?.directiveId
@@ -715,7 +699,7 @@ class ChatViewModel(
                 chatSessionService.markMessageAsOutdated(originalMessageId)
 
                 val subsequentCount = chatSessionService.markMessagesAsOutdatedAfter(sessionId, originalMessageId)
-                println("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
+                log.debug("Marked original message '$originalMessageId' and $subsequentCount subsequent messages as outdated")
 
                 true
             }
@@ -849,6 +833,6 @@ class ChatViewModel(
         errorMessage = null
         searchResults = emptyList()
 
-        println("Cleaned up ChatViewModel for session: ${_currentSessionId.value}")
+        log.debug("Cleaned up ChatViewModel for session: ${_currentSessionId.value}")
     }
 }
