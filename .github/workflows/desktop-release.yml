@@ -276,27 +276,3 @@ jobs:
           echo "Release files prepared:"
           ls -lh release/
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/*
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
-          name: Desktop ${{ github.ref_name }}
-          body: |
-            ## Askimo Application
-            
-            ### Installation
-            
-            For installation instructions, please visit:
-            - **Desktop**: https://askimo.chat/docs/desktop/installation/
-            - **CLI**: https://askimo.chat/docs/cli/installation/
-            
-            ### Checksums
-            
-            Verify your download using the SHA256SUMS.txt file.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
