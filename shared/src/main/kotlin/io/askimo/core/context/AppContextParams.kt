@@ -40,4 +40,11 @@ data class AppContextParams(
      * Gets the last-used model for a given provider.
      */
     fun getModel(provider: ModelProvider): String = models[provider] ?: ""
+
+    override fun toString(): String {
+        val maskedSettings = providerSettings.mapValues { (_, settings) ->
+            settings.toString()
+        }
+        return "AppContextParams(models=$models, currentProvider=$currentProvider, providerSettings=$maskedSettings)"
+    }
 }

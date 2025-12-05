@@ -23,11 +23,11 @@ data class OpenAiSettings(
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(
-        "apiKey:  ${apiKey.take(5)}***",
+        "apiKey:  ${maskApiKey()}",
         "presets: $presets",
     )
 
-    override fun toString(): String = "OpenAiSettings(apiKey=****, presets=$presets)"
+    override fun toString(): String = "OpenAiSettings(apiKey=${maskApiKey()}, presets=$presets)"
 
     override fun getFields(): List<SettingField> = listOf(
         SettingField.TextField(

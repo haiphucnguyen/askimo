@@ -10,10 +10,6 @@ import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
-import io.askimo.core.event.ChatEvent
-import io.askimo.core.event.DatabaseEvent
-import io.askimo.core.event.EventBus
-import io.askimo.core.event.StreamingEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +54,9 @@ class SessionManager(
 
     // Cache of ChatViewModel instances by session ID
     private val chatViewModels = mutableMapOf<String, ChatViewModel>()
+
+    // Track sessions that have been created in database (to avoid redundant checks)
+    private val createdSessions = mutableSetOf<String>()
 
     // Streaming infrastructure: sessionId -> StreamingThread
     private val activeThreads = ConcurrentHashMap<String, StreamingThread>()
@@ -131,6 +130,24 @@ class SessionManager(
         userMessage: String,
         onChunkReceived: (String) -> Unit = {},
     ): String? {
+        // Create session lazily on first message (only once per session)
+        if (!createdSessions.contains(sessionId)) {
+            kotlinx.coroutines.runBlocking {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    chatSessionService.createSession(
+                        ChatSession(
+                            id = sessionId,
+                            title = "New Chat",
+                            createdAt = LocalDateTime.now(),
+                            updatedAt = LocalDateTime.now(),
+                        ),
+                    )
+                    createdSessions.add(sessionId)
+                    log.debug("Created new session: $sessionId")
+                }
+            }
+        }
+
         // Check if this session already has an active stream
         if (activeThreads.containsKey(sessionId)) {
             log.warn("Session $sessionId already has an active stream")
@@ -159,18 +176,9 @@ class SessionManager(
 
         log.debug("Streaming thread $threadId for session $sessionId started. Active streams: ${activeThreads.size}")
 
-        // Emit stream started event
-        EventBus.post(
-            StreamingEvent.StreamStarted(
-                chatId = sessionId,
-                threadId = threadId,
-                userMessage = userMessage,
-            ),
-        )
-
         // Prepare context and save user message to DB
         val promptWithContext = appContext.prepareContextAndGetPromptForChat(userMessage, sessionId)
-        EventBus.post(ChatEvent.ChatCreated(chatId = sessionId, prompt = promptWithContext))
+        log.debug("Saved prompt for session $sessionId: $promptWithContext")
 
         // Start streaming in background
         streamingScope.launch(thread.job) {
@@ -187,18 +195,7 @@ class SessionManager(
 
                 thread.markComplete()
                 appContext.saveAiResponseToSession(fullResponse, sessionId)
-                EventBus.post(DatabaseEvent.SaveCompleted("Session $sessionId: Save AI Response successfully"))
                 log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
-
-                // Emit stream completed event
-                EventBus.post(
-                    StreamingEvent.StreamCompleted(
-                        chatId = sessionId,
-                        threadId = threadId,
-                        fullResponse = fullResponse,
-                        duration = System.currentTimeMillis() - startTime,
-                    ),
-                )
             } catch (e: Exception) {
                 thread.markFailed()
 
@@ -209,16 +206,6 @@ class SessionManager(
                 } else {
                     "Response failed"
                 }
-
-                // Emit stream failed event
-                EventBus.post(
-                    StreamingEvent.StreamFailed(
-                        chatId = sessionId,
-                        threadId = threadId,
-                        error = e.message ?: "Unknown error",
-                        partialResponse = partialResponse.ifBlank { null },
-                    ),
-                )
 
                 appContext.saveAiResponseToSession(failedResponse, sessionId)
                 log.error("Streaming thread $threadId failed for session $sessionId: ${e.message}", e)
@@ -258,7 +245,6 @@ class SessionManager(
      * @return The ChatViewModel for this session
      */
     fun getOrCreateChatViewModel(sessionId: String): ChatViewModel {
-        // If already cached, return it
         chatViewModels[sessionId]?.let { return it }
 
         // Check if we need to clean up before creating new one
@@ -286,32 +272,20 @@ class SessionManager(
      */
     fun switchToSession(sessionId: String) {
         activeSessionId = sessionId
+        createdSessions.add(sessionId)
         val viewModel = getOrCreateChatViewModel(sessionId)
         viewModel.resumeSession(sessionId)
     }
 
     /**
      * Create and switch to a new session.
-     * Creates the session in the database synchronously before setting up the ViewModel.
+     * The session will be created in database lazily when the first message is sent.
      *
      * @param sessionId The new session ID to create
      */
     fun createNewSession(sessionId: String) {
         activeSessionId = sessionId
-
-        kotlinx.coroutines.runBlocking {
-            kotlinx.coroutines.withContext(Dispatchers.IO) {
-                chatSessionService.createSession(
-                    ChatSession(
-                        id = sessionId,
-                        title = "New Chat",
-                        createdAt = LocalDateTime.now(),
-                        updatedAt = LocalDateTime.now(),
-                    ),
-                )
-            }
-        }
-
+        // Don't create in DB yet - will be created lazily on first message
         val viewModel = getOrCreateChatViewModel(sessionId)
         viewModel.resumeSession(sessionId)
     }
@@ -371,9 +345,13 @@ class SessionManager(
         // 2. Clean up the ViewModel
         chatViewModels[sessionId]?.cleanup()
         chatViewModels.remove(sessionId)
+
+        // 3. Remove from created sessions tracking
+        createdSessions.remove(sessionId)
+
         log.info("Closed session: $sessionId (total cached: ${chatViewModels.size})")
 
-        // 3. If closing the active session, clear the active session ID
+        // 4. If closing the active session, clear the active session ID
         if (activeSessionId == sessionId) {
             activeSessionId = null
         }

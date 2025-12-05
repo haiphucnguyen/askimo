@@ -24,10 +24,12 @@ data class XAiSettings(
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(
-        "apiKey:  ${apiKey.take(5)}***",
+        "apiKey:  ${maskApiKey()}",
         "baseUrl: $baseUrl",
         "presets: $presets",
     )
+
+    override fun toString(): String = "XAiSettings(baseUrl=$baseUrl, apiKey=${maskApiKey()}, presets=$presets)"
 
     override fun getFields(): List<SettingField> = listOf(
         SettingField.TextField(

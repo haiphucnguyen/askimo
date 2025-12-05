@@ -48,11 +48,13 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.i18n.LocalizationManager
+import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.provideLocalization
@@ -126,6 +128,12 @@ fun detectMacOSDarkMode(): Boolean {
 fun main() {
     startKoin {
         modules(allDesktopModules)
+    }
+
+    if (AppConfig.developer.enabled &&
+        AppConfig.developer.active
+    ) {
+        LogbackConfigurator.registerEventBusAppender()
     }
 
     application {
@@ -379,6 +387,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             onClose = {
                                 showEventLogPanel = false
                             },
+                            onClearEvents = {
+                                eventLogEvents.clear()
+                            },
                             onDockPositionChange = { newPosition ->
                                 eventLogDockPosition = newPosition
                             },
@@ -560,6 +571,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                 onClose = {
                                     showEventLogPanel = false
                                 },
+                                onClearEvents = {
+                                    eventLogEvents.clear()
+                                },
                                 onDockPositionChange = { newPosition ->
                                     eventLogDockPosition = newPosition
                                 },
@@ -581,6 +595,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             },
                             onClose = {
                                 showEventLogPanel = false
+                            },
+                            onClearEvents = {
+                                eventLogEvents.clear()
                             },
                             onDockPositionChange = { newPosition ->
                                 eventLogDockPosition = newPosition
