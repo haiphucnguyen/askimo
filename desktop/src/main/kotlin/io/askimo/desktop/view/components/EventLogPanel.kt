@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HorizontalSplit
 import androidx.compose.material.icons.filled.VerticalSplit
 import androidx.compose.material3.Card
@@ -172,6 +173,7 @@ fun eventLogPanel(
     events: SnapshotStateList<Event>,
     onDetach: () -> Unit,
     onClose: () -> Unit,
+    onClearEvents: () -> Unit,
     onDockPositionChange: (EventLogDockPosition) -> Unit,
     currentDockPosition: EventLogDockPosition,
     size: Dp,
@@ -185,6 +187,7 @@ fun eventLogPanel(
             events = events,
             onDetach = onDetach,
             onClose = onClose,
+            onClearEvents = onClearEvents,
             onDockPositionChange = onDockPositionChange,
             currentDockPosition = currentDockPosition,
             modifier = contentModifier,
@@ -248,6 +251,7 @@ private fun eventLogPanelContent(
     events: SnapshotStateList<Event>,
     onDetach: () -> Unit,
     onClose: () -> Unit,
+    onClearEvents: () -> Unit,
     onDockPositionChange: (EventLogDockPosition) -> Unit,
     currentDockPosition: EventLogDockPosition,
     modifier: Modifier = Modifier,
@@ -271,6 +275,19 @@ private fun eventLogPanelContent(
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (events.isNotEmpty()) {
+                    IconButton(
+                        onClick = onClearEvents,
+                        modifier = Modifier.padding(0.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource("eventlog.clear"),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+
                 // Dock position menu
                 var showDockMenu by remember { mutableStateOf(false) }
                 Box {

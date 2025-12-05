@@ -177,7 +177,7 @@ data class ChatConfig(
 )
 
 data class DeveloperConfig(
-    val enabled: Boolean = false,
+    val enabled: Boolean = true,
     val active: Boolean = false,
 )
 
@@ -424,4 +424,143 @@ object AppConfig {
         url = System.getenv("ASKIMO_PROXY_URL") ?: "",
         authToken = System.getenv("ASKIMO_PROXY_AUTH_TOKEN") ?: "",
     )
+
+    /**
+     * Generic method to update any config field and persist to YAML file.
+     *
+     * @param path Dot-separated path to the field (e.g., "developer.active", "chat.maxRecentMessages")
+     * @param value The new value to set
+     *
+     * Example: AppConfig.updateField("developer.active", true)
+     */
+    fun updateField(path: String, value: Any) {
+        synchronized(this) {
+            val parts = path.split(".")
+            if (parts.size != 2) {
+                log.displayError("Invalid config path: $path. Must be in format 'section.field'", null)
+                return
+            }
+
+            val section = parts[0]
+            val field = parts[1]
+
+            // Update in-memory cache
+            val current = cached ?: loadOnce()
+            cached = when (section) {
+                "developer" -> current.copy(developer = updateDeveloperField(current.developer, field, value))
+                "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
+                "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
+                "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
+                "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
+                "pgvector" -> current.copy(pgvector = updatePgVectorField(current.pgvector, field, value))
+                else -> {
+                    log.displayError("Unknown config section: $section", null)
+                    return
+                }
+            }
+
+            // Persist to YAML file
+            val configPath = resolveOrCreateConfigPath()
+            if (configPath != null && configPath.exists()) {
+                try {
+                    val content = Files.readString(configPath)
+                    val updatedContent = updateYamlField(content, section, field, value)
+                    Files.writeString(configPath, updatedContent)
+                    log.info("Updated $path=$value in $configPath")
+                } catch (e: Exception) {
+                    log.displayError("Failed to persist $path to config file", e)
+                }
+            }
+        }
+    }
+
+    private fun updateDeveloperField(config: DeveloperConfig, field: String, value: Any): DeveloperConfig = when (field) {
+        "enabled" -> config.copy(enabled = value as Boolean)
+        "active" -> config.copy(active = value as Boolean)
+        else -> config
+    }
+
+    private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
+        "maxRecentMessages" -> config.copy(maxRecentMessages = value as Int)
+        "maxTokensForContext" -> config.copy(maxTokensForContext = value as Int)
+        "summarizationThreshold" -> config.copy(summarizationThreshold = value as Int)
+        else -> config
+    }
+
+    private fun updateRetryField(config: RetryConfig, field: String, value: Any): RetryConfig = when (field) {
+        "attempts" -> config.copy(attempts = value as Int)
+        "baseDelayMs" -> config.copy(baseDelayMs = value as Long)
+        else -> config
+    }
+
+    private fun updateThrottleField(config: ThrottleConfig, field: String, value: Any): ThrottleConfig = when (field) {
+        "perRequestSleepMs" -> config.copy(perRequestSleepMs = value as Long)
+        else -> config
+    }
+
+    private fun updateEmbeddingField(config: EmbeddingConfig, field: String, value: Any): EmbeddingConfig = when (field) {
+        "maxCharsPerChunk" -> config.copy(maxCharsPerChunk = value as Int)
+        "chunkOverlap" -> config.copy(chunkOverlap = value as Int)
+        "preferredDim" -> config.copy(preferredDim = value as? Int)
+        else -> config
+    }
+
+    private fun updatePgVectorField(config: PgVectorConfig, field: String, value: Any): PgVectorConfig = when (field) {
+        "url" -> config.copy(url = value as String)
+        "user" -> config.copy(user = value as String)
+        "password" -> config.copy(password = value as String)
+        "table" -> config.copy(table = value as String)
+        else -> config
+    }
+
+    /**
+     * Generic YAML field updater that handles nested sections.
+     */
+    private fun updateYamlField(yamlContent: String, section: String, field: String, value: Any): String {
+        val lines = yamlContent.lines().toMutableList()
+        var inSection = false
+        var fieldLineIndex = -1
+        var sectionLineIndex = -1
+
+        // Find the section and field
+        for (i in lines.indices) {
+            val line = lines[i].trimStart()
+
+            if (line.startsWith("$section:")) {
+                inSection = true
+                sectionLineIndex = i
+            } else if (inSection && line.startsWith("$field:")) {
+                fieldLineIndex = i
+                break
+            } else if (inSection && line.isNotBlank() && !line.startsWith(" ") && !line.startsWith("\t")) {
+                // We've entered another top-level section
+                break
+            }
+        }
+
+        val formattedValue = when (value) {
+            is String -> value
+            is Boolean -> value.toString()
+            is Number -> value.toString()
+            else -> value.toString()
+        }
+
+        if (fieldLineIndex >= 0) {
+            // Update existing field
+            val indent = lines[fieldLineIndex].takeWhile { it.isWhitespace() }
+            lines[fieldLineIndex] = "$indent$field: $formattedValue"
+        } else if (sectionLineIndex >= 0) {
+            // Add field to existing section
+            val sectionIndent = lines[sectionLineIndex].takeWhile { it.isWhitespace() }
+            val fieldIndent = sectionIndent + "  "
+            lines.add(sectionLineIndex + 1, "$fieldIndent$field: $formattedValue")
+        } else {
+            // Add entire section
+            lines.add("")
+            lines.add("$section:")
+            lines.add("  $field: $formattedValue")
+        }
+
+        return lines.joinToString("\n")
+    }
 }

@@ -88,6 +88,20 @@ interface ProviderSettings {
 
 interface HasApiKey {
     var apiKey: String
+
+    /**
+     * Masks the API key for safe logging and display.
+     * Shows first 4 characters followed by asterisks, or just asterisks for short/special keys.
+     */
+    fun maskApiKey(): String {
+        if (apiKey.isBlank()) return "****"
+        if (apiKey == "***keychain***" || apiKey.startsWith("encrypted:")) return "****"
+
+        return when {
+            apiKey.length <= 4 -> "****"
+            else -> "${apiKey.take(4)}****"
+        }
+    }
 }
 
 interface HasBaseUrl {
