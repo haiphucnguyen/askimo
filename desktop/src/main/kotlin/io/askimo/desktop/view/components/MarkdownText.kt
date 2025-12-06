@@ -53,10 +53,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
@@ -148,15 +150,146 @@ private fun renderNode(node: Node) {
 private fun renderParagraph(paragraph: Paragraph) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     val linkColor = MaterialTheme.colorScheme.primary
-    val annotatedText = buildInlineContent(paragraph, inlineCodeBg, linkColor)
 
-    Text(
-        text = annotatedText,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-    )
+    // Extract raw text to check for LaTeX
+    val rawText = extractTextContent(paragraph)
+
+    // Check if this paragraph contains LaTeX formulas with \[ \] or [ ]
+    val latexMatches = mutableListOf<Triple<Int, Int, String>>() // (start, end, content)
+
+    // Find \[ ... \] or standalone [ ... ] patterns
+    var i = 0
+    while (i < rawText.length) {
+        val hasBackslash = i < rawText.length - 1 && rawText[i] == '\\' && rawText[i + 1] == '['
+        val justBracket = rawText[i] == '[' && (i == 0 || rawText[i - 1] != '\\')
+
+        if (hasBackslash || justBracket) {
+            val start = i
+            val contentStart = if (hasBackslash) i + 2 else i + 1
+            var j = contentStart
+
+            while (j < rawText.length) {
+                val hasEndBackslash = j < rawText.length - 1 && rawText[j] == '\\' && rawText[j + 1] == ']'
+                val justEndBracket = rawText[j] == ']' && (j == 0 || rawText[j - 1] != '\\')
+
+                if (hasEndBackslash || justEndBracket) {
+                    val content = rawText.substring(contentStart, j)
+                    // Only treat as math if it contains typical LaTeX/math expressions
+                    val isMathContent = content.contains(Regex("[\\\\^_{}]|\\b(sin|cos|tan|log|ln|exp|theta|pi|alpha|beta|gamma|delta|sum|int|frac)\\b"))
+
+                    if (content.isNotBlank() && isMathContent) {
+                        val endIndex = if (hasEndBackslash) j + 2 else j + 1
+                        latexMatches.add(Triple(start, endIndex, content))
+                        i = endIndex
+                        break
+                    }
+                }
+                j++
+            }
+        }
+        i++
+    }
+
+    // If we found LaTeX, render with mixed content using Row
+    if (latexMatches.isNotEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        ) {
+            var lastIndex = 0
+            latexMatches.forEach { (start, end, latexContent) ->
+                // Render text before LaTeX (if any)
+                if (start > lastIndex) {
+                    val textBefore = rawText.substring(lastIndex, start)
+                    if (textBefore.isNotBlank()) {
+                        Text(
+                            text = textBefore,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                // Render LaTeX formula as image
+                latexFormula(
+                    latex = latexContent.trim(),
+                    fontSize = 32f,
+                )
+
+                lastIndex = end
+            }
+
+            // Render remaining text (if any)
+            if (lastIndex < rawText.length) {
+                val textAfter = rawText.substring(lastIndex)
+                if (textAfter.isNotBlank()) {
+                    Text(
+                        text = textAfter,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    } else {
+        // No LaTeX found, check for dollar notation $ ... $
+        if (rawText.contains("$")) {
+            // Try to detect $ ... $ patterns
+            val dollarRegex = """\$([^\$\n]+?)\$""".toRegex()
+            val dollarMatches = dollarRegex.findAll(rawText).toList()
+
+            if (dollarMatches.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                ) {
+                    var lastIdx = 0
+                    dollarMatches.forEach { match ->
+                        // Render text before
+                        if (match.range.first > lastIdx) {
+                            val textBefore = rawText.substring(lastIdx, match.range.first)
+                            if (textBefore.isNotBlank()) {
+                                Text(
+                                    text = textBefore,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+
+                        // Render LaTeX formula
+                        latexFormula(
+                            latex = match.groupValues[1].trim(),
+                            fontSize = 28f,
+                        )
+
+                        lastIdx = match.range.last + 1
+                    }
+
+                    // Render remaining text
+                    if (lastIdx < rawText.length) {
+                        val textAfter = rawText.substring(lastIdx)
+                        if (textAfter.isNotBlank()) {
+                            Text(
+                                text = textAfter,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+                return
+            }
+        }
+
+        // No LaTeX at all, render normally with full markdown support
+        val annotatedText = buildInlineContent(paragraph, inlineCodeBg, linkColor)
+        Text(
+            text = annotatedText,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        )
+    }
 }
 
 @Composable
@@ -565,7 +698,109 @@ private fun buildInlineContent(
     var child = node.firstChild
     while (child != null) {
         when (child) {
-            is MarkdownText -> append(child.literal)
+            is MarkdownText -> {
+                val text = child.literal
+                var lastIndex = 0
+
+                // Detect inline math expressions wrapped in \[ \] or [ ] or $ $ or $$ $$
+                val mathRanges = mutableListOf<Triple<IntRange, String, Boolean>>() // Triple(range, content, isDisplayMath)
+
+                // Find display math \[ ... \] or [ ... ] (markdown parser might strip the backslash)
+                var i = 0
+                while (i < text.length) {
+                    // Check for \[ or just [
+                    val hasBackslash = i < text.length - 1 && text[i] == '\\' && text[i + 1] == '['
+                    val justBracket = text[i] == '[' && (i == 0 || text[i - 1] != '\\')
+
+                    if (hasBackslash || justBracket) {
+                        // Found start of display math
+                        val start = i
+                        val contentStart = if (hasBackslash) i + 2 else i + 1
+                        var j = contentStart
+                        var foundEnd = false
+
+                        while (j < text.length) {
+                            // Check for \] or just ]
+                            val hasEndBackslash = j < text.length - 1 && text[j] == '\\' && text[j + 1] == ']'
+                            val justEndBracket = text[j] == ']' && (j == 0 || text[j - 1] != '\\')
+
+                            if (hasEndBackslash || justEndBracket) {
+                                // Found end of display math
+                                val content = text.substring(contentStart, j)
+                                // Only treat as math if it contains typical math content
+                                if (content.contains(Regex("[a-zA-Z\\\\^_{}=+\\-*/()]"))) {
+                                    val endIndex = if (hasEndBackslash) j + 1 else j
+                                    mathRanges.add(Triple(IntRange(start, endIndex), content, true))
+                                    i = endIndex + 1 // Skip past the math expression
+                                    foundEnd = true
+                                    break
+                                }
+                            }
+                            j++
+                        }
+
+                        // If we didn't find the end, just move past the opening bracket
+                        if (!foundEnd) {
+                            i++
+                        }
+                    } else {
+                        i++
+                    }
+                }
+
+                // Find dollar notation math $$ ... $$ and $ ... $
+                val dollarRegex = """\$\$(.+?)\$\$|\$([^\$\n]+?)\$""".toRegex()
+                dollarRegex.findAll(text).forEach { match ->
+                    // Check if this range doesn't overlap with already found ranges
+                    val overlaps = mathRanges.any { (range, _, _) ->
+                        match.range.first in range || match.range.last in range ||
+                            range.first in match.range || range.last in match.range
+                    }
+                    if (!overlaps) {
+                        val content = match.groupValues[1].ifEmpty { match.groupValues[2] }
+                        val isDisplayMath = match.value.startsWith("$$")
+                        mathRanges.add(Triple(match.range, content, isDisplayMath))
+                    }
+                }
+
+                // Sort by position
+                mathRanges.sortBy { it.first.first }
+
+                // Reset lastIndex for building the final string
+                lastIndex = 0
+
+                // Build the annotated string with math expressions
+                mathRanges.forEach { (range, content, _) ->
+                    // Append text before the math expression
+                    if (range.first > lastIndex) {
+                        append(text.substring(lastIndex, range.first))
+                    }
+
+                    // Render the math expression
+                    // For now, we'll use a placeholder and render the image separately
+                    // because Compose Text doesn't support inline images directly
+                    if (content.isNotEmpty()) {
+                        withStyle(
+                            SpanStyle(
+                                fontFamily = FontFamily.Serif,
+                                fontStyle = FontStyle.Italic,
+                                background = inlineCodeBg.copy(alpha = 0.2f),
+                            ),
+                        ) {
+                            append(" ")
+                            append(parseLatexMath(content.trim()))
+                            append(" ")
+                        }
+                    }
+
+                    lastIndex = range.last + 1
+                }
+
+                // Append remaining text after the last match
+                if (lastIndex < text.length) {
+                    append(text.substring(lastIndex))
+                }
+            }
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
                     append(buildInlineContent(child, inlineCodeBg, linkColor))
@@ -637,6 +872,150 @@ private fun buildInlineContentForNode(
     linkColor: Color,
 ): AnnotatedString = buildAnnotatedString {
     append(buildInlineContent(node, inlineCodeBg, linkColor))
+}
+
+/**
+ * Parse LaTeX math expressions and convert to styled AnnotatedString.
+ * Handles superscripts, subscripts, and Greek letter symbols.
+ */
+private fun parseLatexMath(latex: String): AnnotatedString = buildAnnotatedString {
+    var text = latex
+
+    // Handle superscripts (e.g., e^{i\theta} or x^2)
+    val superscriptRegex = """\^(\{[^}]+\}|\S)""".toRegex()
+    text = superscriptRegex.replace(text) { matchResult ->
+        val content = matchResult.groupValues[1].removeSurrounding("{", "}")
+        "^($content)"
+    }
+
+    // Handle subscripts (e.g., x_{n})
+    val subscriptRegex = """_(\{[^}]+\}|\S)""".toRegex()
+    text = subscriptRegex.replace(text) { matchResult ->
+        val content = matchResult.groupValues[1].removeSurrounding("{", "}")
+        "_($content)"
+    }
+
+    // Replace Greek letters and special mathematical symbols
+    val symbols = mapOf(
+        "\\theta" to "θ",
+        "\\pi" to "π",
+        "\\alpha" to "α",
+        "\\beta" to "β",
+        "\\gamma" to "γ",
+        "\\delta" to "δ",
+        "\\epsilon" to "ε",
+        "\\zeta" to "ζ",
+        "\\eta" to "η",
+        "\\lambda" to "λ",
+        "\\mu" to "μ",
+        "\\nu" to "ν",
+        "\\xi" to "ξ",
+        "\\rho" to "ρ",
+        "\\sigma" to "σ",
+        "\\tau" to "τ",
+        "\\phi" to "φ",
+        "\\chi" to "χ",
+        "\\psi" to "ψ",
+        "\\omega" to "ω",
+        "\\Theta" to "Θ",
+        "\\Pi" to "Π",
+        "\\Sigma" to "Σ",
+        "\\Phi" to "Φ",
+        "\\Psi" to "Ψ",
+        "\\Omega" to "Ω",
+        "\\Delta" to "Δ",
+        "\\Gamma" to "Γ",
+        "\\Lambda" to "Λ",
+        "\\infty" to "∞",
+        "\\sum" to "∑",
+        "\\prod" to "∏",
+        "\\int" to "∫",
+        "\\sqrt" to "√",
+        "\\cdot" to "⋅",
+        "\\times" to "×",
+        "\\div" to "÷",
+        "\\pm" to "±",
+        "\\mp" to "∓",
+        "\\neq" to "≠",
+        "\\leq" to "≤",
+        "\\geq" to "≥",
+        "\\approx" to "≈",
+        "\\equiv" to "≡",
+        "\\in" to "∈",
+        "\\notin" to "∉",
+        "\\subset" to "⊂",
+        "\\supset" to "⊃",
+        "\\cup" to "∪",
+        "\\cap" to "∩",
+        "\\forall" to "∀",
+        "\\exists" to "∃",
+        "\\nabla" to "∇",
+        "\\partial" to "∂",
+        "\\propto" to "∝",
+        "\\rightarrow" to "→",
+        "\\leftarrow" to "←",
+        "\\leftrightarrow" to "↔",
+        "\\Rightarrow" to "⇒",
+        "\\Leftarrow" to "⇐",
+        "\\Leftrightarrow" to "⇔",
+        "\\cos" to "cos",
+        "\\sin" to "sin",
+        "\\tan" to "tan",
+        "\\log" to "log",
+        "\\ln" to "ln",
+        "\\exp" to "exp",
+    )
+
+    symbols.forEach { (latex, unicode) ->
+        text = text.replace(latex, unicode)
+    }
+
+    // Parse and apply styles for superscripts and subscripts
+    var i = 0
+    while (i < text.length) {
+        when {
+            // Superscript
+            text[i] == '^' && i + 1 < text.length && text[i + 1] == '(' -> {
+                val end = text.indexOf(')', i + 2)
+                if (end != -1) {
+                    withStyle(
+                        SpanStyle(
+                            fontSize = 11.sp,
+                            baselineShift = BaselineShift(0.5f),
+                        ),
+                    ) {
+                        append(text.substring(i + 2, end))
+                    }
+                    i = end + 1
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            // Subscript
+            text[i] == '_' && i + 1 < text.length && text[i + 1] == '(' -> {
+                val end = text.indexOf(')', i + 2)
+                if (end != -1) {
+                    withStyle(
+                        SpanStyle(
+                            fontSize = 11.sp,
+                            baselineShift = BaselineShift(-0.3f),
+                        ),
+                    ) {
+                        append(text.substring(i + 2, end))
+                    }
+                    i = end + 1
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            else -> {
+                append(text[i])
+                i++
+            }
+        }
+    }
 }
 
 /**

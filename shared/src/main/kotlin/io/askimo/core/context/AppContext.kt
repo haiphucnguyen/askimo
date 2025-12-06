@@ -178,8 +178,15 @@ class AppContext(
      * Gets the current provider's settings.
      */
     fun getCurrentProviderSettings(): ProviderSettings = params.providerSettings[params.currentProvider]
-        ?: getModelFactory()?.defaultSettings()
+        ?: ProviderRegistry.getFactory(params.currentProvider)?.defaultSettings()
         ?: NoopProviderSettings
+
+    /**
+     * Gets the provider-specific settings map, or creates defaults if missing.
+     */
+    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings = params.providerSettings.getOrPut(provider) {
+        getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
+    }
 
     /**
      * Sets the provider-specific settings into the map.
@@ -192,21 +199,9 @@ class AppContext(
     }
 
     /**
-     * Returns the registered factory for the current provider.
-     */
-    fun getModelFactory(): ChatModelFactory<*>? = ProviderRegistry.getFactory(params.currentProvider)
-
-    /**
      * Returns the registered factory for the given provider.
      */
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
-
-    /**
-     * Gets the provider-specific settings map, or creates defaults if missing.
-     */
-    fun getOrCreateProviderSettings(provider: ModelProvider): ProviderSettings = params.providerSettings.getOrPut(provider) {
-        getModelFactory(provider)?.defaultSettings() ?: NoopProviderSettings
-    }
 
     /**
      * Safely calls createMemory on a factory with the given settings.
@@ -412,7 +407,7 @@ class AppContext(
         currentChatSession?.let { session ->
             chatMessageRepository.addMessage(
                 ChatMessage(
-                    id = "", // Will be auto-generated
+                    id = "",
                     sessionId = session.id,
                     role = role,
                     content = content,
@@ -757,6 +752,7 @@ class AppContext(
         try {
             // Get messages that haven't been summarized yet
             val existingSummary = conversationSummaryRepository.getConversationSummary(sessionId)
+            log.debug("Existing summary: $existingSummary")
             val lastSummarizedId = existingSummary?.lastSummarizedMessageId ?: ""
 
             val messagesToSummarize = if (lastSummarizedId.isEmpty()) {
