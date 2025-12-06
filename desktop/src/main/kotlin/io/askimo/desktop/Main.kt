@@ -247,7 +247,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             parametersOf(
                 scope,
                 sessionManager,
-                { appContext.startNewChatSession().id }, // onCreateNewSession callback
+                { appContext.startNewChatSession().id },
             )
         }
     }

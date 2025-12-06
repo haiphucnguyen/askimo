@@ -23,6 +23,7 @@ exposed = "0.61.0"
 compose = "1.9.3"
 coil = "3.3.0"
 koin = "4.1.1"
+jlatexmath = "1.0.7"
 
 [libraries]
 # JLine
@@ -46,6 +47,9 @@ langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai"
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { group = "org.commonmark", name = "commonmark-ext-gfm-tables", version.ref = "commonmark" }
 commonmark-ext-autolink = { group = "org.commonmark", name = "commonmark-ext-autolink", version.ref = "commonmark" }
+
+# LaTeX Rendering
+jlatexmath = { group = "org.scilab.forge", name = "jlatexmath", version.ref = "jlatexmath" }
 
 # Image Loading (Coil)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }

@@ -30,6 +30,7 @@ dependencies {
     implementation(libs.commonmark.ext.autolink)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.jlatexmath)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.koin.test)
@@ -263,4 +264,19 @@ tasks.register("detectUnusedLocalizations") {
             }
         }
     }
+}
+tasks.register<JavaExec>("runLatexTest") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("io.askimo.desktop.view.components.LatexParsingTestKt")
+}
+tasks.register<JavaExec>("testMarkdownLatex") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("io.askimo.desktop.view.components.MarkdownLatexTestKt")
+}
+tasks.register<JavaExec>("runLatexVisualTest") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("io.askimo.desktop.view.components.LatexVisualTestKt")
 }

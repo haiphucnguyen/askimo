@@ -62,6 +62,8 @@ import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.theme.ComponentColors
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.get
+import java.awt.Desktop
+import java.net.URI
 
 /**
  * Footer bar component showing system resources, notifications, and version info.
@@ -143,6 +145,23 @@ fun footerBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                TextButton(
+                    onClick = {
+                        try {
+                            Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo/issues"))
+                        } catch (e: Exception) {
+                            // Silently fail if unable to open browser
+                        }
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Text(
+                        text = stringResource("system.share.feedback"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
                 notificationIcon(onShowUpdateDetails = onShowUpdateDetails)
 
                 Text(
