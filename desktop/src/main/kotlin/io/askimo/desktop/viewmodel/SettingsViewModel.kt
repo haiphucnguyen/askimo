@@ -284,7 +284,6 @@ class SettingsViewModel(
      * Load models for the selected provider (used in provider dialog flow).
      */
     fun loadModelsForSelectedProvider() {
-        pendingModelForNewProvider = null
         modelError = null
         modelErrorHelp = null
         isLoadingModels = true
@@ -296,6 +295,7 @@ class SettingsViewModel(
                 availableModels = emptyList()
                 modelError = "Provider not set"
                 modelErrorHelp = null
+                pendingModelForNewProvider = null
                 return@launch
             }
 
@@ -306,6 +306,7 @@ class SettingsViewModel(
                     availableModels = emptyList()
                     modelError = "No model factory registered for provider: ${provider.name.lowercase()}"
                     modelErrorHelp = null
+                    pendingModelForNewProvider = null
                     return@withContext
                 }
 
@@ -326,10 +327,19 @@ class SettingsViewModel(
                     availableModels = emptyList()
                     modelError = "No models available for ${provider.name.lowercase()}"
                     modelErrorHelp = factory.getNoModelsHelpText()
+                    pendingModelForNewProvider = null
                 } else {
                     availableModels = models
                     modelError = null
                     modelErrorHelp = null
+
+                    // Pre-select the previously selected model if it exists in the available models
+                    val previousModel = appContext.params.getModel(provider)
+                    if (previousModel.isNotBlank() && models.contains(previousModel)) {
+                        pendingModelForNewProvider = previousModel
+                    } else {
+                        pendingModelForNewProvider = null
+                    }
                 }
             }
         }
