@@ -546,16 +546,13 @@ object AppConfig {
         }
 
         if (fieldLineIndex >= 0) {
-            // Update existing field
             val indent = lines[fieldLineIndex].takeWhile { it.isWhitespace() }
             lines[fieldLineIndex] = "$indent$field: $formattedValue"
         } else if (sectionLineIndex >= 0) {
-            // Add field to existing section
             val sectionIndent = lines[sectionLineIndex].takeWhile { it.isWhitespace() }
-            val fieldIndent = sectionIndent + "  "
+            val fieldIndent = "$sectionIndent  "
             lines.add(sectionLineIndex + 1, "$fieldIndent$field: $formattedValue")
         } else {
-            // Add entire section
             lines.add("")
             lines.add("$section:")
             lines.add("  $field: $formattedValue")

@@ -30,6 +30,8 @@ object ThemePreferences {
     private const val WINDOW_X_KEY = "window_x"
     private const val WINDOW_Y_KEY = "window_y"
     private const val WINDOW_IS_MAXIMIZED_KEY = "window_is_maximized"
+    private const val USER_AVATAR_PATH_KEY = "user_avatar_path"
+    private const val AI_AVATAR_PATH_KEY = "ai_avatar_path"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
@@ -170,4 +172,24 @@ object ThemePreferences {
     fun getWindowX(): Int = prefs.getInt(WINDOW_X_KEY, -1)
     fun getWindowY(): Int = prefs.getInt(WINDOW_Y_KEY, -1)
     fun isWindowMaximized(): Boolean = prefs.getBoolean(WINDOW_IS_MAXIMIZED_KEY, true) // Default to maximized
+
+    // Avatar management
+    fun getUserAvatarPath(): String? = prefs.get(USER_AVATAR_PATH_KEY, null)
+    fun getAIAvatarPath(): String? = prefs.get(AI_AVATAR_PATH_KEY, null)
+
+    fun setUserAvatarPath(path: String?) {
+        if (path != null) {
+            prefs.put(USER_AVATAR_PATH_KEY, path)
+        } else {
+            prefs.remove(USER_AVATAR_PATH_KEY)
+        }
+    }
+
+    fun setAIAvatarPath(path: String?) {
+        if (path != null) {
+            prefs.put(AI_AVATAR_PATH_KEY, path)
+        } else {
+            prefs.remove(AI_AVATAR_PATH_KEY)
+        }
+    }
 }

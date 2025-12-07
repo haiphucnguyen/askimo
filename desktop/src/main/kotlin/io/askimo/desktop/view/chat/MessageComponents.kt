@@ -6,6 +6,7 @@ package io.askimo.desktop.view.chat
 
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -80,6 +85,8 @@ fun messageList(
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessage) -> Unit)? = null,
+    userAvatarPath: String? = null,
+    aiAvatarPath: String? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -170,6 +177,8 @@ fun messageList(
                             isActiveSearchResult = isActiveResult,
                             onMessageClick = onMessageClick,
                             onEditMessage = onEditMessage,
+                            userAvatarPath = userAvatarPath,
+                            aiAvatarPath = aiAvatarPath,
                         )
                         messageIndex++
                     }
@@ -224,6 +233,8 @@ fun messageBubble(
     isActiveSearchResult: Boolean = false,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessage) -> Unit)? = null,
+    userAvatarPath: String? = null,
+    aiAvatarPath: String? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -243,7 +254,38 @@ fun messageBubble(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Top,
         ) {
+            if (!message.isUser) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (aiAvatarPath != null) {
+                        io.askimo.desktop.view.components.asyncImage(
+                            imagePath = aiAvatarPath,
+                            contentDescription = "AI",
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.SmartToy,
+                            contentDescription = "AI",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
             Box(
                 modifier = Modifier
                     .onPointerEvent(PointerEventType.Enter) { isHovered = true }
@@ -444,6 +486,37 @@ fun messageBubble(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // Show user icon on the right for user messages
+            if (message.isUser) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (userAvatarPath != null) {
+                        io.askimo.desktop.view.components.asyncImage(
+                            imagePath = userAvatarPath,
+                            contentDescription = "User",
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "User",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
             }

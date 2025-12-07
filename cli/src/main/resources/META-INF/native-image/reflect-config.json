@@ -680,8 +680,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4521,7 +4520,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$qfiVO9gr",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$LQhifgCW",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

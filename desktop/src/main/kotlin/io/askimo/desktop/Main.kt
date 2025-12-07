@@ -547,6 +547,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                             previousView = currentView
                                             currentView = View.SETTINGS
                                         },
+                                        activeSessionId = activeSessionId,
                                         sessionChatState = sessionChatStates[activeSessionId],
                                         onChatStateChange = { inputText, attachments, editingMessage ->
                                             activeSessionId?.let { sessionId ->
@@ -762,6 +763,7 @@ fun mainContent(
     appContext: AppContext,
     onResumeSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit,
 ) {
@@ -815,6 +817,10 @@ fun mainContent(
                     initialAttachments = sessionChatState?.attachments ?: emptyList(),
                     initialEditingMessage = sessionChatState?.editingMessage,
                     onStateChange = onChatStateChange,
+                    sessionId = activeSessionId,
+                    onExportSession = { sessionId ->
+                        sessionsViewModel.exportSession(sessionId)
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             }

@@ -69,6 +69,7 @@ import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
 import io.askimo.desktop.view.components.manageDirectivesDialog
 import io.askimo.desktop.view.components.newDirectiveDialog
+import io.askimo.desktop.view.components.sessionActionsMenu
 import io.askimo.desktop.view.components.themedTooltip
 import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
@@ -171,6 +172,8 @@ fun chatView(
     initialAttachments: List<FileAttachment> = emptyList(),
     initialEditingMessage: ChatMessage? = null,
     onStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit = { _, _, _ -> },
+    sessionId: String? = null,
+    onExportSession: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Internal state management for ChatView
@@ -215,6 +218,10 @@ fun chatView(
             inputFocusRequester.requestFocus()
         }
     }
+
+    // Load avatar paths
+    val userAvatarPath = remember { io.askimo.desktop.preferences.ThemePreferences.getUserAvatarPath() }
+    val aiAvatarPath = remember { io.askimo.desktop.preferences.ThemePreferences.getAIAvatarPath() }
 
     // Show new directive dialog
     if (showNewDirectiveDialog) {
@@ -573,6 +580,14 @@ fun chatView(
                                 )
                             }
                         }
+
+                        // Session actions menu (Export, etc.)
+                        if (sessionId != null) {
+                            sessionActionsMenu(
+                                sessionId = sessionId,
+                                onExportSession = onExportSession,
+                            )
+                        }
                     }
                 }
             }
@@ -717,6 +732,8 @@ fun chatView(
                                 editingAIMessage = message
                             }
                         },
+                        userAvatarPath = userAvatarPath,
+                        aiAvatarPath = aiAvatarPath,
                     )
                 }
                 messages.isEmpty() -> {
@@ -750,6 +767,8 @@ fun chatView(
                                 editingAIMessage = message
                             }
                         },
+                        userAvatarPath = userAvatarPath,
+                        aiAvatarPath = aiAvatarPath,
                     )
                 }
             }
