@@ -9,7 +9,6 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.context.MemoryPolicy.RESET_FOR_THIS_COMBO
-import io.askimo.core.db.DatabaseManager
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
@@ -89,10 +88,6 @@ class AppContext(
 ) {
     private val log = logger<AppContext>()
     private val memoryMap = mutableMapOf<String, ChatMemory>()
-
-    // Chat session support with intelligent context management
-    private val databaseManager = DatabaseManager.getInstance()
-    val chatSessionRepository = databaseManager.getChatSessionRepository()
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
