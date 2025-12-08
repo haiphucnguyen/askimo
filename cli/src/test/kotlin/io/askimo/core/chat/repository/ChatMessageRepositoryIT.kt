@@ -98,6 +98,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should retrieve recent messages in chronological order`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(25) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -105,6 +106,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -146,12 +148,14 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should retrieve messages after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "First",
+                createdAt = baseTime,
             ),
         )
         val message2 = messageRepository.addMessage(
@@ -160,6 +164,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Second",
+                createdAt = baseTime.plusSeconds(1),
             ),
         )
         val message3 = messageRepository.addMessage(
@@ -168,6 +173,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "Third",
+                createdAt = baseTime.plusSeconds(2),
             ),
         )
         val message4 = messageRepository.addMessage(
@@ -176,6 +182,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Fourth",
+                createdAt = baseTime.plusSeconds(3),
             ),
         )
 
@@ -230,6 +237,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should limit recent messages correctly`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -237,6 +245,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -301,12 +310,14 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should mark messages as outdated after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "First",
+                createdAt = baseTime,
             ),
         )
         messageRepository.addMessage(
@@ -315,6 +326,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Second",
+                createdAt = baseTime.plusSeconds(1),
             ),
         )
         messageRepository.addMessage(
@@ -323,6 +335,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "Third",
+                createdAt = baseTime.plusSeconds(2),
             ),
         )
 
@@ -397,6 +410,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate messages forward from start`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -404,6 +418,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -424,6 +439,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate messages backward from end`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -431,6 +447,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -451,6 +468,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should return null cursor when no more messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(3) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -458,6 +476,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -501,6 +520,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate through entire message history forward`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -508,6 +528,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -533,6 +554,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should not duplicate messages across pages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -540,6 +562,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -736,6 +759,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should load attachments with recent messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -743,6 +767,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                     attachments = listOf(
                         FileAttachment(
                             id = "",
@@ -751,7 +776,7 @@ class ChatMessageRepositoryIT {
                             fileName = "file$i.txt",
                             mimeType = "txt",
                             size = (i * 100).toLong(),
-                            createdAt = LocalDateTime.now(),
+                            createdAt = baseTime.plusSeconds(i.toLong()),
                             content = "content$i",
                         ),
                     ),
@@ -772,6 +797,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should load attachments with paginated messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -779,6 +805,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                     attachments = listOf(
                         FileAttachment(
                             id = "",
@@ -787,7 +814,7 @@ class ChatMessageRepositoryIT {
                             fileName = "file$i.txt",
                             mimeType = "txt",
                             size = (i * 100).toLong(),
-                            createdAt = LocalDateTime.now(),
+                            createdAt = baseTime.plusSeconds(i.toLong()),
                             content = "content$i",
                         ),
                     ),
@@ -1008,12 +1035,14 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should load attachments after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "First",
+                createdAt = baseTime,
                 attachments = listOf(
                     FileAttachment(
                         id = "",
@@ -1022,7 +1051,7 @@ class ChatMessageRepositoryIT {
                         fileName = "first.txt",
                         mimeType = "txt",
                         size = 100L,
-                        createdAt = LocalDateTime.now(),
+                        createdAt = baseTime,
                         content = "first content",
                     ),
                 ),
@@ -1035,6 +1064,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "Second",
+                createdAt = baseTime.plusSeconds(1),
                 attachments = listOf(
                     FileAttachment(
                         id = "",
@@ -1043,7 +1073,7 @@ class ChatMessageRepositoryIT {
                         fileName = "second.txt",
                         mimeType = "txt",
                         size = 200L,
-                        createdAt = LocalDateTime.now(),
+                        createdAt = baseTime.plusSeconds(1),
                         content = "second content",
                     ),
                 ),
