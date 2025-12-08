@@ -48,6 +48,8 @@ class ChatSessionRepositoryIT {
             if (::databaseManager.isInitialized) {
                 databaseManager.close()
             }
+            // Reset the singleton to close any file-based database that might have been created
+            DatabaseManager.reset()
             if (::testBaseScope.isInitialized) {
                 testBaseScope.close()
             }
