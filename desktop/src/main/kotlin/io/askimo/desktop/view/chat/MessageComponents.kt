@@ -62,10 +62,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.core.chat.dto.ChatMessageDTO
+import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
-import io.askimo.desktop.model.ChatMessage
-import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.highlightSearchText
 import io.askimo.desktop.view.components.markdownText
@@ -74,7 +74,7 @@ import java.time.LocalDateTime
 
 @Composable
 fun messageList(
-    messages: List<ChatMessage>,
+    messages: List<ChatMessageDTO>,
     isThinking: Boolean = false,
     thinkingElapsedSeconds: Int = 0,
     spinnerFrame: Char = '⠋',
@@ -84,7 +84,7 @@ fun messageList(
     searchQuery: String = "",
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
-    onEditMessage: ((ChatMessage) -> Unit)? = null,
+    onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
 ) {
@@ -183,7 +183,6 @@ fun messageList(
                         messageIndex++
                     }
                     is MessageGroup.OutdatedBranch -> {
-                        // Show collapsible outdated branch
                         outdatedBranchComponent(
                             messages = group.messages,
                         )
@@ -228,11 +227,11 @@ fun messageList(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun messageBubble(
-    message: ChatMessage,
+    message: ChatMessageDTO,
     searchQuery: String = "",
     isActiveSearchResult: Boolean = false,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
-    onEditMessage: ((ChatMessage) -> Unit)? = null,
+    onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
 ) {
@@ -241,10 +240,6 @@ fun messageBubble(
     val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        // Dynamic width calculation based on available space
-        // For narrow screens: use 90% of width (min 200dp)
-        // For medium screens: use 75% of width (up to 800dp)
-        // For wide screens: use 65% of width (max 1000dp for readability)
         val maxBubbleWidth = when {
             maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
             maxWidth < 1200.dp -> (maxWidth * 0.75f).coerceAtMost(800.dp)
@@ -540,7 +535,7 @@ fun messageBubble(
 }
 
 @Composable
-private fun fileAttachmentChip(attachment: FileAttachment) {
+private fun fileAttachmentChip(attachment: FileAttachmentDTO) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -577,7 +572,7 @@ private fun fileAttachmentChip(attachment: FileAttachment) {
 
 @Composable
 fun aiMessageEditDialog(
-    message: ChatMessage,
+    message: ChatMessageDTO,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {

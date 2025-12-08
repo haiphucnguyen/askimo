@@ -34,6 +34,11 @@ dependencies {
     api(kotlin("stdlib"))
     api(libs.slf4j.api)
     api(libs.logback.classic)
+    implementation(libs.tika.core)
+    implementation(libs.tika.parser.pdf) {
+        exclude(group = "org.eclipse.angus", module = "angus-activation")
+    }
+    implementation(libs.tika.parser.microsoft)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)

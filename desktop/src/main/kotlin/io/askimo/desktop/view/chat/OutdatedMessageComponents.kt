@@ -34,23 +34,23 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.desktop.i18n.stringResource
-import io.askimo.desktop.model.ChatMessage
 
 /**
  * Sealed class to represent different types of message groups
  */
 sealed class MessageGroup {
-    data class ActiveMessage(val message: ChatMessage) : MessageGroup()
-    data class OutdatedBranch(val messages: List<ChatMessage>) : MessageGroup()
+    data class ActiveMessage(val message: ChatMessageDTO) : MessageGroup()
+    data class OutdatedBranch(val messages: List<ChatMessageDTO>) : MessageGroup()
 }
 
 /**
  * Group messages into active and outdated branches for display
  */
-fun groupMessagesWithOutdatedBranches(messages: List<ChatMessage>): List<MessageGroup> {
+fun groupMessagesWithOutdatedBranches(messages: List<ChatMessageDTO>): List<MessageGroup> {
     val groups = mutableListOf<MessageGroup>()
-    val outdatedBuffer = mutableListOf<ChatMessage>()
+    val outdatedBuffer = mutableListOf<ChatMessageDTO>()
 
     messages.forEach { message ->
         if (message.isOutdated) {
@@ -79,7 +79,7 @@ fun groupMessagesWithOutdatedBranches(messages: List<ChatMessage>): List<Message
  */
 @Composable
 fun outdatedBranchComponent(
-    messages: List<ChatMessage>,
+    messages: List<ChatMessageDTO>,
     modifier: Modifier = Modifier,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -151,7 +151,7 @@ fun outdatedBranchComponent(
  * Component to display a single outdated message
  */
 @Composable
-fun outdatedMessageItem(message: ChatMessage) {
+fun outdatedMessageItem(message: ChatMessageDTO) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

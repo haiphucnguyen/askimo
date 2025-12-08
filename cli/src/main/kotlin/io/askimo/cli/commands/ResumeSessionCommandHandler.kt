@@ -4,19 +4,16 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.context.AppContext
-import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
 
-class ResumeSessionCommandHandler(private val appContext: AppContext) : CommandHandler {
+class ResumeSessionCommandHandler(private val sessionService: ChatSessionService) : CommandHandler {
     private val log = logger<ResumeSessionCommandHandler>()
     override val keyword = ":resume-session"
     override val description = "Resume a chat session by ID"
-
-    private val sessionService = ChatSessionService()
 
     override fun handle(line: ParsedLine) {
         val args = line.words()
@@ -26,20 +23,26 @@ class ResumeSessionCommandHandler(private val appContext: AppContext) : CommandH
         }
 
         val sessionId = args[1]
-        val result = sessionService.resumeSession(appContext, sessionId)
-
-        if (result.success) {
-            log.display("✅ Resumed chat session: $sessionId")
-            if (result.messages.isNotEmpty()) {
-                log.display("\n📝 All conversation history:")
-                result.messages.forEach { msg ->
-                    val prefix = if (msg.role == MessageRole.USER) "You" else "Assistant"
-                    log.display("$prefix: ${msg.content}")
-                    log.display("-".repeat(40))
-                }
-            }
+        val session = sessionService.getSessionById(sessionId)
+        if (session == null) {
+            log.display("❌ No session found with ID: $sessionId")
+            return
         } else {
-            log.display("❌ ${result.errorMessage}")
+            CliInteractiveContext.setCurrentSession(session)
+            val result = sessionService.resumeSession(sessionId)
+            if (result.success) {
+                log.display("✅ Resumed chat session: $sessionId")
+                if (result.messages.isNotEmpty()) {
+                    log.display("\n📝 All conversation history:")
+                    result.messages.forEach { msg ->
+                        val prefix = if (msg.isUser) "You" else "Assistant"
+                        log.display("$prefix: ${msg.content}")
+                        log.display("-".repeat(40))
+                    }
+                }
+            } else {
+                log.display("❌ ${result.errorMessage}")
+            }
         }
     }
 }

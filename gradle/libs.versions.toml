@@ -24,6 +24,7 @@ compose = "1.9.3"
 coil = "3.3.0"
 koin = "4.1.1"
 jlatexmath = "1.0.7"
+tika = "3.2.3"
 
 [libraries]
 # JLine
@@ -68,6 +69,11 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # Logging
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
+
+# Apache Tika (File type detection and content extraction)
+tika-core = { group = "org.apache.tika", name = "tika-core", version.ref = "tika" }
+tika-parser-pdf = { group = "org.apache.tika", name = "tika-parser-pdf-module", version.ref = "tika" }
+tika-parser-microsoft = { group = "org.apache.tika", name = "tika-parser-microsoft-module", version.ref = "tika" }
 
 # Database and MCP SDK
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }

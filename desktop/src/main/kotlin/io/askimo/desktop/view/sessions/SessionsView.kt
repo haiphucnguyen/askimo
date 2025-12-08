@@ -286,7 +286,7 @@ private fun paginationControls(
         ) {
             Icon(
                 Icons.Default.ChevronLeft,
-                contentDescription = "Previous page",
+                contentDescription = stringResource("sessions.page.previous"),
             )
         }
 
@@ -303,7 +303,7 @@ private fun paginationControls(
         ) {
             Icon(
                 Icons.Default.ChevronRight,
-                contentDescription = "Next page",
+                contentDescription = stringResource("sessions.page.next"),
             )
         }
     }

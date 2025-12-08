@@ -19,7 +19,7 @@ import io.askimo.core.logging.logger
 import org.jetbrains.skia.Image
 import java.io.File
 
-private val log = logger<Unit>()
+private val log = logger("AsyncImageLogger")
 
 /**
  * Asynchronously load and display an image from a file path.

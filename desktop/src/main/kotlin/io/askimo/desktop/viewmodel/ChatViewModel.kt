@@ -7,15 +7,13 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.dto.ChatMessageDTO
+import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.logger
-import io.askimo.desktop.model.ChatMessage
-import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.util.ErrorHandler
-import io.askimo.desktop.util.constructMessageWithAttachments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +41,7 @@ class ChatViewModel(
 ) {
     private val log = logger<ChatViewModel>()
 
-    var messages by mutableStateOf(listOf<ChatMessage>())
+    var messages by mutableStateOf(listOf<ChatMessageDTO>())
         private set
 
     var isLoading by mutableStateOf(false)
@@ -76,7 +74,7 @@ class ChatViewModel(
     var searchQuery by mutableStateOf("")
         private set
 
-    var searchResults by mutableStateOf<List<ChatMessage>>(emptyList())
+    var searchResults by mutableStateOf<List<ChatMessageDTO>>(emptyList())
         private set
 
     var currentSearchResultIndex by mutableStateOf(0)
@@ -87,8 +85,6 @@ class ChatViewModel(
 
     var selectedDirective by mutableStateOf<String?>(null)
         private set
-
-    private val sessionService = ChatSessionService()
 
     private var onMessageComplete: (() -> Unit)? = null
     private var currentJob: Job? = null
@@ -143,14 +139,18 @@ class ChatViewModel(
                 val streamingContent = activeThread.chunks.value.joinToString("")
                 val lastMessage = messages.lastOrNull()
                 if (lastMessage != null && !lastMessage.isUser) {
-                    messages = messages.dropLast(1) + ChatMessage(
+                    messages = messages.dropLast(1) + ChatMessageDTO(
                         content = streamingContent,
                         isUser = false,
+                        id = null,
+                        timestamp = null,
                     )
                 } else {
-                    messages = messages + ChatMessage(
+                    messages = messages + ChatMessageDTO(
                         content = streamingContent,
                         isUser = false,
+                        id = null,
+                        timestamp = null,
                     )
                 }
             }
@@ -173,14 +173,18 @@ class ChatViewModel(
 
                             val lastMessage = messages.lastOrNull()
                             if (lastMessage != null && !lastMessage.isUser) {
-                                messages = messages.dropLast(1) + ChatMessage(
+                                messages = messages.dropLast(1) + ChatMessageDTO(
                                     content = streamingContent,
                                     isUser = false,
+                                    id = null,
+                                    timestamp = null,
                                 )
                             } else {
-                                messages = messages + ChatMessage(
+                                messages = messages + ChatMessageDTO(
                                     content = streamingContent,
                                     isUser = false,
+                                    id = null,
+                                    timestamp = null,
                                 )
                             }
 
@@ -229,8 +233,8 @@ class ChatViewModel(
      */
     fun sendOrEditMessage(
         message: String,
-        attachments: List<FileAttachment> = emptyList(),
-        editingMessage: ChatMessage? = null,
+        attachments: List<FileAttachmentDTO> = emptyList(),
+        editingMessage: ChatMessageDTO? = null,
     ): String? {
         if (message.isBlank() || isLoading) return currentSessionId.value
 
@@ -240,7 +244,7 @@ class ChatViewModel(
         if (editingMessage != null && editingMessage.id != null) {
             // Edit mode:
             // Store the original message ID BEFORE any operations
-            val originalMessageId = editingMessage.id
+            val originalMessageId = editingMessage.id ?: return currentSessionId
 
             // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
             //    This must happen BEFORE creating the new message
@@ -264,7 +268,7 @@ class ChatViewModel(
      * @param message The user's message
      * @param attachments Optional list of file attachments
      */
-    fun sendMessage(message: String, attachments: List<FileAttachment> = emptyList()) {
+    fun sendMessage(message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         if (message.isBlank() || isLoading) return
 
         // Session ID must be set by this point (from resumeSession)
@@ -283,9 +287,11 @@ class ChatViewModel(
         isThinking = true
         thinkingElapsedSeconds = 0
 
-        messages = messages + ChatMessage(
+        messages = messages + ChatMessageDTO(
             content = message,
             isUser = true,
+            id = null,
+            timestamp = null,
             attachments = attachments,
         )
 
@@ -297,11 +303,13 @@ class ChatViewModel(
 
         startThinkingTimer()
 
-        val fullMessage = constructMessageWithAttachments(message, attachments)
-
         currentJob = scope.launch {
             try {
-                val threadId = sessionManager.sendMessage(sessionId, fullMessage)
+                val threadId = sessionManager.sendMessage(
+                    sessionId = sessionId,
+                    userMessage = message,
+                    attachments = attachments,
+                )
 
                 if (threadId == null) {
                     errorMessage = "Please wait for the current response to complete before asking another question."
@@ -312,8 +320,7 @@ class ChatViewModel(
                 }
 
                 if (currentSessionId.value == null) {
-                    val currentSession = appContext.currentChatSession
-                    currentSessionId.value = currentSession?.id ?: sessionId
+                    currentSessionId.value = sessionId
                 }
 
                 subscribeToThread(sessionId)
@@ -400,31 +407,20 @@ class ChatViewModel(
                 clearSearch()
 
                 val result = withContext(Dispatchers.IO) {
-                    sessionService.resumeSessionPaginated(
-                        appContext,
+                    chatSessionService.resumeSessionPaginated(
                         sessionId,
                         MESSAGE_PAGE_SIZE,
                     )
                 }
 
                 if (result.success) {
-                    messages = result.messages.map { sessionMessage ->
-                        ChatMessage(
-                            content = sessionMessage.content,
-                            isUser = sessionMessage.role == MessageRole.USER,
-                            id = sessionMessage.id,
-                            timestamp = sessionMessage.createdAt,
-                            isOutdated = sessionMessage.isOutdated,
-                            editParentId = sessionMessage.editParentId,
-                            isEdited = sessionMessage.isEdited,
-                        )
-                    }
+                    messages = result.messages
                     // Store pagination state
                     currentCursor = result.cursor
                     hasMoreMessages = result.hasMore
 
                     // Load directive from the resumed session
-                    selectedDirective = appContext.currentChatSession?.directiveId
+                    selectedDirective = result.directiveId
 
                     // Reset thinking state
                     isThinking = false
@@ -462,26 +458,14 @@ class ChatViewModel(
                 isLoadingPrevious = true
 
                 val (previousMessages, nextCursor) = withContext(Dispatchers.IO) {
-                    sessionService.loadPreviousMessages(
+                    chatSessionService.loadPreviousMessages(
                         currentSessionId.value!!,
                         currentCursor!!,
                         MESSAGE_PAGE_SIZE,
                     )
                 }
 
-                val chatMessages = previousMessages.map { sessionMessage ->
-                    ChatMessage(
-                        content = sessionMessage.content,
-                        isUser = sessionMessage.role == MessageRole.USER,
-                        id = sessionMessage.id,
-                        timestamp = sessionMessage.createdAt,
-                        isOutdated = sessionMessage.isOutdated,
-                        editParentId = sessionMessage.editParentId,
-                        isEdited = sessionMessage.isEdited,
-                    )
-                }
-
-                messages = chatMessages + messages
+                messages = previousMessages + messages
 
                 // Update pagination state
                 currentCursor = nextCursor
@@ -519,21 +503,10 @@ class ChatViewModel(
                 isSearchMode = true
 
                 val results = withContext(Dispatchers.IO) {
-                    sessionService.searchMessages(currentSessionId.value!!, query, 100)
+                    chatSessionService.searchMessages(currentSessionId.value!!, query, 100)
                 }
 
-                // Convert to chat messages
-                searchResults = results.map { sessionMessage ->
-                    ChatMessage(
-                        content = sessionMessage.content,
-                        isUser = sessionMessage.role == MessageRole.USER,
-                        id = sessionMessage.id,
-                        timestamp = sessionMessage.createdAt,
-                        isOutdated = sessionMessage.isOutdated,
-                        editParentId = sessionMessage.editParentId,
-                        isEdited = sessionMessage.isEdited,
-                    )
-                }
+                searchResults = results
 
                 // Reset to first result
                 currentSearchResultIndex = 0
@@ -541,8 +514,10 @@ class ChatViewModel(
                 // Auto-jump to first result if available
                 if (searchResults.isNotEmpty()) {
                     val firstResult = searchResults[0]
-                    if (firstResult.id != null && firstResult.timestamp != null) {
-                        jumpToMessage(firstResult.id, firstResult.timestamp)
+                    val id = firstResult.id
+                    val timestamp = firstResult.timestamp
+                    if (id != null && timestamp != null) {
+                        jumpToMessage(id, timestamp)
                     }
                 }
 
@@ -579,8 +554,10 @@ class ChatViewModel(
         currentSearchResultIndex = (currentSearchResultIndex + 1) % searchResults.size
         // Jump to the message
         val result = searchResults[currentSearchResultIndex]
-        if (result.id != null && result.timestamp != null) {
-            jumpToMessage(result.id, result.timestamp)
+        val id = result.id
+        val timestamp = result.timestamp
+        if (id != null && timestamp != null) {
+            jumpToMessage(id, timestamp)
         }
     }
 
@@ -596,8 +573,10 @@ class ChatViewModel(
         }
         // Jump to the message
         val result = searchResults[currentSearchResultIndex]
-        if (result.id != null && result.timestamp != null) {
-            jumpToMessage(result.id, result.timestamp)
+        val id = result.id
+        val timestamp = result.timestamp
+        if (id != null && timestamp != null) {
+            jumpToMessage(id, timestamp)
         }
     }
 
@@ -623,7 +602,7 @@ class ChatViewModel(
                 val halfPageSize = MESSAGE_PAGE_SIZE / 2
 
                 val (beforeMessages, _) = withContext(Dispatchers.IO) {
-                    sessionService.loadPreviousMessages(
+                    chatSessionService.loadPreviousMessages(
                         currentSessionId.value!!,
                         messageTimestamp,
                         halfPageSize,
@@ -654,22 +633,11 @@ class ChatViewModel(
                     beforeMessages + afterMessages
                 }
 
-                // Convert to chat messages
-                messages = contextMessages.map { sessionMessage ->
-                    ChatMessage(
-                        content = sessionMessage.content,
-                        isUser = sessionMessage.role == MessageRole.USER,
-                        id = sessionMessage.id,
-                        timestamp = sessionMessage.createdAt,
-                        isOutdated = sessionMessage.isOutdated,
-                        editParentId = sessionMessage.editParentId,
-                        isEdited = sessionMessage.isEdited,
-                    )
-                }
+                messages = contextMessages
 
                 // Update pagination state
                 currentCursor = if (beforeMessages.isNotEmpty()) {
-                    beforeMessages.first().createdAt
+                    beforeMessages.first().timestamp
                 } else {
                     null
                 }
@@ -721,7 +689,7 @@ class ChatViewModel(
      * @param newContent The new content (not used, kept for compatibility)
      * @param attachments Optional attachments (not used, kept for compatibility)
      */
-    fun editMessage(messageId: String, newContent: String, attachments: List<FileAttachment> = emptyList()) {
+    fun editMessage(messageId: String, newContent: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         scope.launch {
             try {
                 markOriginalAndSubsequentAsOutdated(messageId)
@@ -755,9 +723,6 @@ class ChatViewModel(
         // Reset directive to null for new chat session
         selectedDirective = null
 
-        // Start a new session without a directive
-        appContext.currentChatSession = null
-
         // Clear conversation memory
         val provider = appContext.getActiveProvider()
         val modelName = appContext.params.getModel(provider)
@@ -770,11 +735,7 @@ class ChatViewModel(
      */
     fun setDirective(directiveId: String?) {
         selectedDirective = directiveId
-
-        // If there's an active session, update it immediately
-        if (appContext.currentChatSession != null) {
-            appContext.setCurrentSessionDirective(directiveId)
-        }
+        // TODO: Persist directive selection to the session if needed
     }
 
     /**

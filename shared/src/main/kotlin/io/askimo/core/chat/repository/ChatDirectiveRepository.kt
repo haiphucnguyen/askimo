@@ -8,6 +8,7 @@ import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.sqliteDatetime
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -140,17 +141,6 @@ class ChatDirectiveRepository internal constructor(
     }
 
     /**
-     * Check if a directive exists by name.
-     */
-    fun existsByName(name: String): Boolean = transaction(database) {
-        ChatDirectivesTable
-            .selectAll()
-            .where { ChatDirectivesTable.name eq name }
-            .limit(1)
-            .count() > 0
-    }
-
-    /**
      * Get multiple directives by ids.
      */
     fun getByIds(ids: List<String>): List<ChatDirective> = getByColumn(
@@ -169,4 +159,19 @@ class ChatDirectiveRepository internal constructor(
         values = names,
         orderBy = ChatDirectivesTable.name to SortOrder.ASC,
     ) { it.toChatDirective() }
+
+    /**
+     * Find a directive by session ID.
+     * Joins with chat_sessions table to find the directive associated with the given session.
+     * @param sessionId The session ID to look up
+     * @return The directive associated with the session, or null if not found or session has no directive
+     */
+    fun findDirectiveBySessionId(sessionId: String): ChatDirective? = transaction(database) {
+        ChatDirectivesTable
+            .join(ChatSessionsTable, JoinType.INNER, ChatDirectivesTable.id, ChatSessionsTable.directiveId)
+            .selectAll()
+            .where { ChatSessionsTable.id eq sessionId }
+            .singleOrNull()
+            ?.toChatDirective()
+    }
 }

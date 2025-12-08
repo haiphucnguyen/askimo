@@ -28,6 +28,7 @@ import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
 import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.commands.VersionDisplayCommandHandler
+import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.cli.recipes.DefaultRecipeInitializer
 import io.askimo.cli.recipes.RecipeDef
 import io.askimo.cli.recipes.RecipeExecutor
@@ -39,6 +40,7 @@ import io.askimo.cli.service.CliUpdateService
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
+import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
@@ -77,18 +79,18 @@ fun main(args: Array<String>) {
         else -> ExecutionMode.CLI_INTERACTIVE
     }
 
-    val session = AppContextFactory.createAppContext(mode = mode)
+    val appContext = AppContextFactory.createAppContext(mode = mode)
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =
         listOf(
             HelpCommandHandler(),
-            ConfigCommandHandler(session),
+            ConfigCommandHandler(appContext),
             ListProvidersCommandHandler(),
-            SetProviderCommandHandler(session),
-            ModelsCommandHandler(session),
-            ParamsCommandHandler(session),
-            SetParamCommandHandler(session),
+            SetProviderCommandHandler(appContext),
+            ModelsCommandHandler(appContext),
+            ParamsCommandHandler(appContext),
+            SetParamCommandHandler(appContext),
             ListToolsCommandHandler(),
             VersionDisplayCommandHandler(),
         )
@@ -152,7 +154,7 @@ fun main(args: Array<String>) {
                     emptyList()
                 }
             try {
-                runYamlCommand(session, cliCommandName, overrides, externalArgs)
+                runYamlCommand(appContext, cliCommandName, overrides, externalArgs)
             } catch (e: RecipeNotFoundException) {
                 log.displayError(e.message ?: "Recipe not found")
             }
@@ -173,7 +175,7 @@ fun main(args: Array<String>) {
                     emptyList()
                 }
             try {
-                runYamlFileCommand(session, recipeFile, overrides, externalArgs)
+                runYamlFileCommand(appContext, recipeFile, overrides, externalArgs)
             } catch (e: RecipeNotFoundException) {
                 log.displayError(e.message ?: "Recipe file not found")
             }
@@ -184,176 +186,181 @@ fun main(args: Array<String>) {
         if (promptText != null) {
             val stdinText = readStdinIfAny()
             val prompt = buildPrompt(promptText, stdinText)
-            sendChatMessage(session, prompt, showIndicator = true)
+            sendNonInteractiveChatMessage(appContext, prompt, TerminalBuilder.builder().system(true).build())
             return
         }
 
-        if (args.isEmpty()) {
-            val terminal =
-                TerminalBuilder
-                    .builder()
-                    .jna(true)
-                    .system(true)
-                    .build()
+        // go to interactive mode
+        val chatSessionService = ChatSessionService(appContext = appContext)
 
-            // Clear the terminal screen when entering interactive mode
-            terminal.puts(InfoCmp.Capability.clear_screen)
-            terminal.flush()
+        val terminal =
+            TerminalBuilder
+                .builder()
+                .jna(true)
+                .system(true)
+                .build()
 
-            // Setup parser with multi-line support
-            val parser = object : DefaultParser() {
-                override fun isEscapeChar(ch: Char): Boolean = ch == '\\'
+        // Clear the terminal screen when entering interactive mode
+        terminal.puts(InfoCmp.Capability.clear_screen)
+        terminal.flush()
 
-                override fun parse(line: String, cursor: Int, context: ParseContext?): ParsedLine {
-                    // Check if line ends with backslash (continuation)
-                    if (context == ParseContext.ACCEPT_LINE && line.trimEnd().endsWith("\\")) {
-                        throw EOFError(-1, -1, "Line continuation")
-                    }
-                    return super.parse(line, cursor, context)
+        // Setup parser with multi-line support
+        val parser = object : DefaultParser() {
+            override fun isEscapeChar(ch: Char): Boolean = ch == '\\'
+
+            override fun parse(line: String, cursor: Int, context: ParseContext?): ParsedLine {
+                // Check if line ends with backslash (continuation)
+                if (context == ParseContext.ACCEPT_LINE && line.trimEnd().endsWith("\\")) {
+                    throw EOFError(-1, -1, "Line continuation")
                 }
+                return super.parse(line, cursor, context)
             }
+        }
 
-            val completer =
-                AggregateCompleter(
-                    CliCommandCompleter(),
-                )
-
-            val reader =
-                LineReaderBuilder
-                    .builder()
-                    .terminal(terminal)
-                    .parser(parser)
-                    .variable(LineReader.COMPLETION_STYLE_LIST_SELECTION, "fg:blue")
-                    .variable(LineReader.LIST_MAX, 5)
-                    .variable(LineReader.COMPLETION_STYLE_STARTING, "")
-                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
-                    .completer(completer)
-                    .build()
-
-            // Get the main keymap for history search bindings
-            @Suppress("UNCHECKED_CAST")
-            val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
-
-            // Setup history search bindings
-            mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
-            mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
-
-            // Display banner and version
-            displayBanner()
-
-            terminal.writer().println("askimo> Ask anything. Type :help for commands.")
-            terminal.writer().println("💡 Tip 1: End line with \\ for multi-line, Enter to send.")
-            terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
-            terminal.flush()
-
-            // Check for updates silently in the background
-            checkForUpdatesAsync()
-
-            // Create command handlers for interactive mode (shared + interactive-only commands)
-            val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
-                CopyCommandHandler(session),
-                ClearMemoryCommandHandler(session),
-                ListProjectsCommandHandler(),
-                CreateProjectCommandHandler(session),
-                UseProjectCommandHandler(session),
-                DeleteProjectCommandHandler(),
-                ListSessionsCommandHandler(),
-                NewSessionCommandHandler(session),
-                ResumeSessionCommandHandler(session),
-                DeleteSessionCommandHandler(),
+        val completer =
+            AggregateCompleter(
+                CliCommandCompleter(),
             )
 
-            (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
+        val reader =
+            LineReaderBuilder
+                .builder()
+                .terminal(terminal)
+                .parser(parser)
+                .variable(LineReader.COMPLETION_STYLE_LIST_SELECTION, "fg:blue")
+                .variable(LineReader.LIST_MAX, 5)
+                .variable(LineReader.COMPLETION_STYLE_STARTING, "")
+                .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%B..>%b ")
+                .completer(completer)
+                .build()
 
-            while (true) {
-                val input = reader.readLine("askimo> ") ?: continue
-                val parsedLine = parser.parse(input, 0)
+        // Get the main keymap for history search bindings
+        @Suppress("UNCHECKED_CAST")
+        val mainMap = reader.keyMaps[LineReader.MAIN] as KeyMap<Any>
 
-                // Exit handling
-                val trimmed = input.trim()
-                if (trimmed.equals("exit", true) ||
-                    trimmed.equals(
-                        "quit",
-                        true,
-                    ) ||
-                    trimmed == ":exit" ||
-                    trimmed == ":quit"
-                ) {
-                    terminal.writer().println("Thank you for using askimo. Goodbye!")
-                    terminal.flush()
-                    break
-                }
+        // Setup history search bindings
+        mainMap.bind(Reference("reverse-search-history"), KeyMap.ctrl('R'))
+        mainMap.bind(Reference("forward-search-history"), KeyMap.ctrl('S'))
 
-                val keyword = parsedLine.words().firstOrNull()
+        // Display banner and version
+        displayBanner()
 
-                if (keyword != null && keyword.startsWith(":")) {
-                    val handler = interactiveCommandHandlers.find { it.keyword == keyword }
-                    if (handler != null) {
-                        handler.handle(parsedLine)
-                    } else {
-                        terminal.writer().println("❌ Unknown command: $keyword")
-                        terminal.writer().println("💡 Type `:help` to see a list of available commands.")
-                    }
-                } else {
-                    val prompt = parsedLine.line()
-                    val output = sendChatMessage(session, prompt, reader.terminal, showIndicator = true)
-                    session.lastResponse = output
-                    reader.terminal.writer().println()
-                    reader.terminal.writer().flush()
-                }
+        terminal.writer().println("askimo> Ask anything. Type :help for commands.")
+        terminal.writer().println("💡 Tip 1: End line with \\ for multi-line, Enter to send.")
+        terminal.writer().println("💡 Tip 2: Use ↑ / ↓ to browse, Ctrl+R to search history.")
+        terminal.flush()
 
+        // Check for updates silently in the background
+        checkForUpdatesAsync()
+
+        // Create command handlers for interactive mode (shared + interactive-only commands)
+        val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
+            CopyCommandHandler(),
+            ClearMemoryCommandHandler(appContext),
+            ListProjectsCommandHandler(),
+            CreateProjectCommandHandler(appContext),
+            UseProjectCommandHandler(appContext),
+            DeleteProjectCommandHandler(),
+            ListSessionsCommandHandler(appContext),
+            NewSessionCommandHandler(chatSessionService),
+            ResumeSessionCommandHandler(chatSessionService),
+            DeleteSessionCommandHandler(appContext),
+        )
+
+        (interactiveCommandHandlers.find { it.keyword == ":help" } as? HelpCommandHandler)?.setCommands(interactiveCommandHandlers)
+
+        while (true) {
+            val input = reader.readLine("askimo> ") ?: continue
+            val parsedLine = parser.parse(input, 0)
+
+            // Exit handling
+            val trimmed = input.trim()
+            if (trimmed.equals("exit", true) ||
+                trimmed.equals(
+                    "quit",
+                    true,
+                ) ||
+                trimmed == ":exit" ||
+                trimmed == ":quit"
+            ) {
+                terminal.writer().println("Thank you for using askimo. Goodbye!")
                 terminal.flush()
+                break
             }
-        } else {
-            val userPrompt = args.joinToString(" ").trim()
-            val stdinText = readStdinIfAny()
-            val prompt = buildPrompt(userPrompt, stdinText)
-            sendChatMessage(session, prompt, showIndicator = true)
+
+            val keyword = parsedLine.words().firstOrNull()
+
+            if (keyword != null && keyword.startsWith(":")) {
+                val handler = interactiveCommandHandlers.find { it.keyword == keyword }
+                if (handler != null) {
+                    handler.handle(parsedLine)
+                } else {
+                    terminal.writer().println("❌ Unknown command: $keyword")
+                    terminal.writer().println("💡 Type `:help` to see a list of available commands.")
+                }
+            } else {
+                val prompt = parsedLine.line()
+                val output = sendChatMessage(appContext, prompt, reader.terminal, chatSessionService)
+                CliInteractiveContext.setLastResponse(output)
+                reader.terminal.writer().println()
+                reader.terminal.writer().flush()
+            }
+
+            terminal.flush()
         }
     } catch (e: IOException) {
         log.displayError("❌ Error: ${e.message}", e)
     }
 }
 
+private fun sendNonInteractiveChatMessage(
+    appContext: AppContext,
+    prompt: String,
+    terminal: Terminal,
+): String = streamChatResponse(appContext, prompt, terminal)
+
 private fun sendChatMessage(
     appContext: AppContext,
     prompt: String,
-    terminal: Terminal? = null,
-    showIndicator: Boolean = true,
+    terminal: Terminal,
+    chatSessionService: ChatSessionService,
 ): String {
-    val actualTerminal = terminal ?: TerminalBuilder.builder().system(true).build()
+    val currentSession = CliInteractiveContext.currentChatSession
+    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(prompt, currentSession!!.id)
 
-    val indicator = if (showIndicator) {
-        LoadingIndicator(actualTerminal, "Thinking…").apply { start() }
-    } else {
-        null
-    }
+    val output = streamChatResponse(appContext, promptWithContext, terminal)
+    chatSessionService.saveAiResponse(currentSession.id, output)
+    return output
+}
 
+/**
+ * Common function to stream chat response with loading indicator and markdown rendering.
+ * Handles the streaming, indicator management, and markdown formatting.
+ */
+private fun streamChatResponse(
+    appContext: AppContext,
+    promptWithContext: String,
+    terminal: Terminal,
+): String {
+    val indicator = LoadingIndicator(terminal, "Thinking…").apply { start() }
     val firstTokenSeen = AtomicBoolean(false)
     val mdRenderer = MarkdownJLineRenderer()
-    val mdSink = MarkdownStreamingSink(actualTerminal, mdRenderer)
+    val mdSink = MarkdownStreamingSink(terminal, mdRenderer)
 
-    // Prepare context and get the prompt to use
-    val promptWithContext = appContext.prepareContextAndGetPrompt(prompt)
-
-    // Stream the response directly for real-time display
     val output = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
         if (firstTokenSeen.compareAndSet(false, true)) {
-            indicator?.stopWithElapsed()
-            actualTerminal.flush()
+            indicator.stopWithElapsed()
+            terminal.flush()
         }
         mdSink.append(token)
     }
 
     if (!firstTokenSeen.get()) {
-        indicator?.stopWithElapsed()
-        actualTerminal.writer().println()
-        actualTerminal.flush()
+        indicator.stopWithElapsed()
+        terminal.writer().println()
+        terminal.flush()
     }
     mdSink.finish()
-
-    // Save the AI response to session
-    appContext.saveAiResponse(output)
 
     return output
 }

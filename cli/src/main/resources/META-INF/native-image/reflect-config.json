@@ -2125,6 +2125,14 @@
         "name": "should add and retrieve messages for a session",
         "parameterTypes": []
       },
+      {
+        "name": "should add message with attachments and retrieve them",
+        "parameterTypes": []
+      },
+      {
+        "name": "should automatically delete attachments when message is deleted via CASCADE",
+        "parameterTypes": []
+      },
       { "name": "should count messages correctly", "parameterTypes": [] },
       {
         "name": "should delete all messages for a session",
@@ -2141,7 +2149,35 @@
       },
       { "name": "should handle empty messages list", "parameterTypes": [] },
       {
+        "name": "should handle large number of attachments efficiently",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle multiple messages with different attachment counts",
+        "parameterTypes": []
+      },
+      {
         "name": "should limit recent messages correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should load attachments after specific message",
+        "parameterTypes": []
+      },
+      {
+        "name": "should load attachments with active messages only",
+        "parameterTypes": []
+      },
+      {
+        "name": "should load attachments with paginated messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should load attachments with recent messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should load attachments with search results",
         "parameterTypes": []
       },
       { "name": "should mark message as outdated", "parameterTypes": [] },
@@ -2163,6 +2199,14 @@
       },
       {
         "name": "should paginate through entire message history forward",
+        "parameterTypes": []
+      },
+      {
+        "name": "should preserve attachment metadata without content field",
+        "parameterTypes": []
+      },
+      {
+        "name": "should retrieve message without attachments",
         "parameterTypes": []
       },
       {
@@ -2610,8 +2654,11 @@
           "io.askimo.core.context.ExecutionMode"
         ]
       },
+      {
+        "name": "enableRagWith",
+        "parameterTypes": ["io.askimo.core.project.PgVectorIndexer"]
+      },
       { "name": "getActiveProvider", "parameterTypes": [] },
-      { "name": "getLastResponse", "parameterTypes": [] },
       { "name": "getParams", "parameterTypes": [] },
       {
         "name": "removeMemory",
@@ -2619,6 +2666,10 @@
           "io.askimo.core.providers.ModelProvider",
           "java.lang.String"
         ]
+      },
+      {
+        "name": "setScope",
+        "parameterTypes": ["io.askimo.core.project.ProjectMeta"]
       }
     ]
   },
@@ -4520,7 +4571,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$LQhifgCW",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$oxhec74G",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -11,6 +11,8 @@ import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ConversationSummaryRepository
+import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
@@ -52,11 +54,14 @@ class ChatSessionServiceIT {
             summaryRepository = databaseManager.getConversationSummaryRepository()
             folderRepository = databaseManager.getChatFolderRepository()
 
+            val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
+
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
-                summaryRepository = summaryRepository,
+                conversationSummaryRepository = summaryRepository,
                 folderRepository = folderRepository,
+                appContext = appContext,
             )
         }
 

@@ -170,11 +170,11 @@ More languages coming soon.
 ## Support
 If you enjoy this project, here are a few simple ways to show support:
 
-* Star the repo — A quick ⭐️ at the top helps a lot and keeps the project growing.
+* Star the repo - A quick ⭐️ at the top helps a lot and keeps the project growing.
 
-* Contribute — Spot a bug or want to improve something? Pull requests are always welcome.
+* Contribute - Spot a bug or want to improve something? Pull requests are always welcome.
 
-* Share feedback — Got ideas or suggestions? Feel free to open an issue or start a discussion.
+* Share feedback - Got ideas or suggestions? Feel free to open an issue or start a discussion.
 
 Thanks for being part of the journey! 🙌
 ## License

@@ -5,9 +5,7 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextParams
 import io.askimo.core.project.PostgresContainerManager
-import io.askimo.core.providers.ModelProvider
 import io.askimo.testcontainers.SharedOllama
 import io.askimo.testcontainers.TestContainersConfig
 import org.junit.jupiter.api.AfterAll
@@ -17,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
+import org.mockito.kotlin.mock
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.nio.file.Files
@@ -57,8 +56,7 @@ class CreateProjectCommandHandlerTest : CommandHandlerTestBase() {
 
         val tempDir = Files.createTempDirectory("askimo-test-project").toAbsolutePath()
 
-        val appContext = AppContext(AppContextParams.noOp())
-        appContext.params.currentProvider = ModelProvider.OLLAMA
+        val appContext = mock<AppContext>()
         val handler = CreateProjectCommandHandler(appContext)
 
         val projectName =
