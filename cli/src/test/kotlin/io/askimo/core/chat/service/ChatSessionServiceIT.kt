@@ -47,7 +47,7 @@ class ChatSessionServiceIT {
         fun setUpClass(@TempDir tempDir: Path) {
             testBaseScope = AskimoHome.withTestBase(tempDir)
 
-            databaseManager = DatabaseManager.getTestInstance(this)
+            databaseManager = DatabaseManager.getInMemoryTestInstance(this)
 
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
