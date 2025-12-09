@@ -4,13 +4,13 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.core.context.AppContext
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -21,7 +21,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @BeforeEach
     fun setUp() {
         appContext = mock<AppContext>()
-        handler = CopyCommandHandler(appContext)
+        handler = CopyCommandHandler()
     }
 
     @Test
@@ -38,7 +38,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with no response shows warning`() {
-        whenever(appContext.lastResponse).thenReturn(null)
+        CliInteractiveContext.setLastResponse(null)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -51,7 +51,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with blank response shows warning`() {
-        whenever(appContext.lastResponse).thenReturn("   ")
+        CliInteractiveContext.setLastResponse("   ")
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -63,7 +63,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle with empty response shows warning`() {
-        whenever(appContext.lastResponse).thenReturn("")
+        CliInteractiveContext.setLastResponse("")
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -77,7 +77,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @EnabledOnOs(OS.MAC)
     fun `handle with valid response on macOS attempts copy`() {
         val testResponse = "This is a test response from the AI"
-        whenever(appContext.lastResponse).thenReturn(testResponse)
+        CliInteractiveContext.setLastResponse(testResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -97,7 +97,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @EnabledOnOs(OS.WINDOWS)
     fun `handle with valid response on Windows attempts copy`() {
         val testResponse = "This is a test response from the AI"
-        whenever(appContext.lastResponse).thenReturn(testResponse)
+        CliInteractiveContext.setLastResponse(testResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -116,7 +116,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @EnabledOnOs(OS.LINUX)
     fun `handle with valid response on Linux attempts copy`() {
         val testResponse = "This is a test response from the AI"
-        whenever(appContext.lastResponse).thenReturn(testResponse)
+        CliInteractiveContext.setLastResponse(testResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -140,7 +140,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
             This is line 2
             This is line 3
             """.trimIndent()
-        whenever(appContext.lastResponse).thenReturn(multilineResponse)
+        CliInteractiveContext.setLastResponse(multilineResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -158,7 +158,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @Test
     fun `handle with special characters in response processes correctly`() {
         val specialResponse = "Response with special chars: @#\$%^&*()_+-=[]{}|;':\",./<>?"
-        whenever(appContext.lastResponse).thenReturn(specialResponse)
+        CliInteractiveContext.setLastResponse(specialResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -176,7 +176,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @Test
     fun `handle with unicode characters in response processes correctly`() {
         val unicodeResponse = "Response with unicode: 你好 こんにちは 안녕하세요 🚀 ✨"
-        whenever(appContext.lastResponse).thenReturn(unicodeResponse)
+        CliInteractiveContext.setLastResponse(unicodeResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -208,7 +208,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
             - List item 1
             - List item 2
             """.trimIndent()
-        whenever(appContext.lastResponse).thenReturn(markdownResponse)
+        CliInteractiveContext.setLastResponse(markdownResponse)
 
         val parsedLine = mockParsedLine(":copy")
 
@@ -226,7 +226,7 @@ class CopyCommandHandlerTest : CommandHandlerTestBase() {
     @Test
     fun `handle with very long response processes correctly`() {
         val longResponse = "A".repeat(10000) // 10KB of text
-        whenever(appContext.lastResponse).thenReturn(longResponse)
+        CliInteractiveContext.setLastResponse(longResponse)
 
         val parsedLine = mockParsedLine(":copy")
 

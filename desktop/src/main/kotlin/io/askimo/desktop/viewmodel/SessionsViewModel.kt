@@ -11,6 +11,7 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.i18n.LocalizationManager
+import io.askimo.core.logging.logger
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +23,11 @@ import kotlinx.coroutines.withContext
  */
 class SessionsViewModel(
     private val scope: CoroutineScope,
-    private val sessionService: ChatSessionService = ChatSessionService(),
+    private val sessionService: ChatSessionService,
     private val sessionManager: SessionManager? = null,
     private val onCreateNewSession: (() -> String)? = null,
 ) {
+    private val log = logger<SessionsViewModel>()
     companion object {
         const val MAX_SIDEBAR_SESSIONS = 50
     }
@@ -78,15 +80,13 @@ class SessionsViewModel(
     fun loadRecentSessions() {
         scope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
-                    sessionService.getAllSessionsSorted().take(MAX_SIDEBAR_SESSIONS)
+                val allSessions = withContext(Dispatchers.IO) {
+                    sessionService.getAllSessionsSorted()
                 }
-                recentSessions = result
-                totalSessionCount = withContext(Dispatchers.IO) {
-                    sessionService.getAllSessionsSorted().size
-                }
+                recentSessions = allSessions.take(MAX_SIDEBAR_SESSIONS)
+                totalSessionCount = allSessions.size
             } catch (e: Exception) {
-                // Silently fail for sidebar loading
+                log.error("Failed to load recent sessions: ${e.message}", e)
             }
         }
     }

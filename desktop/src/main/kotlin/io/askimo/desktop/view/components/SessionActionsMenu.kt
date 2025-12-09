@@ -6,6 +6,7 @@ package io.askimo.desktop.view.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenuItem
@@ -26,21 +27,23 @@ import io.askimo.desktop.theme.ComponentColors
 
 /**
  * Reusable session actions menu component that provides a dropdown with session-related actions.
- * Currently supports Export action.
+ * Currently supports Export and Delete actions.
  *
  * @param sessionId The ID of the session to perform actions on
  * @param onExportSession Callback invoked when the export action is triggered
+ * @param onDeleteSession Callback invoked when the delete action is triggered
  * @param modifier Optional modifier for the IconButton
  */
 @Composable
 fun sessionActionsMenu(
     sessionId: String,
     onExportSession: (String) -> Unit,
+    onDeleteSession: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    androidx.compose.foundation.layout.Box {
+    Box {
         IconButton(
             onClick = { expanded = true },
             modifier = modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -72,6 +75,26 @@ fun sessionActionsMenu(
                         imageVector = Icons.Default.Share,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource("action.delete"),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                onClick = {
+                    onDeleteSession(sessionId)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 },
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

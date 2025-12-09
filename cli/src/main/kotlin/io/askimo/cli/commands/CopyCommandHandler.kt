@@ -4,7 +4,7 @@
  */
 package io.askimo.cli.commands
 
-import io.askimo.core.context.AppContext
+import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
@@ -16,16 +16,14 @@ import org.jline.reader.ParsedLine
  * system clipboard, with cross-platform support for different operating systems (macOS,
  * Windows, Linux). It helps users easily extract and reuse AI responses in other applications.
  */
-class CopyCommandHandler(
-    private val appContext: AppContext,
-) : CommandHandler {
+class CopyCommandHandler : CommandHandler {
     private val log = logger<CopyCommandHandler>()
     override val keyword: String = ":copy"
 
     override val description: String = "Copy the last AI response to the clipboard"
 
     override fun handle(line: ParsedLine) {
-        val response = appContext.lastResponse
+        val response = CliInteractiveContext.lastResponse
         if (response.isNullOrBlank()) {
             log.display("⚠️ No response to copy. Ask something first.")
             return

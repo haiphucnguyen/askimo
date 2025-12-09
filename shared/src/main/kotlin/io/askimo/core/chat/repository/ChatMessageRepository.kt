@@ -5,6 +5,7 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatMessage
+import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
@@ -17,6 +18,7 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.leftJoin
 import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -59,8 +61,23 @@ private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
     isEdited = this[ChatMessagesTable.isEdited] == 1,
 )
 
+/**
+ * Extension function to map an Exposed ResultRow to a FileAttachment object (from JOIN).
+ */
+private fun ResultRow.toFileAttachment(): FileAttachment = FileAttachment(
+    id = this[ChatMessageAttachmentsTable.id],
+    messageId = this[ChatMessageAttachmentsTable.messageId],
+    sessionId = this[ChatMessageAttachmentsTable.sessionId],
+    fileName = this[ChatMessageAttachmentsTable.fileName],
+    mimeType = this[ChatMessageAttachmentsTable.mimeType],
+    size = this[ChatMessageAttachmentsTable.size],
+    createdAt = this[ChatMessageAttachmentsTable.createdAt],
+    content = null, // Content is not stored in DB
+)
+
 class ChatMessageRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
+    private val attachmentRepository: ChatMessageAttachmentRepository = ChatMessageAttachmentRepository(databaseManager),
 ) : AbstractSQLiteRepository(databaseManager) {
 
     fun addMessage(message: ChatMessage): ChatMessage {
@@ -79,27 +96,52 @@ class ChatMessageRepository internal constructor(
                 it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
                 it[ChatMessagesTable.isEdited] = if (messageWithInjectedFields.isEdited) 1 else 0
             }
+
+            // Save attachments if any
+            if (messageWithInjectedFields.attachments.isNotEmpty()) {
+                val attachmentsWithMessageId = messageWithInjectedFields.attachments.map { attachment ->
+                    attachment.copy(
+                        messageId = messageWithInjectedFields.id,
+                        sessionId = messageWithInjectedFields.sessionId,
+                    )
+                }
+                attachmentRepository.addAttachments(attachmentsWithMessageId)
+            }
         }
 
         return messageWithInjectedFields
     }
 
     fun getMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where { ChatMessagesTable.sessionId eq sessionId }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .map { it.toChatMessage() }
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where { ChatMessagesTable.sessionId eq sessionId }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
             .limit(limit)
             .map { it.toChatMessage() }
             .reversed()
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     /**
@@ -111,13 +153,20 @@ class ChatMessageRepository internal constructor(
      * @return List of active messages, ordered by creation time (oldest first)
      */
     fun getRecentActiveMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where { (ChatMessagesTable.sessionId eq sessionId) and (ChatMessagesTable.isOutdated eq 0) }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
             .limit(limit)
             .map { it.toChatMessage() }
             .reversed()
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     /**
@@ -172,18 +221,26 @@ class ChatMessageRepository internal constructor(
         // Reverse if we fetched in backward direction to maintain chronological order
         val orderedMessages = if (direction == PaginationDirection.BACKWARD) resultMessages.reversed() else resultMessages
 
+        // Load attachments using helper
+        val messageIds = orderedMessages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        val messagesWithAttachments = orderedMessages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
+
         // Calculate next cursor
-        val nextCursor = if (hasMore && orderedMessages.isNotEmpty()) {
+        val nextCursor = if (hasMore && messagesWithAttachments.isNotEmpty()) {
             if (direction == PaginationDirection.FORWARD) {
-                orderedMessages.last().createdAt
+                messagesWithAttachments.last().createdAt
             } else {
-                orderedMessages.first().createdAt
+                messagesWithAttachments.first().createdAt
             }
         } else {
             null
         }
 
-        Pair(orderedMessages, nextCursor)
+        Pair(messagesWithAttachments, nextCursor)
     }
 
     fun getMessageCount(sessionId: String): Int = transaction(database) {
@@ -210,7 +267,7 @@ class ChatMessageRepository internal constructor(
         if (searchQuery.isBlank()) return emptyList()
 
         return transaction(database) {
-            ChatMessagesTable
+            val messages = ChatMessagesTable
                 .selectAll()
                 .where {
                     (ChatMessagesTable.sessionId eq sessionId) and
@@ -219,6 +276,13 @@ class ChatMessageRepository internal constructor(
                 .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
                 .limit(limit)
                 .map { it.toChatMessage() }
+
+            val messageIds = messages.map { it.id }
+            val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+            messages.map { message ->
+                message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+            }
         }
     }
 
@@ -231,8 +295,7 @@ class ChatMessageRepository internal constructor(
             ?.get(ChatMessagesTable.createdAt)
             ?: return@transaction emptyList()
 
-        // Then get messages after that timestamp
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where {
                 (ChatMessagesTable.sessionId eq sessionId) and
@@ -241,6 +304,13 @@ class ChatMessageRepository internal constructor(
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .limit(limit)
             .map { it.toChatMessage() }
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     /**
@@ -260,7 +330,7 @@ class ChatMessageRepository internal constructor(
             ?.get(ChatMessagesTable.createdAt)
             ?: return@transaction emptyList()
 
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where {
                 (ChatMessagesTable.sessionId eq sessionId) and
@@ -270,6 +340,13 @@ class ChatMessageRepository internal constructor(
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .limit(limit)
             .map { it.toChatMessage() }
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     /**
@@ -319,7 +396,7 @@ class ChatMessageRepository internal constructor(
      * @return List of active messages, ordered by creation time
      */
     fun getActiveMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
+        val messages = ChatMessagesTable
             .selectAll()
             .where {
                 (ChatMessagesTable.sessionId eq sessionId) and
@@ -327,6 +404,13 @@ class ChatMessageRepository internal constructor(
             }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .map { it.toChatMessage() }
+
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+
+        messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
     }
 
     /**
@@ -345,9 +429,42 @@ class ChatMessageRepository internal constructor(
     }
 
     /**
-     * Delete all messages for a session
+     * Delete all messages for a session.
+     * Attachments are automatically deleted via CASCADE foreign key constraint.
      */
     fun deleteMessagesBySession(sessionId: String): Int = transaction(database) {
         ChatMessagesTable.deleteWhere { ChatMessagesTable.sessionId eq sessionId }
+    }
+
+    /**
+     * Helper method to load attachments for messages using LEFT JOIN.
+     * This performs a single database query to efficiently load all attachments.
+     *
+     * @param messageIds List of message IDs to load attachments for
+     * @return Map of message ID to list of attachments
+     */
+    private fun loadAttachmentsForMessageIds(messageIds: List<String>): Map<String, List<FileAttachment>> {
+        if (messageIds.isEmpty()) return emptyMap()
+
+        val messagesMap = mutableMapOf<String, ChatMessage>()
+        val attachmentsMap = mutableMapOf<String, MutableList<FileAttachment>>()
+
+        (ChatMessagesTable leftJoin ChatMessageAttachmentsTable)
+            .selectAll()
+            .where { ChatMessagesTable.id inList messageIds }
+            .forEach { row ->
+                val messageId = row[ChatMessagesTable.id]
+
+                if (!messagesMap.containsKey(messageId)) {
+                    messagesMap[messageId] = row.toChatMessage()
+                }
+
+                row.getOrNull(ChatMessageAttachmentsTable.id)?.let {
+                    attachmentsMap.getOrPut(messageId) { mutableListOf() }
+                        .add(row.toFileAttachment())
+                }
+            }
+
+        return attachmentsMap.mapValues { it.value.toList() }
     }
 }

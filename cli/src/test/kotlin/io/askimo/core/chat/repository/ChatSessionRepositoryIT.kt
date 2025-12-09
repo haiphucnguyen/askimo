@@ -37,7 +37,7 @@ class ChatSessionRepositoryIT {
         @BeforeAll
         fun setUpClass(@TempDir tempDir: Path) {
             testBaseScope = AskimoHome.withTestBase(tempDir)
-            databaseManager = DatabaseManager.getTestInstance(this)
+            databaseManager = DatabaseManager.getInMemoryTestInstance(this)
 
             sessionRepository = databaseManager.getChatSessionRepository()
         }
@@ -48,6 +48,8 @@ class ChatSessionRepositoryIT {
             if (::databaseManager.isInitialized) {
                 databaseManager.close()
             }
+            // Reset the singleton to close any file-based database that might have been created
+            DatabaseManager.reset()
             if (::testBaseScope.isInitialized) {
                 testBaseScope.close()
             }
@@ -148,7 +150,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = sessionRepository.getSession(session.id)
         assertNotNull(retrieved)
-        assertTrue(retrieved!!.isStarred)
+        assertTrue(retrieved.isStarred)
     }
 
     @Test
@@ -157,7 +159,7 @@ class ChatSessionRepositoryIT {
 
         val retrieved = sessionRepository.getSession(session.id)
         assertNotNull(retrieved)
-        assertFalse(retrieved!!.isStarred)
+        assertFalse(retrieved.isStarred)
     }
 
     @Test

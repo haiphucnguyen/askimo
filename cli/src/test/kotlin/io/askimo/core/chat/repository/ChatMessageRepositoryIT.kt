@@ -6,6 +6,7 @@ package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
@@ -42,17 +43,19 @@ class ChatMessageRepositoryIT {
         private lateinit var databaseManager: DatabaseManager
         private lateinit var messageRepository: ChatMessageRepository
         private lateinit var sessionRepository: ChatSessionRepository
+        private lateinit var attachmentRepository: ChatMessageAttachmentRepository
 
         @JvmStatic
         @BeforeAll
         fun setUpClass(@TempDir tempDir: Path) {
             testBaseScope = AskimoHome.withTestBase(tempDir)
 
-            databaseManager = DatabaseManager.getTestInstance(this)
+            databaseManager = DatabaseManager.getInMemoryTestInstance(this)
 
             // Get singleton repositories from DatabaseManager
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
+            attachmentRepository = databaseManager.getChatMessageAttachmentRepository()
         }
 
         @JvmStatic
@@ -95,6 +98,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should retrieve recent messages in chronological order`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(25) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -102,6 +106,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -143,12 +148,14 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should retrieve messages after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "First",
+                createdAt = baseTime,
             ),
         )
         val message2 = messageRepository.addMessage(
@@ -157,6 +164,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Second",
+                createdAt = baseTime.plusSeconds(1),
             ),
         )
         val message3 = messageRepository.addMessage(
@@ -165,6 +173,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "Third",
+                createdAt = baseTime.plusSeconds(2),
             ),
         )
         val message4 = messageRepository.addMessage(
@@ -173,6 +182,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Fourth",
+                createdAt = baseTime.plusSeconds(3),
             ),
         )
 
@@ -227,6 +237,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should limit recent messages correctly`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -234,6 +245,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -298,12 +310,14 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should mark messages as outdated after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "First",
+                createdAt = baseTime,
             ),
         )
         messageRepository.addMessage(
@@ -312,6 +326,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.ASSISTANT,
                 content = "Second",
+                createdAt = baseTime.plusSeconds(1),
             ),
         )
         messageRepository.addMessage(
@@ -320,6 +335,7 @@ class ChatMessageRepositoryIT {
                 sessionId = testSession.id,
                 role = MessageRole.USER,
                 content = "Third",
+                createdAt = baseTime.plusSeconds(2),
             ),
         )
 
@@ -394,6 +410,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate messages forward from start`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -401,6 +418,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -421,6 +439,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate messages backward from end`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(5) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -428,6 +447,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -448,6 +468,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should return null cursor when no more messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(3) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -455,6 +476,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -498,6 +520,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should paginate through entire message history forward`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -505,6 +528,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -530,6 +554,7 @@ class ChatMessageRepositoryIT {
 
     @Test
     fun `should not duplicate messages across pages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         repeat(10) { i ->
             messageRepository.addMessage(
                 ChatMessage(
@@ -537,6 +562,7 @@ class ChatMessageRepositoryIT {
                     sessionId = testSession.id,
                     role = MessageRole.USER,
                     content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
                 ),
             )
         }
@@ -557,5 +583,507 @@ class ChatMessageRepositoryIT {
 
         val allMessageIds = (page1.first + page2.first).map { it.id }
         assertEquals(allMessageIds.size, allMessageIds.toSet().size) // No duplicates
+    }
+
+    // ===== Attachment Tests =====
+
+    @Test
+    fun `should add message with attachments and retrieve them`() {
+        val attachment1 = FileAttachment(
+            id = "",
+            messageId = "",
+            sessionId = testSession.id,
+            fileName = "document.pdf",
+            mimeType = "pdf",
+            size = 1024L,
+            createdAt = LocalDateTime.now(),
+            content = "PDF content here",
+        )
+        val attachment2 = FileAttachment(
+            id = "",
+            messageId = "",
+            sessionId = testSession.id,
+            fileName = "image.png",
+            mimeType = "png",
+            size = 2048L,
+            createdAt = LocalDateTime.now(),
+            content = "PNG content here",
+        )
+
+        val message = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message with attachments",
+                attachments = listOf(attachment1, attachment2),
+            ),
+        )
+
+        val messages = messageRepository.getMessages(testSession.id)
+
+        assertEquals(1, messages.size)
+        assertEquals(2, messages[0].attachments.size)
+        assertEquals("document.pdf", messages[0].attachments[0].fileName)
+        assertEquals("image.png", messages[0].attachments[1].fileName)
+        assertEquals(message.id, messages[0].attachments[0].messageId)
+        assertEquals(message.id, messages[0].attachments[1].messageId)
+    }
+
+    @Test
+    fun `should retrieve message without attachments`() {
+        val message = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message without attachments",
+            ),
+        )
+
+        val messages = messageRepository.getMessages(testSession.id)
+
+        assertEquals(1, messages.size)
+        assertTrue(messages[0].attachments.isEmpty())
+    }
+
+    @Test
+    fun `should handle multiple messages with different attachment counts`() {
+        val message1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message with one attachment",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "file1.txt",
+                        mimeType = "txt",
+                        size = 100L,
+                        createdAt = LocalDateTime.now(),
+                        content = "content1",
+                    ),
+                ),
+            ),
+        )
+
+        val message2 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message without attachments",
+            ),
+        )
+
+        val message3 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message with two attachments",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "file2.txt",
+                        mimeType = "txt",
+                        size = 200L,
+                        createdAt = LocalDateTime.now(),
+                        content = "content2",
+                    ),
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "file3.txt",
+                        mimeType = "txt",
+                        size = 300L,
+                        createdAt = LocalDateTime.now(),
+                        content = "content3",
+                    ),
+                ),
+            ),
+        )
+
+        val messages = messageRepository.getMessages(testSession.id)
+
+        assertEquals(3, messages.size)
+        assertEquals(1, messages[0].attachments.size)
+        assertEquals(0, messages[1].attachments.size)
+        assertEquals(2, messages[2].attachments.size)
+    }
+
+    @Test
+    fun `should automatically delete attachments when message is deleted via CASCADE`() {
+        val message = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message with attachments",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "file.txt",
+                        mimeType = "txt",
+                        size = 100L,
+                        createdAt = LocalDateTime.now(),
+                        content = "content",
+                    ),
+                ),
+            ),
+        )
+
+        // Verify attachment exists
+        val messagesBeforeDelete = messageRepository.getMessages(testSession.id)
+        assertEquals(1, messagesBeforeDelete[0].attachments.size)
+
+        // Delete session (which will CASCADE delete messages and attachments)
+        messageRepository.deleteMessagesBySession(testSession.id)
+
+        // Verify no messages remain
+        val messagesAfterDelete = messageRepository.getMessages(testSession.id)
+        assertTrue(messagesAfterDelete.isEmpty())
+
+        // Verify attachments are also deleted (via CASCADE)
+        val attachments = attachmentRepository.getAttachmentsBySessionId(testSession.id)
+        assertTrue(attachments.isEmpty())
+    }
+
+    @Test
+    fun `should load attachments with recent messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+        repeat(5) { i ->
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = testSession.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
+                    attachments = listOf(
+                        FileAttachment(
+                            id = "",
+                            messageId = "",
+                            sessionId = testSession.id,
+                            fileName = "file$i.txt",
+                            mimeType = "txt",
+                            size = (i * 100).toLong(),
+                            createdAt = baseTime.plusSeconds(i.toLong()),
+                            content = "content$i",
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        val recentMessages = messageRepository.getRecentMessages(testSession.id, limit = 3)
+
+        assertEquals(3, recentMessages.size)
+        assertEquals(1, recentMessages[0].attachments.size)
+        assertEquals("file2.txt", recentMessages[0].attachments[0].fileName)
+        assertEquals(1, recentMessages[1].attachments.size)
+        assertEquals("file3.txt", recentMessages[1].attachments[0].fileName)
+        assertEquals(1, recentMessages[2].attachments.size)
+        assertEquals("file4.txt", recentMessages[2].attachments[0].fileName)
+    }
+
+    @Test
+    fun `should load attachments with paginated messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+        repeat(5) { i ->
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = testSession.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
+                    attachments = listOf(
+                        FileAttachment(
+                            id = "",
+                            messageId = "",
+                            sessionId = testSession.id,
+                            fileName = "file$i.txt",
+                            mimeType = "txt",
+                            size = (i * 100).toLong(),
+                            createdAt = baseTime.plusSeconds(i.toLong()),
+                            content = "content$i",
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        val (page1, cursor) = messageRepository.getMessagesPaginated(
+            sessionId = testSession.id,
+            limit = 2,
+            cursor = null,
+            direction = PaginationDirection.FORWARD,
+        )
+
+        assertEquals(2, page1.size)
+        assertEquals(1, page1[0].attachments.size)
+        assertEquals("file0.txt", page1[0].attachments[0].fileName)
+        assertEquals(1, page1[1].attachments.size)
+        assertEquals("file1.txt", page1[1].attachments[0].fileName)
+
+        val (page2, _) = messageRepository.getMessagesPaginated(
+            sessionId = testSession.id,
+            limit = 2,
+            cursor = cursor,
+            direction = PaginationDirection.FORWARD,
+        )
+
+        assertEquals(2, page2.size)
+        assertEquals(1, page2[0].attachments.size)
+        assertEquals("file2.txt", page2[0].attachments[0].fileName)
+    }
+
+    @Test
+    fun `should load attachments with search results`() {
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Important document",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "important.pdf",
+                        mimeType = "pdf",
+                        size = 1024L,
+                        createdAt = LocalDateTime.now(),
+                        content = "important content",
+                    ),
+                ),
+            ),
+        )
+
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Regular message",
+            ),
+        )
+
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Another important note",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "note.txt",
+                        mimeType = "txt",
+                        size = 512L,
+                        createdAt = LocalDateTime.now(),
+                        content = "note content",
+                    ),
+                ),
+            ),
+        )
+
+        val results = messageRepository.searchMessages(testSession.id, "important")
+
+        assertEquals(2, results.size)
+        assertEquals(1, results[0].attachments.size)
+        assertEquals("important.pdf", results[0].attachments[0].fileName)
+        assertEquals(1, results[1].attachments.size)
+        assertEquals("note.txt", results[1].attachments[0].fileName)
+    }
+
+    @Test
+    fun `should load attachments with active messages only`() {
+        val message1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Active message",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "active.txt",
+                        mimeType = "txt",
+                        size = 100L,
+                        createdAt = LocalDateTime.now(),
+                        content = "active content",
+                    ),
+                ),
+            ),
+        )
+
+        val message2 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Outdated message",
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "outdated.txt",
+                        mimeType = "txt",
+                        size = 200L,
+                        createdAt = LocalDateTime.now(),
+                        content = "outdated content",
+                    ),
+                ),
+            ),
+        )
+
+        messageRepository.markMessageAsOutdated(message2.id)
+
+        val activeMessages = messageRepository.getActiveMessages(testSession.id)
+
+        assertEquals(1, activeMessages.size)
+        assertEquals(1, activeMessages[0].attachments.size)
+        assertEquals("active.txt", activeMessages[0].attachments[0].fileName)
+    }
+
+    @Test
+    fun `should preserve attachment metadata without content field`() {
+        val attachment = FileAttachment(
+            id = "",
+            messageId = "",
+            sessionId = testSession.id,
+            fileName = "test.txt",
+            mimeType = "txt",
+            size = 1024L,
+            createdAt = LocalDateTime.now(),
+            content = "This content should be stored",
+        )
+
+        val message = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Test message",
+                attachments = listOf(attachment),
+            ),
+        )
+
+        val retrievedMessages = messageRepository.getMessages(testSession.id)
+        val retrievedAttachment = retrievedMessages[0].attachments[0]
+
+        assertEquals("test.txt", retrievedAttachment.fileName)
+        assertEquals("txt", retrievedAttachment.mimeType)
+        assertEquals(1024L, retrievedAttachment.size)
+        assertNotNull(retrievedAttachment.id)
+        assertEquals(message.id, retrievedAttachment.messageId)
+        assertEquals(testSession.id, retrievedAttachment.sessionId)
+        // Content is NOT stored in database, should be null
+        assertEquals(null, retrievedAttachment.content)
+    }
+
+    @Test
+    fun `should handle large number of attachments efficiently`() {
+        val attachments = (1..10).map { i ->
+            FileAttachment(
+                id = "",
+                messageId = "",
+                sessionId = testSession.id,
+                fileName = "file$i.txt",
+                mimeType = "txt",
+                size = (i * 100).toLong(),
+                createdAt = LocalDateTime.now(),
+                content = "content$i",
+            )
+        }
+
+        val message = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message with many attachments",
+                attachments = attachments,
+            ),
+        )
+
+        val messages = messageRepository.getMessages(testSession.id)
+
+        assertEquals(1, messages.size)
+        assertEquals(10, messages[0].attachments.size)
+        // Verify all attachments are properly loaded via JOIN (order doesn't matter)
+        val fileNames = messages[0].attachments.map { it.fileName }.toSet()
+        val expectedFileNames = (1..10).map { "file$it.txt" }.toSet()
+        assertEquals(expectedFileNames, fileNames)
+    }
+
+    @Test
+    fun `should load attachments after specific message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+        val message1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "First",
+                createdAt = baseTime,
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "first.txt",
+                        mimeType = "txt",
+                        size = 100L,
+                        createdAt = baseTime,
+                        content = "first content",
+                    ),
+                ),
+            ),
+        )
+
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Second",
+                createdAt = baseTime.plusSeconds(1),
+                attachments = listOf(
+                    FileAttachment(
+                        id = "",
+                        messageId = "",
+                        sessionId = testSession.id,
+                        fileName = "second.txt",
+                        mimeType = "txt",
+                        size = 200L,
+                        createdAt = baseTime.plusSeconds(1),
+                        content = "second content",
+                    ),
+                ),
+            ),
+        )
+
+        val messagesAfter = messageRepository.getMessagesAfter(testSession.id, message1.id, limit = 10)
+
+        assertEquals(1, messagesAfter.size)
+        assertEquals(1, messagesAfter[0].attachments.size)
+        assertEquals("second.txt", messagesAfter[0].attachments[0].fileName)
     }
 }

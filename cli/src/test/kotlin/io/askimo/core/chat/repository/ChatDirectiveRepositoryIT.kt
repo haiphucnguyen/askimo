@@ -38,7 +38,7 @@ class ChatDirectiveRepositoryIT {
         fun setUpClass(@TempDir tempDir: Path) {
             testBaseScope = AskimoHome.withTestBase(tempDir)
 
-            databaseManager = DatabaseManager.getTestInstance(this)
+            databaseManager = DatabaseManager.getInMemoryTestInstance(this)
 
             repository = databaseManager.getChatDirectiveRepository()
         }

@@ -6,17 +6,18 @@ package io.askimo.cli.commands
 
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
 import org.jline.reader.ParsedLine
 
-class ListSessionsCommandHandler : CommandHandler {
+class ListSessionsCommandHandler(private val appContext: AppContext) : CommandHandler {
     private val log = logger<ListSessionsCommandHandler>()
     override val keyword = ":sessions"
     override val description = "List all chat sessions with pagination (:sessions [page])"
 
-    private val sessionService = ChatSessionService()
+    private val sessionService = ChatSessionService(appContext = appContext)
     private val sessionsPerPage = 10
 
     override fun handle(line: ParsedLine) {

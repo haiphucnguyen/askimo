@@ -48,6 +48,10 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.dto.ChatMessageDTO
+import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
@@ -61,8 +65,6 @@ import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
-import io.askimo.desktop.model.ChatMessage
-import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.theme.ThemeMode
@@ -205,8 +207,8 @@ enum class EventLogDockPosition {
  */
 data class ChatViewState(
     val inputText: TextFieldValue = TextFieldValue(""),
-    val attachments: List<FileAttachment> = emptyList(),
-    val editingMessage: ChatMessage? = null,
+    val attachments: List<FileAttachmentDTO> = emptyList(),
+    val editingMessage: ChatMessageDTO? = null,
 )
 
 @Composable
@@ -241,6 +243,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     val koin = get()
 
     val appContext = remember { koin.get<AppContext>() }
+    val chatSessionService = remember { koin.get<ChatSessionService>() }
 
     val sessionManager = remember { koin.get<SessionManager>() }
     val sessionsViewModel = remember {
@@ -248,7 +251,15 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             parametersOf(
                 scope,
                 sessionManager,
-                { appContext.startNewChatSession().id },
+                {
+                    chatSessionService.createSession(
+                        ChatSession(
+                            id = "",
+                            title = "New Chat",
+                            directiveId = null,
+                        ),
+                    ).id
+                },
             )
         }
     }
@@ -256,13 +267,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     val updateViewModel = remember { koin.get<UpdateViewModel> { parametersOf(scope) } }
 
     LaunchedEffect(Unit) {
-        val currentSession = appContext.currentChatSession
-        if (currentSession != null) {
-            sessionManager.switchToSession(currentSession.id)
-        } else {
-            val newSessionId = UUID.randomUUID().toString()
-            sessionManager.createNewSession(newSessionId)
-        }
+        val newSessionId = UUID.randomUUID().toString()
+        sessionManager.createNewSession(newSessionId)
     }
 
     LaunchedEffect(Unit) {
@@ -765,7 +771,7 @@ fun mainContent(
     onNavigateToSettings: () -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
-    onChatStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit,
+    onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -820,6 +826,9 @@ fun mainContent(
                     sessionId = activeSessionId,
                     onExportSession = { sessionId ->
                         sessionsViewModel.exportSession(sessionId)
+                    },
+                    onDeleteSession = { sessionId ->
+                        sessionsViewModel.deleteSessionWithCleanup(sessionId)
                     },
                     modifier = Modifier.fillMaxSize(),
                 )

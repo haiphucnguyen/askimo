@@ -11,6 +11,8 @@ import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ConversationSummaryRepository
+import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
@@ -45,18 +47,21 @@ class ChatSessionServiceIT {
         fun setUpClass(@TempDir tempDir: Path) {
             testBaseScope = AskimoHome.withTestBase(tempDir)
 
-            databaseManager = DatabaseManager.getTestInstance(this)
+            databaseManager = DatabaseManager.getInMemoryTestInstance(this)
 
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
             summaryRepository = databaseManager.getConversationSummaryRepository()
             folderRepository = databaseManager.getChatFolderRepository()
 
+            val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
+
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
-                summaryRepository = summaryRepository,
+                conversationSummaryRepository = summaryRepository,
                 folderRepository = folderRepository,
+                appContext = appContext,
             )
         }
 
@@ -66,6 +71,8 @@ class ChatSessionServiceIT {
             if (::databaseManager.isInitialized) {
                 databaseManager.close()
             }
+            // Reset the singleton to close any file-based database that might have been created
+            DatabaseManager.reset()
             if (::testBaseScope.isInitialized) {
                 testBaseScope.close()
             }

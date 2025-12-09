@@ -5,16 +5,17 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
 
-class DeleteSessionCommandHandler : CommandHandler {
+class DeleteSessionCommandHandler(private val appContext: AppContext) : CommandHandler {
     private val log = logger<DeleteSessionCommandHandler>()
     override val keyword = ":delete-session"
     override val description = "Delete a chat session by ID (:delete-session <session-id>)"
 
-    private val sessionService = ChatSessionService()
+    private val sessionService = ChatSessionService(appContext = appContext)
 
     override fun handle(line: ParsedLine) {
         val args = line.words()

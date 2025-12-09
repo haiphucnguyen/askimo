@@ -56,6 +56,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
+import io.askimo.core.chat.dto.ChatMessageDTO
+import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
@@ -63,8 +65,6 @@ import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
-import io.askimo.desktop.model.ChatMessage
-import io.askimo.desktop.model.FileAttachment
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
 import io.askimo.desktop.view.components.manageDirectivesDialog
@@ -76,6 +76,7 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
+import java.util.UUID
 
 private object ChatViewObject
 private val log = logger<ChatViewObject>()
@@ -83,7 +84,7 @@ private val log = logger<ChatViewObject>()
 // File attachment item composable
 @Composable
 private fun fileAttachmentItem(
-    attachment: FileAttachment,
+    attachment: FileAttachmentDTO,
     onRemove: () -> Unit,
 ) {
     Card(
@@ -141,8 +142,8 @@ private fun fileAttachmentItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun chatView(
-    messages: List<ChatMessage>,
-    onSendMessage: (String, List<FileAttachment>, ChatMessage?) -> Unit,
+    messages: List<ChatMessageDTO>,
+    onSendMessage: (String, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     onStopResponse: () -> Unit = {},
     isLoading: Boolean = false,
     isThinking: Boolean = false,
@@ -157,7 +158,7 @@ fun chatView(
     onLoadPrevious: () -> Unit = {},
     isSearchMode: Boolean = false,
     searchQuery: String = "",
-    searchResults: List<ChatMessage> = emptyList(),
+    searchResults: List<ChatMessageDTO> = emptyList(),
     currentSearchResultIndex: Int = 0,
     isSearching: Boolean = false,
     onSearch: (String) -> Unit = {},
@@ -169,18 +170,19 @@ fun chatView(
     onDirectiveSelected: (String?) -> Unit = {},
     onUpdateAIMessage: (String, String) -> Unit = { _, _ -> },
     initialInputText: TextFieldValue = TextFieldValue(""),
-    initialAttachments: List<FileAttachment> = emptyList(),
-    initialEditingMessage: ChatMessage? = null,
-    onStateChange: (TextFieldValue, List<FileAttachment>, ChatMessage?) -> Unit = { _, _, _ -> },
+    initialAttachments: List<FileAttachmentDTO> = emptyList(),
+    initialEditingMessage: ChatMessageDTO? = null,
+    onStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit = { _, _, _ -> },
     sessionId: String? = null,
     onExportSession: (String) -> Unit = {},
+    onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Internal state management for ChatView
     var inputText by remember(initialInputText) { mutableStateOf(initialInputText) }
     var attachments by remember(initialAttachments) { mutableStateOf(initialAttachments) }
     var editingMessage by remember(initialEditingMessage) { mutableStateOf(initialEditingMessage) }
-    var editingAIMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var editingAIMessage by remember { mutableStateOf<ChatMessageDTO?>(null) }
 
     // Notify parent of state changes
     LaunchedEffect(inputText, attachments, editingMessage) {
@@ -581,11 +583,11 @@ fun chatView(
                             }
                         }
 
-                        // Session actions menu (Export, etc.)
                         if (sessionId != null) {
                             sessionActionsMenu(
                                 sessionId = sessionId,
                                 onExportSession = onExportSession,
+                                onDeleteSession = onDeleteSession,
                             )
                         }
                     }
@@ -784,16 +786,20 @@ fun chatView(
             if (selectedFile != null && selectedDir != null) {
                 val file = File(selectedDir, selectedFile)
                 try {
-                    val content = file.readText()
-                    val attachment = FileAttachment(
+                    val attachment = FileAttachmentDTO(
+                        id = UUID.randomUUID().toString(),
+                        messageId = "",
+                        sessionId = sessionId ?: "",
                         fileName = file.name,
-                        content = content,
                         mimeType = file.extension,
                         size = file.length(),
+                        createdAt = LocalDateTime.now(),
+                        content = null,
+                        filePath = file.absolutePath,
                     )
                     attachments = attachments + attachment
                 } catch (e: Exception) {
-                    log.error("Error reading file: ${e.message}", e)
+                    log.error("Error adding file attachment: ${e.message}", e)
                 }
             }
         }
@@ -924,7 +930,6 @@ fun chatView(
 
                             when (shortcut) {
                                 AppShortcut.NEW_LINE -> {
-                                    // Shift+Enter: insert new line at cursor position
                                     val cursorPosition = inputText.selection.start
                                     val textBeforeCursor = inputText.text.substring(0, cursorPosition)
                                     val textAfterCursor = inputText.text.substring(cursorPosition)

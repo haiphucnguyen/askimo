@@ -20,6 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +51,7 @@ import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import org.jetbrains.skia.Image
+import java.awt.Cursor
 
 enum class SettingsSection {
     GENERAL,
@@ -102,7 +109,7 @@ fun settingsViewWithSidebar(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "— ${stringResource("settings.title")}",
+                    text = stringResource("settings.title"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
@@ -135,31 +142,37 @@ fun settingsViewWithSidebar(
             ) {
                 settingsSidebarItem(
                     title = stringResource("settings.general"),
+                    icon = Icons.Default.Settings,
                     isSelected = selectedSection == SettingsSection.GENERAL,
                     onClick = { selectedSection = SettingsSection.GENERAL },
                 )
                 settingsSidebarItem(
                     title = stringResource("settings.ai.provider"),
+                    icon = Icons.Default.SmartToy,
                     isSelected = selectedSection == SettingsSection.AI_PROVIDER,
                     onClick = { selectedSection = SettingsSection.AI_PROVIDER },
                 )
                 settingsSidebarItem(
                     title = stringResource("settings.appearance"),
+                    icon = Icons.Default.Palette,
                     isSelected = selectedSection == SettingsSection.APPEARANCE,
                     onClick = { selectedSection = SettingsSection.APPEARANCE },
                 )
                 settingsSidebarItem(
                     title = stringResource("settings.shortcuts"),
+                    icon = Icons.Outlined.Keyboard,
                     isSelected = selectedSection == SettingsSection.SHORTCUTS,
                     onClick = { selectedSection = SettingsSection.SHORTCUTS },
                 )
                 settingsSidebarItem(
                     title = stringResource("settings.advanced"),
+                    icon = Icons.Outlined.Tune,
                     isSelected = selectedSection == SettingsSection.ADVANCED,
                     onClick = { selectedSection = SettingsSection.ADVANCED },
                 )
                 settingsSidebarItem(
                     title = stringResource("settings.about"),
+                    icon = Icons.Default.Info,
                     isSelected = selectedSection == SettingsSection.ABOUT,
                     onClick = { selectedSection = SettingsSection.ABOUT },
                 )
@@ -171,7 +184,7 @@ fun settingsViewWithSidebar(
                     .width(8.dp)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .pointerHoverIcon(PointerIcon(java.awt.Cursor(java.awt.Cursor.E_RESIZE_CURSOR)))
+                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
@@ -222,6 +235,7 @@ fun settingsViewWithSidebar(
 @Composable
 private fun settingsSidebarItem(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -236,15 +250,30 @@ private fun settingsSidebarItem(
             Transparent
         },
     ) {
-        Text(
-            text = title,
+        Row(
             modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+        }
     }
 }

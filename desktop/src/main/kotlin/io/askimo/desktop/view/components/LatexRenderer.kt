@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import io.askimo.core.logging.logger
 import org.scilab.forge.jlatexmath.TeXConstants
 import org.scilab.forge.jlatexmath.TeXFormula
 import java.awt.AlphaComposite
@@ -27,6 +28,8 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 import java.awt.Color as AwtColor
+
+private val log = logger("LatexRenderer")
 
 /**
  * Renders a LaTeX formula as an image using JLaTeXMath.
@@ -37,8 +40,6 @@ fun latexFormula(
     modifier: Modifier = Modifier,
     fontSize: Float = 32f,
 ) {
-    // Get the actual content color that matches the surrounding text
-    // This is the same color that MaterialTheme.typography.bodyMedium text uses
     val textColor = LocalContentColor.current
 
     val formulaImage = remember(latex, fontSize, textColor) {
@@ -56,7 +57,6 @@ fun latexFormula(
             alignment = Alignment.CenterStart,
         )
     } else {
-        // Fallback to plain text if rendering fails
         Text(
             text = latex,
             style = MaterialTheme.typography.bodyMedium,
@@ -74,7 +74,6 @@ private fun renderLatexToImage(
     fontSize: Float,
     textColor: Color,
 ): ImageBitmap? = try {
-    // Convert Compose Color to AWT Color
     val red = (textColor.red * 255).toInt().coerceIn(0, 255)
     val green = (textColor.green * 255).toInt().coerceIn(0, 255)
     val blue = (textColor.blue * 255).toInt().coerceIn(0, 255)
@@ -93,8 +92,7 @@ private fun renderLatexToImage(
         foregroundField.isAccessible = true
         foregroundField.set(box, awtColor)
     } catch (e: Exception) {
-        // If reflection fails, continue without custom color
-        println("Warning: Could not set LaTeX foreground color: ${e.message}")
+        log.error("Warning: Could not set LaTeX foreground color: ${e.message}", e)
     }
 
     val bufferedImage = BufferedImage(icon.iconWidth, icon.iconHeight, BufferedImage.TYPE_INT_ARGB)
@@ -129,7 +127,6 @@ private fun renderLatexToImage(
     val bytes = outputStream.toByteArray()
     org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()
 } catch (e: Exception) {
-    println("Failed to render LaTeX: $latex - ${e.message}")
-    e.printStackTrace()
+    log.error("Failed to render LaTeX: $latex - ${e.message}", e)
     null
 }

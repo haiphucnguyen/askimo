@@ -39,8 +39,9 @@ val desktopModule = module {
         ChatSessionService(
             sessionRepository = get(),
             messageRepository = get(),
-            summaryRepository = get(),
+            conversationSummaryRepository = get(),
             folderRepository = get(),
+            appContext = get(),
         )
     }
     single {
@@ -65,6 +66,7 @@ val desktopModule = module {
     factory { (scope: CoroutineScope, sessionManager: SessionManager?, onCreateNewSession: (() -> String)?) ->
         SessionsViewModel(
             scope = scope,
+            sessionService = get(),
             sessionManager = sessionManager,
             onCreateNewSession = onCreateNewSession,
         )

@@ -8,6 +8,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatFolderRepository
+import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ConversationSummaryRepository
@@ -91,6 +92,7 @@ class DatabaseManager private constructor(
         createFoldersTable(connection)
         createSessionsTable(connection)
         createMessagesTable(connection)
+        createAttachmentsTable(connection)
         createSummariesTable(connection)
         createDirectivesTable(connection)
     }
@@ -167,6 +169,42 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createAttachmentsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS chat_message_attachments (
+                    id TEXT PRIMARY KEY,
+                    message_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    file_name TEXT NOT NULL,
+                    mime_type TEXT NOT NULL,
+                    size INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (message_id) REFERENCES chat_messages (id) ON DELETE CASCADE,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+                )
+                """,
+            )
+
+            // Create index for efficient lookups by message_id
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_attachments_message_id
+                ON chat_message_attachments (message_id)
+                """,
+            )
+
+            // Create index for efficient lookups by session_id
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_attachments_session_id
+                ON chat_message_attachments (session_id)
+                """,
+            )
+        }
+    }
+
     private fun createSummariesTable(conn: Connection) {
         conn.createStatement().use { stmt ->
             stmt.executeUpdate(
@@ -204,8 +242,12 @@ class DatabaseManager private constructor(
         ChatSessionRepository(this)
     }
 
+    private val _chatMessageAttachmentRepository: ChatMessageAttachmentRepository by lazy {
+        ChatMessageAttachmentRepository(this)
+    }
+
     private val _chatMessageRepository: ChatMessageRepository by lazy {
-        ChatMessageRepository(this)
+        ChatMessageRepository(this, _chatMessageAttachmentRepository)
     }
 
     private val _chatFolderRepository: ChatFolderRepository by lazy {
@@ -231,6 +273,12 @@ class DatabaseManager private constructor(
      * All access to chat messages should go through this repository.
      */
     fun getChatMessageRepository(): ChatMessageRepository = _chatMessageRepository
+
+    /**
+     * Get the singleton ChatMessageAttachmentRepository instance.
+     * All access to chat message attachments should go through this repository.
+     */
+    fun getChatMessageAttachmentRepository(): ChatMessageAttachmentRepository = _chatMessageAttachmentRepository
 
     /**
      * Get the singleton ChatFolderRepository instance.
@@ -280,6 +328,19 @@ class DatabaseManager private constructor(
         fun getTestInstance(testScope: Any): DatabaseManager {
             val testDbName = "test_${testScope.javaClass.simpleName}_${System.nanoTime()}.db"
             return DatabaseManager(databaseFileName = testDbName)
+        }
+
+        /**
+         * Create an in-memory test DatabaseManager.
+         * This is useful for environments where SQLite native libraries are not available
+         * or for faster test execution without file I/O.
+         *
+         * @param testScope The test class instance (typically use `this` in companion object)
+         * @return A new DatabaseManager instance with an in-memory database
+         */
+        fun getInMemoryTestInstance(testScope: Any): DatabaseManager {
+            val testDbName = "test_${testScope.javaClass.simpleName}_${System.nanoTime()}_memory.db"
+            return DatabaseManager(databaseFileName = testDbName, useInMemory = true)
         }
 
         /**

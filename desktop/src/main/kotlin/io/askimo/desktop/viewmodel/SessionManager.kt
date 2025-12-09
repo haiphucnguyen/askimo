@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
@@ -117,17 +118,13 @@ class SessionManager(
     }
 
     /**
-     * Send a message and start streaming in the background.
-     * Creates a new thread for this question-answer pair.
-     *
-     * @param sessionId The session ID
-     * @param userMessage The user's message
-     * @param onChunkReceived Callback for each chunk (optional)
+     * Send a message and start streaming the AI response.
      * @return threadId if streaming started successfully, null if session already has active stream or max streams reached
      */
     fun sendMessage(
         sessionId: String,
         userMessage: String,
+        attachments: List<FileAttachmentDTO> = emptyList(),
         onChunkReceived: (String) -> Unit = {},
     ): String? {
         // Create session lazily on first message (only once per session)
@@ -177,7 +174,7 @@ class SessionManager(
         log.debug("Streaming thread $threadId for session $sessionId started. Active streams: ${activeThreads.size}")
 
         // Prepare context and save user message to DB
-        val promptWithContext = appContext.prepareContextAndGetPromptForChat(userMessage, sessionId)
+        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(userMessage, sessionId, attachments)
         log.debug("Saved prompt for session $sessionId: $promptWithContext")
 
         // Start streaming in background
@@ -194,7 +191,7 @@ class SessionManager(
                 }
 
                 thread.markComplete()
-                appContext.saveAiResponseToSession(fullResponse, sessionId)
+                chatSessionService.saveAiResponse(sessionId, fullResponse)
                 log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
             } catch (e: Exception) {
                 thread.markFailed()
@@ -207,7 +204,7 @@ class SessionManager(
                     "Response failed"
                 }
 
-                appContext.saveAiResponseToSession(failedResponse, sessionId)
+                chatSessionService.saveAiResponse(sessionId, failedResponse)
                 log.error("Streaming thread $threadId failed for session $sessionId: ${e.message}", e)
             } finally {
                 activeThreads.remove(sessionId)

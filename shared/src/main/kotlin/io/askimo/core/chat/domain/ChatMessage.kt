@@ -16,4 +16,5 @@ data class ChatMessage(
     val isOutdated: Boolean = false,
     val editParentId: String? = null,
     val isEdited: Boolean = false,
+    val attachments: List<FileAttachment> = emptyList(),
 )

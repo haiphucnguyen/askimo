@@ -4,12 +4,12 @@
  */
 package io.askimo.desktop.util
 
-import io.askimo.core.util.formatFileSize
-import io.askimo.desktop.model.FileAttachment
+import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.chat.util.constructMessageWithAttachments
 
 /**
  * Constructs a message with file attachments that will be sent to the AI.
- * The file contents are included in the message context so the AI can read and process them.
+ * Delegates to shared module implementation for consistency across UI layers.
  *
  * @param userMessage The user's message/question
  * @param attachments List of file attachments
@@ -17,24 +17,5 @@ import io.askimo.desktop.model.FileAttachment
  */
 fun constructMessageWithAttachments(
     userMessage: String,
-    attachments: List<FileAttachment>,
-): String {
-    if (attachments.isEmpty()) {
-        return userMessage
-    }
-
-    return buildString {
-        attachments.forEach { attachment ->
-            appendLine("---")
-            appendLine("Attached file: ${attachment.fileName}")
-            appendLine("File size: ${formatFileSize(attachment.size)}")
-            appendLine()
-            appendLine(attachment.content)
-            appendLine("---")
-            appendLine()
-        }
-
-        // Then include user's message/question
-        appendLine(userMessage)
-    }
-}
+    attachments: List<FileAttachmentDTO>,
+): String = constructMessageWithAttachments(userMessage, attachments)
