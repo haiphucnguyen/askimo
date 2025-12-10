@@ -21,6 +21,8 @@ data class GeminiSettings(
     override var apiKey: String = "",
     override val defaultModel: String = "gemini-2.5-flash",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
+    val enableAiSummarization: Boolean = true,
+    val summarizerModel: String = "gemini-1.5-flash-8b", // Very fast and cheap model for summarization
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

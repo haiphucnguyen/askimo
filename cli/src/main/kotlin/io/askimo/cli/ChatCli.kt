@@ -5,7 +5,6 @@
 package io.askimo.cli
 
 import io.askimo.cli.autocompleter.CliCommandCompleter
-import io.askimo.cli.commands.ClearMemoryCommandHandler
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
 import io.askimo.cli.commands.CopyCommandHandler
@@ -40,6 +39,7 @@ import io.askimo.cli.service.CliUpdateService
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
+import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextFactory
@@ -256,7 +256,6 @@ fun main(args: Array<String>) {
         // Create command handlers for interactive mode (shared + interactive-only commands)
         val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
             CopyCommandHandler(),
-            ClearMemoryCommandHandler(appContext),
             ListProjectsCommandHandler(),
             CreateProjectCommandHandler(appContext),
             UseProjectCommandHandler(appContext),
@@ -325,8 +324,18 @@ private fun sendChatMessage(
     terminal: Terminal,
     chatSessionService: ChatSessionService,
 ): String {
-    val currentSession = CliInteractiveContext.currentChatSession
-    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(prompt, currentSession!!.id)
+    var currentSession = CliInteractiveContext.currentChatSession
+    if (currentSession == null) {
+        val session = chatSessionService.createSession(
+            ChatSession(
+                id = "",
+                title = "New Chat",
+            ),
+        )
+        CliInteractiveContext.setCurrentSession(session)
+        currentSession = session
+    }
+    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(prompt, currentSession.id)
 
     val output = streamChatResponse(appContext, promptWithContext, terminal)
     chatSessionService.saveAiResponse(currentSession.id, output)

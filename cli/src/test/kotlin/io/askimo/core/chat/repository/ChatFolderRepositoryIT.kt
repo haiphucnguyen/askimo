@@ -9,7 +9,10 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -60,14 +63,14 @@ class ChatFolderRepositoryIT {
         )
 
         assertNotNull(folder.id)
-        Assertions.assertEquals("Work Projects", folder.name)
+        assertEquals("Work Projects", folder.name)
         assertNotNull(folder.createdAt)
         assertNotNull(folder.updatedAt)
 
         val retrieved = folderRepository.getFolder(folder.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals(folder.id, retrieved.id)
-        Assertions.assertEquals(folder.name, retrieved.name)
+        assertEquals(folder.id, retrieved.id)
+        assertEquals(folder.name, retrieved.name)
     }
 
     @Test
@@ -81,10 +84,10 @@ class ChatFolderRepositoryIT {
 
         val retrieved = folderRepository.getFolder(folder.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals("Important", retrieved!!.name)
-        Assertions.assertEquals("#FF0000", retrieved.color)
-        Assertions.assertEquals("star", retrieved.icon)
-        Assertions.assertEquals(5, retrieved.sortOrder)
+        assertEquals("Important", retrieved!!.name)
+        assertEquals("#FF0000", retrieved.color)
+        assertEquals("star", retrieved.icon)
+        assertEquals(5, retrieved.sortOrder)
     }
 
     @Test
@@ -97,7 +100,7 @@ class ChatFolderRepositoryIT {
 
         val retrieved = folderRepository.getFolder(child.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals(parent.id, retrieved!!.parentFolderId)
+        assertEquals(parent.id, retrieved!!.parentFolderId)
     }
 
     @Test
@@ -108,10 +111,10 @@ class ChatFolderRepositoryIT {
 
         val folders = folderRepository.getAllFolders()
 
-        Assertions.assertEquals(3, folders.size)
-        Assertions.assertEquals("A Folder", folders[0].name)
-        Assertions.assertEquals("C Folder", folders[1].name)
-        Assertions.assertEquals("B Folder", folders[2].name)
+        assertEquals(3, folders.size)
+        assertEquals("A Folder", folders[0].name)
+        assertEquals("C Folder", folders[1].name)
+        assertEquals("B Folder", folders[2].name)
     }
 
     @Test
@@ -120,9 +123,9 @@ class ChatFolderRepositoryIT {
 
         val updated = folderRepository.updateFolder(folder.id, name = "New Name")
 
-        Assertions.assertTrue(updated)
+        assertTrue(updated)
         val retrieved = folderRepository.getFolder(folder.id)
-        Assertions.assertEquals("New Name", retrieved!!.name)
+        assertEquals("New Name", retrieved!!.name)
     }
 
     @Test
@@ -137,9 +140,9 @@ class ChatFolderRepositoryIT {
         )
 
         val retrieved = folderRepository.getFolder(folder.id)
-        Assertions.assertEquals("#00FF00", retrieved!!.color)
-        Assertions.assertEquals("folder", retrieved.icon)
-        Assertions.assertEquals(10, retrieved.sortOrder)
+        assertEquals("#00FF00", retrieved!!.color)
+        assertEquals("folder", retrieved.icon)
+        assertEquals(10, retrieved.sortOrder)
     }
 
     @Test
@@ -150,9 +153,9 @@ class ChatFolderRepositoryIT {
 
         val updated = folderRepository.updateFolder(child.id, parentFolderId = parent2.id)
 
-        Assertions.assertTrue(updated)
+        assertTrue(updated)
         val retrieved = folderRepository.getFolder(child.id)
-        Assertions.assertEquals(parent2.id, retrieved!!.parentFolderId)
+        assertEquals(parent2.id, retrieved!!.parentFolderId)
     }
 
     @Test
@@ -169,20 +172,20 @@ class ChatFolderRepositoryIT {
         folderRepository.deleteFolder(tempParent.id)
 
         val retrieved = folderRepository.getFolder(child.id)
-        Assertions.assertNull(retrieved!!.parentFolderId)
+        assertNull(retrieved!!.parentFolderId)
     }
 
     @Test
     fun `should return false when updating non-existent folder`() {
         val updated = folderRepository.updateFolder("non-existent-id", name = "New Name")
-        Assertions.assertFalse(updated)
+        assertFalse(updated)
     }
 
     @Test
     fun `should return false when updating folder with no changes`() {
         val folder = folderRepository.createFolder(name = "Test")
         val updated = folderRepository.updateFolder(folder.id)
-        Assertions.assertFalse(updated)
+        assertFalse(updated)
     }
 
     @Test
@@ -191,14 +194,14 @@ class ChatFolderRepositoryIT {
 
         val deleted = folderRepository.deleteFolder(folder.id)
 
-        Assertions.assertTrue(deleted)
-        Assertions.assertNull(folderRepository.getFolder(folder.id))
+        assertTrue(deleted)
+        assertNull(folderRepository.getFolder(folder.id))
     }
 
     @Test
     fun `should return false when deleting non-existent folder`() {
         val deleted = folderRepository.deleteFolder("non-existent-id")
-        Assertions.assertFalse(deleted)
+        assertFalse(deleted)
     }
 
     @Test
@@ -213,8 +216,8 @@ class ChatFolderRepositoryIT {
         folderRepository.deleteFolder(folder.id)
 
         val retrieved = sessionRepository.getSession(session.id)
-        Assertions.assertNull(retrieved!!.folderId)
-        Assertions.assertNull(folderRepository.getFolder(folder.id))
+        assertNull(retrieved!!.folderId)
+        assertNull(folderRepository.getFolder(folder.id))
     }
 
     @Test
@@ -227,14 +230,14 @@ class ChatFolderRepositoryIT {
 
         val retrievedChild = folderRepository.getFolder(child.id)
         assertNotNull(retrievedChild)
-        Assertions.assertNull(retrievedChild!!.parentFolderId)
-        Assertions.assertNull(folderRepository.getFolder(parent.id))
+        assertNull(retrievedChild!!.parentFolderId)
+        assertNull(folderRepository.getFolder(parent.id))
     }
 
     @Test
     fun `should return null for non-existent folder`() {
         val result = folderRepository.getFolder("non-existent-id")
-        Assertions.assertNull(result)
+        assertNull(result)
     }
 
     @Test
@@ -244,10 +247,10 @@ class ChatFolderRepositoryIT {
         val level3 = folderRepository.createFolder(name = "Level 3", parentFolderId = level2.id)
 
         val retrieved = folderRepository.getFolder(level3.id)
-        Assertions.assertEquals(level2.id, retrieved!!.parentFolderId)
+        assertEquals(level2.id, retrieved!!.parentFolderId)
 
         val retrievedLevel2 = folderRepository.getFolder(level2.id)
-        Assertions.assertEquals(level1.id, retrievedLevel2!!.parentFolderId)
+        assertEquals(level1.id, retrievedLevel2!!.parentFolderId)
     }
 
     @Test
@@ -265,11 +268,11 @@ class ChatFolderRepositoryIT {
         val folder1Sessions = sessionRepository.getSessionsByFolder(folder1.id)
         val folder2Sessions = sessionRepository.getSessionsByFolder(folder2.id)
 
-        Assertions.assertEquals(1, folder1Sessions.size)
-        Assertions.assertEquals(session1.id, folder1Sessions[0].id)
+        assertEquals(1, folder1Sessions.size)
+        assertEquals(session1.id, folder1Sessions[0].id)
 
-        Assertions.assertEquals(1, folder2Sessions.size)
-        Assertions.assertEquals(session2.id, folder2Sessions[0].id)
+        assertEquals(1, folder2Sessions.size)
+        assertEquals(session2.id, folder2Sessions[0].id)
     }
 
     @Test
@@ -280,8 +283,8 @@ class ChatFolderRepositoryIT {
 
         val rootSessions = sessionRepository.getSessionsByFolder(null)
 
-        Assertions.assertEquals(1, rootSessions.size)
-        Assertions.assertEquals(rootSession.id, rootSessions[0].id)
+        assertEquals(1, rootSessions.size)
+        assertEquals(rootSession.id, rootSessions[0].id)
     }
 
     @Test
@@ -296,7 +299,7 @@ class ChatFolderRepositoryIT {
         sessionRepository.updateSessionFolder(session.id, folder2.id)
 
         val retrieved = sessionRepository.getSession(session.id)
-        Assertions.assertEquals(folder2.id, retrieved!!.folderId)
+        assertEquals(folder2.id, retrieved!!.folderId)
     }
 
     @Test
@@ -309,6 +312,6 @@ class ChatFolderRepositoryIT {
         sessionRepository.updateSessionFolder(session.id, null)
 
         val retrieved = sessionRepository.getSession(session.id)
-        Assertions.assertNull(retrieved!!.folderId)
+        assertNull(retrieved!!.folderId)
     }
 }

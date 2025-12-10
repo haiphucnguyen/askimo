@@ -118,4 +118,19 @@ object NoopChatClient : ChatClient {
     }
 
     override fun sendMessage(prompt: String): String = getConfigurationMessage()
+
+    // Session management methods - no-op implementations
+    override suspend fun switchSession(sessionId: String) {
+        // No-op: NoopChatClient doesn't support session management
+    }
+
+    override suspend fun saveCurrentSession() {
+        // No-op: NoopChatClient doesn't support session management
+    }
+
+    override fun getCurrentSessionId(): String? = null
+
+    override fun clearMemory() {
+        // No-op: NoopChatClient doesn't have memory
+    }
 }

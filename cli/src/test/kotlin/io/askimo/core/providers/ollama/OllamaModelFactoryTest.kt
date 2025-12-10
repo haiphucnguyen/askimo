@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.ollama
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
@@ -40,12 +39,10 @@ class OllamaModelFactoryTest {
 
     private fun createChatService(baseUrl: String): ChatClient {
         val settings = OllamaSettings(baseUrl = baseUrl)
-        val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         return OllamaModelFactory().create(
             model = "qwen2.5:0.5b",
             settings = settings,
-            memory = memory,
             retrievalAugmentor = null,
         )
     }

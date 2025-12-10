@@ -18,8 +18,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class OpenAiSettings(
     override var apiKey: String = "",
-    override val defaultModel: String = "gpt-4o",
+    override val defaultModel: String = "gpt-5.1",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
+    val enableAiSummarization: Boolean = true,
+    val summarizerModel: String = "gpt-4o-mini", // Cheaper model for background summarization
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

@@ -32,14 +32,12 @@ val desktopModule = module {
     single { get<DatabaseManager>().getChatSessionRepository() }
     single { get<DatabaseManager>().getChatMessageRepository() }
     single { get<DatabaseManager>().getChatFolderRepository() }
-    single { get<DatabaseManager>().getConversationSummaryRepository() }
     single { get<DatabaseManager>().getChatDirectiveRepository() }
 
     single {
         ChatSessionService(
             sessionRepository = get(),
             messageRepository = get(),
-            conversationSummaryRepository = get(),
             folderRepository = get(),
             appContext = get(),
         )

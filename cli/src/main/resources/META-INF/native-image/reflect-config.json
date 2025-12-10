@@ -680,7 +680,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1140,6 +1141,23 @@
     ]
   },
   {
+    "name": "dev.langchain4j.model.googleai.GeminiCountTokensRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "contents", "parameterTypes": [] },
+      { "name": "generateContentRequest", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiCountTokensResponse",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": ["java.lang.Integer"] }]
+  },
+  {
     "name": "dev.langchain4j.model.googleai.GeminiFunctionDeclaration",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1518,43 +1536,6 @@
         ]
       },
       { "name": "totalTokens", "parameterTypes": ["java.lang.Integer"] }
-    ]
-  },
-  {
-    "name": "io.askimo.cli.commands.ClearMemoryCommandHandlerTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "description is not empty and mentions clearing memory",
-        "parameterTypes": []
-      },
-      {
-        "name": "description mentions provider and model",
-        "parameterTypes": []
-      },
-      {
-        "name": "handle clears memory for Anthropic provider",
-        "parameterTypes": []
-      },
-      {
-        "name": "handle clears memory for Gemini provider",
-        "parameterTypes": []
-      },
-      {
-        "name": "handle clears memory for Ollama provider",
-        "parameterTypes": []
-      },
-      {
-        "name": "handle clears memory for active provider and model",
-        "parameterTypes": []
-      },
-      { "name": "keyword returns correct value", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -2328,7 +2309,7 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.chat.repository.ConversationSummaryRepositoryIT",
+    "name": "io.askimo.core.chat.repository.SessionMemoryRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
@@ -2336,39 +2317,53 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
       { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
-      { "name": "should delete summary by session", "parameterTypes": [] },
       {
-        "name": "should handle conversation summary with complex data",
+        "name": "should cascade delete memory when session is deleted",
         "parameterTypes": []
       },
       {
-        "name": "should handle empty key facts and topics",
+        "name": "should cleanup old memories older than threshold",
         "parameterTypes": []
       },
       {
-        "name": "should handle special characters in summary data",
+        "name": "should handle empty JSON objects in summary",
         "parameterTypes": []
       },
       {
-        "name": "should maintain timestamp when saving summary",
+        "name": "should not affect other session memories when deleting one session",
         "parameterTypes": []
       },
       {
-        "name": "should return 0 when deleting non-existent summary",
+        "name": "should override existing memory when saving again",
         "parameterTypes": []
       },
       {
-        "name": "should return null for non-existent summary",
+        "name": "should preserve createdAt timestamp when updating memory",
         "parameterTypes": []
       },
       {
-        "name": "should save and retrieve conversation summary",
+        "name": "should return null for non-existent session memory",
         "parameterTypes": []
       },
       {
-        "name": "should update conversation summary when saving again",
+        "name": "should return zero when cleaning up with no old memories",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save and retrieve session memory",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save memory with large JSON content",
+        "parameterTypes": []
+      },
+      {
+        "name": "should save session memory without summary",
+        "parameterTypes": []
+      },
+      {
+        "name": "should update lastUpdated timestamp when overriding memory",
         "parameterTypes": []
       },
       { "name": "tearDown", "parameterTypes": [] },
@@ -2376,7 +2371,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.chat.repository.ConversationSummaryRepositoryIT$Companion",
+    "name": "io.askimo.core.chat.repository.SessionMemoryRepositoryIT$Companion",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -2396,19 +2391,11 @@
         "parameterTypes": []
       },
       {
-        "name": "should coordinate summary operations through service",
-        "parameterTypes": []
-      },
-      {
         "name": "should delete folder and move child folders through service",
         "parameterTypes": []
       },
       {
         "name": "should delete folder and move sessions through service",
-        "parameterTypes": []
-      },
-      {
-        "name": "should delete session with all related data through service",
         "parameterTypes": []
       },
       { "name": "should get messages through service", "parameterTypes": [] },
@@ -2453,8 +2440,8 @@
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
-          "io.askimo.core.config.ChatConfig",
-          "io.askimo.core.config.DeveloperConfig"
+          "io.askimo.core.config.DeveloperConfig",
+          "io.askimo.core.config.ChatConfig"
         ]
       },
       {
@@ -2465,8 +2452,8 @@
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
-          "io.askimo.core.config.ChatConfig",
           "io.askimo.core.config.DeveloperConfig",
+          "io.askimo.core.config.ChatConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2479,13 +2466,13 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["int", "int", "int"] },
+      { "name": "<init>", "parameterTypes": ["int", "double", "boolean"] },
       {
         "name": "<init>",
         "parameterTypes": [
           "int",
-          "int",
-          "int",
+          "double",
+          "boolean",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2661,13 +2648,6 @@
       { "name": "getActiveProvider", "parameterTypes": [] },
       { "name": "getParams", "parameterTypes": [] },
       {
-        "name": "removeMemory",
-        "parameterTypes": [
-          "io.askimo.core.providers.ModelProvider",
-          "java.lang.String"
-        ]
-      },
-      {
         "name": "setScope",
         "parameterTypes": ["io.askimo.core.project.ProjectMeta"]
       }
@@ -2691,10 +2671,6 @@
         ]
       },
       { "name": "getCurrentProvider", "parameterTypes": [] },
-      {
-        "name": "getModel",
-        "parameterTypes": ["io.askimo.core.providers.ModelProvider"]
-      },
       { "name": "getProviderSettings", "parameterTypes": [] }
     ]
   },
@@ -4571,7 +4547,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$oxhec74G",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$DClpUKLv",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

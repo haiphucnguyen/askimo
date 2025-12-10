@@ -12,11 +12,20 @@ This guide explains how to implement a new chat model provider in Askimo. By fol
 
 Askimo uses a modular architecture for chat models with the following key components:
 
-1. **ChatService**: Interface that defines the contract for all chat models
-2. **ChatModelFactory**: Generic interface for creating chat model instances with type parameter `<T : ProviderSettings>`
-3. **ProviderSettings**: Interface for model-specific configuration with methods for validation, field management, and deep copying
-4. **ModelProvider**: Enum that identifies different model providers (OpenAI, XAI, Gemini, Ollama, Anthropic, LocalAI, LMStudio)
-5. **ProviderRegistry**: Central registry that manages all model factories using a map-based structure
+1. **ChatClient**: Interface that defines the contract for all chat models (created by LangChain4j's AiServices)
+2. **ChatClientImpl**: Wrapper that adds session management and memory persistence to ChatClient
+3. **ChatModelFactory**: Generic interface for creating chat model instances with type parameter `<T : ProviderSettings>`
+4. **ProviderSettings**: Interface for model-specific configuration with methods for validation, field management, and deep copying
+5. **ModelProvider**: Enum that identifies different model providers (OpenAI, XAI, Gemini, Ollama, Anthropic, LocalAI, LMStudio)
+6. **ProviderRegistry**: Central registry that manages all model factories using a map-based structure
+7. **TokenAwareSummarizingMemory**: Advanced memory implementation that automatically summarizes conversation history when approaching token limits
+8. **SessionMemoryRepository**: Persistence layer for storing and retrieving conversation memory across sessions
+
+### Memory Architecture
+
+Each factory creates two key components:
+- **ChatClient** (delegate): LangChain4j-generated proxy that handles AI communication
+- **ChatClientImpl** (wrapper): Adds session awareness, auto-save, and memory persistence
 
 Each model provider has its own implementation of these interfaces, along with optional marker interfaces like `HasApiKey` or `HasBaseUrl` for common configuration patterns.
 
@@ -119,6 +128,10 @@ Create a factory class that implements `ChatModelFactory<T>` with your settings 
 ```kotlin
 // File: io.askimo.core.providers.yourprovider.YourProviderModelFactory.kt
 
+import io.askimo.core.memory.TokenAwareSummarizingMemory
+import io.askimo.core.providers.ChatClientImpl
+import io.askimo.core.db.DatabaseManager
+
 class YourProviderModelFactory : ChatModelFactory<YourProviderSettings> {
     
     override fun availableModels(settings: YourProviderSettings): List<String> {
@@ -137,32 +150,85 @@ class YourProviderModelFactory : ChatModelFactory<YourProviderSettings> {
     override fun create(
         model: String,
         settings: YourProviderSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
-        sessionMode: SessionMode,
-    ): ChatService {
+        executionMode: ExecutionMode,
+    ): ChatClient {
         // 1. Build your provider's streaming chat model using LangChain4j
-        // 2. Apply sampling parameters (temperature, topP) from settings.presets.style
-        // 3. Build AiServices with chat memory
-        // 4. Enable tools conditionally (disable for DESKTOP mode)
-        // 5. Set system message provider with tool response format instructions
-        // 6. Add retrievalAugmentor if provided (for RAG support)
-        // 7. Return the built ChatService
-    }
-    
-    override fun createMemory(
-        model: String,
-        settings: YourProviderSettings,
-    ): ChatMemory {
-        // Optional: Customize memory settings, or use default
-        // Default returns: MessageWindowChatMemory.withMaxMessages(200)
+        val chatModel = YourProviderStreamingChatModel
+            .builder()
+            .apiKey(settings.apiKey)
+            .modelName(model)
+            .apply {
+                // Apply sampling parameters (temperature, topP) from settings.presets.style
+                val sampling = samplingFor(settings.presets.style)
+                temperature(sampling.temperature)
+                topP(sampling.topP)
+            }
+            .build()
+        
+        // 2. Create token-aware summarizing memory with provider-specific tokenizer
+        val chatMemory = TokenAwareSummarizingMemory.builder()
+            .maxTokens(8000)  // Adjust based on model's context window
+            .tokenEstimator(YourProviderTokenEstimator(model)::estimateTokenCountInMessage)
+            .summarizationThreshold(0.75)  // Summarize at 75% capacity
+            .build()
+        
+        // 3. Build AiServices with ChatClient interface
+        val builder = AiServices
+            .builder(ChatClient::class.java)
+            .streamingChatModel(chatModel)
+            .chatMemory(chatMemory)
+            .apply {
+                // Enable tools conditionally (disable for DESKTOP mode)
+                if (executionMode != ExecutionMode.DESKTOP) {
+                    tools(LocalFsTools)
+                }
+            }
+            .systemMessageProvider {
+                systemMessage(
+                    """
+                    Tool response format:
+                    • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
+                    • success=true: Tool executed successfully
+                    • success=false: Tool failed, check "error" for reason
+                    
+                    Tool execution guidelines:
+                    • Parse the tool response JSON before responding
+                    • Check the "success" field before using "output"
+                    • Explain errors from the "error" field
+                    """.trimIndent(),
+                    verbosityInstruction(settings.presets.verbosity),
+                )
+            }
+        
+        // Add retrievalAugmentor if provided (for RAG support)
+        if (retrievalAugmentor != null) {
+            builder.retrievalAugmentor(retrievalAugmentor)
+        }
+        
+        // 4. Build the delegate (LangChain4j proxy)
+        val delegate: ChatClient = builder.build()
+        
+        // 5. Wrap in ChatClientImpl for session management
+        val sessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository()
+        return ChatClientImpl(delegate, chatMemory, sessionMemoryRepository)
     }
 }
 ```
 
+**Key Changes from Old Pattern:**
+
+1. **No `memory` parameter** - Factory creates its own `TokenAwareSummarizingMemory`
+2. **Returns `ChatClient` not `ChatService`** - Now returns `ChatClientImpl` wrapper
+3. **Session management built-in** - Automatic save/restore of conversation context
+4. **Provider-specific tokenizer** - Use your provider's token estimator for accurate counts
+5. **Two-step creation** - Create delegate, then wrap in `ChatClientImpl`
+
 **For complete implementation examples, refer to:**
-- `OpenAiModelFactory.kt` - Example with API key, proxy support, and sampling parameters
+- `OpenAiModelFactory.kt` - Example with API key, proxy support, OpenAI tokenizer, and ChatClientImpl wrapping
 - `OllamaModelFactory.kt` - Example with base URL and local process integration
+- `AnthropicModelFactory.kt` - Example with Anthropic tokenizer and memory configuration
+- `ChatClientImpl.kt` - Session management wrapper implementation with memory serialization
 
 ### 5. Register Your Factory
 
@@ -188,6 +254,49 @@ object ProviderRegistry {
 
 The registry uses a map-based approach for better type safety and immutability. Once registered, your provider will be available throughout the application.
 
+## Memory Management and Session Persistence
+
+### TokenAwareSummarizingMemory
+
+Your factory should create a `TokenAwareSummarizingMemory` instance that:
+- **Tracks token usage** - Uses provider-specific tokenizers for accurate counts
+- **Auto-summarizes** - When reaching 75% of max tokens, older messages are summarized
+- **Preserves context** - Recent messages kept in full, older ones compressed into structured summaries
+
+**Configuration guidelines:**
+```kotlin
+TokenAwareSummarizingMemory.builder()
+    .maxTokens(8000)        // Set based on your model's context window
+                            // OpenAI GPT-4: 8000, Claude: 100000, etc.
+    .tokenEstimator(...)    // Use provider-specific tokenizer
+    .summarizationThreshold(0.75)  // Trigger at 75% capacity
+    .build()
+```
+
+### Session Management via ChatClientImpl
+
+The `ChatClientImpl` wrapper automatically handles:
+1. **Session Switching** - Save current session, load new session memory
+2. **Auto-save** - Periodic saves every 5 minutes
+3. **Shutdown Hook** - Save on graceful application exit
+4. **Serialization** - Convert memory to/from JSON for database storage
+
+**You don't need to implement session management** - just wrap your delegate in `ChatClientImpl`:
+```kotlin
+val delegate: ChatClient = builder.build()
+val sessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository()
+return ChatClientImpl(delegate, chatMemory, sessionMemoryRepository)
+```
+
+### Integration with ChatSessionService
+
+When users create or resume sessions, `ChatSessionService` automatically:
+- **On createSession()** - Calls `chatClient.switchSession(sessionId)` to initialize memory
+- **On resumeSession()** - Calls `chatClient.switchSession(sessionId)` to restore memory
+- **On session switch** - Saves old session, loads new session
+
+**CLI and Desktop code remain unchanged** - they just call `ChatSessionService` methods, and memory synchronization happens automatically.
+
 ## Example: Implementation Reference
 
 For reference, here are the key components of existing implementations:
@@ -195,12 +304,22 @@ For reference, here are the key components of existing implementations:
 ### OpenAI Implementation
 
 - **Settings**: `OpenAiSettings` - Contains API key and presets
-- **Factory**: `OpenAiModelFactory` - Creates OpenAI models and fetches available models
+- **Factory**: `OpenAiModelFactory` - Creates OpenAI models with token-aware memory
+- **Tokenizer**: `OpenAiTokenCountEstimator` - Accurate token counting per model
+- **Memory**: 8000 max tokens with 0.75 threshold
 
 ### Ollama Implementation
 
 - **Settings**: `OllamaSettings` - Contains base URL and presets
 - **Factory**: `OllamaModelFactory` - Creates Ollama models and fetches available models
+- **Memory**: 8000 max tokens with default word-count estimation
+
+### Anthropic Implementation
+
+- **Settings**: `AnthropicSettings` - Contains API key and presets
+- **Factory**: `AnthropicModelFactory` - Creates Claude models with Anthropic tokenizer
+- **Tokenizer**: `AnthropicTokenCountEstimator` - Claude-specific token counting
+- **Memory**: 8000 max tokens with 0.75 threshold
 
 ## Testing Your Implementation
 
@@ -225,8 +344,7 @@ After implementing your provider, you can test it by:
    askimo> What is the capital of Viet Nam?
    ```
 
+
 ## Conclusion
 
 By following these steps, you can integrate any chat model provider with Askimo. The modular architecture makes it easy to add new providers while maintaining a consistent interface for users.
-
-Remember to handle errors gracefully and provide clear feedback to users when something goes wrong with your provider's API.

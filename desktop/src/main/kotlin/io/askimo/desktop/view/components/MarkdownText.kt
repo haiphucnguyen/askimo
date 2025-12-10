@@ -174,12 +174,14 @@ private fun renderParagraph(paragraph: Paragraph) {
 
                 if (hasEndBackslash || justEndBracket) {
                     val content = rawText.substring(contentStart, j)
-                    // Only treat as math if it contains typical LaTeX/math expressions
-                    val isMathContent = content.contains(Regex("[\\\\^_{}]|\\b(sin|cos|tan|log|ln|exp|theta|pi|alpha|beta|gamma|delta|sum|int|frac)\\b"))
+                    // More comprehensive math content detection
+                    val isMathContent = content.contains(Regex("[\\\\^_{}=+\\-*/]|\\b(sin|cos|tan|log|ln|exp|theta|pi|alpha|beta|gamma|delta|sum|int|frac|boxed|begin|end|aligned)\\b"))
 
                     if (content.isNotBlank() && isMathContent) {
                         val endIndex = if (hasEndBackslash) j + 2 else j + 1
-                        latexMatches.add(Triple(start, endIndex, content))
+                        // Fix markdown-mangled LaTeX content
+                        val fixedContent = fixMarkdownMangledLatex(content)
+                        latexMatches.add(Triple(start, endIndex, fixedContent))
                         i = endIndex
                         break
                     }
@@ -189,6 +191,56 @@ private fun renderParagraph(paragraph: Paragraph) {
         }
         i++
     }
+
+    // Find inline math \( ... \) - these should not span multiple lines
+    i = 0
+    while (i < rawText.length - 1) {
+        if (rawText[i] == '\\' && rawText[i + 1] == '(') {
+            val start = i
+            val contentStart = i + 2
+            var j = contentStart
+            var foundEnd = false
+
+            while (j < rawText.length - 1) {
+                // Stop if we hit a newline (inline math shouldn't span lines)
+                if (rawText[j] == '\n') {
+                    break
+                }
+
+                if (rawText[j] == '\\' && rawText[j + 1] == ')') {
+                    val content = rawText.substring(contentStart, j)
+                    // Check if it's math content
+                    val isMathContent = content.contains(Regex("[\\\\^_{}=+\\-*/]|\\b(sin|cos|tan|log|ln|exp|theta|pi|alpha|beta|gamma|delta|sum|int|frac)\\b"))
+
+                    if (content.isNotBlank() && isMathContent) {
+                        // Check for overlap with existing matches
+                        val overlaps = latexMatches.any { (existingStart, existingEnd, _) ->
+                            start in existingStart until existingEnd || existingStart in start until (j + 2)
+                        }
+
+                        if (!overlaps) {
+                            // Fix markdown-mangled LaTeX content
+                            val fixedContent = fixMarkdownMangledLatex(content)
+                            latexMatches.add(Triple(start, j + 2, fixedContent))
+                            foundEnd = true
+                        }
+                        i = j + 2
+                        break
+                    }
+                }
+                j++
+            }
+
+            if (!foundEnd) {
+                i++
+            }
+        } else {
+            i++
+        }
+    }
+
+    // Sort matches by start position
+    latexMatches.sortBy { it.first }
 
     // If we found LaTeX, render with mixed content using Row
     if (latexMatches.isNotEmpty()) {
@@ -290,6 +342,45 @@ private fun renderParagraph(paragraph: Paragraph) {
                 .padding(vertical = 4.dp),
         )
     }
+}
+
+/**
+ * Fix LaTeX content that has been mangled by markdown escape processing.
+ *
+ * Markdown treats backslash as escape character, so:
+ * - `\\` (LaTeX line break) becomes `\` + next char (e.g., `\a_n`)
+ * - `\,` (LaTeX thin space) becomes `,`
+ *
+ * This function attempts to reconstruct the original LaTeX.
+ */
+private fun fixMarkdownMangledLatex(latex: String): String {
+    var fixed = latex
+
+    // Fix: \a_n → a_n  (after line break, letter should not have backslash)
+    // Pattern: backslash followed by lowercase letter followed by underscore or caret
+    // BUT preserve alignment markers like &= in aligned environments
+    fixed = fixed.replace(Regex("""\\([a-z])([_^])""")) { matchResult ->
+        val letter = matchResult.groupValues[1]
+        val symbol = matchResult.groupValues[2]
+
+        // Don't fix if this is after an alignment marker &
+        val startIndex = matchResult.range.first
+        if (startIndex > 0 && fixed.getOrNull(startIndex - 1) == '&') {
+            matchResult.value // Keep as-is
+        } else {
+            "$letter$symbol"
+        }
+    }
+
+    // Fix: \f(x) → f(x)  (function names shouldn't have leading backslash unless they're LaTeX commands)
+    fixed = fixed.replace(Regex("""\\([a-z])\("""), "$1(")
+
+    // Fix common markdown escape artifacts after line breaks
+    // Pattern: } or \right followed by space and \X where X is a letter
+    // BUT don't touch & alignment markers
+    fixed = fixed.replace(Regex("""([}]|\\right)\s+\\([a-zA-Z])"""), "$1 $2")
+
+    return fixed
 }
 
 @Composable
@@ -740,6 +831,45 @@ private fun buildInlineContent(
                         }
 
                         // If we didn't find the end, just move past the opening bracket
+                        if (!foundEnd) {
+                            i++
+                        }
+                    } else {
+                        i++
+                    }
+                }
+
+                // Find inline math \( ... \)
+                i = 0
+                while (i < text.length - 1) {
+                    if (text[i] == '\\' && text[i + 1] == '(') {
+                        val start = i
+                        val contentStart = i + 2
+                        var j = contentStart
+                        var foundEnd = false
+
+                        while (j < text.length - 1) {
+                            if (text[j] == '\\' && text[j + 1] == ')') {
+                                val content = text.substring(contentStart, j)
+                                // Only treat as math if it contains typical math content
+                                if (content.contains(Regex("[a-zA-Z\\\\^_{}=+\\-*/()]"))) {
+                                    // Check for overlap
+                                    val overlaps = mathRanges.any { (range, _, _) ->
+                                        start in range || (j + 1) in range ||
+                                            range.first in start..(j + 1) || range.last in start..(j + 1)
+                                    }
+
+                                    if (!overlaps) {
+                                        mathRanges.add(Triple(IntRange(start, j + 1), content, false))
+                                    }
+                                    i = j + 2
+                                    foundEnd = true
+                                    break
+                                }
+                            }
+                            j++
+                        }
+
                         if (!foundEnd) {
                             i++
                         }

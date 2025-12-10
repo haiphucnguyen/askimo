@@ -21,6 +21,8 @@ data class AnthropicSettings(
     override var apiKey: String = "default",
     override val defaultModel: String = "claude-sonnet-4-5",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
+    val enableAiSummarization: Boolean = true,
+    val summarizerModel: String = "claude-3-5-haiku-20241022", // Fast and cheap model for summarization
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

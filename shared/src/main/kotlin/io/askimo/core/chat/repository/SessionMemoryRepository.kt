@@ -1,0 +1,117 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
+package io.askimo.core.chat.repository
+
+import io.askimo.core.chat.domain.SessionMemory
+import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.sqliteDatetime
+import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
+import java.time.LocalDateTime
+
+/**
+ * Exposed table definition for session_memory.
+ */
+object SessionMemoryTable : Table("session_memory") {
+    val sessionId = varchar("session_id", 255).references(
+        ChatSessionsTable.id,
+        onDelete = ReferenceOption.CASCADE,
+        onUpdate = ReferenceOption.CASCADE,
+    )
+    val memorySummary = text("memory_summary").nullable()
+    val memoryMessages = text("memory_messages")
+    val lastUpdated = sqliteDatetime("last_updated")
+    val createdAt = sqliteDatetime("created_at")
+
+    override val primaryKey = PrimaryKey(sessionId)
+}
+
+/**
+ * Extension function to map an Exposed ResultRow to a SessionMemory object.
+ */
+private fun ResultRow.toSessionMemory(): SessionMemory = SessionMemory(
+    sessionId = this[SessionMemoryTable.sessionId],
+    memorySummary = this[SessionMemoryTable.memorySummary],
+    memoryMessages = this[SessionMemoryTable.memoryMessages],
+    lastUpdated = this[SessionMemoryTable.lastUpdated],
+    createdAt = this[SessionMemoryTable.createdAt],
+)
+
+/**
+ * Repository for managing session memory persistence.
+ * Handles saving and loading of TokenAwareSummarizingMemory state for chat sessions.
+ */
+class SessionMemoryRepository internal constructor(
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
+) : AbstractSQLiteRepository(databaseManager) {
+
+    /**
+     * Save or update session memory.
+     * If memory for the session already exists, it will be updated (override).
+     *
+     * @param sessionMemory The session memory to save
+     * @return The saved session memory
+     */
+    fun saveMemory(sessionMemory: SessionMemory): SessionMemory = transaction(database) {
+        val existing = SessionMemoryTable
+            .selectAll()
+            .where { SessionMemoryTable.sessionId eq sessionMemory.sessionId }
+            .singleOrNull()
+
+        if (existing != null) {
+            // Update existing memory (override)
+            SessionMemoryTable.update({ SessionMemoryTable.sessionId eq sessionMemory.sessionId }) {
+                it[memorySummary] = sessionMemory.memorySummary
+                it[memoryMessages] = sessionMemory.memoryMessages
+                it[lastUpdated] = sessionMemory.lastUpdated
+            }
+        } else {
+            // Insert new memory
+            SessionMemoryTable.insert {
+                it[sessionId] = sessionMemory.sessionId
+                it[memorySummary] = sessionMemory.memorySummary
+                it[memoryMessages] = sessionMemory.memoryMessages
+                it[lastUpdated] = sessionMemory.lastUpdated
+                it[createdAt] = sessionMemory.createdAt
+            }
+        }
+
+        sessionMemory
+    }
+
+    /**
+     * Load session memory by session ID.
+     *
+     * @param sessionId The session ID to load memory for
+     * @return The session memory, or null if not found
+     */
+    fun loadMemory(sessionId: String): SessionMemory? = transaction(database) {
+        SessionMemoryTable
+            .selectAll()
+            .where { SessionMemoryTable.sessionId eq sessionId }
+            .singleOrNull()
+            ?.toSessionMemory()
+    }
+
+    /**
+     * Delete all session memories older than the specified timestamp.
+     * Useful for cleanup maintenance tasks.
+     *
+     * @param olderThan Timestamp threshold - memories last updated before this will be deleted
+     * @return Number of records deleted
+     */
+    fun cleanupOldMemories(olderThan: LocalDateTime): Int = transaction(database) {
+        SessionMemoryTable.deleteWhere { SessionMemoryTable.lastUpdated less olderThan }
+    }
+}

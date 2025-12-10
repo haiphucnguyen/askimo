@@ -5,12 +5,13 @@
 package io.askimo.core.providers.lmstudio
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
-import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -36,7 +37,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     override fun create(
         model: String,
         settings: LmStudioSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -58,11 +58,16 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     topP(s.topP)
                 }.build()
 
+        val chatMemory = TokenAwareSummarizingMemory.builder()
+            .maxTokens(8000)
+            .summarizationThreshold(0.75)
+            .build()
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -92,6 +97,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
-        return builder.build()
+
+        return ChatClientImpl(builder.build(), chatMemory)
     }
 }

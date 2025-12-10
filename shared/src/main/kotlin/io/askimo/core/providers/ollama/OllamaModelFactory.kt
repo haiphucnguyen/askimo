@@ -4,14 +4,15 @@
  */
 package io.askimo.core.providers.ollama
 
-import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -62,7 +63,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     override fun create(
         model: String,
         settings: OllamaSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -78,11 +78,17 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                     topP(s.topP)
                 }.build()
 
+        // Create token-aware summarizing memory
+        val chatMemory = TokenAwareSummarizingMemory.builder()
+            .maxTokens(8000)
+            .summarizationThreshold(0.75)
+            .build()
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -112,6 +118,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
-        return builder.build()
+        return ChatClientImpl(builder.build(), chatMemory)
     }
 }

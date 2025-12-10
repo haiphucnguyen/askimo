@@ -69,13 +69,11 @@ object AppContextFactory {
                 ?: factory?.defaultSettings()
                 ?: NoopProviderSettings
 
-        val memory = appContext.getOrCreateMemory(provider, modelName, settings)
-
         val chatClient = if (factory != null) {
             try {
                 @Suppress("UNCHECKED_CAST")
                 (factory as ChatModelFactory<ProviderSettings>)
-                    .create(modelName, settings, memory, executionMode = mode)
+                    .create(modelName, settings, executionMode = mode)
             } catch (e: Exception) {
                 log.error("Failed to create chat service", e)
                 NoopChatClient

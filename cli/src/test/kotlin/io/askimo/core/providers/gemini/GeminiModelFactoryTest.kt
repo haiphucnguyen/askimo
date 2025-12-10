@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.gemini
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -27,12 +26,10 @@ class GeminiModelFactoryTest {
             ?: throw IllegalStateException("GEMINI_API_KEY environment variable is required")
 
         val settings = GeminiSettings(apiKey = apiKey)
-        val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         return GeminiModelFactory().create(
             model = "gemini-2.5-flash",
             settings = settings,
-            memory = memory,
             retrievalAugmentor = null,
         )
     }
