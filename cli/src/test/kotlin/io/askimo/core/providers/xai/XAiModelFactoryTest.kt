@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.xai
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -27,12 +26,10 @@ class XAiModelFactoryTest {
             ?: throw IllegalStateException("X_API_KEY environment variable is required")
 
         val settings = XAiSettings(apiKey = apiKey)
-        val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         return XAiModelFactory().create(
             model = "grok-4",
             settings = settings,
-            memory = memory,
             retrievalAugmentor = null,
         )
     }
@@ -41,7 +38,7 @@ class XAiModelFactoryTest {
         println("Sending prompt: '$prompt'")
 
         val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ ->
-            print(".") // Show progress without overwhelming output
+            print(".")
         }.trim()
 
         println("\nFinal output: '$output'")

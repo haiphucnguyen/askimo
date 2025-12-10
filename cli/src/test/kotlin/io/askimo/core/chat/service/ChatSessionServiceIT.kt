@@ -6,11 +6,9 @@ package io.askimo.core.chat.service
 
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
-import io.askimo.core.chat.domain.ConversationSummary
 import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.ConversationSummaryRepository
 import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
@@ -39,7 +37,6 @@ class ChatSessionServiceIT {
         private lateinit var service: ChatSessionService
         private lateinit var sessionRepository: ChatSessionRepository
         private lateinit var messageRepository: ChatMessageRepository
-        private lateinit var summaryRepository: ConversationSummaryRepository
         private lateinit var folderRepository: ChatFolderRepository
 
         @JvmStatic
@@ -51,7 +48,6 @@ class ChatSessionServiceIT {
 
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
-            summaryRepository = databaseManager.getConversationSummaryRepository()
             folderRepository = databaseManager.getChatFolderRepository()
 
             val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
@@ -59,7 +55,6 @@ class ChatSessionServiceIT {
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
-                conversationSummaryRepository = summaryRepository,
                 folderRepository = folderRepository,
                 appContext = appContext,
             )
@@ -77,56 +72,6 @@ class ChatSessionServiceIT {
                 testBaseScope.close()
             }
         }
-    }
-
-    @Test
-    fun `should delete session with all related data through service`() {
-        val session = sessionRepository.createSession(ChatSession(id = "", title = "Test Session"))
-
-        // Add messages
-        service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Message 1",
-            ),
-        )
-        service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.ASSISTANT,
-                content = "Message 2",
-            ),
-        )
-
-        // Add summary
-        val message = service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Last message",
-            ),
-        )
-        service.saveSummary(
-            ConversationSummary(
-                sessionId = session.id,
-                keyFacts = mapOf("test" to "data"),
-                mainTopics = listOf("testing"),
-                recentContext = "Test context",
-                lastSummarizedMessageId = message.id,
-            ),
-        )
-
-        // Delete through service (should delete session, messages, and summary)
-        val deleted = service.deleteSession(session.id)
-
-        Assertions.assertTrue(deleted)
-        Assertions.assertNull(sessionRepository.getSession(session.id))
-        Assertions.assertEquals(0, messageRepository.getMessageCount(session.id))
-        Assertions.assertNull(summaryRepository.getConversationSummary(session.id))
     }
 
     @Test
@@ -186,8 +131,8 @@ class ChatSessionServiceIT {
         val retrievedChild2 = folderRepository.getFolder(child2.id)
         assertNotNull(retrievedChild1)
         assertNotNull(retrievedChild2)
-        Assertions.assertNull(retrievedChild1!!.parentFolderId)
-        Assertions.assertNull(retrievedChild2!!.parentFolderId)
+        Assertions.assertNull(retrievedChild1.parentFolderId)
+        Assertions.assertNull(retrievedChild2.parentFolderId)
     }
 
     @Test
@@ -241,33 +186,6 @@ class ChatSessionServiceIT {
 
         Assertions.assertEquals(10, activeMessages.size)
         Assertions.assertTrue(activeMessages.all { !it.isOutdated })
-    }
-
-    @Test
-    fun `should coordinate summary operations through service`() {
-        val session = sessionRepository.createSession(ChatSession(id = "", title = "Test"))
-        val message = service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Test message",
-            ),
-        )
-
-        val summary = ConversationSummary(
-            sessionId = session.id,
-            keyFacts = mapOf("key" to "value"),
-            mainTopics = listOf("topic"),
-            recentContext = "Context",
-            lastSummarizedMessageId = message.id,
-        )
-
-        service.saveSummary(summary)
-
-        val retrieved = service.getConversationSummary(session.id)
-        assertNotNull(retrieved)
-        Assertions.assertEquals(session.id, retrieved!!.sessionId)
     }
 
     @Test

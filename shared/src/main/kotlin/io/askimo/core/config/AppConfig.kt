@@ -170,15 +170,15 @@ data class IndexingConfig(
     }
 }
 
-data class ChatConfig(
-    val maxRecentMessages: Int = 10,
-    val maxTokensForContext: Int = 3000,
-    val summarizationThreshold: Int = 50,
-)
-
 data class DeveloperConfig(
     val enabled: Boolean = true,
     val active: Boolean = false,
+)
+
+data class ChatConfig(
+    val maxTokens: Int = 8000,
+    val summarizationThreshold: Double = 0.75,
+    val enableAsyncSummarization: Boolean = true,
 )
 
 data class ProxyConfig(
@@ -193,8 +193,8 @@ data class AppConfigData(
     val retry: RetryConfig = RetryConfig(),
     val throttle: ThrottleConfig = ThrottleConfig(),
     val indexing: IndexingConfig = IndexingConfig(),
-    val chat: ChatConfig = ChatConfig(),
     val developer: DeveloperConfig = DeveloperConfig(),
+    val chat: ChatConfig = ChatConfig(),
 )
 
 object AppConfig {
@@ -203,8 +203,8 @@ object AppConfig {
     val retry: RetryConfig get() = delegate.retry
     val throttle: ThrottleConfig get() = delegate.throttle
     val indexing: IndexingConfig get() = delegate.indexing
-    val chat: ChatConfig get() = delegate.chat
     val developer: DeveloperConfig get() = delegate.developer
+    val chat: ChatConfig get() = delegate.chat
 
     val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
 
@@ -248,9 +248,9 @@ object AppConfig {
           # ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_MARKERS and ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_EXCLUDES
 
         chat:
-          max_recent_messages: ${'$'}{ASKIMO_CHAT_MAX_RECENT_MESSAGES:10}
-          max_tokens_for_context: ${'$'}{ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT:3000}
-          summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:50}
+          max_tokens: ${'$'}{ASKIMO_CHAT_MAX_TOKENS:8000}
+          summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:0.75}
+          enable_async_summarization: ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
 
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
@@ -404,18 +404,22 @@ object AppConfig {
                 supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml"),
                 commonExcludes = envList("ASKIMO_INDEXING_COMMON_EXCLUDES", ".git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/"),
             )
-        val chat =
-            ChatConfig(
-                maxRecentMessages = envInt("ASKIMO_CHAT_MAX_RECENT_MESSAGES", 10),
-                maxTokensForContext = envInt("ASKIMO_CHAT_MAX_TOKENS_FOR_CONTEXT", 3000),
-                summarizationThreshold = envInt("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 50),
-            )
         val dev =
             DeveloperConfig(
                 enabled = System.getenv("ASKIMO_DEVELOPER_ENABLED")?.toBoolean() ?: false,
                 active = System.getenv("ASKIMO_DEVELOPER_ACTIVE")?.toBoolean() ?: false,
             )
-        return AppConfigData(pg, emb, r, t, idx, chat, dev)
+
+        fun envDouble(k: String, def: Double) = System.getenv(k)?.toDoubleOrNull() ?: def
+
+        val chat =
+            ChatConfig(
+                maxTokens = envInt("ASKIMO_CHAT_MAX_TOKENS", 8000),
+                summarizationThreshold = envDouble("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 0.75),
+                enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
+            )
+
+        return AppConfigData(pg, emb, r, t, idx, dev, chat)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */
@@ -448,11 +452,11 @@ object AppConfig {
             val current = cached ?: loadOnce()
             cached = when (section) {
                 "developer" -> current.copy(developer = updateDeveloperField(current.developer, field, value))
-                "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
                 "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
                 "pgvector" -> current.copy(pgvector = updatePgVectorField(current.pgvector, field, value))
+                "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -480,13 +484,6 @@ object AppConfig {
         else -> config
     }
 
-    private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
-        "maxRecentMessages" -> config.copy(maxRecentMessages = value as Int)
-        "maxTokensForContext" -> config.copy(maxTokensForContext = value as Int)
-        "summarizationThreshold" -> config.copy(summarizationThreshold = value as Int)
-        else -> config
-    }
-
     private fun updateRetryField(config: RetryConfig, field: String, value: Any): RetryConfig = when (field) {
         "attempts" -> config.copy(attempts = value as Int)
         "baseDelayMs" -> config.copy(baseDelayMs = value as Long)
@@ -510,6 +507,13 @@ object AppConfig {
         "user" -> config.copy(user = value as String)
         "password" -> config.copy(password = value as String)
         "table" -> config.copy(table = value as String)
+        else -> config
+    }
+
+    private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
+        "maxTokens" -> config.copy(maxTokens = value as Int)
+        "summarizationThreshold" -> config.copy(summarizationThreshold = value as Double)
+        "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
         else -> config
     }
 

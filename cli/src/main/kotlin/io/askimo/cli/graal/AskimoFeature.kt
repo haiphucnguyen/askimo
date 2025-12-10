@@ -7,7 +7,6 @@ package io.askimo.cli.graal
 import ch.qos.logback.classic.AsyncAppender
 import ch.qos.logback.classic.filter.LevelFilter
 import io.askimo.core.config.AppConfigData
-import io.askimo.core.config.ChatConfig
 import io.askimo.core.config.EmbeddingConfig
 import io.askimo.core.config.IndexingConfig
 import io.askimo.core.config.PgVectorConfig
@@ -36,7 +35,6 @@ class AskimoFeature : Feature {
             RetryConfig::class.java,
             ThrottleConfig::class.java,
             IndexingConfig::class.java,
-            ChatConfig::class.java,
         )
 
         // Handle LangChain4j internal Jackson deserializer (package-private, cannot import directly)

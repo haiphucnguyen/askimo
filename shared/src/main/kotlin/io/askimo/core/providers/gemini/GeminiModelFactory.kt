@@ -4,12 +4,16 @@
  */
 package io.askimo.core.providers.gemini
 
-import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
+import dev.langchain4j.model.googleai.GoogleAiGeminiTokenCountEstimator
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -38,7 +42,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     override fun create(
         model: String,
         settings: GeminiSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -54,11 +57,33 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                     }
                 }.build()
 
+        // Create separate summarizer model if AI summarization enabled
+        val summarizerModel = if (settings.enableAiSummarization) {
+            createSummarizerModel(settings)
+        } else {
+            null
+        }
+
+        val tokenEstimator = GoogleAiGeminiTokenCountEstimator.builder()
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(model)
+            .build()
+
+        val memoryConfig = MemoryConfig(
+            maxTokens = AppConfig.chat.maxTokens,
+            summarizationThreshold = AppConfig.chat.summarizationThreshold,
+            tokenEstimator = tokenEstimator::estimateTokenCountInMessage,
+            summarizerModel = summarizerModel,
+            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
+        )
+
+        val chatMemory = memoryConfig.createMemory()
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
@@ -102,8 +127,14 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return builder.build()
+        return ChatClientImpl(builder.build(), chatMemory)
     }
 
     private fun supportsSampling(model: String): Boolean = true
+
+    private fun createSummarizerModel(settings: GeminiSettings): GoogleAiGeminiChatModel = GoogleAiGeminiChatModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(settings.summarizerModel)
+        .temperature(0.3)
+        .build()
 }

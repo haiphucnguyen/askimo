@@ -692,6 +692,33 @@ fun chatView(
             }
         }
 
+        // Download attachment handler
+        val saveDialogTitle = stringResource("attachment.save.file")
+        val downloadAttachment: (FileAttachmentDTO) -> Unit = { attachment ->
+            val fileChooser = FileDialog(null as Frame?, saveDialogTitle, FileDialog.SAVE)
+            fileChooser.file = attachment.fileName
+            fileChooser.isVisible = true
+            val selectedFile = fileChooser.file
+            val selectedDir = fileChooser.directory
+            if (selectedFile != null && selectedDir != null) {
+                val targetFile = File(selectedDir, selectedFile)
+                // Copy the attachment file to the selected location
+                attachment.filePath?.let { filePath ->
+                    val sourceFile = File(filePath)
+                    if (sourceFile.exists()) {
+                        try {
+                            sourceFile.copyTo(targetFile, overwrite = true)
+                            log.info("Downloaded attachment: ${attachment.fileName} to ${targetFile.absolutePath}")
+                        } catch (e: Exception) {
+                            log.error("Error copying attachment file: ${e.message}", e)
+                        }
+                    } else {
+                        log.error("Source file not found: $filePath")
+                    }
+                } ?: log.error("Attachment file path is null: ${attachment.fileName}")
+            }
+        }
+
         // Messages area
         Box(
             modifier = Modifier
@@ -734,6 +761,7 @@ fun chatView(
                                 editingAIMessage = message
                             }
                         },
+                        onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
                     )
@@ -769,6 +797,7 @@ fun chatView(
                                 editingAIMessage = message
                             }
                         },
+                        onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
                     )

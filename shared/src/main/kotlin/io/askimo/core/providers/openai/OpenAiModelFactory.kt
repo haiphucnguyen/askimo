@@ -4,13 +4,16 @@
  */
 package io.askimo.core.providers.openai
 
-import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
+import dev.langchain4j.model.openai.OpenAiTokenCountEstimator
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -51,7 +54,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     override fun create(
         model: String,
         settings: OpenAiSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -65,25 +67,32 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                         val s = samplingFor(settings.presets.style)
                         temperature(s.temperature).topP(s.topP)
                     }
-                    // Add proxy configuration if enabled
-                    if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
-                        baseUrl("${AppConfig.proxy.url}/openai/v1")
-                        // Add proxy authentication header and OpenAI API key if tokens are provided
-                        val headers = mutableMapOf<String, String>()
-                        if (AppConfig.proxy.authToken.isNotBlank()) {
-                            headers["X-Proxy-Auth"] = AppConfig.proxy.authToken
-                        }
-                        // Include OpenAI API key in Authorization header for proxy forwarding
-                        headers["Authorization"] = "Bearer ${safeApiKey(settings.apiKey)}"
-                        customHeaders(headers)
-                    }
+                    configureProxy(settings.apiKey)
                 }.build()
+
+        // Create separate summarizer model if AI summarization enabled
+        val summarizerModel = if (settings.enableAiSummarization) {
+            createSummarizerModel(settings)
+        } else {
+            null
+        }
+
+        // Create memory config with OpenAI-specific token estimator
+        val memoryConfig = MemoryConfig(
+            maxTokens = AppConfig.chat.maxTokens,
+            summarizationThreshold = AppConfig.chat.summarizationThreshold,
+            tokenEstimator = OpenAiTokenCountEstimator(model)::estimateTokenCountInMessage,
+            summarizerModel = summarizerModel,
+            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
+        )
+
+        val chatMemory = memoryConfig.createMemory()
 
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -113,11 +122,61 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
-        return builder.build()
+        return ChatClientImpl(builder.build(), chatMemory)
     }
 
     private fun supportsSampling(model: String): Boolean {
         val m = model.lowercase()
         return !(m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
     }
+
+    /**
+     * Build proxy headers for OpenAI requests
+     */
+    private fun buildProxyHeaders(apiKey: String): Map<String, String> {
+        val headers = mutableMapOf<String, String>()
+        if (AppConfig.proxy.authToken.isNotBlank()) {
+            headers["X-Proxy-Auth"] = AppConfig.proxy.authToken
+        }
+        headers["Authorization"] = "Bearer ${safeApiKey(apiKey)}"
+        return headers
+    }
+
+    /**
+     * Configure proxy settings for OpenAI streaming chat model builder.
+     */
+    private fun OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder.configureProxy(
+        apiKey: String,
+    ): OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder {
+        if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
+            baseUrl("${AppConfig.proxy.url}/openai/v1")
+            customHeaders(buildProxyHeaders(apiKey))
+        }
+        return this
+    }
+
+    /**
+     * Configure proxy settings for OpenAI chat model builder.
+     */
+    private fun OpenAiChatModel.OpenAiChatModelBuilder.configureProxy(
+        apiKey: String,
+    ): OpenAiChatModel.OpenAiChatModelBuilder {
+        if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
+            baseUrl("${AppConfig.proxy.url}/openai/v1")
+            customHeaders(buildProxyHeaders(apiKey))
+        }
+        return this
+    }
+
+    /**
+     * Create a non-streaming chat model for background summarization tasks.
+     * Uses a cheaper model (default: gpt-4o-mini) to reduce costs.
+     */
+    private fun createSummarizerModel(settings: OpenAiSettings): OpenAiChatModel = OpenAiChatModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(settings.summarizerModel)
+        .temperature(0.3)
+        .apply {
+            configureProxy(settings.apiKey)
+        }.build()
 }

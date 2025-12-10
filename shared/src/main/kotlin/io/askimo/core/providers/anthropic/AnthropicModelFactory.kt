@@ -4,12 +4,15 @@
  */
 package io.askimo.core.providers.anthropic
 
-import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
@@ -17,25 +20,20 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
 class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
-    override fun availableModels(settings: AnthropicSettings): List<String> {
-        // Anthropic doesn’t yet expose a “list models” endpoint like OpenAI,
-        // so we’ll return known public models manually.
-        return listOf(
-            "claude-opus-4-1",
-            "claude-opus-4-0",
-            "claude-sonnet-4-5",
-            "claude-sonnet-4-0",
-            "claude-3-7-sonnet-latest",
-            "claude-3-5-haiku-latest",
-        )
-    }
+    override fun availableModels(settings: AnthropicSettings): List<String> = listOf(
+        "claude-opus-4-1",
+        "claude-opus-4-0",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-0",
+        "claude-3-7-sonnet-latest",
+        "claude-3-5-haiku-latest",
+    )
 
     override fun defaultSettings(): AnthropicSettings = AnthropicSettings()
 
     override fun create(
         model: String,
         settings: AnthropicSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -47,11 +45,27 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .baseUrl(settings.baseUrl)
                 .build()
 
+        val summarizerModel = if (settings.enableAiSummarization) {
+            createSummarizerModel(settings)
+        } else {
+            null
+        }
+
+        val memoryConfig = MemoryConfig(
+            maxTokens = AppConfig.chat.maxTokens,
+            summarizationThreshold = AppConfig.chat.summarizationThreshold,
+            tokenEstimator = null, // Use default word-count * 1.3 estimation
+            summarizerModel = summarizerModel,
+            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
+        )
+
+        val chatMemory = memoryConfig.createMemory()
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -83,6 +97,13 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return builder.build()
+        return ChatClientImpl(builder.build(), chatMemory)
     }
+
+    private fun createSummarizerModel(settings: AnthropicSettings): AnthropicChatModel = AnthropicChatModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(settings.summarizerModel)
+        .baseUrl(settings.baseUrl)
+        .temperature(0.3)
+        .build()
 }

@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.anthropic
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -29,13 +28,11 @@ class AnthropicModelFactoryTest {
             ?: throw IllegalStateException("ANTHROPIC_API_KEY environment variable is required")
 
         val settings = AnthropicSettings(apiKey = apiKey)
-        val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         val chatClient: ChatClient =
             AnthropicModelFactory().create(
                 model = "claude-sonnet-4-5",
                 settings = settings,
-                memory = memory,
                 retrievalAugmentor = null,
             )
 

@@ -11,7 +11,7 @@ import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.ConversationSummaryRepository
+import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
@@ -95,6 +95,7 @@ class DatabaseManager private constructor(
         createAttachmentsTable(connection)
         createSummariesTable(connection)
         createDirectivesTable(connection)
+        createSessionMemoryTable(connection)
     }
 
     private fun createFoldersTable(conn: Connection) {
@@ -238,6 +239,23 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createSessionMemoryTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS session_memory (
+                    session_id TEXT PRIMARY KEY,
+                    memory_summary TEXT,
+                    memory_messages TEXT NOT NULL,
+                    last_updated TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE ON UPDATE CASCADE
+                )
+                """,
+            )
+        }
+    }
+
     private val _chatSessionRepository: ChatSessionRepository by lazy {
         ChatSessionRepository(this)
     }
@@ -254,12 +272,12 @@ class DatabaseManager private constructor(
         ChatFolderRepository(this)
     }
 
-    private val _conversationSummaryRepository: ConversationSummaryRepository by lazy {
-        ConversationSummaryRepository(this)
-    }
-
     private val _chatDirectiveRepository: ChatDirectiveRepository by lazy {
         ChatDirectiveRepository(this)
+    }
+
+    private val _sessionMemoryRepository: SessionMemoryRepository by lazy {
+        SessionMemoryRepository(this)
     }
 
     /**
@@ -287,16 +305,16 @@ class DatabaseManager private constructor(
     fun getChatFolderRepository(): ChatFolderRepository = _chatFolderRepository
 
     /**
-     * Get the singleton ConversationSummaryRepository instance.
-     * All access to conversation summaries should go through this repository.
-     */
-    fun getConversationSummaryRepository(): ConversationSummaryRepository = _conversationSummaryRepository
-
-    /**
      * Get the singleton ChatDirectiveRepository instance.
      * All access to chat directives should go through this repository.
      */
     fun getChatDirectiveRepository(): ChatDirectiveRepository = _chatDirectiveRepository
+
+    /**
+     * Get the singleton SessionMemoryRepository instance.
+     * All access to session memory should go through this repository.
+     */
+    fun getSessionMemoryRepository(): SessionMemoryRepository = _sessionMemoryRepository
 
     /**
      * Closes the HikariCP connection pool and releases all database resources.

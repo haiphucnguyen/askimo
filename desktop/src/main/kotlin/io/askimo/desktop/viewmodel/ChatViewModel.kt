@@ -722,11 +722,6 @@ class ChatViewModel(
 
         // Reset directive to null for new chat session
         selectedDirective = null
-
-        // Clear conversation memory
-        val provider = appContext.getActiveProvider()
-        val modelName = appContext.params.getModel(provider)
-        appContext.removeMemory(provider, modelName)
     }
 
     /**

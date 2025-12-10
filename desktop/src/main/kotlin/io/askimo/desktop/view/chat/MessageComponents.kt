@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
@@ -85,6 +86,7 @@ fun messageList(
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
+    onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
 ) {
@@ -144,7 +146,7 @@ fun messageList(
                 .fillMaxSize()
                 .padding(end = 12.dp) // Add padding for scrollbar
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Show loading indicator when loading previous messages
             if (isLoadingPrevious) {
@@ -177,6 +179,7 @@ fun messageList(
                             isActiveSearchResult = isActiveResult,
                             onMessageClick = onMessageClick,
                             onEditMessage = onEditMessage,
+                            onDownloadAttachment = onDownloadAttachment,
                             userAvatarPath = userAvatarPath,
                             aiAvatarPath = aiAvatarPath,
                         )
@@ -232,6 +235,7 @@ fun messageBubble(
     isActiveSearchResult: Boolean = false,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
+    onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
 ) {
@@ -313,7 +317,10 @@ fun messageBubble(
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 message.attachments.forEach { attachment ->
-                                    fileAttachmentChip(attachment)
+                                    fileAttachmentChip(
+                                        attachment = attachment,
+                                        onDownload = onDownloadAttachment,
+                                    )
                                 }
                             }
                         }
@@ -534,37 +541,63 @@ fun messageBubble(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun fileAttachmentChip(attachment: FileAttachmentDTO) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
+private fun fileAttachmentChip(
+    attachment: FileAttachmentDTO,
+    onDownload: ((FileAttachmentDTO) -> Unit)? = null,
+) {
+    themedTooltip(
+        text = if (onDownload != null) stringResource("attachment.download") else "",
     ) {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onDownload != null) {
+                        Modifier
+                            .clickable { onDownload(attachment) }
+                            .pointerHoverIcon(PointerIcon.Hand)
+                    } else {
+                        Modifier
+                    },
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
         ) {
-            Icon(
-                imageVector = Icons.Default.AttachFile,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = attachment.fileName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Row(
+                modifier = Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    text = formatFileSize(attachment.size),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = attachment.fileName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatFileSize(attachment.size),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (onDownload != null) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = stringResource("attachment.download.description"),
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

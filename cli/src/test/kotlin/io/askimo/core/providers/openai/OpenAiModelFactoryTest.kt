@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.openai
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -27,12 +26,10 @@ class OpenAiModelFactoryTest {
             ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
 
         val settings = OpenAiSettings(apiKey = apiKey)
-        val memory = MessageWindowChatMemory.withMaxMessages(10)
 
         return OpenAiModelFactory().create(
             model = "gpt-3.5-turbo",
             settings = settings,
-            memory = memory,
             retrievalAugmentor = null,
         )
     }

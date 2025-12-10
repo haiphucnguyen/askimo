@@ -4,12 +4,13 @@
  */
 package io.askimo.core.providers.xai
 
-import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -36,7 +37,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
     override fun create(
         model: String,
         settings: XAiSettings,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
     ): ChatClient {
@@ -53,11 +53,17 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                     }
                 }.build()
 
+        // Create token-aware summarizing memory
+        val chatMemory = TokenAwareSummarizingMemory.builder()
+            .maxTokens(8000)
+            .summarizationThreshold(0.75)
+            .build()
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(memory)
+                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -87,7 +93,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
-        return builder.build()
+
+        return ChatClientImpl(builder.build(), chatMemory)
     }
 
     private fun supportsSampling(model: String): Boolean = true

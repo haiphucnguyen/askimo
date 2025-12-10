@@ -4,8 +4,6 @@
  */
 package io.askimo.core.providers
 
-import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.ExecutionMode
 
@@ -36,7 +34,6 @@ interface ChatModelFactory<T : ProviderSettings> {
      *
      * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
-     * @param memory Chat memory to use for conversation history
      * @param retrievalAugmentor Optional retrieval-augmented generation (RAG) component.
      * If provided, the created chat service will use it to fetch and inject relevant context
      * into prompts during generation. Pass null to disable retrieval augmentation.
@@ -47,22 +44,9 @@ interface ChatModelFactory<T : ProviderSettings> {
     fun create(
         model: String,
         settings: T,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
     ): ChatClient
-
-    /**
-     * Creates a chat memory instance for storing conversation history.
-     *
-     * @param model The identifier of the model to create memory for
-     * @param settings Provider-specific settings that may influence memory configuration
-     * @return A ChatMemory instance configured with a default window size of 200 messages
-     */
-    fun createMemory(
-        model: String,
-        settings: T,
-    ): ChatMemory = MessageWindowChatMemory.withMaxMessages(200)
 
     /**
      * Returns helpful guidance text to display when no models are available for this provider.

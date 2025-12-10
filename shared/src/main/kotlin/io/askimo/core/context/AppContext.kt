@@ -5,7 +5,6 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.context.MemoryPolicy.RESET_FOR_THIS_COMBO
@@ -23,9 +22,11 @@ import io.askimo.core.providers.NoopChatClient
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Controls what happens to the *chat memory* when the active [ChatClient] is re-created
@@ -88,6 +89,69 @@ class AppContext(
 ) {
     private val log = logger<AppContext>()
     private val memoryMap = mutableMapOf<String, ChatMemory>()
+
+    @Volatile
+    private var autoSaveScheduler: java.util.concurrent.ScheduledExecutorService? = null
+
+    init {
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                try {
+                    log.info("Shutdown hook triggered - saving session memory")
+                    if (::chatClient.isInitialized) {
+                        runBlocking {
+                            chatClient.saveCurrentSession()
+                        }
+                        log.info("Successfully saved memory on application shutdown")
+                    }
+                } catch (e: Exception) {
+                    log.error("Failed to save memory on shutdown", e)
+                }
+            },
+        )
+
+        startPeriodicAutoSave()
+    }
+
+    /**
+     * Start periodic auto-save scheduler
+     */
+    private fun startPeriodicAutoSave() {
+        autoSaveScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+            Thread(r, "memory-auto-saver").apply {
+                isDaemon = true
+            }
+        }
+
+        autoSaveScheduler?.scheduleAtFixedRate({
+            try {
+                if (::chatClient.isInitialized) {
+                    runBlocking {
+                        chatClient.saveCurrentSession()
+                    }
+                    log.debug("Periodic auto-save completed")
+                }
+            } catch (e: Exception) {
+                log.error("Periodic auto-save failed", e)
+            }
+        }, 5, 5, TimeUnit.MINUTES)
+    }
+
+    /**
+     * Stop the periodic auto-save scheduler
+     */
+    fun stopAutoSave() {
+        autoSaveScheduler?.shutdown()
+        try {
+            val terminated = autoSaveScheduler?.awaitTermination(10, TimeUnit.SECONDS) ?: true
+            if (!terminated) {
+                autoSaveScheduler?.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            autoSaveScheduler?.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
+    }
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
@@ -174,18 +238,6 @@ class AppContext(
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
 
     /**
-     * Safely calls createMemory on a factory with the given settings.
-     * Uses unchecked cast which is safe because the registry ensures
-     * factory and settings types match for each provider.
-     */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : ProviderSettings> createMemoryFromFactory(
-        factory: ChatModelFactory<*>,
-        model: String,
-        settings: T,
-    ): ChatMemory = (factory as ChatModelFactory<T>).createMemory(model, settings)
-
-    /**
      * Safely calls create on a factory with the given settings.
      * Uses unchecked cast which is safe because the registry ensures
      * factory and settings types match for each provider.
@@ -195,39 +247,9 @@ class AppContext(
         factory: ChatModelFactory<*>,
         model: String,
         settings: T,
-        memory: ChatMemory,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-    ): ChatClient = (factory as ChatModelFactory<T>).create(model, settings, memory, retrievalAugmentor, executionMode)
-
-    /**
-     * Returns the provider-specific chat memory for a given (provider, model) pair,
-     * creating one if it doesn't exist yet.
-     *
-     * @param provider The model provider
-     * @param model The name of the model
-     * @param settings Provider-specific configuration settings used to create memory if needed
-     * @return The chat memory instance for this provider/model combination
-     */
-    fun getOrCreateMemory(
-        provider: ModelProvider,
-        model: String,
-        settings: ProviderSettings,
-    ): ChatMemory {
-        val key = "${provider.name}/$model"
-        return memoryMap.getOrPut(key) {
-            ProviderRegistry.getFactory(provider)?.let { factory ->
-                createMemoryFromFactory(factory, model, settings)
-            } ?: MessageWindowChatMemory.withMaxMessages(200)
-        }
-    }
-
-    fun removeMemory(
-        provider: ModelProvider,
-        modelName: String,
-    ) {
-        memoryMap.remove("${provider.name}/$modelName")
-    }
+    ): ChatClient = (factory as ChatModelFactory<T>).create(model, settings, retrievalAugmentor, executionMode)
 
     /**
      * Rebuilds and returns a new instance of the active chat model based on current session parameters.
@@ -251,8 +273,7 @@ class AppContext(
             memoryMap.remove(key)
         }
 
-        val memory = getOrCreateMemory(provider, modelName, settings)
-        val newModel = createChatClientFromFactory(factory, modelName, settings, memory, executionMode = mode)
+        val newModel = createChatClientFromFactory(factory, modelName, settings, executionMode = mode)
         setChatClient(newModel)
         return newModel
     }
@@ -291,7 +312,6 @@ class AppContext(
         val provider = params.currentProvider
         val model = params.model
         val settings = getCurrentProviderSettings()
-        val memory = getOrCreateMemory(provider, model, settings)
 
         val factory =
             getModelFactory(provider)
@@ -301,7 +321,6 @@ class AppContext(
             factory = factory,
             model = model,
             settings = settings,
-            memory = memory,
             retrievalAugmentor = rag,
             executionMode = mode,
         )
