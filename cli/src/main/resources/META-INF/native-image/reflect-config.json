@@ -680,8 +680,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -2385,6 +2384,62 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "resumeSession should handle session with attachments",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSession should include outdated messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSession should preserve message order",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSession should return all messages for a session",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSession should return empty list for session with no messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should handle large limit",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should handle limit of 1",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should handle non-existent session gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should handle session with fewer messages than limit",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should handle session with no messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should maintain consistency with multiple calls",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should return limited messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should return most recent messages first",
+        "parameterTypes": []
+      },
+      {
+        "name": "resumeSessionPaginated should return session directive if present",
+        "parameterTypes": []
+      },
       { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
       {
         "name": "should add message and update session timestamp through service",
@@ -2641,16 +2696,7 @@
           "io.askimo.core.context.ExecutionMode"
         ]
       },
-      {
-        "name": "enableRagWith",
-        "parameterTypes": ["io.askimo.core.project.PgVectorIndexer"]
-      },
-      { "name": "getActiveProvider", "parameterTypes": [] },
-      { "name": "getParams", "parameterTypes": [] },
-      {
-        "name": "setScope",
-        "parameterTypes": ["io.askimo.core.project.ProjectMeta"]
-      }
+      { "name": "getParams", "parameterTypes": [] }
     ]
   },
   {
@@ -4547,7 +4593,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$DClpUKLv",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$bDmnOqaA",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -79,23 +79,70 @@ class DefaultConversationSummarizer(
         }
 
         Guidelines:
-        - keyFacts: Extract important information like user preferences, names, dates, decisions, or specific requirements
+        - keyFacts: Extract important information as key-value pairs. Each value MUST be a simple string, NOT an array or object. If you need to store multiple items, combine them into a comma-separated string.
+          Example: "frameworks": "OpenAI Java SDK, LangChain4J 1.9, Spring Boot"
         - mainTopics: List the main subjects or themes discussed (max 5-7 topics)
         - recentContext: Summarize the most recent part of the conversation (2-3 sentences)
 
-        Return ONLY the JSON object, no additional text.
+        IMPORTANT: Return ONLY the JSON object without markdown code blocks or extra text. Do not wrap the JSON in ```json``` tags.
     """.trimIndent()
 
     private fun parseJsonResponse(response: String): ConversationSummary {
+        // Remove markdown code blocks if present
+        val cleanedResponse = response
+            .replace("```json", "")
+            .replace("```", "")
+            .trim()
+
         // Try to extract JSON from response (in case the model adds extra text)
-        val jsonMatch = Regex("""\{[\s\S]*\}""").find(response)
-        val jsonText = jsonMatch?.value ?: response
+        val jsonMatch = Regex("""\{[\s\S]*\}""").find(cleanedResponse)
+        val jsonText = jsonMatch?.value ?: cleanedResponse
 
         return try {
             json.decodeFromString<ConversationSummary>(jsonText)
         } catch (e: Exception) {
-            log.warn("Failed to parse JSON response, returning empty summary", e)
-            ConversationSummary()
+            log.warn("Failed to parse JSON response, attempting to sanitize and retry", e)
+
+            // Try to sanitize the JSON by converting arrays in keyFacts to comma-separated strings
+            try {
+                val sanitized = sanitizeKeyFacts(jsonText)
+                json.decodeFromString<ConversationSummary>(sanitized)
+            } catch (e2: Exception) {
+                log.error("Failed to parse even after sanitization, returning empty summary", e2)
+                ConversationSummary()
+            }
         }
+    }
+
+    /**
+     * Sanitizes keyFacts by converting array values to comma-separated strings.
+     * This handles cases where the AI returns arrays instead of strings.
+     */
+    private fun sanitizeKeyFacts(jsonText: String): String {
+        // Find the keyFacts section and only sanitize arrays within it
+        val keyFactsRegex = Regex(""""keyFacts":\s*\{([^}]+)\}""")
+        val keyFactsMatch = keyFactsRegex.find(jsonText)
+
+        if (keyFactsMatch == null) {
+            return jsonText
+        }
+
+        val keyFactsContent = keyFactsMatch.groupValues[1]
+
+        // Replace array values with comma-separated strings in keyFacts only
+        val sanitizedKeyFacts = Regex(""""([^"]+)":\s*\[([^\]]+)\]""").replace(keyFactsContent) { matchResult ->
+            val key = matchResult.groupValues[1]
+            val arrayContent = matchResult.groupValues[2]
+
+            // Extract quoted strings from array and join with commas
+            val values = Regex(""""([^"]+)"""").findAll(arrayContent)
+                .map { it.groupValues[1] }
+                .joinToString(", ")
+
+            """"$key": "$values""""
+        }
+
+        // Replace the original keyFacts with the sanitized version
+        return jsonText.replace(keyFactsMatch.value, """"keyFacts": {$sanitizedKeyFacts}""")
     }
 }

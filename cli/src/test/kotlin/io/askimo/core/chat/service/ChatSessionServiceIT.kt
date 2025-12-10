@@ -4,8 +4,10 @@
  */
 package io.askimo.core.chat.service
 
+import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
@@ -41,6 +43,7 @@ class ChatSessionServiceIT {
         private lateinit var sessionRepository: ChatSessionRepository
         private lateinit var messageRepository: ChatMessageRepository
         private lateinit var folderRepository: ChatFolderRepository
+        private lateinit var directiveRepository: ChatDirectiveRepository
 
         @JvmStatic
         @BeforeAll
@@ -52,6 +55,7 @@ class ChatSessionServiceIT {
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
             folderRepository = databaseManager.getChatFolderRepository()
+            directiveRepository = databaseManager.getChatDirectiveRepository()
 
             val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
 
@@ -272,5 +276,421 @@ class ChatSessionServiceIT {
         val activeMessages = service.getActiveMessages(session.id)
         assertEquals(1, activeMessages.size)
         assertEquals("Message 1", activeMessages[0].content)
+    }
+
+    @Test
+    fun `resumeSession should return all messages for a session`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Test Session"))
+        val baseTime = LocalDateTime.now()
+
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "First message",
+                createdAt = baseTime,
+            ),
+        )
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Second message",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Third message",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+
+        // When
+        val result = service.resumeSession(session.id)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(session.id, result.sessionId)
+        assertEquals(3, result.messages.size)
+        assertEquals("First message", result.messages[0].content)
+        assertEquals("Second message", result.messages[1].content)
+        assertEquals("Third message", result.messages[2].content)
+        assertNull(result.errorMessage)
+    }
+
+    @Test
+    fun `resumeSession should return empty list for session with no messages`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Empty Session"))
+
+        // When
+        val result = service.resumeSession(session.id)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(session.id, result.sessionId)
+        assertEquals(0, result.messages.size)
+        assertNull(result.errorMessage)
+    }
+
+    @Test
+    fun `resumeSession should preserve message order`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Ordered Session"))
+        val baseTime = LocalDateTime.now()
+
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime,
+            ),
+        )
+        Thread.sleep(10)
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        Thread.sleep(10)
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message 3",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+
+        // When
+        val result = service.resumeSession(session.id)
+
+        // Then
+        assertEquals(3, result.messages.size)
+        assertEquals("Message 1", result.messages[0].content)
+        assertEquals("Message 2", result.messages[1].content)
+        assertEquals("Message 3", result.messages[2].content)
+    }
+
+    @Test
+    fun `resumeSession should include outdated messages`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Mixed Session"))
+        val baseTime = LocalDateTime.now()
+
+        val message1 = service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Active message",
+                createdAt = baseTime,
+            ),
+        )
+        val message2 = service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.ASSISTANT,
+                content = "Outdated message",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+
+        service.markMessageAsOutdated(message2.id)
+
+        // When
+        val result = service.resumeSession(session.id)
+
+        // Then
+        assertEquals(2, result.messages.size)
+        assertTrue(result.messages.any { it.content == "Active message" })
+        assertTrue(result.messages.any { it.content == "Outdated message" })
+    }
+
+    @Test
+    fun `resumeSessionPaginated should return limited messages`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Paginated Session"))
+
+        repeat(20) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = LocalDateTime.now().plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 10)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(session.id, result.sessionId)
+        assertEquals(10, result.messages.size)
+        assertTrue(result.hasMore)
+        assertNotNull(result.cursor)
+        assertNull(result.errorMessage)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should return most recent messages first`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Recent First"))
+        val baseTime = LocalDateTime.now()
+
+        repeat(15) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 5)
+
+        // Then
+        assertEquals(5, result.messages.size)
+        // Messages should be in reverse chronological order (most recent first)
+        val contents = result.messages.map { it.content }
+        assertTrue(contents.contains("Message 14"))
+        assertTrue(contents.contains("Message 13"))
+        assertTrue(contents.contains("Message 12"))
+        assertTrue(contents.contains("Message 11"))
+        assertTrue(contents.contains("Message 10"))
+    }
+
+    @Test
+    fun `resumeSessionPaginated should handle session with no messages`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Empty Paginated"))
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 10)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(session.id, result.sessionId)
+        assertEquals(0, result.messages.size)
+        assertNull(result.cursor)
+        assertEquals(false, result.hasMore)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should handle session with fewer messages than limit`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Few Messages"))
+        val baseTime = LocalDateTime.now()
+
+        repeat(3) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 10)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(3, result.messages.size)
+        assertNull(result.cursor)
+        assertEquals(false, result.hasMore)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should handle non-existent session gracefully`() {
+        // Given
+        val nonExistentId = "non-existent-session-id"
+
+        // When
+        val result = service.resumeSessionPaginated(nonExistentId, limit = 10)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(nonExistentId, result.sessionId)
+        assertEquals(0, result.messages.size)
+        assertNull(result.cursor)
+        assertEquals(false, result.hasMore)
+        assertNull(result.directiveId)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should return session directive if present`() {
+        // Given
+        val directive = directiveRepository.save(
+            ChatDirective(
+                id = "",
+                name = "Test Directive",
+                content = "Test instruction",
+            ),
+        )
+        val session = sessionRepository.createSession(
+            ChatSession(
+                id = "",
+                title = "Session with Directive",
+                directiveId = directive.id,
+            ),
+        )
+        val baseTime = LocalDateTime.now()
+
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Test message",
+                createdAt = baseTime,
+            ),
+        )
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 10)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(directive.id, result.directiveId)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should handle limit of 1`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Single Message"))
+
+        repeat(5) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = LocalDateTime.now().plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 1)
+
+        // Then
+        assertEquals(1, result.messages.size)
+        assertTrue(result.hasMore)
+        assertNotNull(result.cursor)
+    }
+
+    @Test
+    fun `resumeSessionPaginated should handle large limit`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Large Limit"))
+        val baseTime = LocalDateTime.now()
+
+        repeat(10) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = baseTime.plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When
+        val result = service.resumeSessionPaginated(session.id, limit = 1000)
+
+        // Then
+        assertEquals(10, result.messages.size)
+        assertNull(result.cursor)
+        assertEquals(false, result.hasMore)
+    }
+
+    @Test
+    fun `resumeSession should handle session with attachments`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "With Attachments"))
+        val baseTime = LocalDateTime.now()
+
+        service.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = session.id,
+                role = MessageRole.USER,
+                content = "Message with attachment",
+                createdAt = baseTime,
+            ),
+        )
+
+        // When
+        val result = service.resumeSession(session.id)
+
+        // Then
+        assertTrue(result.success)
+        assertEquals(1, result.messages.size)
+        assertNotNull(result.messages[0])
+    }
+
+    @Test
+    fun `resumeSessionPaginated should maintain consistency with multiple calls`() {
+        // Given
+        val session = sessionRepository.createSession(ChatSession(id = "", title = "Consistency Test"))
+
+        repeat(15) { i ->
+            service.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = session.id,
+                    role = MessageRole.USER,
+                    content = "Message $i",
+                    createdAt = LocalDateTime.now().plusSeconds(i.toLong()),
+                ),
+            )
+        }
+
+        // When - Load first page
+        val firstResult = service.resumeSessionPaginated(session.id, limit = 5)
+
+        // Then - First page should be consistent
+        assertEquals(5, firstResult.messages.size)
+        assertTrue(firstResult.hasMore)
+
+        // When - Load again (should get same results for first page)
+        val secondResult = service.resumeSessionPaginated(session.id, limit = 5)
+
+        // Then - Results should be identical
+        assertEquals(firstResult.messages.size, secondResult.messages.size)
+        assertEquals(
+            firstResult.messages.map { it.content },
+            secondResult.messages.map { it.content },
+        )
     }
 }
