@@ -438,7 +438,6 @@ class TokenAwareSummarizingMemory private constructor(
                     }
                 }
             } else {
-                // Synchronous executor for testing
                 Executors.newSingleThreadExecutor()
             }
 

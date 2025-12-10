@@ -109,27 +109,4 @@ data class MemoryConfig(
 
         return builder.build()
     }
-
-    companion object {
-        /**
-         * Basic configuration without AI summarization (free, fast, reliable)
-         */
-        fun basic(maxTokens: Int = 4000) = MemoryConfig(
-            maxTokens = maxTokens,
-            summarizerModel = null,
-        )
-
-        /**
-         * Configuration with AI summarization
-         */
-        fun withAI(
-            maxTokens: Int = 8000,
-            summarizerModel: ChatModel,
-            tokenEstimator: ((ChatMessage) -> Int)? = null,
-        ) = MemoryConfig(
-            maxTokens = maxTokens,
-            summarizerModel = summarizerModel,
-            tokenEstimator = tokenEstimator,
-        )
-    }
 }
