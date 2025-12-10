@@ -118,6 +118,12 @@ compose.desktop {
     }
 }
 
+// Fix for "Archive contains more than 65535 entries" error
+// Enable ZIP64 format for Compose Desktop packaging (supports unlimited entries)
+tasks.withType<Zip> {
+    isZip64 = true
+}
+
 tasks.test {
     useJUnitPlatform()
 }
