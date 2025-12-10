@@ -16,12 +16,15 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.time.LocalDateTime
 
 class ChatSessionServiceIT {
 
@@ -91,7 +94,7 @@ class ChatSessionServiceIT {
         )
 
         val updated = sessionRepository.getSession(session.id)
-        Assertions.assertTrue(updated!!.updatedAt.isAfter(originalUpdatedAt))
+        assertTrue(updated!!.updatedAt.isAfter(originalUpdatedAt))
     }
 
     @Test
@@ -108,13 +111,13 @@ class ChatSessionServiceIT {
         service.deleteFolder(folder.id)
 
         // Folder should be deleted
-        Assertions.assertNull(folderRepository.getFolder(folder.id))
+        assertNull(folderRepository.getFolder(folder.id))
 
         // Sessions should be moved to root
         val retrievedSession1 = sessionRepository.getSession(session1.id)
         val retrievedSession2 = sessionRepository.getSession(session2.id)
-        Assertions.assertNull(retrievedSession1!!.folderId)
-        Assertions.assertNull(retrievedSession2!!.folderId)
+        assertNull(retrievedSession1!!.folderId)
+        assertNull(retrievedSession2!!.folderId)
     }
 
     @Test
@@ -125,14 +128,14 @@ class ChatSessionServiceIT {
 
         service.deleteFolder(parent.id)
 
-        Assertions.assertNull(folderRepository.getFolder(parent.id))
+        assertNull(folderRepository.getFolder(parent.id))
 
         val retrievedChild1 = folderRepository.getFolder(child1.id)
         val retrievedChild2 = folderRepository.getFolder(child2.id)
         assertNotNull(retrievedChild1)
         assertNotNull(retrievedChild2)
-        Assertions.assertNull(retrievedChild1.parentFolderId)
-        Assertions.assertNull(retrievedChild2.parentFolderId)
+        assertNull(retrievedChild1.parentFolderId)
+        assertNull(retrievedChild2.parentFolderId)
     }
 
     @Test
@@ -158,9 +161,9 @@ class ChatSessionServiceIT {
 
         val messages = service.getMessages(session.id)
 
-        Assertions.assertEquals(2, messages.size)
-        Assertions.assertEquals("Message 1", messages[0].content)
-        Assertions.assertEquals("Message 2", messages[1].content)
+        assertEquals(2, messages.size)
+        assertEquals("Message 1", messages[0].content)
+        assertEquals("Message 2", messages[1].content)
     }
 
     @Test
@@ -184,8 +187,8 @@ class ChatSessionServiceIT {
 
         val activeMessages = service.getRecentActiveMessages(session.id, limit = 10)
 
-        Assertions.assertEquals(10, activeMessages.size)
-        Assertions.assertTrue(activeMessages.all { !it.isOutdated })
+        assertEquals(10, activeMessages.size)
+        assertTrue(activeMessages.all { !it.isOutdated })
     }
 
     @Test
@@ -204,9 +207,9 @@ class ChatSessionServiceIT {
 
         val folderSessions = service.getSessionsByFolder(folder.id)
 
-        Assertions.assertEquals(2, folderSessions.size)
-        Assertions.assertTrue(folderSessions.any { it.id == session1.id })
-        Assertions.assertTrue(folderSessions.any { it.id == session2.id })
+        assertEquals(2, folderSessions.size)
+        assertTrue(folderSessions.any { it.id == session1.id })
+        assertTrue(folderSessions.any { it.id == session2.id })
     }
 
     @Test
@@ -216,8 +219,8 @@ class ChatSessionServiceIT {
         service.updateSessionStarred(session.id, true)
 
         val starredSessions = service.getStarredSessions()
-        Assertions.assertEquals(1, starredSessions.size)
-        Assertions.assertEquals(session.id, starredSessions[0].id)
+        assertEquals(1, starredSessions.size)
+        assertEquals(session.id, starredSessions[0].id)
     }
 
     @Test
@@ -227,12 +230,14 @@ class ChatSessionServiceIT {
         service.renameTitle(session.id, "New Title")
 
         val updated = service.getSessionById(session.id)
-        Assertions.assertEquals("New Title", updated!!.title)
+        assertEquals("New Title", updated!!.title)
     }
 
     @Test
     fun `should mark messages as outdated through service`() {
         val session = sessionRepository.createSession(ChatSession(id = "", title = "Test"))
+
+        val baseTime = LocalDateTime.now()
 
         val message1 = service.addMessage(
             ChatMessage(
@@ -240,6 +245,7 @@ class ChatSessionServiceIT {
                 sessionId = session.id,
                 role = MessageRole.USER,
                 content = "Message 1",
+                createdAt = baseTime,
             ),
         )
         service.addMessage(
@@ -248,6 +254,7 @@ class ChatSessionServiceIT {
                 sessionId = session.id,
                 role = MessageRole.ASSISTANT,
                 content = "Message 2",
+                createdAt = baseTime.plusSeconds(1),
             ),
         )
         service.addMessage(
@@ -256,13 +263,14 @@ class ChatSessionServiceIT {
                 sessionId = session.id,
                 role = MessageRole.USER,
                 content = "Message 3",
+                createdAt = baseTime.plusSeconds(2),
             ),
         )
 
         service.markMessagesAsOutdatedAfter(session.id, message1.id)
 
         val activeMessages = service.getActiveMessages(session.id)
-        Assertions.assertEquals(1, activeMessages.size)
-        Assertions.assertEquals("Message 1", activeMessages[0].content)
+        assertEquals(1, activeMessages.size)
+        assertEquals("Message 1", activeMessages[0].content)
     }
 }

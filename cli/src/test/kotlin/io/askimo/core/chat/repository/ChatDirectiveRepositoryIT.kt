@@ -10,6 +10,9 @@ import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -65,16 +68,16 @@ class ChatDirectiveRepositoryIT {
 
         val saved = repository.save(directive)
 
-        Assertions.assertEquals(directive.id, saved.id)
-        Assertions.assertEquals("concise-code", saved.name)
-        Assertions.assertEquals("Provide concise code examples without verbose explanations.", saved.content)
+        assertEquals(directive.id, saved.id)
+        assertEquals("concise-code", saved.name)
+        assertEquals("Provide concise code examples without verbose explanations.", saved.content)
         assertNotNull(saved.createdAt)
 
         val retrieved = repository.get(saved.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals(directive.id, retrieved.id)
-        Assertions.assertEquals(directive.name, retrieved.name)
-        Assertions.assertEquals(directive.content, retrieved.content)
+        assertEquals(directive.id, retrieved.id)
+        assertEquals(directive.name, retrieved.name)
+        assertEquals(directive.content, retrieved.content)
     }
 
     @Test
@@ -100,8 +103,8 @@ class ChatDirectiveRepositoryIT {
 
         val retrieved = repository.get(saved.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals("updated-name", retrieved.name)
-        Assertions.assertEquals("Updated content", retrieved.content)
+        assertEquals("updated-name", retrieved.name)
+        assertEquals("Updated content", retrieved.content)
     }
 
     @Test
@@ -112,10 +115,10 @@ class ChatDirectiveRepositoryIT {
 
         val directives = repository.list()
 
-        Assertions.assertEquals(3, directives.size)
-        Assertions.assertEquals("alpha", directives[0].name)
-        Assertions.assertEquals("middle", directives[1].name)
-        Assertions.assertEquals("zebra", directives[2].name)
+        assertEquals(3, directives.size)
+        assertEquals("alpha", directives[0].name)
+        assertEquals("middle", directives[1].name)
+        assertEquals("zebra", directives[2].name)
     }
 
     @Test
@@ -126,12 +129,12 @@ class ChatDirectiveRepositoryIT {
         val updated = saved.copy(name = "updated-test", content = "Updated content")
         val result = repository.update(updated)
 
-        Assertions.assertTrue(result)
+        assertTrue(result)
 
         val retrieved = repository.get(saved.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals("updated-test", retrieved.name)
-        Assertions.assertEquals("Updated content", retrieved.content)
+        assertEquals("updated-test", retrieved.name)
+        assertEquals("Updated content", retrieved.content)
     }
 
     @Test
@@ -139,19 +142,19 @@ class ChatDirectiveRepositoryIT {
         val directive = ChatDirective(name = "non-existent", content = "Some content")
         val result = repository.update(directive)
 
-        Assertions.assertFalse(result)
+        assertFalse(result)
     }
 
     @Test
     fun `should delete existing directive`() {
         val saved = repository.save(ChatDirective(name = "to-delete", content = "Content"))
 
-        Assertions.assertTrue(repository.exists(saved.id))
+        assertTrue(repository.exists(saved.id))
 
         val deleted = repository.delete(saved.id)
 
-        Assertions.assertTrue(deleted)
-        Assertions.assertFalse(repository.exists(saved.id))
+        assertTrue(deleted)
+        assertFalse(repository.exists(saved.id))
         assertNull(repository.get(saved.id))
     }
 
@@ -159,18 +162,18 @@ class ChatDirectiveRepositoryIT {
     fun `should return false when deleting non-existent directive`() {
         val deleted = repository.delete("non-existent-id")
 
-        Assertions.assertFalse(deleted)
+        assertFalse(deleted)
     }
 
     @Test
     fun `should check if directive exists`() {
         val directive = ChatDirective(name = "test-exists", content = "Content")
 
-        Assertions.assertFalse(repository.exists(directive.id))
+        assertFalse(repository.exists(directive.id))
 
         val saved = repository.save(directive)
 
-        Assertions.assertTrue(repository.exists(saved.id))
+        assertTrue(repository.exists(saved.id))
     }
 
     @Test
@@ -181,9 +184,9 @@ class ChatDirectiveRepositoryIT {
 
         val directives = repository.getByIds(listOf(saved1.id, saved3.id, "non-existent"))
 
-        Assertions.assertEquals(2, directives.size)
-        Assertions.assertEquals("directive1", directives[0].name)
-        Assertions.assertEquals("directive3", directives[1].name)
+        assertEquals(2, directives.size)
+        assertEquals("directive1", directives[0].name)
+        assertEquals("directive3", directives[1].name)
     }
 
     @Test
@@ -192,7 +195,7 @@ class ChatDirectiveRepositoryIT {
 
         val directives = repository.getByIds(emptyList())
 
-        Assertions.assertTrue(directives.isEmpty())
+        assertTrue(directives.isEmpty())
     }
 
     @Test
@@ -203,9 +206,9 @@ class ChatDirectiveRepositoryIT {
 
         val directives = repository.getByNames(listOf("directive1", "directive3", "non-existent"))
 
-        Assertions.assertEquals(2, directives.size)
-        Assertions.assertEquals("directive1", directives[0].name)
-        Assertions.assertEquals("directive3", directives[1].name)
+        assertEquals(2, directives.size)
+        assertEquals("directive1", directives[0].name)
+        assertEquals("directive3", directives[1].name)
     }
 
     @Test
@@ -214,7 +217,7 @@ class ChatDirectiveRepositoryIT {
 
         val directives = repository.getByNames(emptyList())
 
-        Assertions.assertTrue(directives.isEmpty())
+        assertTrue(directives.isEmpty())
     }
 
     @Test
@@ -233,7 +236,7 @@ class ChatDirectiveRepositoryIT {
 
         val retrieved = repository.get(saved.id)
         assertNotNull(retrieved)
-        Assertions.assertEquals(specialContent, retrieved.content)
+        assertEquals(specialContent, retrieved.content)
     }
 
     @Test
@@ -245,7 +248,7 @@ class ChatDirectiveRepositoryIT {
             repository.save(directive)
         }
 
-        Assertions.assertTrue(exception.message!!.contains("cannot exceed ${DIRECTIVE_NAME_MAX_LENGTH} characters"))
+        assertTrue(exception.message!!.contains("cannot exceed ${DIRECTIVE_NAME_MAX_LENGTH} characters"))
     }
 
     @Test
@@ -257,7 +260,7 @@ class ChatDirectiveRepositoryIT {
             repository.save(directive)
         }
 
-        Assertions.assertTrue(exception.message!!.contains("cannot exceed ${DIRECTIVE_CONTENT_MAX_LENGTH} characters"))
+        assertTrue(exception.message!!.contains("cannot exceed ${DIRECTIVE_CONTENT_MAX_LENGTH} characters"))
     }
 
     @Test
@@ -270,7 +273,7 @@ class ChatDirectiveRepositoryIT {
 
             val retrieved = repository.get(saved.id)
             assertNotNull(retrieved)
-            Assertions.assertEquals(maxName, retrieved.name)
+            assertEquals(maxName, retrieved.name)
         }
     }
 
@@ -284,7 +287,7 @@ class ChatDirectiveRepositoryIT {
 
             val retrieved = repository.get(saved.id)
             assertNotNull(retrieved)
-            Assertions.assertEquals(maxContent, retrieved.content)
+            assertEquals(maxContent, retrieved.content)
         }
     }
 }
