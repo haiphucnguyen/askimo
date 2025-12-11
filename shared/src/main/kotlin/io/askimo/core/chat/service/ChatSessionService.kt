@@ -16,6 +16,7 @@ import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
+import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
@@ -416,16 +417,22 @@ class ChatSessionService(
             sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
         }
 
-        return preparePromptWithContext(sessionId, userMessage)
+        return preparePromptWithContext(sessionId, userMessage, attachments)
     }
 
-    private fun preparePromptWithContext(sessionId: String, userMessage: String): String {
+    private fun preparePromptWithContext(
+        sessionId: String,
+        userMessage: String,
+        attachments: List<FileAttachmentDTO>,
+    ): String {
         val directivePrompt = buildDirectivePrompt(sessionId)
 
+        val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)
+
         return if (directivePrompt != null) {
-            "$directivePrompt\n\n$userMessage"
+            "$directivePrompt\n\n$messageWithAttachments"
         } else {
-            userMessage
+            messageWithAttachments
         }
     }
 

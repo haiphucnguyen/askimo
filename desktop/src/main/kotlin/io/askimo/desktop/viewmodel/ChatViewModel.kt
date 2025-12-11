@@ -246,14 +246,16 @@ class ChatViewModel(
             // Store the original message ID BEFORE any operations
             val originalMessageId = editingMessage.id ?: return currentSessionId
 
-            // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
-            //    This must happen BEFORE creating the new message
-            editMessage(originalMessageId, message, attachments)
+            scope.launch {
+                // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
+                //    This must happen BEFORE creating the new message
+                editMessage(originalMessageId, message, attachments)
 
-            // 2. Send the NEW message with updated content
-            //    This creates a NEW active message (not marked as outdated)
-            //    The new message will have editParentId linking to originalMessageId
-            sendMessage(message, attachments)
+                // 2. Send the NEW message with updated content
+                //    This creates a NEW active message (not marked as outdated)
+                //    The new message will have editParentId linking to originalMessageId
+                sendMessage(message, attachments)
+            }
         } else {
             // Normal mode: just send the message
             sendMessage(message, attachments)
@@ -689,17 +691,32 @@ class ChatViewModel(
      * @param newContent The new content (not used, kept for compatibility)
      * @param attachments Optional attachments (not used, kept for compatibility)
      */
-    fun editMessage(messageId: String, newContent: String, attachments: List<FileAttachmentDTO> = emptyList()) {
-        scope.launch {
-            try {
-                markOriginalAndSubsequentAsOutdated(messageId)
-            } catch (e: Exception) {
-                errorMessage = ErrorHandler.getUserFriendlyError(
-                    e,
-                    "editing message",
-                    "Failed to edit message. Please try again.",
-                )
+    suspend fun editMessage(messageId: String, newContent: String, attachments: List<FileAttachmentDTO> = emptyList()) {
+        try {
+            val success = markOriginalAndSubsequentAsOutdated(messageId)
+
+            if (success) {
+                // Update local state to reflect outdated messages
+                // mutableStateOf is thread-safe in Compose, no need for Dispatchers.Main
+                messages = messages.map { message ->
+                    // Find the index of the original message
+                    val originalIndex = messages.indexOfFirst { it.id == messageId }
+                    val currentIndex = messages.indexOf(message)
+
+                    // Mark original message and all subsequent messages as outdated
+                    if (currentIndex >= originalIndex && originalIndex != -1) {
+                        message.copy(isOutdated = true)
+                    } else {
+                        message
+                    }
+                }
             }
+        } catch (e: Exception) {
+            errorMessage = ErrorHandler.getUserFriendlyError(
+                e,
+                "editing message",
+                "Failed to edit message. Please try again.",
+            )
         }
     }
 

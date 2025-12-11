@@ -230,6 +230,30 @@ fun settingsViewWithSidebar(
             } // End Box (main content)
         } // End Row (sidebar + content)
     } // End Column (settings view with top header)
+
+    // Dialogs
+    if (settingsViewModel.showModelDialog) {
+        modelSelectionDialog(
+            viewModel = settingsViewModel,
+            onDismiss = { settingsViewModel.closeModelDialog() },
+            onSelect = { model -> settingsViewModel.selectModel(model) },
+        )
+    }
+
+    if (settingsViewModel.showProviderDialog) {
+        providerSelectionDialog(
+            viewModel = settingsViewModel,
+            onDismiss = { settingsViewModel.closeProviderDialog() },
+            onSave = { settingsViewModel.saveProvider() },
+        )
+    }
+
+    if (settingsViewModel.showSettingsDialog) {
+        settingsConfigDialog(
+            viewModel = settingsViewModel,
+            onDismiss = { settingsViewModel.closeSettingsDialog() },
+        )
+    }
 } // End settingsViewWithSidebar function
 
 @Composable
