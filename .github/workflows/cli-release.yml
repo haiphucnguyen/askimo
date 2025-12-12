@@ -45,14 +45,14 @@ jobs:
         if: runner.os != 'Windows'
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -PDISABLE_DOCKER_TESTS=true clean :cli:test
 
       - name: Generate Graal metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" "-Djava.io.tmpdir=$env:RUNNER_TEMP" clean :cli:test
+        run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx2g" -PDISABLE_DOCKER_TESTS=true "-Djava.io.tmpdir=$env:RUNNER_TEMP" clean :cli:test
 
       - name: Upload test report
         if: always()
@@ -154,7 +154,7 @@ jobs:
       - name: Generate Graal metadata (arm64)
         env:
           DISABLE_DOCKER_TESTS: 'true'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" clean :cli:test
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -PDISABLE_DOCKER_TESTS=true clean :cli:test
 
       - name: Build native image (arm64)
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" :cli:nativeCompile
