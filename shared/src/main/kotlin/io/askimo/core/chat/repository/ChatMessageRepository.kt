@@ -43,6 +43,7 @@ object ChatMessagesTable : Table("chat_messages") {
     val isOutdated = integer("is_outdated").default(0)
     val editParentId = varchar("edit_parent_id", 36).nullable()
     val isEdited = integer("is_edited").default(0)
+    val isFailed = integer("is_failed").default(0)
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -59,6 +60,7 @@ private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
     isOutdated = this[ChatMessagesTable.isOutdated] == 1,
     editParentId = this[ChatMessagesTable.editParentId],
     isEdited = this[ChatMessagesTable.isEdited] == 1,
+    isFailed = this[ChatMessagesTable.isFailed] == 1,
 )
 
 /**
@@ -95,6 +97,7 @@ class ChatMessageRepository internal constructor(
                 it[ChatMessagesTable.isOutdated] = if (messageWithInjectedFields.isOutdated) 1 else 0
                 it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
                 it[ChatMessagesTable.isEdited] = if (messageWithInjectedFields.isEdited) 1 else 0
+                it[ChatMessagesTable.isFailed] = if (messageWithInjectedFields.isFailed) 1 else 0
             }
 
             // Save attachments if any
@@ -124,6 +127,21 @@ class ChatMessageRepository internal constructor(
 
         messages.map { message ->
             message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
+        }
+    }
+
+    /**
+     * Delete a message and its attachments from the database.
+     *
+     * @param messageId The message ID to delete
+     */
+    fun deleteMessage(messageId: String) {
+        transaction(database) {
+            // Delete attachments first (foreign key constraint)
+            attachmentRepository.deleteAttachmentsByMessageId(messageId)
+
+            // Delete the message
+            ChatMessagesTable.deleteWhere { id eq messageId }
         }
     }
 

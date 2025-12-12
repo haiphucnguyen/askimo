@@ -28,6 +28,7 @@ object ChatMessageMapper {
         editParentId = this.editParentId,
         isEdited = this.isEdited,
         attachments = this.attachments.map { it.toDTO() },
+        isFailed = this.isFailed,
     )
 
     /**

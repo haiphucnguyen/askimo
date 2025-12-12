@@ -176,8 +176,7 @@ fun chatView(
     sessionId: String? = null,
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
-    showRetryButton: Boolean = false,
-    onRetry: () -> Unit = {},
+    onRetryMessage: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Internal state management for ChatView
@@ -742,7 +741,7 @@ fun chatView(
                         messages = searchResults,
                         isThinking = false,
                         thinkingElapsedSeconds = 0,
-                        spinnerFrame = spinnerFrame,
+                        spinnerFrame = spinnerFrame.toString(),
                         hasMoreMessages = false,
                         isLoadingPrevious = false,
                         onLoadPrevious = {},
@@ -766,8 +765,7 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
-                        showRetryButton = showRetryButton,
-                        onRetry = onRetry,
+                        onRetryMessage = onRetryMessage,
                     )
                 }
                 messages.isEmpty() -> {
@@ -783,7 +781,7 @@ fun chatView(
                         messages = messages,
                         isThinking = isThinking,
                         thinkingElapsedSeconds = thinkingElapsedSeconds,
-                        spinnerFrame = spinnerFrame,
+                        spinnerFrame = spinnerFrame.toString(),
                         hasMoreMessages = hasMoreMessages,
                         isLoadingPrevious = isLoadingPrevious,
                         onLoadPrevious = onLoadPrevious,
@@ -804,8 +802,7 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
-                        showRetryButton = showRetryButton,
-                        onRetry = onRetry,
+                        onRetryMessage = onRetryMessage,
                     )
                 }
             }

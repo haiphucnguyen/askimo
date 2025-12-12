@@ -830,8 +830,9 @@ fun mainContent(
                     onDeleteSession = { sessionId ->
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
                     },
-                    showRetryButton = chatViewModel.showRetryButton,
-                    onRetry = { chatViewModel.retryLastMessage() },
+                    onRetryMessage = { failedMessageId ->
+                        chatViewModel.retryMessage(failedMessageId)
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             }

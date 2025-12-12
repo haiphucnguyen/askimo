@@ -2696,7 +2696,16 @@
           "io.askimo.core.context.ExecutionMode"
         ]
       },
-      { "name": "getParams", "parameterTypes": [] }
+      {
+        "name": "enableRagWith",
+        "parameterTypes": ["io.askimo.core.project.PgVectorIndexer"]
+      },
+      { "name": "getActiveProvider", "parameterTypes": [] },
+      { "name": "getParams", "parameterTypes": [] },
+      {
+        "name": "setScope",
+        "parameterTypes": ["io.askimo.core.project.ProjectMeta"]
+      }
     ]
   },
   {
@@ -4593,7 +4602,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$bDmnOqaA",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$f2y6vehu",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

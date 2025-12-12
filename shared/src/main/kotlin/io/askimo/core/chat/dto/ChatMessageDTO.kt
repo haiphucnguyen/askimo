@@ -19,4 +19,5 @@ data class ChatMessageDTO(
     val editParentId: String? = null,
     val isEdited: Boolean = false,
     val attachments: List<FileAttachmentDTO> = emptyList(),
+    val isFailed: Boolean = false,
 )
