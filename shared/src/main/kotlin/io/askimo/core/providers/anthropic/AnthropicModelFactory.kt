@@ -14,6 +14,7 @@ import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
@@ -72,6 +73,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                         tools(LocalFsTools)
                     }
                 }
+                .hallucinatedToolNameStrategy(::hallucinatedToolHandler)
                 .systemMessageProvider {
                     systemMessage(
                         """

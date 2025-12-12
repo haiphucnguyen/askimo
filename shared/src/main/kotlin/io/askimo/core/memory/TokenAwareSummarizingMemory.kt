@@ -147,21 +147,28 @@ class TokenAwareSummarizingMemory private constructor(
             return
         }
 
-        summarizationInProgress = true
-
         CompletableFuture.runAsync({
             try {
+                summarizationInProgress = true
                 summarizeAndPrune()
             } catch (e: Exception) {
                 log.error("Async summarization failed", e)
             } finally {
                 summarizationInProgress = false
-                summarizationLock.unlock()
+                if (summarizationLock.isHeldByCurrentThread) {
+                    summarizationLock.unlock()
+                }
             }
-        }, executorService).orTimeout(summarizationTimeoutSeconds, TimeUnit.SECONDS)
+        }, executorService)
+            .orTimeout(summarizationTimeoutSeconds, TimeUnit.SECONDS)
             .exceptionally { throwable ->
                 log.error("Summarization timed out or failed", throwable)
+                // Ensure cleanup on timeout
                 summarizationInProgress = false
+                // Only unlock if current thread owns the lock
+                if (summarizationLock.isHeldByCurrentThread) {
+                    summarizationLock.unlock()
+                }
                 null
             }
     }
