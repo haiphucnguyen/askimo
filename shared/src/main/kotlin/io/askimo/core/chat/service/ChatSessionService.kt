@@ -176,16 +176,15 @@ class ChatSessionService(
         return createdMessage
     }
 
-    fun saveAiResponse(sessionId: String, response: String) {
-        addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = sessionId,
-                role = MessageRole.ASSISTANT,
-                content = response,
-            ),
-        )
-    }
+    fun saveAiResponse(sessionId: String, response: String, isFailed: Boolean = false): ChatMessage = addMessage(
+        ChatMessage(
+            id = "",
+            sessionId = sessionId,
+            role = MessageRole.ASSISTANT,
+            content = response,
+            isFailed = isFailed,
+        ),
+    )
 
     /**
      * Get all messages for a session.
@@ -194,6 +193,10 @@ class ChatSessionService(
      * @return List of messages in chronological order
      */
     fun getMessages(sessionId: String): List<ChatMessageDTO> = messageRepository.getMessages(sessionId).toDTOs()
+
+    fun deleteMessage(messageId: String) {
+        messageRepository.deleteMessage(messageId)
+    }
 
     /**
      * Get recent active (non-outdated) messages for a session.

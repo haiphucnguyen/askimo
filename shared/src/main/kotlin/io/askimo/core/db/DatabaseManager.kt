@@ -167,6 +167,17 @@ class DatabaseManager private constructor(
             } catch (e: Exception) {
                 // Column already exists, ignore the error
             }
+
+            // Migration: Add is_failed column if it doesn't exist (for existing databases)
+            try {
+                stmt.executeUpdate(
+                    """
+                    ALTER TABLE chat_messages ADD COLUMN is_failed INTEGER DEFAULT 0
+                    """,
+                )
+            } catch (e: Exception) {
+                // Column already exists, ignore the error
+            }
         }
     }
 

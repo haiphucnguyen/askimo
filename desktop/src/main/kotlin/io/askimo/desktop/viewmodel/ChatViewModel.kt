@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.chat.mapper.ChatMessageMapper.toDTO
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
@@ -22,7 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.UUID
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * ViewModel for managing chat state and interactions.
@@ -74,10 +74,10 @@ class ChatViewModel(
     var searchQuery by mutableStateOf("")
         private set
 
-    var searchResults by mutableStateOf<List<ChatMessageDTO>>(emptyList())
+    var currentSearchResultIndex by mutableStateOf(0)
         private set
 
-    var currentSearchResultIndex by mutableStateOf(0)
+    var searchResults by mutableStateOf<List<ChatMessageDTO>>(emptyList())
         private set
 
     var isSearchMode by mutableStateOf(false)
@@ -86,11 +86,8 @@ class ChatViewModel(
     var selectedDirective by mutableStateOf<String?>(null)
         private set
 
-    var showRetryButton by mutableStateOf(false)
-        private set
-
-    var lastFailedMessage by mutableStateOf<Pair<String, List<FileAttachmentDTO>>?>(null)
-        private set
+    // Track the position where retry response should be inserted (null = append to end)
+    private var retryInsertPosition: Int? = null
 
     private var onMessageComplete: (() -> Unit)? = null
     private var currentJob: Job? = null
@@ -143,21 +140,25 @@ class ChatViewModel(
                 startThinkingTimer()
             } else {
                 val streamingContent = activeThread.chunks.value.joinToString("")
-                val lastMessage = messages.lastOrNull()
-                if (lastMessage != null && !lastMessage.isUser) {
-                    messages = messages.dropLast(1) + ChatMessageDTO(
-                        content = streamingContent,
-                        isUser = false,
-                        id = null,
-                        timestamp = null,
-                    )
+                val newAiMessage = ChatMessageDTO(
+                    content = streamingContent,
+                    isUser = false,
+                    id = null,
+                    timestamp = null,
+                )
+
+                // Insert at retry position or append to end
+                messages = if (retryInsertPosition != null) {
+                    messages.toMutableList().apply {
+                        add(retryInsertPosition!!, newAiMessage)
+                    }
                 } else {
-                    messages = messages + ChatMessageDTO(
-                        content = streamingContent,
-                        isUser = false,
-                        id = null,
-                        timestamp = null,
-                    )
+                    val lastMessage = messages.lastOrNull()
+                    if (lastMessage != null && !lastMessage.isUser) {
+                        messages.dropLast(1) + newAiMessage
+                    } else {
+                        messages + newAiMessage
+                    }
                 }
             }
 
@@ -165,41 +166,50 @@ class ChatViewModel(
             val subscriptionJob = scope.launch {
                 var firstTokenReceived = hasChunks
 
-                try {
-                    activeThread.chunks.collect { chunks ->
-                        if (currentSessionId.value == sessionId && chunks.isNotEmpty()) {
-                            if (!firstTokenReceived) {
-                                firstTokenReceived = true
-                                isThinking = false
-                                stopThinkingTimer()
+                activeThread.chunks.collect { chunks ->
+                    if (currentSessionId.value == sessionId && chunks.isNotEmpty()) {
+                        if (!firstTokenReceived) {
+                            firstTokenReceived = true
+                            isThinking = false
+                            stopThinkingTimer()
+                        }
+
+                        val streamingContent = chunks.joinToString("")
+                        currentResponse = streamingContent
+
+                        val newAiMessage = ChatMessageDTO(
+                            content = streamingContent,
+                            isUser = false,
+                            id = null,
+                            timestamp = null,
+                        )
+
+                        // Insert at retry position or update/append at end
+                        messages = if (retryInsertPosition != null) {
+                            // Check if message already exists at retry position
+                            val messagesList = messages.toMutableList()
+                            if (retryInsertPosition!! < messagesList.size &&
+                                !messagesList[retryInsertPosition!!].isUser &&
+                                messagesList[retryInsertPosition!!].id == null
+                            ) {
+                                // Replace existing streaming message
+                                messagesList[retryInsertPosition!!] = newAiMessage
+                                messagesList
+                            } else {
+                                // Insert new message
+                                messagesList.apply { add(retryInsertPosition!!, newAiMessage) }
                             }
-
-                            val streamingContent = chunks.joinToString("")
-                            currentResponse = streamingContent
-
+                        } else {
                             val lastMessage = messages.lastOrNull()
                             if (lastMessage != null && !lastMessage.isUser) {
-                                messages = messages.dropLast(1) + ChatMessageDTO(
-                                    content = streamingContent,
-                                    isUser = false,
-                                    id = null,
-                                    timestamp = null,
-                                )
+                                messages.dropLast(1) + newAiMessage
                             } else {
-                                messages = messages + ChatMessageDTO(
-                                    content = streamingContent,
-                                    isUser = false,
-                                    id = null,
-                                    timestamp = null,
-                                )
+                                messages + newAiMessage
                             }
-
-                            onMessageComplete?.invoke()
                         }
+
+                        onMessageComplete?.invoke()
                     }
-                } finally {
-                    // Clean up this subscription when done
-                    activeSubscriptions.remove(sessionId)
                 }
             }
 
@@ -208,21 +218,44 @@ class ChatViewModel(
 
             // Monitor completion in a separate job
             scope.launch {
-                try {
-                    activeThread.isComplete.collect { isComplete ->
-                        // Only update if still on this session
-                        if (currentSessionId.value == sessionId && isComplete) {
-                            isLoading = false
-                            isThinking = false
-                            stopThinkingTimer()
+                activeThread.isComplete.collect { isComplete ->
+                    if (currentSessionId.value == sessionId && isComplete) {
+                        isLoading = false
+                        isThinking = false
+                        stopThinkingTimer()
 
-                            // Cancel and clean up subscription when thread completes
-                            activeSubscriptions[sessionId]?.cancel()
-                            activeSubscriptions.remove(sessionId)
+                        // Get the saved message from the StreamingThread (no database query needed!)
+                        // The SessionManager already saved it and stored the result
+                        val savedMessage = activeThread.savedMessage.value
+                        if (savedMessage != null) {
+                            // Replace temporary message with the saved one (has ID, isFailed, timestamp)
+                            messages = if (retryInsertPosition != null) {
+                                messages.toMutableList().apply {
+                                    val tempMessageIndex = indexOfLast { !it.isUser && it.id == null }
+                                    if (tempMessageIndex >= 0) {
+                                        this[tempMessageIndex] = savedMessage.toDTO()
+                                    }
+                                }
+                            } else {
+                                val lastMessage = messages.lastOrNull()
+                                if (lastMessage != null && !lastMessage.isUser) {
+                                    messages.dropLast(1) + savedMessage.toDTO()
+                                } else {
+                                    messages + savedMessage.toDTO()
+                                }
+                            }
+                            log.debug("Updated AI message from StreamingThread - isFailed: ${savedMessage.isFailed}, id: ${savedMessage.id}, position: ${retryInsertPosition ?: "end"}")
+                        } else {
+                            log.warn("Saved message not available in StreamingThread for session $sessionId")
                         }
+
+                        // Clear retry position tracker
+                        retryInsertPosition = null
+
+                        // Cancel and clean up subscription when thread completes
+                        activeSubscriptions[sessionId]?.cancel()
+                        activeSubscriptions.remove(sessionId)
                     }
-                } catch (e: CancellationException) {
-                    // Expected when subscription is cancelled
                 }
             }
         }
@@ -244,26 +277,17 @@ class ChatViewModel(
     ): String? {
         if (message.isBlank() || isLoading) return currentSessionId.value
 
-        // Get current session ID before any operations
         val currentSessionId = currentSessionId.value
 
         if (editingMessage != null && editingMessage.id != null) {
-            // Edit mode:
-            // Store the original message ID BEFORE any operations
             val originalMessageId = editingMessage.id ?: return currentSessionId
 
             scope.launch {
-                // 1. Mark ORIGINAL message and ALL subsequent messages as outdated
-                //    This must happen BEFORE creating the new message
                 editMessage(originalMessageId, message, attachments)
 
-                // 2. Send the NEW message with updated content
-                //    This creates a NEW active message (not marked as outdated)
-                //    The new message will have editParentId linking to originalMessageId
                 sendMessage(message, attachments)
             }
         } else {
-            // Normal mode: just send the message
             sendMessage(message, attachments)
         }
 
@@ -271,22 +295,100 @@ class ChatViewModel(
     }
 
     /**
-     * Called when a message fails to send or stream.
-     * Stores the failed message for retry.
+     * Retry sending a failed message.
+     * Removes the failed AI response and resends the user message WITHOUT creating a duplicate user message.
+     * Works for any failed message in the chat history, not just the most recent one.
+     * The new response will be inserted at the same position as the failed message to maintain order.
+     *
+     * @param failedMessageId The ID of the failed AI message to remove
      */
-    fun onMessageFailed(message: String, attachments: List<FileAttachmentDTO>) {
-        lastFailedMessage = message to attachments
-        showRetryButton = true
-    }
+    fun retryMessage(failedMessageId: String) {
+        scope.launch {
+            try {
+                val failedMessage = messages.find { it.id == failedMessageId }
+                if (failedMessage == null || failedMessage.isUser) {
+                    log.error("Cannot retry: message not found or is user message")
+                    errorMessage = "Cannot retry: message not found"
+                    return@launch
+                }
 
-    /**
-     * Retry sending the last failed message.
-     */
-    fun retryLastMessage() {
-        val (message, attachments) = lastFailedMessage ?: return
-        showRetryButton = false
-        lastFailedMessage = null
-        sendMessage(message, attachments)
+                // Store the position where we'll insert the retry response
+                val failedMessageIndex = messages.indexOf(failedMessage)
+                retryInsertPosition = failedMessageIndex
+
+                // Find the user message that came before this failed AI message
+                val userMessage = if (failedMessageIndex > 0) {
+                    messages[failedMessageIndex - 1]
+                } else {
+                    null
+                }
+
+                if (userMessage == null || !userMessage.isUser) {
+                    log.error("Cannot retry: no user message found before failed AI response")
+                    errorMessage = "Cannot retry: no user message found"
+                    retryInsertPosition = null
+                    return@launch
+                }
+
+                // Remove the failed AI message from the database and local state
+                withContext(Dispatchers.IO) {
+                    chatSessionService.deleteMessage(failedMessageId)
+                }
+
+                // Remove from local state
+                messages = messages.filterNot { it.id == failedMessageId }
+
+                // Get session ID
+                val sessionId = currentSessionId.value ?: return@launch
+
+                // Clear any previous error
+                errorMessage = null
+                isLoading = true
+                currentResponse = ""
+                isThinking = true
+                thinkingElapsedSeconds = 0
+
+                startThinkingTimer()
+
+                // Resend to AI WITHOUT adding a new user message (it already exists in the chat)
+                currentJob = scope.launch {
+                    try {
+                        val threadId = sessionManager.sendMessage(
+                            sessionId = sessionId,
+                            userMessage = userMessage.content,
+                            attachments = userMessage.attachments,
+                        )
+
+                        if (threadId == null) {
+                            errorMessage = "Please wait for the current response to complete before asking another question."
+                            isLoading = false
+                            isThinking = false
+                            stopThinkingTimer()
+                            retryInsertPosition = null
+                            return@launch
+                        }
+
+                        subscribeToThread(sessionId)
+                    } catch (e: Exception) {
+                        if (currentSessionId.value == sessionId) {
+                            errorMessage = ErrorHandler.getUserFriendlyError(e, "retrying message")
+                            isLoading = false
+                            isThinking = false
+                            stopThinkingTimer()
+                            retryInsertPosition = null
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("Failed to retry message", e)
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    e,
+                    "retrying message",
+                    "Failed to retry message. Please try again.",
+                )
+                retryInsertPosition = null
+            }
+        }
     }
 
     /**
@@ -297,10 +399,6 @@ class ChatViewModel(
      */
     fun sendMessage(message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         if (message.isBlank() || isLoading) return
-
-        // Clear retry state when sending a new message
-        showRetryButton = false
-        lastFailedMessage = null
 
         // Session ID must be set by this point (from resumeSession)
         val sessionId = currentSessionId.value ?: run {
@@ -340,7 +438,6 @@ class ChatViewModel(
                     sessionId = sessionId,
                     userMessage = message,
                     attachments = attachments,
-                    onMessageFailed = { msg, att -> onMessageFailed(msg, att) },
                 )
 
                 if (threadId == null) {
@@ -348,7 +445,6 @@ class ChatViewModel(
                     isLoading = false
                     isThinking = false
                     stopThinkingTimer()
-                    onMessageFailed(message, attachments)
                     return@launch
                 }
 
@@ -363,7 +459,6 @@ class ChatViewModel(
                     isLoading = false
                     isThinking = false
                     stopThinkingTimer()
-                    onMessageFailed(message, attachments)
                 }
             }
         }

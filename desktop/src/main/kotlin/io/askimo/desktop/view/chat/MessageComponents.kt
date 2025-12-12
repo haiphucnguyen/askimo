@@ -79,7 +79,7 @@ fun messageList(
     messages: List<ChatMessageDTO>,
     isThinking: Boolean = false,
     thinkingElapsedSeconds: Int = 0,
-    spinnerFrame: Char = '⠋',
+    spinnerFrame: String = "",
     hasMoreMessages: Boolean = false,
     isLoadingPrevious: Boolean = false,
     onLoadPrevious: () -> Unit = {},
@@ -90,8 +90,7 @@ fun messageList(
     onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
-    showRetryButton: Boolean = false,
-    onRetry: () -> Unit = {},
+    onRetryMessage: ((String) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -185,6 +184,7 @@ fun messageList(
                             onDownloadAttachment = onDownloadAttachment,
                             userAvatarPath = userAvatarPath,
                             aiAvatarPath = aiAvatarPath,
+                            onRetryMessage = onRetryMessage,
                         )
                         messageIndex++
                     }
@@ -211,32 +211,6 @@ fun messageList(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
-                }
-            }
-
-            // Show retry button when a message fails
-            if (showRetryButton) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Button(
-                        onClick = onRetry,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        ),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Retry",
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource("action.retry"))
-                    }
                 }
             }
         }
@@ -267,6 +241,7 @@ fun messageBubble(
     onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
+    onRetryMessage: ((String) -> Unit)? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -519,9 +494,35 @@ fun messageBubble(
                         }
                     }
                 }
+
+                // Show retry icon for failed AI messages at bottom-right corner
+                if (message.isFailed && !message.isUser && message.id != null && onRetryMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 4.dp, end = 4.dp),
+                    ) {
+                        themedTooltip(
+                            text = stringResource("action.retry"),
+                        ) {
+                            IconButton(
+                                onClick = { onRetryMessage(message.id!!) },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource("action.retry"),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
-            // Show user icon on the right for user messages
             if (message.isUser) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Box(

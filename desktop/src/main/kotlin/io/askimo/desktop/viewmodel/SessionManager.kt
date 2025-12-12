@@ -7,10 +7,12 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
+import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import kotlinx.coroutines.CoroutineScope
@@ -90,9 +92,11 @@ class SessionManager(
         private val _chunks: MutableStateFlow<List<String>>,
         private val _isComplete: MutableStateFlow<Boolean>,
         private val _hasFailed: MutableStateFlow<Boolean>,
+        private val _savedMessage: MutableStateFlow<ChatMessage?> = MutableStateFlow(null),
     ) {
         val chunks: StateFlow<List<String>> = _chunks.asStateFlow()
         val isComplete: StateFlow<Boolean> = _isComplete.asStateFlow()
+        val savedMessage: StateFlow<ChatMessage?> = _savedMessage.asStateFlow()
 
         private val mutex = Mutex()
 
@@ -114,6 +118,12 @@ class SessionManager(
             }
         }
 
+        suspend fun setSavedMessage(message: ChatMessage) {
+            mutex.withLock {
+                _savedMessage.value = message
+            }
+        }
+
         fun getCurrentContent(): String = _chunks.value.joinToString("")
     }
 
@@ -126,7 +136,6 @@ class SessionManager(
         userMessage: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         onChunkReceived: (String) -> Unit = {},
-        onMessageFailed: (String, List<FileAttachmentDTO>) -> Unit = { _, _ -> },
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -180,9 +189,7 @@ class SessionManager(
 
         // Start streaming in background
         streamingScope.launch(thread.job) {
-            val startTime = System.currentTimeMillis()
             try {
-                // Stream the response with token-by-token callback
                 val fullResponse = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
                     streamingScope.launch {
                         thread.appendChunk(token)
@@ -191,26 +198,26 @@ class SessionManager(
                     }
                 }
 
+                val savedMessage = chatSessionService.saveAiResponse(sessionId, fullResponse)
+                thread.setSavedMessage(savedMessage)
                 thread.markComplete()
-                chatSessionService.saveAiResponse(sessionId, fullResponse)
                 log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
             } catch (e: Exception) {
                 thread.markFailed()
 
-                // Save partial response with failure marker
                 val partialResponse = thread.getCurrentContent()
-                val failedResponse = if (partialResponse.isNotBlank()) {
-                    "$partialResponse\n\n⚠️ Response failed: ${e.message}"
-                } else {
-                    "⚠️ Response failed: ${e.message}"
-                }
+                val failedResponse = ExceptionHandler.handleWithPartialContent(
+                    throwable = e,
+                    partialContent = partialResponse,
+                    contextId = sessionId,
+                )
 
-                chatSessionService.saveAiResponse(sessionId, failedResponse)
+                val savedMessage = chatSessionService.saveAiResponse(sessionId, failedResponse, isFailed = true)
+                thread.setSavedMessage(savedMessage)
 
-                // Notify ViewModel about failure for retry functionality
-                onMessageFailed(userMessage, attachments)
-
-                log.error("Streaming thread $threadId failed for session $sessionId: ${e.message}", e)
+                // Mark as complete so the ChatViewModel's completion monitoring triggers
+                // and replaces the temporary message with the saved one from database
+                thread.markComplete()
             } finally {
                 activeThreads.remove(sessionId)
                 log.debug("Thread $threadId cleaned up. Active streams: ${activeThreads.size}")
@@ -358,32 +365,4 @@ class SessionManager(
             activeSessionId = null
         }
     }
-
-    /**
-     * Get statistics about cached ViewModels for debugging/monitoring.
-     *
-     * @return Statistics about the ViewModel cache
-     */
-    fun getStats(): ViewModelCacheStats {
-        val totalCached = chatViewModels.size
-        val activeCount = chatViewModels.count { (_, vm) -> vm.isLoading }
-        val inactiveCount = totalCached - activeCount
-
-        return ViewModelCacheStats(
-            totalCached = totalCached,
-            activeCount = activeCount,
-            inactiveCount = inactiveCount,
-            maxCapacity = maxCachedViewModels,
-        )
-    }
 }
-
-/**
- * Statistics about the ViewModel cache.
- */
-data class ViewModelCacheStats(
-    val totalCached: Int,
-    val activeCount: Int,
-    val inactiveCount: Int,
-    val maxCapacity: Int,
-)
