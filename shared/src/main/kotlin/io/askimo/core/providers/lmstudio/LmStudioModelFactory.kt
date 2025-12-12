@@ -15,6 +15,7 @@ import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
+import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.SystemPrompts.systemMessage
@@ -74,6 +75,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                         tools(LocalFsTools)
                     }
                 }
+                .hallucinatedToolNameStrategy(::hallucinatedToolHandler)
                 .systemMessageProvider {
                     systemMessage(
                         """

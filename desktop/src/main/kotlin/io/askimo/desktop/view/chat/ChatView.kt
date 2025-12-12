@@ -176,6 +176,8 @@ fun chatView(
     sessionId: String? = null,
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
+    showRetryButton: Boolean = false,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Internal state management for ChatView
@@ -764,6 +766,8 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
+                        showRetryButton = showRetryButton,
+                        onRetry = onRetry,
                     )
                 }
                 messages.isEmpty() -> {
@@ -800,6 +804,8 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
+                        showRetryButton = showRetryButton,
+                        onRetry = onRetry,
                     )
                 }
             }

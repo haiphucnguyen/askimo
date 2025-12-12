@@ -86,6 +86,12 @@ class ChatViewModel(
     var selectedDirective by mutableStateOf<String?>(null)
         private set
 
+    var showRetryButton by mutableStateOf(false)
+        private set
+
+    var lastFailedMessage by mutableStateOf<Pair<String, List<FileAttachmentDTO>>?>(null)
+        private set
+
     private var onMessageComplete: (() -> Unit)? = null
     private var currentJob: Job? = null
     private var thinkingJob: Job? = null
@@ -265,6 +271,25 @@ class ChatViewModel(
     }
 
     /**
+     * Called when a message fails to send or stream.
+     * Stores the failed message for retry.
+     */
+    fun onMessageFailed(message: String, attachments: List<FileAttachmentDTO>) {
+        lastFailedMessage = message to attachments
+        showRetryButton = true
+    }
+
+    /**
+     * Retry sending the last failed message.
+     */
+    fun retryLastMessage() {
+        val (message, attachments) = lastFailedMessage ?: return
+        showRetryButton = false
+        lastFailedMessage = null
+        sendMessage(message, attachments)
+    }
+
+    /**
      * Send a message to the AI.
      *
      * @param message The user's message
@@ -272,6 +297,10 @@ class ChatViewModel(
      */
     fun sendMessage(message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         if (message.isBlank() || isLoading) return
+
+        // Clear retry state when sending a new message
+        showRetryButton = false
+        lastFailedMessage = null
 
         // Session ID must be set by this point (from resumeSession)
         val sessionId = currentSessionId.value ?: run {
@@ -311,6 +340,7 @@ class ChatViewModel(
                     sessionId = sessionId,
                     userMessage = message,
                     attachments = attachments,
+                    onMessageFailed = { msg, att -> onMessageFailed(msg, att) },
                 )
 
                 if (threadId == null) {
@@ -318,6 +348,7 @@ class ChatViewModel(
                     isLoading = false
                     isThinking = false
                     stopThinkingTimer()
+                    onMessageFailed(message, attachments)
                     return@launch
                 }
 
@@ -332,6 +363,7 @@ class ChatViewModel(
                     isLoading = false
                     isThinking = false
                     stopThinkingTimer()
+                    onMessageFailed(message, attachments)
                 }
             }
         }

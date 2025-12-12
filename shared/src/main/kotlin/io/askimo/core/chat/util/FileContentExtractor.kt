@@ -40,7 +40,10 @@ object FileContentExtractor {
             mimeType.startsWith("application/pdf") ||
                 mimeType.contains("word") ||
                 mimeType.contains("wordprocessingml") ||
-                mimeType.contains("msword") -> {
+                mimeType.contains("msword") ||
+                mimeType.contains("spreadsheet") ||
+                mimeType.contains("excel") ||
+                mimeType.contains("ms-excel") -> {
                 extractUsingTika(file)
             }
             // Plain text files - read directly for better performance
@@ -112,6 +115,7 @@ object FileContentExtractor {
         mimeType in SUPPORTED_APPLICATION_TYPES -> true
         mimeType.startsWith("application/pdf") -> true
         mimeType.contains("word") || mimeType.contains("wordprocessingml") || mimeType.contains("msword") -> true
+        mimeType.contains("spreadsheet") || mimeType.contains("excel") || mimeType.contains("ms-excel") -> true
         else -> false
     }
 
@@ -122,7 +126,6 @@ object FileContentExtractor {
         val mimeType = detectMimeType(file)
         return when {
             mimeType.startsWith("image/") -> "Image OCR support coming soon"
-            mimeType.contains("spreadsheet") || mimeType.contains("excel") -> "Excel support coming soon"
             mimeType.contains("presentation") || mimeType.contains("powerpoint") -> "PowerPoint support coming soon"
             else -> "Unsupported file type: $mimeType"
         }
@@ -170,5 +173,7 @@ object FileContentExtractor {
         "pdf",
         "docx",
         "doc",
+        "xlsx",
+        "xls",
     )
 }

@@ -16,6 +16,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
+import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -99,6 +100,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                         tools(LocalFsTools)
                     }
                 }
+                .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
                 .systemMessageProvider {
                     systemMessage(
                         """

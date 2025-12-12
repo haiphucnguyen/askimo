@@ -14,6 +14,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.LOCALAI
+import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -73,6 +74,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                         tools(LocalFsTools)
                     }
                 }
+                .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
                 .systemMessageProvider {
                     systemMessage(
                         """

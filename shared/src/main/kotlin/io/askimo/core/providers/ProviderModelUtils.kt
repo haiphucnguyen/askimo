@@ -4,6 +4,8 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.agent.tool.ToolExecutionRequest
+import dev.langchain4j.data.message.ToolExecutionResultMessage
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.util.appJson
@@ -16,6 +18,22 @@ import java.net.URI
 
 object ProviderModelUtils {
     private val log = logger<ProviderModelUtils>()
+
+    fun hallucinatedToolHandler(request: ToolExecutionRequest): ToolExecutionResultMessage {
+        val toolName = request.name()
+        log.warn("LLM hallucinated tool: '$toolName'")
+
+        return ToolExecutionResultMessage.from(
+            request,
+            """
+            Error: Tool '$toolName' does not exist.
+
+            Please use only the tools that have been explicitly provided to you.
+            Do not invent or assume the existence of tools.
+            """.trimIndent(),
+        )
+    }
+
     fun fetchModels(
         apiKey: String,
         url: String,

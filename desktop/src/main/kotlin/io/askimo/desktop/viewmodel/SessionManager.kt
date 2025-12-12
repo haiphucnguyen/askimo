@@ -126,6 +126,7 @@ class SessionManager(
         userMessage: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         onChunkReceived: (String) -> Unit = {},
+        onMessageFailed: (String, List<FileAttachmentDTO>) -> Unit = { _, _ -> },
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -199,12 +200,16 @@ class SessionManager(
                 // Save partial response with failure marker
                 val partialResponse = thread.getCurrentContent()
                 val failedResponse = if (partialResponse.isNotBlank()) {
-                    "$partialResponse\n\nResponse failed"
+                    "$partialResponse\n\n⚠️ Response failed: ${e.message}"
                 } else {
-                    "Response failed"
+                    "⚠️ Response failed: ${e.message}"
                 }
 
                 chatSessionService.saveAiResponse(sessionId, failedResponse)
+
+                // Notify ViewModel about failure for retry functionality
+                onMessageFailed(userMessage, attachments)
+
                 log.error("Streaming thread $threadId failed for session $sessionId: ${e.message}", e)
             } finally {
                 activeThreads.remove(sessionId)
