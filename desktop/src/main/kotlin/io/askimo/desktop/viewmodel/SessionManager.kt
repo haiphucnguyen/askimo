@@ -299,6 +299,51 @@ class SessionManager(
     }
 
     /**
+     * Create a new session associated with a project, switch to it, and send the first message.
+     * This is used when starting a chat from ProjectView.
+     *
+     * @param projectId The project ID to associate with the session
+     * @param projectName The project name for the session title
+     * @param message The first message to send
+     * @param onComplete Callback when the session is ready (for navigation)
+     */
+    fun createProjectSessionAndSendMessage(
+        projectId: String,
+        projectName: String,
+        message: String,
+        onComplete: () -> Unit,
+    ) {
+        scope.launch {
+            try {
+                // Create a new session associated with the project
+                val newSession = chatSessionService.createSession(
+                    ChatSession(
+                        id = "",
+                        title = "Chat in $projectName",
+                        directiveId = null,
+                        projectId = projectId,
+                    ),
+                )
+
+                // Switch to the new session (this sets up the ViewModel properly)
+                switchToSession(newSession.id)
+
+                // Navigate to chat view
+                onComplete()
+
+                // Small delay to ensure UI and ViewModel are ready
+                kotlinx.coroutines.delay(100)
+
+                // Now send the message - ViewModel is ready
+                val viewModel = getOrCreateChatViewModel(newSession.id)
+                viewModel.sendMessage(message, emptyList())
+            } catch (e: Exception) {
+                log.error("Failed to create project session and send message", e)
+            }
+        }
+    }
+
+    /**
      * Clean up inactive ViewModels that are safe to remove.
      * Priority order:
      * 1. Remove inactive ViewModels (not active, not streaming)

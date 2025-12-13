@@ -7,6 +7,8 @@ package io.askimo.desktop.view
 enum class View {
     CHAT,
     NEW_CHAT,
+    PROJECTS,
+    PROJECT_DETAIL,
     SESSIONS,
     SETTINGS,
 }

@@ -2018,79 +2018,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.chat.repository.ChatFolderRepositoryIT",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
-      { "name": "should create and retrieve a folder", "parameterTypes": [] },
-      {
-        "name": "should create folder with all properties",
-        "parameterTypes": []
-      },
-      { "name": "should create nested folders", "parameterTypes": [] },
-      { "name": "should delete folder successfully", "parameterTypes": [] },
-      {
-        "name": "should handle multiple levels of folder nesting",
-        "parameterTypes": []
-      },
-      {
-        "name": "should move child folders to root when deleting parent folder",
-        "parameterTypes": []
-      },
-      { "name": "should move folder to root", "parameterTypes": [] },
-      { "name": "should move session between folders", "parameterTypes": [] },
-      { "name": "should move session to root level", "parameterTypes": [] },
-      {
-        "name": "should move sessions to root when deleting folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should retrieve all folders ordered by sort order and name",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when deleting non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating folder with no changes",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return false when updating non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should return null for non-existent folder",
-        "parameterTypes": []
-      },
-      {
-        "name": "should support sessions at root level (no folder)",
-        "parameterTypes": []
-      },
-      {
-        "name": "should support sessions in different folders",
-        "parameterTypes": []
-      },
-      { "name": "should update folder name", "parameterTypes": [] },
-      { "name": "should update folder parent", "parameterTypes": [] },
-      { "name": "should update folder properties", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] },
-      { "name": "tearDownClass", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.chat.repository.ChatFolderRepositoryIT$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.askimo.core.chat.repository.ChatMessageRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2445,21 +2372,9 @@
         "name": "should add message and update session timestamp through service",
         "parameterTypes": []
       },
-      {
-        "name": "should delete folder and move child folders through service",
-        "parameterTypes": []
-      },
-      {
-        "name": "should delete folder and move sessions through service",
-        "parameterTypes": []
-      },
       { "name": "should get messages through service", "parameterTypes": [] },
       {
         "name": "should get recent active messages through service",
-        "parameterTypes": []
-      },
-      {
-        "name": "should get sessions by folder through service",
         "parameterTypes": []
       },
       {
@@ -4602,7 +4517,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$f2y6vehu",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$Z9aZfsdy",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -12,6 +12,7 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.service.UpdateService
+import io.askimo.desktop.viewmodel.ProjectsViewModel
 import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
@@ -31,14 +32,12 @@ val desktopModule = module {
 
     single { get<DatabaseManager>().getChatSessionRepository() }
     single { get<DatabaseManager>().getChatMessageRepository() }
-    single { get<DatabaseManager>().getChatFolderRepository() }
     single { get<DatabaseManager>().getChatDirectiveRepository() }
 
     single {
         ChatSessionService(
             sessionRepository = get(),
             messageRepository = get(),
-            folderRepository = get(),
             appContext = get(),
         )
     }
@@ -68,6 +67,10 @@ val desktopModule = module {
             sessionManager = sessionManager,
             onCreateNewSession = onCreateNewSession,
         )
+    }
+
+    factory { (scope: CoroutineScope) ->
+        ProjectsViewModel(scope = scope)
     }
 
     factory { (scope: CoroutineScope) ->

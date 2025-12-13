@@ -606,13 +606,6 @@ class SettingsViewModel(
     }
 
     /**
-     * Dismiss the success message.
-     */
-    fun dismissSuccessMessage() {
-        showSuccessMessage = false
-    }
-
-    /**
      * Validates that all required fields are filled.
      */
     private fun validateConfigFields(fields: Map<String, String>, configFields: List<ProviderConfigField>): Boolean = configFields.all { field ->
@@ -622,7 +615,7 @@ class SettingsViewModel(
                 true
             } else {
                 val value = fields[field.name]
-                value != null && value.isNotBlank()
+                !value.isNullOrBlank()
             }
         } else {
             true

@@ -8,7 +8,6 @@ import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.context.AppContextFactory
@@ -33,7 +32,6 @@ class ChatSessionServiceIT {
     @AfterEach
     fun tearDown() {
         sessionRepository.deleteAll()
-        folderRepository.deleteAll()
     }
 
     companion object {
@@ -42,7 +40,6 @@ class ChatSessionServiceIT {
         private lateinit var service: ChatSessionService
         private lateinit var sessionRepository: ChatSessionRepository
         private lateinit var messageRepository: ChatMessageRepository
-        private lateinit var folderRepository: ChatFolderRepository
         private lateinit var directiveRepository: ChatDirectiveRepository
 
         @JvmStatic
@@ -54,7 +51,6 @@ class ChatSessionServiceIT {
 
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
-            folderRepository = databaseManager.getChatFolderRepository()
             directiveRepository = databaseManager.getChatDirectiveRepository()
 
             val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
@@ -62,7 +58,6 @@ class ChatSessionServiceIT {
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
-                folderRepository = folderRepository,
                 appContext = appContext,
             )
         }
@@ -99,47 +94,6 @@ class ChatSessionServiceIT {
 
         val updated = sessionRepository.getSession(session.id)
         assertTrue(updated!!.updatedAt.isAfter(originalUpdatedAt))
-    }
-
-    @Test
-    fun `should delete folder and move sessions through service`() {
-        val folder = service.createFolder("Test Folder")
-        val session1 = sessionRepository.createSession(
-            ChatSession(id = "", title = "Session 1", folderId = folder.id),
-        )
-        val session2 = sessionRepository.createSession(
-            ChatSession(id = "", title = "Session 2", folderId = folder.id),
-        )
-
-        // Service should coordinate moving sessions before deleting folder
-        service.deleteFolder(folder.id)
-
-        // Folder should be deleted
-        assertNull(folderRepository.getFolder(folder.id))
-
-        // Sessions should be moved to root
-        val retrievedSession1 = sessionRepository.getSession(session1.id)
-        val retrievedSession2 = sessionRepository.getSession(session2.id)
-        assertNull(retrievedSession1!!.folderId)
-        assertNull(retrievedSession2!!.folderId)
-    }
-
-    @Test
-    fun `should delete folder and move child folders through service`() {
-        val parent = service.createFolder("Parent")
-        val child1 = service.createFolder("Child 1", parentFolderId = parent.id)
-        val child2 = service.createFolder("Child 2", parentFolderId = parent.id)
-
-        service.deleteFolder(parent.id)
-
-        assertNull(folderRepository.getFolder(parent.id))
-
-        val retrievedChild1 = folderRepository.getFolder(child1.id)
-        val retrievedChild2 = folderRepository.getFolder(child2.id)
-        assertNotNull(retrievedChild1)
-        assertNotNull(retrievedChild2)
-        assertNull(retrievedChild1.parentFolderId)
-        assertNull(retrievedChild2.parentFolderId)
     }
 
     @Test
@@ -193,27 +147,6 @@ class ChatSessionServiceIT {
 
         assertEquals(10, activeMessages.size)
         assertTrue(activeMessages.all { !it.isOutdated })
-    }
-
-    @Test
-    fun `should get sessions by folder through service`() {
-        val folder = service.createFolder("Work")
-
-        val session1 = sessionRepository.createSession(
-            ChatSession(id = "", title = "Work Session 1", folderId = folder.id),
-        )
-        val session2 = sessionRepository.createSession(
-            ChatSession(id = "", title = "Work Session 2", folderId = folder.id),
-        )
-        sessionRepository.createSession(
-            ChatSession(id = "", title = "Personal Session"),
-        )
-
-        val folderSessions = service.getSessionsByFolder(folder.id)
-
-        assertEquals(2, folderSessions.size)
-        assertTrue(folderSessions.any { it.id == session1.id })
-        assertTrue(folderSessions.any { it.id == session2.id })
     }
 
     @Test
