@@ -90,16 +90,20 @@ import io.askimo.desktop.view.components.eventLogWindow
 import io.askimo.desktop.view.components.exportSessionDialog
 import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
+import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.renameSessionDialog
 import io.askimo.desktop.view.components.starPromptDialog
+import io.askimo.desktop.view.project.projectView
 import io.askimo.desktop.view.sessions.sessionsView
 import io.askimo.desktop.view.settings.providerSelectionDialog
 import io.askimo.desktop.view.settings.settingsViewWithSidebar
 import io.askimo.desktop.viewmodel.ChatViewModel
+import io.askimo.desktop.viewmodel.ProjectsViewModel
 import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import io.askimo.desktop.viewmodel.UpdateViewModel
+import kotlinx.coroutines.delay
 import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
@@ -228,7 +232,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var previousView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
+    var isProjectsExpanded by remember { mutableStateOf(false) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
+    var selectedProjectId by remember { mutableStateOf<String?>(null) }
     var sidebarWidth by remember { mutableStateOf(280.dp) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -237,6 +243,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var eventLogDockPosition by remember { mutableStateOf(EventLogDockPosition.BOTTOM) }
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showStarPromptDialog by remember { mutableStateOf(false) }
+    var showNewProjectDialog by remember { mutableStateOf(false) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -275,6 +282,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             )
         }
     }
+    val projectsViewModel = remember { koin.get<ProjectsViewModel> { parametersOf(scope) } }
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
     val updateViewModel = remember { koin.get<UpdateViewModel> { parametersOf(scope) } }
 
@@ -492,7 +500,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     isExpanded = isSidebarExpanded,
                                     width = sidebarWidth,
                                     currentView = currentView,
+                                    isProjectsExpanded = isProjectsExpanded,
                                     isSessionsExpanded = isSessionsExpanded,
+                                    projectsViewModel = projectsViewModel,
                                     sessionsViewModel = sessionsViewModel,
                                     currentSessionId = currentSessionId,
                                     fontScale = fontSettings.fontSize.scale,
@@ -500,6 +510,14 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     onNewChat = {
                                         chatViewModel?.clearChat()
                                         currentView = View.CHAT
+                                    },
+                                    onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
+                                    onNewProject = {
+                                        showNewProjectDialog = true
+                                    },
+                                    onSelectProject = { projectId ->
+                                        selectedProjectId = projectId
+                                        currentView = View.PROJECT_DETAIL
                                     },
                                     onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
                                     onNavigateToSessions = { currentView = View.SESSIONS },
@@ -565,11 +583,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         currentView = currentView,
                                         chatViewModel = chatViewModel,
                                         sessionsViewModel = sessionsViewModel,
+                                        projectsViewModel = projectsViewModel,
                                         appContext = appContext,
+                                        sessionManager = sessionManager,
                                         onResumeSession = handleResumeSession,
                                         onNavigateToSettings = {
                                             previousView = currentView
                                             currentView = View.SETTINGS
+                                        },
+                                        onNavigateToChat = {
+                                            currentView = View.CHAT
                                         },
                                         activeSessionId = activeSessionId,
                                         sessionChatState = sessionChatStates[activeSessionId],
@@ -582,6 +605,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                                 )
                                             }
                                         },
+                                        selectedProjectId = selectedProjectId,
                                     )
                                 } else {
                                     Box(
@@ -920,6 +944,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
+            // New Project Dialog
+            if (showNewProjectDialog) {
+                newProjectDialog(
+                    onDismiss = { showNewProjectDialog = false },
+                    onCreateProject = { _, _, _ ->
+                        projectsViewModel.refresh()
+                    },
+                )
+            }
+
             // Event Log Window (Developer Mode - Detached)
             if (showEventLogWindow) {
                 eventLogWindow(
@@ -940,12 +974,16 @@ fun mainContent(
     currentView: View,
     chatViewModel: ChatViewModel,
     sessionsViewModel: SessionsViewModel,
+    projectsViewModel: ProjectsViewModel,
     appContext: AppContext,
+    sessionManager: SessionManager,
     onResumeSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
+    selectedProjectId: String?,
 ) {
     Box(
         modifier = Modifier
@@ -1015,6 +1053,65 @@ fun mainContent(
                 onResumeSession = onResumeSession,
                 modifier = Modifier.fillMaxSize(),
             )
+            View.PROJECTS -> {
+                // TODO: Implement projects view
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Projects view - Coming soon",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            View.PROJECT_DETAIL -> {
+                val projectId = selectedProjectId
+                if (projectId != null) {
+                    val project = projectsViewModel.projects.find { it.id == projectId }
+                    if (project != null) {
+                        projectView(
+                            project = project,
+                            onStartChat = { projId, message ->
+                                // Delegate to SessionManager to handle business logic
+                                sessionManager.createProjectSessionAndSendMessage(
+                                    projectId = projId,
+                                    projectName = project.name,
+                                    message = message,
+                                    onComplete = { onNavigateToChat() },
+                                )
+                            },
+                            onResumeSession = onResumeSession,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        // Project not found, show error
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "Project not found",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                } else {
+                    // No project selected, show error
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "No project selected",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             View.SETTINGS -> {
             }
         }

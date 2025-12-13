@@ -7,10 +7,10 @@ package io.askimo.core.db
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
+import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
@@ -89,7 +89,7 @@ class DatabaseManager private constructor(
      */
     private fun initializeTables(connection: Connection) {
         // Create tables in dependency order (respecting foreign key constraints)
-        createFoldersTable(connection)
+        createProjectsTable(connection)
         createSessionsTable(connection)
         createMessagesTable(connection)
         createAttachmentsTable(connection)
@@ -98,20 +98,17 @@ class DatabaseManager private constructor(
         createSessionMemoryTable(connection)
     }
 
-    private fun createFoldersTable(conn: Connection) {
+    private fun createProjectsTable(conn: Connection) {
         conn.createStatement().use { stmt ->
             stmt.executeUpdate(
                 """
-                CREATE TABLE IF NOT EXISTS chat_folders (
+                CREATE TABLE IF NOT EXISTS projects (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
-                    parent_folder_id TEXT,
-                    color TEXT,
-                    icon TEXT,
-                    sort_order INTEGER DEFAULT 0,
+                    description TEXT,
+                    indexed_paths TEXT NOT NULL,
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (parent_folder_id) REFERENCES chat_folders (id) ON DELETE CASCADE
+                    updated_at TEXT NOT NULL
                 )
                 """,
             )
@@ -130,11 +127,21 @@ class DatabaseManager private constructor(
                     directive_id TEXT,
                     folder_id TEXT,
                     is_starred INTEGER DEFAULT 0,
-                    sort_order INTEGER DEFAULT 0,
-                    FOREIGN KEY (folder_id) REFERENCES chat_folders (id) ON DELETE SET NULL
+                    sort_order INTEGER DEFAULT 0
                 )
                 """,
             )
+
+            // Migration: Add project_id column if it doesn't exist (for existing databases)
+            try {
+                stmt.executeUpdate(
+                    """
+                    ALTER TABLE chat_sessions ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE CASCADE
+                    """,
+                )
+            } catch (e: Exception) {
+                // Column already exists, ignore the error
+            }
         }
     }
 
@@ -279,16 +286,16 @@ class DatabaseManager private constructor(
         ChatMessageRepository(this, _chatMessageAttachmentRepository)
     }
 
-    private val _chatFolderRepository: ChatFolderRepository by lazy {
-        ChatFolderRepository(this)
-    }
-
     private val _chatDirectiveRepository: ChatDirectiveRepository by lazy {
         ChatDirectiveRepository(this)
     }
 
     private val _sessionMemoryRepository: SessionMemoryRepository by lazy {
         SessionMemoryRepository(this)
+    }
+
+    private val _projectRepository: ProjectRepository by lazy {
+        ProjectRepository(this)
     }
 
     /**
@@ -310,12 +317,6 @@ class DatabaseManager private constructor(
     fun getChatMessageAttachmentRepository(): ChatMessageAttachmentRepository = _chatMessageAttachmentRepository
 
     /**
-     * Get the singleton ChatFolderRepository instance.
-     * All access to chat folders should go through this repository.
-     */
-    fun getChatFolderRepository(): ChatFolderRepository = _chatFolderRepository
-
-    /**
      * Get the singleton ChatDirectiveRepository instance.
      * All access to chat directives should go through this repository.
      */
@@ -326,6 +327,12 @@ class DatabaseManager private constructor(
      * All access to session memory should go through this repository.
      */
     fun getSessionMemoryRepository(): SessionMemoryRepository = _sessionMemoryRepository
+
+    /**
+     * Get the singleton ProjectRepository instance.
+     * All access to projects should go through this repository.
+     */
+    fun getProjectRepository(): ProjectRepository = _projectRepository
 
     /**
      * Closes the HikariCP connection pool and releases all database resources.

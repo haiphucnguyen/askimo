@@ -92,16 +92,21 @@ class SessionsViewModel(
     }
 
     /**
-     * Load recent sessions for sidebar display (max defined by MAX_SIDEBAR_SESSIONS).
+     * Load recent sessions for the sidebar.
+     * Only loads sessions without a project (projectId is null).
+     * Sessions with projects are shown in ProjectView.
      */
     fun loadRecentSessions() {
         scope.launch {
             try {
-                val allSessions = withContext(Dispatchers.IO) {
-                    sessionService.getAllSessionsSorted()
+                // Query sessions without projects directly from database
+                val sessionsWithoutProject = withContext(Dispatchers.IO) {
+                    sessionService.getSessionsWithoutProject()
                 }
-                recentSessions = allSessions.take(MAX_SIDEBAR_SESSIONS)
-                totalSessionCount = allSessions.size
+                recentSessions = sessionsWithoutProject.take(MAX_SIDEBAR_SESSIONS)
+                totalSessionCount = sessionsWithoutProject.size
+
+                log.debug("Loaded ${sessionsWithoutProject.size} sessions without projects (showing ${recentSessions.size} in sidebar)")
             } catch (e: Exception) {
                 log.error("Failed to load recent sessions: ${e.message}", e)
             }

@@ -11,8 +11,8 @@ data class ChatSession(
     val title: String,
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now(),
+    val projectId: String? = null, // null = no project (general chat)
     val directiveId: String? = null,
-    val folderId: String? = null,
     val isStarred: Boolean = false,
     val sortOrder: Int = 0,
 )

@@ -331,7 +331,7 @@ class ChatSessionRepositoryIT {
             ChatSession(id = "", title = "Starred First", isStarred = true, sortOrder = 1),
         )
 
-        val sessions = sessionRepository.getSessionsByFolder(null)
+        val sessions = sessionRepository.getAllSessions()
 
         assertEquals(3, sessions.size)
         assertEquals(session3.id, sessions[0].id) // Starred, sort order 1

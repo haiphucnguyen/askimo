@@ -32,8 +32,8 @@ object ChatSessionsTable : Table("chat_sessions") {
     val title = varchar("title", SESSION_TITLE_MAX_LENGTH)
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")
+    val projectId = varchar("project_id", 36).nullable()
     val directiveId = varchar("directive_id", 36).nullable()
-    val folderId = varchar("folder_id", 36).nullable()
     val isStarred = integer("is_starred").default(0)
     val sortOrder = integer("sort_order").default(0)
 
@@ -49,8 +49,8 @@ private fun ResultRow.toChatSession(): ChatSession = ChatSession(
     title = this[ChatSessionsTable.title],
     createdAt = this[ChatSessionsTable.createdAt],
     updatedAt = this[ChatSessionsTable.updatedAt],
+    projectId = this[ChatSessionsTable.projectId],
     directiveId = this[ChatSessionsTable.directiveId],
-    folderId = this[ChatSessionsTable.folderId],
     isStarred = this[ChatSessionsTable.isStarred] == 1,
     sortOrder = this[ChatSessionsTable.sortOrder],
 )
@@ -75,8 +75,8 @@ class ChatSessionRepository internal constructor(
                 it[ChatSessionsTable.title] = sessionWithInjectedFields.title
                 it[createdAt] = sessionWithInjectedFields.createdAt
                 it[updatedAt] = sessionWithInjectedFields.updatedAt
+                it[ChatSessionsTable.projectId] = sessionWithInjectedFields.projectId
                 it[ChatSessionsTable.directiveId] = sessionWithInjectedFields.directiveId
-                it[ChatSessionsTable.folderId] = sessionWithInjectedFields.folderId
                 it[ChatSessionsTable.isStarred] = if (sessionWithInjectedFields.isStarred) 1 else 0
                 it[ChatSessionsTable.sortOrder] = sessionWithInjectedFields.sortOrder
             }
@@ -93,6 +93,21 @@ class ChatSessionRepository internal constructor(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
+            .map { it.toChatSession() }
+    }
+
+    /**
+     * Get all sessions associated with a specific project.
+     * Sessions are ordered by updated time (most recent first).
+     *
+     * @param projectId The project ID to filter by
+     * @return List of sessions belonging to the project
+     */
+    fun getSessionsByProjectId(projectId: String): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .where { ChatSessionsTable.projectId eq projectId }
+            .orderBy(ChatSessionsTable.updatedAt to SortOrder.DESC)
             .map { it.toChatSession() }
     }
 
@@ -202,16 +217,6 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Move a session to a folder
-     */
-    fun updateSessionFolder(sessionId: String, folderId: String?): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[ChatSessionsTable.folderId] = folderId
-            it[updatedAt] = LocalDateTime.now()
-        } > 0
-    }
-
-    /**
      * Update the sort order of a session
      */
     fun updateSessionSortOrder(sessionId: String, sortOrder: Int): Boolean = transaction(database) {
@@ -239,27 +244,6 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Get all sessions in a folder
-     */
-    fun getSessionsByFolder(folderId: String?): List<ChatSession> = transaction(database) {
-        val query = ChatSessionsTable.selectAll()
-
-        val filteredQuery = if (folderId == null) {
-            query.where { ChatSessionsTable.folderId.isNull() }
-        } else {
-            query.where { ChatSessionsTable.folderId eq folderId }
-        }
-
-        filteredQuery
-            .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
-            )
-            .map { it.toChatSession() }
-    }
-
-    /**
      * Get all starred sessions
      */
     fun getStarredSessions(): List<ChatSession> = transaction(database) {
@@ -274,12 +258,42 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Move all sessions in a folder to root (null folder_id).
-     * This is typically called by the service layer when deleting a folder.
+     * Get all sessions belonging to a specific project.
      */
-    fun moveSessionsToRoot(folderId: String): Int = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.folderId eq folderId }) {
-            it[ChatSessionsTable.folderId] = null
-        }
+    fun getSessionsByProject(projectId: String): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .where { ChatSessionsTable.projectId eq projectId }
+            .orderBy(
+                ChatSessionsTable.isStarred to SortOrder.DESC,
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .map { it.toChatSession() }
+    }
+
+    /**
+     * Get all sessions not belonging to any project (general chat sessions).
+     */
+    fun getSessionsWithoutProject(): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .where { ChatSessionsTable.projectId.isNull() }
+            .orderBy(
+                ChatSessionsTable.isStarred to SortOrder.DESC,
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .map { it.toChatSession() }
+    }
+
+    /**
+     * Update the project of a session.
+     */
+    fun updateSessionProject(sessionId: String, projectId: String?): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[ChatSessionsTable.projectId] = projectId
+            it[updatedAt] = LocalDateTime.now()
+        } > 0
     }
 }

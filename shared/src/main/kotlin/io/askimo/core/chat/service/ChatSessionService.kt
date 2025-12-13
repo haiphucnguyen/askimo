@@ -4,7 +4,6 @@
  */
 package io.askimo.core.chat.service
 
-import io.askimo.core.chat.domain.ChatFolder
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -12,7 +11,6 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDomain
 import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.chat.repository.ChatFolderRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
@@ -61,7 +59,6 @@ data class ResumeSessionPaginatedResult(
 class ChatSessionService(
     private val sessionRepository: ChatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository(),
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
-    private val folderRepository: ChatFolderRepository = DatabaseManager.getInstance().getChatFolderRepository(),
     private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository(),
     private val appContext: AppContext,
 ) {
@@ -73,14 +70,23 @@ class ChatSessionService(
     fun getAllSessionsSorted(): List<ChatSession> = sessionRepository.getAllSessions().sortedByDescending { it.createdAt }
 
     /**
-     * Get a paginated list of sessions.
+     * Get all sessions without a project, sorted by star status and updated time.
+     * This is used for the sidebar sessions list.
+     */
+    fun getSessionsWithoutProject(): List<ChatSession> = sessionRepository.getSessionsWithoutProject()
+
+    /**
+     * Get sessions with pagination support.
+     * Only returns sessions without a project (projectId is null).
+     * Sessions with projects are accessed through ProjectView.
      *
-     * @param page The page number (1-based)
+     * @param page The page number (1-indexed)
      * @param pageSize The number of sessions per page
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
     fun getSessionsPaged(page: Int, pageSize: Int): PagedSessions {
-        val allSessions = getAllSessionsSorted()
+        // Query only sessions without projects at database level
+        val allSessions = sessionRepository.getSessionsWithoutProject()
 
         if (allSessions.isEmpty()) {
             return PagedSessions(
@@ -355,37 +361,6 @@ class ChatSessionService(
         val (messages, nextCursor) = messageRepository.getMessagesPaginated(sessionId, limit, cursor, direction)
         return Pair(messages.toDTOs(), nextCursor)
     }
-
-    /**
-     * Create a new folder.
-     */
-    fun createFolder(
-        name: String,
-        parentFolderId: String? = null,
-        color: String? = null,
-        icon: String? = null,
-        sortOrder: Int = 0,
-    ): ChatFolder = folderRepository.createFolder(name, parentFolderId, color, icon, sortOrder)
-
-    /**
-     * Delete a folder and move its contents to root.
-     * This method coordinates the operation across multiple repositories.
-     */
-    fun deleteFolder(folderId: String): Boolean {
-        // Move sessions to root
-        sessionRepository.moveSessionsToRoot(folderId)
-
-        // Move child folders to root
-        folderRepository.moveChildFoldersToRoot(folderId)
-
-        // Delete the folder
-        return folderRepository.deleteFolder(folderId)
-    }
-
-    /**
-     * Get all sessions in a folder.
-     */
-    fun getSessionsByFolder(folderId: String?): List<ChatSession> = sessionRepository.getSessionsByFolder(folderId)
 
     /**
      * Get all starred sessions.
