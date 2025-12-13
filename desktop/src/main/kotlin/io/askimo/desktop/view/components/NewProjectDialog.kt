@@ -289,6 +289,7 @@ fun newProjectDialog(
                         supportingText = nameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
                     )
 
                     // Description Field (Optional)
@@ -300,6 +301,7 @@ fun newProjectDialog(
                         minLines = 3,
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
                     )
 
                     // Folder Selection
@@ -343,6 +345,7 @@ fun newProjectDialog(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
+                                colors = ComponentColors.outlinedTextFieldColors(),
                             )
 
                             OutlinedButton(

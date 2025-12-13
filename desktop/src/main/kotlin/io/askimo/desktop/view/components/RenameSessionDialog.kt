@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.desktop.i18n.stringResource
@@ -53,6 +56,18 @@ fun renameSessionDialog(
     val focusRequester = remember { FocusRequester() }
 
     val emptyErrorMessage = stringResource("session.rename.error.empty")
+
+    // Extract rename logic to reuse in button and Enter key handler
+    val performRename = {
+        val trimmedTitle = newTitle.trim()
+        if (trimmedTitle.isEmpty()) {
+            error = emptyErrorMessage
+        } else if (trimmedTitle == currentTitle) {
+            onDismiss()
+        } else {
+            onRename(trimmedTitle)
+        }
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -91,6 +106,8 @@ fun renameSessionDialog(
                     isError = error != null,
                     supportingText = error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     colors = ComponentColors.outlinedTextFieldColors(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { performRename() }),
                 )
 
                 Row(
@@ -109,16 +126,7 @@ fun renameSessionDialog(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
-                        onClick = {
-                            val trimmedTitle = newTitle.trim()
-                            if (trimmedTitle.isEmpty()) {
-                                error = emptyErrorMessage
-                            } else if (trimmedTitle == currentTitle) {
-                                onDismiss()
-                            } else {
-                                onRename(trimmedTitle)
-                            }
-                        },
+                        onClick = performRename,
                         enabled = newTitle.trim().isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,

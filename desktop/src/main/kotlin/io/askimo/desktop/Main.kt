@@ -264,6 +264,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     val appContext = remember { koin.get<AppContext>() }
     val chatSessionService = remember { koin.get<ChatSessionService>() }
 
+    var projectViewRefreshTrigger by remember { mutableStateOf(0) }
+
     val sessionManager = remember { koin.get<SessionManager>() }
     val sessionsViewModel = remember {
         koin.get<SessionsViewModel> {
@@ -278,6 +280,10 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             directiveId = null,
                         ),
                     ).id
+                },
+                {
+                    // Callback when rename completes - refresh ProjectView sessions
+                    projectViewRefreshTrigger++
                 },
             )
         }
@@ -594,6 +600,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         onNavigateToChat = {
                                             currentView = View.CHAT
                                         },
+                                        onProjectSessionsChanged = {
+                                            projectViewRefreshTrigger++
+                                        },
                                         activeSessionId = activeSessionId,
                                         sessionChatState = sessionChatStates[activeSessionId],
                                         onChatStateChange = { inputText, attachments, editingMessage ->
@@ -606,6 +615,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                             }
                                         },
                                         selectedProjectId = selectedProjectId,
+                                        projectViewRefreshTrigger = projectViewRefreshTrigger,
                                     )
                                 } else {
                                     Box(
@@ -980,10 +990,12 @@ fun mainContent(
     onResumeSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onProjectSessionsChanged: () -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
+    projectViewRefreshTrigger: Int,
 ) {
     Box(
         modifier = Modifier
@@ -1083,6 +1095,17 @@ fun mainContent(
                                 )
                             },
                             onResumeSession = onResumeSession,
+                            onDeleteSession = { sessionId ->
+                                sessionsViewModel.deleteSessionWithCleanup(sessionId)
+                                onProjectSessionsChanged()
+                            },
+                            onRenameSession = { sessionId, _ ->
+                                sessionsViewModel.showRenameDialog(sessionId)
+                            },
+                            onExportSession = { sessionId ->
+                                sessionsViewModel.exportSession(sessionId)
+                            },
+                            refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {

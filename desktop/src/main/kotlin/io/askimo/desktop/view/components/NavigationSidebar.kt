@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
@@ -34,9 +33,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -897,67 +894,13 @@ private fun sessionItemWithMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource("session.export")) },
-                    onClick = {
-                        showMenu = false
-                        onExportSession(session.id)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = null,
-                        )
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource("session.rename.title")) },
-                    onClick = {
-                        showMenu = false
-                        onRenameSession(session.id, session.title ?: "")
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = null,
-                        )
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                )
-                DropdownMenuItem(
-                    text = { Text(if (session.isStarred) stringResource("session.unstar") else stringResource("session.star")) },
-                    onClick = {
-                        showMenu = false
-                        onStarSession(session.id, !session.isStarred)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            if (session.isStarred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = null,
-                            tint = if (session.isStarred) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource("action.delete")) },
-                    onClick = {
-                        showMenu = false
-                        onDeleteSession(session.id)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                SessionActionMenu.sidebarMenu(
+                    isStarred = session.isStarred,
+                    onExport = { onExportSession(session.id) },
+                    onRename = { onRenameSession(session.id, session.title ?: "") },
+                    onStar = { onStarSession(session.id, !session.isStarred) },
+                    onDelete = { onDeleteSession(session.id) },
+                    onDismiss = { showMenu = false },
                 )
             }
         }
