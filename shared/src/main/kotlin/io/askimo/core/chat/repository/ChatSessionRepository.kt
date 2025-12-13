@@ -111,7 +111,6 @@ class ChatSessionRepository internal constructor(
             .map { it.toChatSession() }
     }
 
-
     fun getSession(sessionId: String): ChatSession? = transaction(database) {
         ChatSessionsTable
             .selectAll()

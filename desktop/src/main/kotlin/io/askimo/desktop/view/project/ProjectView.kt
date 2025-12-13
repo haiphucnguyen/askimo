@@ -139,7 +139,7 @@ fun projectView(
                 }
             } else {
                 items(projectSessions) { session ->
-                    SessionCard(
+                    sessionCard(
                         session = session,
                         onClick = { onResumeSession(session.id) },
                     )
@@ -150,7 +150,7 @@ fun projectView(
 }
 
 @Composable
-private fun SessionCard(
+private fun sessionCard(
     session: ChatSession,
     onClick: () -> Unit,
 ) {
