@@ -12,6 +12,7 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
+import io.askimo.desktop.model.ExportFormat
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +55,23 @@ class SessionsViewModel(
     var exportSessionId by mutableStateOf<String?>(null)
         private set
 
+    var exportSessionTitle by mutableStateOf("")
+        private set
+
     var exportDefaultFilename by mutableStateOf("")
+        private set
+
+    var exportFormat by mutableStateOf(ExportFormat.MARKDOWN)
+        private set
+
+    var successMessage by mutableStateOf<String?>(null)
+        private set
+
+    // File overwrite confirmation state
+    var showOverwriteConfirmation by mutableStateOf(false)
+        private set
+
+    var pendingExportPath by mutableStateOf<String?>(null)
         private set
 
     // Rename dialog state
@@ -322,13 +339,13 @@ class SessionsViewModel(
     }
 
     /**
-     * Export a session to markdown format.
-     * Shows a styled file save dialog to choose export location.
+     * Export a session in the selected format.
+     * Shows a styled export dialog to choose format and location.
      */
     fun exportSession(sessionId: String) {
         scope.launch {
             try {
-                // Find the session to get the title for default filename
+                // Find the session to get the title for display in dialog
                 val session = withContext(Dispatchers.IO) {
                     sessionService.getSessionById(sessionId)
                 } ?: run {
@@ -336,12 +353,18 @@ class SessionsViewModel(
                     return@launch
                 }
 
-                // Sanitize title for filename
-                val defaultFilename = (session.title ?: "session").replace(Regex("[^a-zA-Z0-9-_\\s]"), "_") + ".md"
+                // Use simple default filename pattern instead of session title
+                // to avoid long filenames that cause errors
+                val timestamp = java.time.LocalDateTime.now().format(
+                    java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"),
+                )
+                val defaultFilename = "chat_export_$timestamp"
 
-                // Set state to show dialog
+                // Set state to show dialog (will update filename when format changes)
                 exportSessionId = sessionId
-                exportDefaultFilename = defaultFilename
+                exportSessionTitle = session.title
+                exportFormat = ExportFormat.MARKDOWN // Default format
+                exportDefaultFilename = "$defaultFilename.${exportFormat.extension}"
                 showExportDialog = true
             } catch (e: Exception) {
                 errorMessage = ErrorHandler.getUserFriendlyError(
@@ -354,38 +377,65 @@ class SessionsViewModel(
     }
 
     /**
+     * Update the export format and refresh the default filename.
+     */
+    fun updateExportFormat(format: ExportFormat) {
+        exportFormat = format
+        // Update filename extension
+        val baseFilename = exportDefaultFilename.substringBeforeLast('.')
+        exportDefaultFilename = "$baseFilename.${format.extension}"
+    }
+
+    /**
      * Dismiss the export dialog.
      */
     fun dismissExportDialog() {
         showExportDialog = false
         exportSessionId = null
+        exportSessionTitle = ""
         exportDefaultFilename = ""
+        exportFormat = ExportFormat.MARKDOWN // Reset to default
     }
 
     /**
      * Execute the actual export after user confirms file location.
      */
     fun executeExport(fullPath: String) {
-        val sessionId = exportSessionId ?: return
-
         scope.launch {
             try {
-                // Export in background
-                val result = withContext(Dispatchers.IO) {
-                    val exporterService = io.askimo.core.chat.service.ChatSessionExporterService()
-                    exporterService.exportToMarkdown(sessionId, fullPath)
+                // Validate filename length (most filesystems have 255 character limit for filename)
+                val file = java.io.File(fullPath)
+                val filename = file.name
+
+                if (filename.length > 255) {
+                    errorMessage = LocalizationManager.getString("file.name.too.long")
+                    return@launch
                 }
 
-                result.onFailure { error ->
+                // Check if file exists
+                val fileExists = withContext(Dispatchers.IO) {
+                    file.exists()
+                }
+
+                if (fileExists) {
+                    // Show overwrite confirmation
+                    pendingExportPath = fullPath
+                    showOverwriteConfirmation = true
+                } else {
+                    // File doesn't exist, proceed with export
+                    performExport(fullPath)
+                }
+            } catch (e: java.io.FileNotFoundException) {
+                // Handle filename too long error specifically
+                if (e.message?.contains("File name too long") == true) {
+                    errorMessage = LocalizationManager.getString("file.name.too.long")
+                } else {
                     errorMessage = ErrorHandler.getUserFriendlyError(
-                        error,
+                        e,
                         "exporting session",
-                        "Failed to export session: ${error.message}",
+                        "Failed to export session: ${e.message}",
                     )
                 }
-
-                // Close dialog on success
-                dismissExportDialog()
             } catch (e: Exception) {
                 errorMessage = ErrorHandler.getUserFriendlyError(
                     e,
@@ -394,5 +444,72 @@ class SessionsViewModel(
                 )
             }
         }
+    }
+
+    /**
+     * Confirm overwrite and proceed with export.
+     */
+    fun confirmOverwrite() {
+        val path = pendingExportPath
+        showOverwriteConfirmation = false
+        pendingExportPath = null
+
+        if (path != null) {
+            scope.launch {
+                performExport(path)
+            }
+        }
+    }
+
+    /**
+     * Cancel overwrite confirmation.
+     */
+    fun cancelOverwrite() {
+        showOverwriteConfirmation = false
+        pendingExportPath = null
+    }
+
+    /**
+     * Perform the actual export operation.
+     */
+    private suspend fun performExport(fullPath: String) {
+        try {
+            val result = withContext(Dispatchers.IO) {
+                val exporterService = io.askimo.core.chat.service.ChatSessionExporterService()
+                when (exportFormat) {
+                    ExportFormat.MARKDOWN -> exporterService.exportToMarkdown(exportSessionId!!, fullPath)
+                    ExportFormat.JSON -> exporterService.exportToJson(exportSessionId!!, fullPath)
+                    ExportFormat.HTML -> exporterService.exportToHtml(exportSessionId!!, fullPath)
+                }
+            }
+
+            result.onSuccess {
+                // Show success message
+                successMessage = "${LocalizationManager.getString("session.export.success.message")} $fullPath"
+                // Close dialog on success
+                dismissExportDialog()
+            }
+
+            result.onFailure { error ->
+                errorMessage = ErrorHandler.getUserFriendlyError(
+                    error,
+                    "exporting session",
+                    "Failed to export session: ${error.message}",
+                )
+            }
+        } catch (e: Exception) {
+            errorMessage = ErrorHandler.getUserFriendlyError(
+                e,
+                "exporting session",
+                "Failed to export session: ${e.message}",
+            )
+        }
+    }
+
+    /**
+     * Dismiss the success message.
+     */
+    fun dismissSuccessMessage() {
+        successMessage = null
     }
 }

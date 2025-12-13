@@ -39,6 +39,8 @@ dependencies {
         exclude(group = "org.eclipse.angus", module = "angus-activation")
     }
     implementation(libs.tika.parser.microsoft)
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.ext.gfm.tables)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
