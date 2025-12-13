@@ -85,6 +85,7 @@ import io.askimo.desktop.view.View
 import io.askimo.desktop.view.about.aboutDialog
 import io.askimo.desktop.view.chat.chatView
 import io.askimo.desktop.view.components.NativeMenuBar
+import io.askimo.desktop.view.components.editProjectDialog
 import io.askimo.desktop.view.components.eventLogPanel
 import io.askimo.desktop.view.components.eventLogWindow
 import io.askimo.desktop.view.components.exportSessionDialog
@@ -244,6 +245,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
+    var showEditProjectDialog by remember { mutableStateOf(false) }
+    var editingProjectId by remember { mutableStateOf<String?>(null) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -602,6 +605,10 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         },
                                         onProjectSessionsChanged = {
                                             projectViewRefreshTrigger++
+                                        },
+                                        onEditProject = { projectId ->
+                                            editingProjectId = projectId
+                                            showEditProjectDialog = true
                                         },
                                         activeSessionId = activeSessionId,
                                         sessionChatState = sessionChatStates[activeSessionId],
@@ -964,6 +971,27 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
+            // Edit Project Dialog
+            if (showEditProjectDialog) {
+                val projectToEdit = editingProjectId?.let { id ->
+                    projectsViewModel.projects.find { it.id == id }
+                }
+                if (projectToEdit != null) {
+                    editProjectDialog(
+                        project = projectToEdit,
+                        onDismiss = {
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                        onSave = { projectId, name, description ->
+                            projectsViewModel.updateProject(projectId, name, description)
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                    )
+                }
+            }
+
             // Event Log Window (Developer Mode - Detached)
             if (showEventLogWindow) {
                 eventLogWindow(
@@ -991,6 +1019,7 @@ fun mainContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
     onProjectSessionsChanged: () -> Unit,
+    onEditProject: (String) -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
@@ -1105,6 +1134,7 @@ fun mainContent(
                             onExportSession = { sessionId ->
                                 sessionsViewModel.exportSession(sessionId)
                             },
+                            onEditProject = onEditProject,
                             refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )

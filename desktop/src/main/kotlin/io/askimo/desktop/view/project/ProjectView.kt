@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,6 +46,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.SessionActionMenu
+import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -59,6 +61,7 @@ fun projectView(
     onDeleteSession: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onEditProject: (String) -> Unit,
     refreshTrigger: Int = 0, // External trigger to refresh sessions list
     modifier: Modifier = Modifier,
 ) {
@@ -79,14 +82,33 @@ fun projectView(
             .fillMaxSize()
             .padding(24.dp),
     ) {
-        // Project Name Header
-        Text(
-            text = project.name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = project.name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            themedTooltip(text = "Edit project") {
+                IconButton(
+                    onClick = { onEditProject(project.id) },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit project",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
 
         // Project Description (if exists)
         project.description?.let { desc ->
@@ -98,7 +120,6 @@ fun projectView(
             )
         }
 
-        // Chat Input Field (at top)
         OutlinedTextField(
             value = inputText,
             onValueChange = {
@@ -123,7 +144,6 @@ fun projectView(
             colors = ComponentColors.outlinedTextFieldColors(),
         )
 
-        // Sessions list title
         if (projectSessions.isNotEmpty()) {
             Text(
                 text = "Recent Chats",
@@ -134,7 +154,6 @@ fun projectView(
             )
         }
 
-        // Sessions list (sorted by latest first)
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -331,7 +331,6 @@ class SessionsViewModel(
                 if (updated) {
                     refresh()
                     dismissRenameDialog()
-                    // Notify external components that rename completed
                     onRenameComplete()
                 } else {
                     errorMessage = LocalizationManager.getString("sessions.error.rename.failed")

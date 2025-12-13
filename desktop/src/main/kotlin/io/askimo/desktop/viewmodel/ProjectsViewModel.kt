@@ -71,4 +71,29 @@ class ProjectsViewModel(
             }
         }
     }
+
+    /**
+     * Update an existing project.
+     */
+    fun updateProject(projectId: String, name: String, description: String?) {
+        scope.launch {
+            try {
+                val existingProject = projectRepository.getProject(projectId)
+                if (existingProject != null) {
+                    projectRepository.updateProject(
+                        projectId = projectId,
+                        name = name,
+                        description = description,
+                        indexedPaths = existingProject.indexedPaths, // Keep existing indexed paths
+                    )
+                    log.debug("Updated project $projectId")
+                    loadProjects() // Refresh the list
+                } else {
+                    log.error("Project $projectId not found for update")
+                }
+            } catch (e: Exception) {
+                log.error("Failed to update project $projectId", e)
+            }
+        }
+    }
 }
