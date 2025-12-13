@@ -115,6 +115,23 @@ object NativeMenuBar {
             )
             helpMenu.add(docsItem)
 
+            // Star on GitHub
+            val starGitHubItem = MenuItem(LocalizationManager.getString("menu.help.star.github"))
+            starGitHubItem.addActionListener(
+                ActionListener {
+                    try {
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
+            )
+            helpMenu.add(starGitHubItem)
+
+            helpMenu.addSeparator()
+
             // Check for Updates
             val checkUpdatesItem = MenuItem(LocalizationManager.getString("menu.help.check.updates"))
             checkUpdatesItem.addActionListener(

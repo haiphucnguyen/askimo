@@ -265,7 +265,6 @@ class SessionManager(
             sessionManager = this,
             scope = scope,
             chatSessionService = chatSessionService,
-            appContext = appContext,
         )
 
         chatViewModels[sessionId] = viewModel

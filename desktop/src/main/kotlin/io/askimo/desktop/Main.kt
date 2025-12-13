@@ -11,15 +11,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -65,6 +73,7 @@ import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.preferences.StarPromptPreferences
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.theme.ThemeMode
@@ -78,10 +87,11 @@ import io.askimo.desktop.view.chat.chatView
 import io.askimo.desktop.view.components.NativeMenuBar
 import io.askimo.desktop.view.components.eventLogPanel
 import io.askimo.desktop.view.components.eventLogWindow
-import io.askimo.desktop.view.components.fileSaveDialog
+import io.askimo.desktop.view.components.exportSessionDialog
 import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
 import io.askimo.desktop.view.components.renameSessionDialog
+import io.askimo.desktop.view.components.starPromptDialog
 import io.askimo.desktop.view.sessions.sessionsView
 import io.askimo.desktop.view.settings.providerSelectionDialog
 import io.askimo.desktop.view.settings.settingsViewWithSidebar
@@ -95,6 +105,7 @@ import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
+import java.awt.Desktop
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -225,6 +236,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showEventLogPanel by remember { mutableStateOf(false) }
     var eventLogDockPosition by remember { mutableStateOf(EventLogDockPosition.BOTTOM) }
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
+    var showStarPromptDialog by remember { mutableStateOf(false) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -297,6 +309,12 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     chatViewModel?.setOnMessageCompleteCallback {
         sessionsViewModel.loadRecentSessions()
+
+        // Track chat completion for star prompt
+        StarPromptPreferences.incrementChatCount()
+        if (StarPromptPreferences.shouldShowStarPrompt()) {
+            showStarPromptDialog = true
+        }
     }
 
     // Theme state
@@ -723,16 +741,149 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
-            // Export Session Dialog
             if (sessionsViewModel.showExportDialog) {
-                fileSaveDialog(
-                    title = stringResource("session.export"),
+                exportSessionDialog(
+                    sessionTitle = sessionsViewModel.exportSessionTitle,
+                    selectedFormat = sessionsViewModel.exportFormat,
                     defaultFilename = sessionsViewModel.exportDefaultFilename,
+                    onFormatChange = { format ->
+                        sessionsViewModel.updateExportFormat(format)
+                    },
                     onDismiss = { sessionsViewModel.dismissExportDialog() },
-                    onSave = { fullPath ->
+                    onExport = { fullPath ->
                         sessionsViewModel.executeExport(fullPath)
                     },
                 )
+            }
+
+            sessionsViewModel.successMessage?.let { message ->
+                Dialog(onDismissRequest = { sessionsViewModel.dismissSuccessMessage() }) {
+                    Surface(
+                        modifier = Modifier.width(450.dp),
+                        shape = MaterialTheme.shapes.large,
+                        tonalElevation = 8.dp,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp),
+                                )
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text = stringResource("session.export.success.title"),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { sessionsViewModel.dismissSuccessMessage() },
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Text(stringResource("action.ok"))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // File Overwrite Confirmation Dialog
+            if (sessionsViewModel.showOverwriteConfirmation) {
+                Dialog(onDismissRequest = { sessionsViewModel.cancelOverwrite() }) {
+                    Surface(
+                        modifier = Modifier.width(450.dp),
+                        shape = MaterialTheme.shapes.large,
+                        tonalElevation = 8.dp,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(32.dp),
+                                )
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text = stringResource("file.overwrite.title"),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = stringResource("file.overwrite.message"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    sessionsViewModel.pendingExportPath?.let { path ->
+                                        Text(
+                                            text = path,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(top = 4.dp),
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                TextButton(
+                                    onClick = { sessionsViewModel.cancelOverwrite() },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Text(stringResource("action.cancel"))
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Button(
+                                    onClick = { sessionsViewModel.confirmOverwrite() },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                    ),
+                                ) {
+                                    Text(stringResource("file.overwrite.confirm"))
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Rename Session Dialog
@@ -742,6 +893,29 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     onDismiss = { sessionsViewModel.dismissRenameDialog() },
                     onRename = { newTitle ->
                         sessionsViewModel.executeRename(newTitle)
+                    },
+                )
+            }
+
+            // Star Prompt Dialog (One-time after usage)
+            if (showStarPromptDialog) {
+                starPromptDialog(
+                    onDismiss = {
+                        StarPromptPreferences.markPromptDismissed()
+                        showStarPromptDialog = false
+                    },
+                    onStar = {
+                        StarPromptPreferences.markAsPrompted()
+                        showStarPromptDialog = false
+                        try {
+                            if (Desktop.isDesktopSupported()) {
+                                Desktop.getDesktop().browse(
+                                    java.net.URI("https://github.com/haiphucnguyen/askimo"),
+                                )
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     },
                 )
             }
