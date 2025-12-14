@@ -324,13 +324,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    chatViewModel?.setOnMessageCompleteCallback {
-        sessionsViewModel.loadRecentSessions()
+    // Set message complete callback once per chatViewModel instance
+    LaunchedEffect(chatViewModel) {
+        chatViewModel?.setOnMessageCompleteCallback {
+            sessionsViewModel.loadRecentSessions()
 
-        // Track chat completion for star prompt
-        StarPromptPreferences.incrementChatCount()
-        if (StarPromptPreferences.shouldShowStarPrompt()) {
-            showStarPromptDialog = true
+            // Track chat completion for star prompt
+            StarPromptPreferences.incrementChatCount()
+            if (StarPromptPreferences.shouldShowStarPrompt()) {
+                showStarPromptDialog = true
+            }
         }
     }
 
@@ -413,14 +416,12 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // Stack-based body: Settings OR Chat/Sessions
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                 ) {
                     if (currentView == View.SETTINGS) {
-                        // Settings View - Full replacement of body
                         settingsViewWithSidebar(
                             onClose = {
                                 currentView = previousView
@@ -596,10 +597,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         appContext = appContext,
                                         sessionManager = sessionManager,
                                         onResumeSession = handleResumeSession,
-                                        onNavigateToSettings = {
-                                            previousView = currentView
-                                            currentView = View.SETTINGS
-                                        },
                                         onNavigateToChat = {
                                             currentView = View.CHAT
                                         },
@@ -630,7 +627,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
-                                            text = "Select a session from the sidebar or start a new chat",
+                                            text = stringResource("chat.no.active.session"),
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -669,6 +666,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 footerBar(
                     onShowUpdateDetails = {
                         updateViewModel.showUpdateDialogForExistingRelease()
+                    },
+                    onConfigureAiProvider = {
+                        settingsViewModel.onChangeProvider()
                     },
                 )
 
@@ -934,6 +934,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     onDismiss = { sessionsViewModel.dismissRenameDialog() },
                     onRename = { newTitle ->
                         sessionsViewModel.executeRename(newTitle)
+                        // Refresh the session title in ChatViewModel if currently viewing this session
+                        chatViewModel?.refreshSessionTitle()
                     },
                 )
             }
@@ -1016,7 +1018,6 @@ fun mainContent(
     appContext: AppContext,
     sessionManager: SessionManager,
     onResumeSession: (String) -> Unit,
-    onNavigateToSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
     onProjectSessionsChanged: () -> Unit,
     onEditProject: (String) -> Unit,
@@ -1051,7 +1052,6 @@ fun mainContent(
                     errorMessage = chatViewModel.errorMessage,
                     provider = configInfo.provider.name,
                     model = configInfo.model,
-                    onNavigateToSettings = onNavigateToSettings,
                     hasMoreMessages = chatViewModel.hasMoreMessages,
                     isLoadingPrevious = chatViewModel.isLoadingPrevious,
                     onLoadPrevious = { chatViewModel.loadPreviousMessages() },
@@ -1077,6 +1077,10 @@ fun mainContent(
                     initialEditingMessage = sessionChatState?.editingMessage,
                     onStateChange = onChatStateChange,
                     sessionId = activeSessionId,
+                    sessionTitle = chatViewModel?.sessionTitle,
+                    onRenameSession = { sessionId ->
+                        sessionsViewModel.showRenameDialog(sessionId)
+                    },
                     onExportSession = { sessionId ->
                         sessionsViewModel.exportSession(sessionId)
                     },
@@ -1095,13 +1099,12 @@ fun mainContent(
                 modifier = Modifier.fillMaxSize(),
             )
             View.PROJECTS -> {
-                // TODO: Implement projects view
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Projects view - Coming soon",
+                        text = stringResource("chat.no.active.session"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1114,12 +1117,13 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            onStartChat = { projId, message ->
+                            onStartChat = { projId, message, attachments ->
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
                                     projectName = project.name,
                                     message = message,
+                                    attachments = attachments,
                                     onComplete = { onNavigateToChat() },
                                 )
                             },
@@ -1145,7 +1149,7 @@ fun mainContent(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Project not found",
+                                text = stringResource("project.not.found"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -1158,7 +1162,7 @@ fun mainContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No project selected",
+                            text = stringResource("project.not.selected"),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

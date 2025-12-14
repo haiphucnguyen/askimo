@@ -66,8 +66,9 @@ enum class SettingsSection {
 fun settingsViewWithSidebar(
     onClose: () -> Unit,
     settingsViewModel: SettingsViewModel,
+    initialSection: SettingsSection = SettingsSection.GENERAL,
 ) {
-    var selectedSection by remember { mutableStateOf(SettingsSection.GENERAL) }
+    var selectedSection by remember { mutableStateOf(initialSection) }
     var sidebarWidth by remember { mutableStateOf(240.dp) }
 
     // Settings view - full screen replacement with top header bar

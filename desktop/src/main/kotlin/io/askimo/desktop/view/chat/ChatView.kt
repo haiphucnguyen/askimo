@@ -10,24 +10,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -54,90 +50,29 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.logging.logger
-import io.askimo.core.util.TimeUtil
-import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.theme.ComponentColors
-import io.askimo.desktop.util.Platform
+import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.manageDirectivesDialog
 import io.askimo.desktop.view.components.newDirectiveDialog
 import io.askimo.desktop.view.components.sessionActionsMenu
-import io.askimo.desktop.view.components.themedTooltip
 import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
-import java.util.UUID
 
 private object ChatViewObject
 private val log = logger<ChatViewObject>()
-
-// File attachment item composable
-@Composable
-private fun fileAttachmentItem(
-    attachment: FileAttachmentDTO,
-    onRemove: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.surfaceVariantCardColors(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Column {
-                    Text(
-                        text = attachment.fileName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = formatFileSize(attachment.size),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier
-                    .size(24.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove attachment",
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -152,7 +87,6 @@ fun chatView(
     errorMessage: String? = null,
     provider: String? = null,
     model: String? = null,
-    onNavigateToSettings: () -> Unit = {},
     hasMoreMessages: Boolean = false,
     isLoadingPrevious: Boolean = false,
     onLoadPrevious: () -> Unit = {},
@@ -174,6 +108,8 @@ fun chatView(
     initialEditingMessage: ChatMessageDTO? = null,
     onStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit = { _, _, _ -> },
     sessionId: String? = null,
+    sessionTitle: String? = null,
+    onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
     onRetryMessage: (String) -> Unit = {},
@@ -282,7 +218,7 @@ fun chatView(
                 }
             },
     ) {
-        // Configuration info header
+        // Session header with title and directive selector
         if (provider != null && model != null) {
             Card(
                 modifier = Modifier
@@ -300,56 +236,17 @@ fun chatView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Left side: Provider, Model, and Change button
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp,
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        Text(
-                                            text = "${stringResource("settings.provider")}: $provider",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            text = "${stringResource("settings.model")}: $model",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            },
-                        ) {
-                            Text(
-                                text = stringResource("chat.provider.model.short", provider, model),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        TextButton(
-                            onClick = onNavigateToSettings,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.primaryTextButtonColors(),
-                        ) {
-                            Text(
-                                text = stringResource("chat.change"),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
+                    // Left side: Session title
+                    Text(
+                        text = sessionTitle ?: "New Chat",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
 
-                    // Right side: Directive selector
+                    // Right side: Directive selector and session actions
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -587,6 +484,7 @@ fun chatView(
                         if (sessionId != null) {
                             sessionActionsMenu(
                                 sessionId = sessionId,
+                                onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
                                 onDeleteSession = onDeleteSession,
                             )
@@ -808,241 +706,35 @@ fun chatView(
             }
         }
 
-        // File attachment handler
-        val selectFileTitle = stringResource("chat.select.file")
-        val openFileDialog = {
-            val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
-            fileChooser.isVisible = true
-            val selectedFile = fileChooser.file
-            val selectedDir = fileChooser.directory
-            if (selectedFile != null && selectedDir != null) {
-                val file = File(selectedDir, selectedFile)
-                try {
-                    val attachment = FileAttachmentDTO(
-                        id = UUID.randomUUID().toString(),
-                        messageId = "",
-                        sessionId = sessionId ?: "",
-                        fileName = file.name,
-                        mimeType = file.extension,
-                        size = file.length(),
-                        createdAt = LocalDateTime.now(),
-                        content = null,
-                        filePath = file.absolutePath,
-                    )
-                    attachments = attachments + attachment
-                } catch (e: Exception) {
-                    log.error("Error adding file attachment: ${e.message}", e)
-                }
-            }
-        }
-
-        // Edit mode banner (shown when editing a message)
-        if (editingMessage != null) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = ComponentColors.bannerCardColors(),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = editingMessage?.timestamp?.let { timestamp ->
-                                val formattedTime = TimeUtil.formatDisplay(timestamp)
-                                stringResource("message.editing.banner.from", formattedTime)
-                            } ?: stringResource("message.editing.banner"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            editingMessage = null
-                            inputText = TextFieldValue("")
-                            attachments = emptyList()
-                        },
-                        modifier = Modifier
-                            .size(32.dp)
-                            .pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = stringResource("message.cancel.edit"),
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-            }
-        }
-
         // Input area
-        Column(
+        chatInputField(
+            inputText = inputText,
+            onInputTextChange = { inputText = it },
+            attachments = attachments,
+            onAttachmentsChange = { attachments = it },
+            onSendMessage = {
+                if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                    onSendMessage(inputText.text, attachments, editingMessage)
+                    inputText = TextFieldValue("")
+                    attachments = emptyList()
+                    editingMessage = null
+                }
+            },
+            isLoading = isLoading,
+            isThinking = isThinking,
+            onStopResponse = onStopResponse,
+            errorMessage = errorMessage,
+            editingMessage = editingMessage,
+            onCancelEdit = {
+                editingMessage = null
+                inputText = TextFieldValue("")
+                attachments = emptyList()
+            },
+            sessionId = sessionId,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .onPreviewKeyEvent { keyEvent ->
-                    val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-
-                    when (shortcut) {
-                        AppShortcut.ATTACH_FILE -> {
-                            if (!isLoading) {
-                                openFileDialog()
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        else -> false
-                    }
-                },
-        ) {
-            // File attachments display
-            if (attachments.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    attachments.forEach { attachment ->
-                        fileAttachmentItem(
-                            attachment = attachment,
-                            onRemove = {
-                                attachments = attachments - attachment
-                            },
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Attach file button
-                themedTooltip(
-                    text = stringResource("chat.attach.file", Platform.modifierKey),
-                ) {
-                    IconButton(
-                        onClick = openFileDialog,
-                        colors = ComponentColors.primaryIconButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.AttachFile,
-                            contentDescription = "Attach file",
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(inputFocusRequester)
-                        .onPreviewKeyEvent { keyEvent ->
-                            val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-
-                            when (shortcut) {
-                                AppShortcut.NEW_LINE -> {
-                                    val cursorPosition = inputText.selection.start
-                                    val textBeforeCursor = inputText.text.substring(0, cursorPosition)
-                                    val textAfterCursor = inputText.text.substring(cursorPosition)
-                                    val newText = textBeforeCursor + "\n" + textAfterCursor
-                                    val newCursorPosition = cursorPosition + 1
-                                    inputText = TextFieldValue(
-                                        text = newText,
-                                        selection = TextRange(newCursorPosition),
-                                    )
-                                    true
-                                }
-                                AppShortcut.SEND_MESSAGE -> {
-                                    if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                        onSendMessage(inputText.text, attachments, editingMessage)
-
-                                        inputText = TextFieldValue("")
-                                        attachments = emptyList()
-                                        editingMessage = null
-                                    }
-                                    true
-                                }
-                                else -> false
-                            }
-                        },
-                    placeholder = { Text(stringResource("chat.input.placeholder")) },
-                    maxLines = 5,
-                    isError = errorMessage != null,
-                    supportingText = if (errorMessage != null) {
-                        { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                    } else {
-                        null
-                    },
-                    colors = ComponentColors.outlinedTextFieldColors(),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-
-                if (isLoading || isThinking) {
-                    IconButton(
-                        onClick = onStopResponse,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.Stop,
-                            contentDescription = "Stop",
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                } else {
-                    themedTooltip(
-                        text = if (editingMessage != null) {
-                            stringResource("message.update.regenerate")
-                        } else {
-                            stringResource("message.send")
-                        },
-                    ) {
-                        IconButton(
-                            onClick = {
-                                if (inputText.text.isNotBlank()) {
-                                    onSendMessage(inputText.text, attachments, editingMessage)
-                                    inputText = TextFieldValue("")
-                                    attachments = emptyList()
-                                    editingMessage = null
-                                }
-                            },
-                            enabled = inputText.text.isNotBlank(),
-                            colors = ComponentColors.primaryIconButtonColors(),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Icon(
-                                if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
-                                contentDescription = if (editingMessage != null) {
-                                    stringResource("message.update.regenerate")
-                                } else {
-                                    stringResource("message.send")
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+                .padding(16.dp),
+        )
     }
 
     editingAIMessage?.let { message ->

@@ -27,28 +27,23 @@ object AppContextFactory {
 
     /**
      * Create (or reuse) a Session.
-     * - Reuses cached if params are equal to the cached session's params and forceReload == false.
+     * - Reuses cached if params are equal to the cached session's params.
      * - Otherwise builds a new Session and caches it.
      *
      * @param params The session parameters to use
      * @param mode The execution mode (CLI_PROMPT, CLI_INTERACTIVE, or DESKTOP)
-     * @param forceReload Whether to force reload the session even if params match
      */
     fun createAppContext(
         params: AppContextParams = AppContextConfigManager.load(),
         mode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-        forceReload: Boolean = false,
     ): AppContext {
-        if (!forceReload) {
-            val existing = cached
-            if (existing != null && existing.params == params && existing.mode == mode) return existing
-        }
+        val existing = cached
+        if (existing != null && existing.params == params && existing.mode == mode) return existing
 
         return synchronized(this) {
-            if (!forceReload) {
-                val again = cached
-                if (again != null && again.params == params && again.mode == mode) return@synchronized again
-            }
+            val again = cached
+            if (again != null && again.params == params && again.mode == mode) return@synchronized again
+
             val fresh = buildAppContext(params, mode)
             cached = fresh
             fresh

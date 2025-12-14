@@ -305,12 +305,14 @@ class SessionManager(
      * @param projectId The project ID to associate with the session
      * @param projectName The project name for the session title
      * @param message The first message to send
+     * @param attachments The file attachments to include with the message
      * @param onComplete Callback when the session is ready (for navigation)
      */
     fun createProjectSessionAndSendMessage(
         projectId: String,
         projectName: String,
         message: String,
+        attachments: List<FileAttachmentDTO> = emptyList(),
         onComplete: () -> Unit,
     ) {
         scope.launch {
@@ -336,7 +338,7 @@ class SessionManager(
 
                 // Now send the message - ViewModel is ready
                 val viewModel = getOrCreateChatViewModel(newSession.id)
-                viewModel.sendMessage(message, emptyList())
+                viewModel.sendMessage(message, attachments)
             } catch (e: Exception) {
                 log.error("Failed to create project session and send message", e)
             }

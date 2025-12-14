@@ -15,7 +15,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -200,7 +199,7 @@ class ProjectRepositoryIT {
     }
 
     @Test
-    fun `should CASCADE delete sessions when project is deleted`() {
+    fun `should cascade delete sessions when project is deleted`() {
         // Create a project
         val project = projectRepository.createProject(
             Project(
@@ -222,7 +221,7 @@ class ProjectRepositoryIT {
         )
 
         // Create messages for session 1
-        val message1_1 = messageRepository.addMessage(
+        messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = session1.id,
@@ -230,7 +229,7 @@ class ProjectRepositoryIT {
                 content = "Message 1 for Session 1",
             ),
         )
-        val message1_2 = messageRepository.addMessage(
+        messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = session1.id,
@@ -240,7 +239,7 @@ class ProjectRepositoryIT {
         )
 
         // Create messages for session 2
-         messageRepository.addMessage(
+        messageRepository.addMessage(
             ChatMessage(
                 id = "",
                 sessionId = session2.id,

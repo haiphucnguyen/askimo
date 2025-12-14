@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.view.project
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,14 +38,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.SessionActionMenu
+import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,7 +60,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun projectView(
     project: Project,
-    onStartChat: (projectId: String, message: String) -> Unit,
+    onStartChat: (projectId: String, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
@@ -65,7 +69,8 @@ fun projectView(
     refreshTrigger: Int = 0, // External trigger to refresh sessions list
     modifier: Modifier = Modifier,
 ) {
-    var inputText by remember { mutableStateOf("") }
+    var inputText by remember { mutableStateOf(TextFieldValue("")) }
+    var attachments by remember { mutableStateOf<List<FileAttachmentDTO>>(emptyList()) }
     var projectSessions by remember { mutableStateOf<List<ChatSession>>(emptyList()) }
 
     // Load sessions for this project - refreshes when project.id or refreshTrigger changes
@@ -96,14 +101,14 @@ fun projectView(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            themedTooltip(text = "Edit project") {
+            themedTooltip(text = stringResource("project.edit.tooltip")) {
                 IconButton(
                     onClick = { onEditProject(project.id) },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit project",
+                        contentDescription = stringResource("project.edit.tooltip"),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -120,33 +125,26 @@ fun projectView(
             )
         }
 
-        OutlinedTextField(
-            value = inputText,
-            onValueChange = {
-                inputText = it
-                // Auto-trigger chat creation when user types
-                if (it.isNotBlank() && it.endsWith("\n") && !it.endsWith("\n\n")) {
-                    val message = it.trim()
-                    if (message.isNotBlank()) {
-                        onStartChat(project.id, message)
-                        inputText = ""
-                    }
+        chatInputField(
+            inputText = inputText,
+            onInputTextChange = { inputText = it },
+            attachments = attachments,
+            onAttachmentsChange = { attachments = it },
+            onSendMessage = {
+                if (inputText.text.isNotBlank()) {
+                    onStartChat(project.id, inputText.text, attachments)
+                    inputText = TextFieldValue("")
+                    attachments = emptyList()
                 }
             },
-            placeholder = {
-                Text("New chat in ${project.name}")
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            minLines = 3,
-            maxLines = 10,
-            colors = ComponentColors.outlinedTextFieldColors(),
+            sessionId = project.id,
+            placeholder = stringResource("project.new.chat.placeholder", project.name),
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         if (projectSessions.isNotEmpty()) {
             Text(
-                text = "Recent Chats",
+                text = stringResource("project.recent.chats"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -161,7 +159,7 @@ fun projectView(
             if (projectSessions.isEmpty()) {
                 item {
                     Text(
-                        text = "No chats yet. Start a new chat above!",
+                        text = stringResource("project.no.chats"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 16.dp),
@@ -210,6 +208,10 @@ private fun sessionCard(
             containerColor = backgroundColor,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        ),
     ) {
         Row(
             modifier = Modifier

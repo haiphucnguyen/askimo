@@ -4,7 +4,6 @@
  */
 package io.askimo.core.chat.repository
 
-import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
@@ -15,7 +14,6 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
