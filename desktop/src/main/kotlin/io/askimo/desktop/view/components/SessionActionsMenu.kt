@@ -7,6 +7,7 @@ package io.askimo.desktop.view.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenuItem
@@ -27,9 +28,10 @@ import io.askimo.desktop.theme.ComponentColors
 
 /**
  * Reusable session actions menu component that provides a dropdown with session-related actions.
- * Currently supports Export and Delete actions.
+ * Currently supports Rename, Export and Delete actions.
  *
  * @param sessionId The ID of the session to perform actions on
+ * @param onRenameSession Callback invoked when the rename action is triggered
  * @param onExportSession Callback invoked when the export action is triggered
  * @param onDeleteSession Callback invoked when the delete action is triggered
  * @param modifier Optional modifier for the IconButton
@@ -37,6 +39,7 @@ import io.askimo.desktop.theme.ComponentColors
 @Composable
 fun sessionActionsMenu(
     sessionId: String,
+    onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -59,6 +62,26 @@ fun sessionActionsMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource("action.rename"),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                onClick = {
+                    onRenameSession(sessionId)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
             DropdownMenuItem(
                 text = {
                     Text(

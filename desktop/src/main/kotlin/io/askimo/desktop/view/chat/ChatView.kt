@@ -54,6 +54,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -152,7 +153,6 @@ fun chatView(
     errorMessage: String? = null,
     provider: String? = null,
     model: String? = null,
-    onNavigateToSettings: () -> Unit = {},
     hasMoreMessages: Boolean = false,
     isLoadingPrevious: Boolean = false,
     onLoadPrevious: () -> Unit = {},
@@ -174,6 +174,8 @@ fun chatView(
     initialEditingMessage: ChatMessageDTO? = null,
     onStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit = { _, _, _ -> },
     sessionId: String? = null,
+    sessionTitle: String? = null,
+    onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
     onRetryMessage: (String) -> Unit = {},
@@ -282,7 +284,7 @@ fun chatView(
                 }
             },
     ) {
-        // Configuration info header
+        // Session header with title and directive selector
         if (provider != null && model != null) {
             Card(
                 modifier = Modifier
@@ -300,56 +302,17 @@ fun chatView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Left side: Provider, Model, and Change button
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp,
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        Text(
-                                            text = "${stringResource("settings.provider")}: $provider",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            text = "${stringResource("settings.model")}: $model",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            },
-                        ) {
-                            Text(
-                                text = stringResource("chat.provider.model.short", provider, model),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        TextButton(
-                            onClick = onNavigateToSettings,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.primaryTextButtonColors(),
-                        ) {
-                            Text(
-                                text = stringResource("chat.change"),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
+                    // Left side: Session title
+                    Text(
+                        text = sessionTitle ?: "New Chat",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
 
-                    // Right side: Directive selector
+                    // Right side: Directive selector and session actions
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -587,6 +550,7 @@ fun chatView(
                         if (sessionId != null) {
                             sessionActionsMenu(
                                 sessionId = sessionId,
+                                onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
                                 onDeleteSession = onDeleteSession,
                             )

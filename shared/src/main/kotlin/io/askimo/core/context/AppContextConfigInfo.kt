@@ -31,7 +31,7 @@ data class AppContextConfigInfo(
 fun AppContext.getConfigInfo(): AppContextConfigInfo {
     val provider = getActiveProvider()
     val settings = getCurrentProviderSettings()
-    val model = if (hasChatClient()) params.model else "(not set)"
+    val model = params.model
 
     return AppContextConfigInfo(
         provider = provider,

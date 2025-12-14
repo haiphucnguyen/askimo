@@ -38,6 +38,7 @@ data class ResumeSessionResult(
 data class ResumeSessionPaginatedResult(
     val success: Boolean,
     val sessionId: String,
+    val title: String? = null,
     val directiveId: String?,
     val messages: List<ChatMessageDTO> = emptyList(),
     val cursor: LocalDateTime? = null,
@@ -126,16 +127,13 @@ class ChatSessionService(
      * @return The created session with generated ID (if not provided)
      */
     fun createSession(session: ChatSession): ChatSession {
-        val created = sessionRepository.createSession(session)
+        val createdSession = sessionRepository.createSession(session)
 
-        if (appContext.hasChatClient()) {
-            runBlocking {
-                appContext.chatClient.switchSession(created.id)
-            }
-            log.debug("Initialized memory for new session: ${created.id}")
+        runBlocking {
+            appContext.getChatClient().switchSession(createdSession.id)
         }
 
-        return created
+        return createdSession
     }
 
     /**
@@ -148,7 +146,6 @@ class ChatSessionService(
     fun deleteSession(sessionId: String): Boolean {
         messageRepository.deleteMessagesBySession(sessionId)
 
-        // Then delete the session itself
         return sessionRepository.deleteSession(sessionId)
     }
 
@@ -254,11 +251,8 @@ class ChatSessionService(
      * @return ResumeSessionResult containing success status, messages, and any error
      */
     fun resumeSession(sessionId: String): ResumeSessionResult {
-        if (appContext.hasChatClient()) {
-            runBlocking {
-                appContext.chatClient.switchSession(sessionId)
-            }
-            log.debug("Restored memory for session: $sessionId")
+        runBlocking {
+            appContext.getChatClient().switchSession(sessionId)
         }
 
         val messages = messageRepository.getMessages(sessionId)
@@ -281,12 +275,8 @@ class ChatSessionService(
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
-            // Restore session memory
-            if (appContext.hasChatClient()) {
-                runBlocking {
-                    appContext.chatClient.switchSession(sessionId)
-                }
-                log.debug("Restored memory for paginated session: $sessionId")
+            runBlocking {
+                appContext.getChatClient().switchSession(sessionId)
             }
 
             val (messages, cursor) = messageRepository.getMessagesPaginated(
@@ -298,6 +288,7 @@ class ChatSessionService(
             ResumeSessionPaginatedResult(
                 success = true,
                 sessionId = sessionId,
+                title = existingSession.title,
                 directiveId = existingSession.directiveId,
                 messages = messages.toDTOs(),
                 cursor = cursor,
@@ -307,6 +298,7 @@ class ChatSessionService(
             ResumeSessionPaginatedResult(
                 success = true,
                 sessionId = sessionId,
+                title = null,
                 directiveId = null,
                 messages = emptyList(),
                 cursor = null,

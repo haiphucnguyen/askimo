@@ -51,7 +51,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.filled.AutoAwesome
 import io.askimo.core.VersionInfo
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.EventSource
@@ -66,11 +71,47 @@ import java.awt.Desktop
 import java.net.URI
 
 /**
+ * Displays the current AI provider and model configuration.
+ * Clicking opens the provider configuration dialog.
+ */
+@Composable
+private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
+    val appContext = remember { get<AppContext>(AppContext::class.java) }
+    val configInfo = remember(appContext) { appContext.getConfigInfo() }
+    val provider = configInfo.provider.name
+    val model = configInfo.model
+
+    themedTooltip(
+        text = stringResource("system.ai.config.tooltip", provider, model),
+    ) {
+        TextButton(
+            onClick = onConfigureAiProvider,
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "$provider: $model",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/**
  * Footer bar component showing system resources, notifications, and version info.
  */
 @Composable
 fun footerBar(
     onShowUpdateDetails: () -> Unit = {},
+    onConfigureAiProvider: () -> Unit = {},
 ) {
     val resourceMonitor = remember { get<SystemResourceMonitor>(SystemResourceMonitor::class.java) }
     val scope = rememberCoroutineScope()
@@ -141,6 +182,9 @@ fun footerBar(
                 }
             }
 
+            // AI Configuration (Center)
+            aiConfigInfo(onConfigureAiProvider = onConfigureAiProvider)
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -195,7 +239,9 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
     Box {
         IconButton(
             onClick = { showEventPopup = !showEventPopup },
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier
+                .size(32.dp)
+                .pointerHoverIcon(PointerIcon.Hand),
         ) {
             BadgedBox(
                 badge = {

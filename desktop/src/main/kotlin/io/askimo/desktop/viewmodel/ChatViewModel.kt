@@ -84,6 +84,27 @@ class ChatViewModel(
     var selectedDirective by mutableStateOf<String?>(null)
         private set
 
+    var sessionTitle by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Refresh the session title from the database.
+     * Called after sending messages to update the auto-generated title.
+     */
+    fun refreshSessionTitle() {
+        val sessionId = currentSessionId.value ?: return
+        scope.launch {
+            try {
+                val session = withContext(Dispatchers.IO) {
+                    chatSessionService.getSessionById(sessionId)
+                }
+                sessionTitle = session?.title
+            } catch (e: Exception) {
+                log.error("Failed to refresh session title", e)
+            }
+        }
+    }
+
     // Track the position where retry response should be inserted (null = append to end)
     private var retryInsertPosition: Int? = null
 
@@ -249,6 +270,9 @@ class ChatViewModel(
 
                         // Clear retry position tracker
                         retryInsertPosition = null
+
+                        // Refresh session title (in case it was auto-generated from first message)
+                        refreshSessionTitle()
 
                         // Cancel and clean up subscription when thread completes
                         activeSubscriptions[sessionId]?.cancel()
@@ -548,6 +572,9 @@ class ChatViewModel(
 
                     // Load directive from the resumed session
                     selectedDirective = result.directiveId
+
+                    // Load session title
+                    sessionTitle = result.title
 
                     // Reset thinking state
                     isThinking = false

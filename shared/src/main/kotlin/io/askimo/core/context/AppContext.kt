@@ -26,6 +26,7 @@ import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.isInitialized
 
 
 data class Scope(
@@ -65,9 +66,9 @@ class AppContext(
             Thread {
                 try {
                     log.info("Shutdown hook triggered - saving session memory")
-                    if (::chatClient.isInitialized) {
+                    if (::_chatClient.isInitialized) {
                         runBlocking {
-                            chatClient.saveCurrentSession()
+                            _chatClient.saveCurrentSession()
                         }
                         log.info("Successfully saved memory on application shutdown")
                     }
@@ -92,9 +93,9 @@ class AppContext(
 
         autoSaveScheduler?.scheduleAtFixedRate({
             try {
-                if (::chatClient.isInitialized) {
+                if (::_chatClient.isInitialized) {
                     runBlocking {
-                        chatClient.saveCurrentSession()
+                        _chatClient.saveCurrentSession()
                     }
                     log.debug("Periodic auto-save completed")
                 }
@@ -130,8 +131,7 @@ class AppContext(
      * The active chat model for this session.
      * This property is initialized lazily and can only be set through setChatModel().
      */
-    lateinit var chatClient: ChatClient
-        private set
+    private lateinit var _chatClient: ChatClient
 
     /**
      * Sets the chat model for this session.
@@ -139,18 +139,11 @@ class AppContext(
      * @param chatClient The chat model to use for this session
      */
     fun setChatClient(chatClient: ChatClient) {
-        this.chatClient = chatClient
+        this._chatClient = chatClient
         if (chatClient is NoopChatClient) {
-            (this.chatClient as NoopChatClient).appContext = this
+            (this._chatClient as NoopChatClient).appContext = this
         }
     }
-
-    /**
-     * Checks if a chat client has been initialized for this session.
-     *
-     * @return true if chat client has been set, false otherwise
-     */
-    fun hasChatClient(): Boolean = ::chatClient.isInitialized
 
     /**
      * Gets the currently active model provider for this session.
@@ -244,7 +237,7 @@ class AppContext(
      * Returns the active [ChatClient]. If a model has not been created yet for the
      * current (provider, model) and settings, it will be built now.
      */
-    fun getChatClient(): ChatClient = if (hasChatClient()) chatClient else rebuildActiveChatClient()
+    fun getChatClient(): ChatClient = if (::_chatClient.isInitialized) _chatClient else rebuildActiveChatClient()
 
     /**
      * Enables Retrieval-Augmented Generation (RAG) for the current session using

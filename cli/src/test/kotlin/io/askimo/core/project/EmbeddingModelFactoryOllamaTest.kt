@@ -55,7 +55,6 @@ class EmbeddingModelFactoryOllamaTest {
         val session = AppContextFactory.createAppContext(
             params = params,
             mode = ExecutionMode.CLI_PROMPT,
-            forceReload = true,
         )
 
         val model = getEmbeddingModel(session)

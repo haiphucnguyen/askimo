@@ -6,7 +6,6 @@ package io.askimo.cli.commands
 
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
-import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
@@ -72,7 +71,7 @@ class SetProviderCommandHandler(
         appContext.params.model = model
 
         AppContextConfigManager.save(appContext.params)
-        appContext.rebuildActiveChatClient(KEEP_PER_PROVIDER_MODEL)
+        appContext.rebuildActiveChatClient()
 
         log.display("✅ Model provider set to: ${provider.name.lowercase()}")
         log.display("💡 Use `:models` to list all available models for this provider.")

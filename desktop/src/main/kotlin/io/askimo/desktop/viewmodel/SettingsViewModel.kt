@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
-import io.askimo.core.context.MemoryPolicy
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
@@ -412,7 +411,7 @@ class SettingsViewModel(
                         appContext.params.model = model
 
                         AppContextConfigManager.save(appContext.params)
-                        appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                        appContext.rebuildActiveChatClient()
 
                         ProviderTestResult.Success
                     } catch (e: Exception) {
@@ -539,7 +538,7 @@ class SettingsViewModel(
 
                     // Rebuild the chat service with the new model
                     // Use KEEP_PER_PROVIDER_MODEL to preserve conversation history
-                    appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                    appContext.rebuildActiveChatClient()
 
                     true
                 } catch (_: Exception) {
@@ -584,7 +583,7 @@ class SettingsViewModel(
 
                 // Rebuild chat service with new settings
                 withContext(Dispatchers.IO) {
-                    appContext.rebuildActiveChatClient(MemoryPolicy.KEEP_PER_PROVIDER_MODEL)
+                    appContext.rebuildActiveChatClient()
                 }
 
                 // Reload configuration to refresh UI

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -148,7 +149,7 @@ fun messageList(
                 .fillMaxSize()
                 .padding(end = 12.dp) // Add padding for scrollbar
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Show loading indicator when loading previous messages
             if (isLoadingPrevious) {
@@ -171,6 +172,7 @@ fun messageList(
             val messageGroups = groupMessagesWithOutdatedBranches(messages)
 
             var messageIndex = 0
+            var isFirstMessage = true
             messageGroups.forEach { group ->
                 when (group) {
                     is MessageGroup.ActiveMessage -> {
@@ -185,13 +187,16 @@ fun messageList(
                             userAvatarPath = userAvatarPath,
                             aiAvatarPath = aiAvatarPath,
                             onRetryMessage = onRetryMessage,
+                            addTopPadding = isFirstMessage,
                         )
+                        isFirstMessage = false
                         messageIndex++
                     }
                     is MessageGroup.OutdatedBranch -> {
                         outdatedBranchComponent(
                             messages = group.messages,
                         )
+                        isFirstMessage = false
                         messageIndex += group.messages.size
                     }
                 }
@@ -242,12 +247,23 @@ fun messageBubble(
     userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
     onRetryMessage: ((String) -> Unit)? = null,
+    addTopPadding: Boolean = false,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
     val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
 
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (addTopPadding) {
+                    Modifier.padding(top = 20.dp)
+                } else {
+                    Modifier
+                }
+            )
+    ) {
         val maxBubbleWidth = when {
             maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
             maxWidth < 1200.dp -> (maxWidth * 0.75f).coerceAtMost(800.dp)
@@ -387,11 +403,12 @@ fun messageBubble(
                     Card(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 4.dp, end = 4.dp),
+                            .offset(x = (-8).dp, y = (-16).dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -443,11 +460,12 @@ fun messageBubble(
                     Card(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 4.dp, end = 4.dp),
+                            .offset(x = (-8).dp, y = (-16).dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
