@@ -60,12 +60,13 @@ val desktopModule = module {
         )
     }
 
-    factory { (scope: CoroutineScope, sessionManager: SessionManager?, onCreateNewSession: (() -> String)?) ->
+    factory { (scope: CoroutineScope, sessionManager: SessionManager, onCreateNewSession: () -> String, onRenameComplete: () -> Unit) ->
         SessionsViewModel(
             scope = scope,
             sessionService = get(),
             sessionManager = sessionManager,
             onCreateNewSession = onCreateNewSession,
+            onRenameComplete = onRenameComplete,
         )
     }
 

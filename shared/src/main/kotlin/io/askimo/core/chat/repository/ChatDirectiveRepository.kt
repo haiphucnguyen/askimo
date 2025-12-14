@@ -5,38 +5,21 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatDirective
+import io.askimo.core.chat.domain.ChatDirectivesTable
+import io.askimo.core.chat.domain.ChatSessionsTable
+import io.askimo.core.chat.domain.DIRECTIVE_CONTENT_MAX_LENGTH
+import io.askimo.core.chat.domain.DIRECTIVE_NAME_MAX_LENGTH
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.upsert
-
-const val DIRECTIVE_NAME_MAX_LENGTH = 128
-const val DIRECTIVE_CONTENT_MAX_LENGTH = 8192
-
-/**
- * Exposed table definition for chat_directives.
- */
-object ChatDirectivesTable : Table("chat_directives") {
-    val id = varchar("id", 36)
-    val name = varchar("name", DIRECTIVE_NAME_MAX_LENGTH)
-    val content = varchar("content", DIRECTIVE_CONTENT_MAX_LENGTH)
-    val createdAt = sqliteDatetime("created_at")
-
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        uniqueIndex(name)
-    }
-}
 
 /**
  * Extension function to map an Exposed ResultRow to a ChatDirective object.

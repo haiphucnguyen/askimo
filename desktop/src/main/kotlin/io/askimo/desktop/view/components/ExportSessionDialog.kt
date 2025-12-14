@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.model.ExportFormat
+import io.askimo.desktop.theme.ComponentColors
 import java.io.File
 import javax.swing.JFileChooser
 
@@ -205,6 +206,7 @@ fun exportSessionDialog(
                         label = { Text(stringResource("session.export.file.path")) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
+                        colors = ComponentColors.outlinedTextFieldColors(),
                     )
 
                     IconButton(

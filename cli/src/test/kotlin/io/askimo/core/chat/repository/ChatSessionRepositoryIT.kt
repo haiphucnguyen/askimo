@@ -5,6 +5,7 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.SESSION_TITLE_MAX_LENGTH
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterAll

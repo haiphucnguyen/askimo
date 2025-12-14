@@ -7,8 +7,9 @@ package io.askimo.core.project
 import dev.langchain4j.model.input.PromptTemplate
 import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.injector.DefaultContentInjector
+import dev.langchain4j.rag.content.retriever.ContentRetriever
 
-fun buildRetrievalAugmentor(retriever: PgVectorContentRetriever) = DefaultRetrievalAugmentor
+fun buildRetrievalAugmentor(retriever: ContentRetriever) = DefaultRetrievalAugmentor
     .builder()
     .contentRetriever(retriever)
     .contentInjector(

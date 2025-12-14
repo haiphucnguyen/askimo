@@ -6,6 +6,7 @@ package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
+import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
 import io.askimo.core.context.MemoryPolicy.RESET_FOR_THIS_COMBO
 import io.askimo.core.i18n.LocalizationManager
@@ -305,8 +306,7 @@ class AppContext(
      *
      * @param indexer The PgVector-backed indexer to use for retrieving relevant context.
      */
-    fun enableRagWith(indexer: PgVectorIndexer) {
-        val retriever = PgVectorContentRetriever(indexer)
+    fun enableRagWith(retriever: ContentRetriever) {
         val rag = buildRetrievalAugmentor(retriever)
 
         val provider = params.currentProvider

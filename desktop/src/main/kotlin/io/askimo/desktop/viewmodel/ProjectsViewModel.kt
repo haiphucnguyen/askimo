@@ -63,11 +63,33 @@ class ProjectsViewModel(
     fun deleteProject(projectId: String) {
         scope.launch {
             try {
+                isLoading = true
                 projectRepository.deleteProject(projectId)
-                log.debug("Deleted project $projectId")
-                loadProjects() // Refresh the list
+                projects = projectRepository.getAllProjects()
             } catch (e: Exception) {
                 log.error("Failed to delete project $projectId", e)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    /**
+     * Update an existing project.
+     */
+    fun updateProject(projectId: String, name: String, description: String?, indexedPaths: String) {
+        scope.launch {
+            try {
+                projectRepository.updateProject(
+                    projectId = projectId,
+                    name = name,
+                    description = description,
+                    indexedPaths = indexedPaths,
+                )
+                log.debug("Updated project $projectId")
+                loadProjects() // Refresh the list
+            } catch (e: Exception) {
+                log.error("Failed to update project $projectId", e)
             }
         }
     }

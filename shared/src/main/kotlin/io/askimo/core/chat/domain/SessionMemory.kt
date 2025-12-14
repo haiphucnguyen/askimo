@@ -4,6 +4,9 @@
  */
 package io.askimo.core.chat.domain
 
+import io.askimo.core.db.sqliteDatetime
+import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.Table
 import java.time.LocalDateTime
 
 /**
@@ -23,3 +26,20 @@ data class SessionMemory(
     val lastUpdated: LocalDateTime = LocalDateTime.now(),
     val createdAt: LocalDateTime = LocalDateTime.now(),
 )
+
+/**
+ * Exposed table definition for session_memory.
+ */
+object SessionMemoryTable : Table("session_memory") {
+    val sessionId = varchar("session_id", 255).references(
+        ChatSessionsTable.id,
+        onDelete = ReferenceOption.CASCADE,
+        onUpdate = ReferenceOption.CASCADE,
+    )
+    val memorySummary = text("memory_summary").nullable()
+    val memoryMessages = text("memory_messages")
+    val lastUpdated = sqliteDatetime("last_updated")
+    val createdAt = sqliteDatetime("created_at")
+
+    override val primaryKey = PrimaryKey(sessionId)
+}

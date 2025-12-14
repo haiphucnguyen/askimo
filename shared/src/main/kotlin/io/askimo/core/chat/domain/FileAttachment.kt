@@ -4,6 +4,8 @@
  */
 package io.askimo.core.chat.domain
 
+import io.askimo.core.db.sqliteDatetime
+import org.jetbrains.exposed.sql.Table
 import java.time.LocalDateTime
 
 /**
@@ -29,3 +31,18 @@ data class FileAttachment(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val content: String? = null,
 )
+
+/**
+ * Exposed table definition for chat_message_attachments.
+ */
+object ChatMessageAttachmentsTable : Table("chat_message_attachments") {
+    val id = varchar("id", 36)
+    val messageId = varchar("message_id", 36).references(ChatMessagesTable.id)
+    val sessionId = varchar("session_id", 36).references(ChatSessionsTable.id)
+    val fileName = varchar("file_name", 255)
+    val mimeType = varchar("mime_type", 100)
+    val size = long("size")
+    val createdAt = sqliteDatetime("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}

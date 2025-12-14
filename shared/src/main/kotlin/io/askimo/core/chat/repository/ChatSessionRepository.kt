@@ -5,14 +5,14 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.ChatSessionsTable
+import io.askimo.core.chat.domain.SESSION_TITLE_MAX_LENGTH
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -21,24 +21,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 import java.util.UUID
-
-const val SESSION_TITLE_MAX_LENGTH = 256
-
-/**
- * Exposed table definition for chat_sessions.
- */
-object ChatSessionsTable : Table("chat_sessions") {
-    val id = varchar("id", 36)
-    val title = varchar("title", SESSION_TITLE_MAX_LENGTH)
-    val createdAt = sqliteDatetime("created_at")
-    val updatedAt = sqliteDatetime("updated_at")
-    val projectId = varchar("project_id", 36).nullable()
-    val directiveId = varchar("directive_id", 36).nullable()
-    val isStarred = integer("is_starred").default(0)
-    val sortOrder = integer("sort_order").default(0)
-
-    override val primaryKey = PrimaryKey(id)
-}
 
 /**
  * Extension function to map an Exposed ResultRow to a ChatSession object.
