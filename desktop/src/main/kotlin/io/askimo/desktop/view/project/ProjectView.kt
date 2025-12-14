@@ -6,19 +6,24 @@ package io.askimo.desktop.view.project
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -38,9 +43,12 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.theme.ComponentColors
+import io.askimo.desktop.view.components.SessionActionMenu
+import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.format.DateTimeFormatter
 
 /**
  * Project view showing project details and chat interface.
@@ -50,13 +58,18 @@ fun projectView(
     project: Project,
     onStartChat: (projectId: String, message: String) -> Unit,
     onResumeSession: (String) -> Unit,
+    onDeleteSession: (String) -> Unit,
+    onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
+    onEditProject: (String) -> Unit,
+    refreshTrigger: Int = 0, // External trigger to refresh sessions list
     modifier: Modifier = Modifier,
 ) {
     var inputText by remember { mutableStateOf("") }
     var projectSessions by remember { mutableStateOf<List<ChatSession>>(emptyList()) }
 
-    // Load sessions for this project
-    LaunchedEffect(project.id) {
+    // Load sessions for this project - refreshes when project.id or refreshTrigger changes
+    LaunchedEffect(project.id, refreshTrigger) {
         projectSessions = withContext(Dispatchers.IO) {
             DatabaseManager.getInstance()
                 .getChatSessionRepository()
@@ -69,14 +82,33 @@ fun projectView(
             .fillMaxSize()
             .padding(24.dp),
     ) {
-        // Project Name Header
-        Text(
-            text = project.name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = project.name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            themedTooltip(text = "Edit project") {
+                IconButton(
+                    onClick = { onEditProject(project.id) },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit project",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
 
         // Project Description (if exists)
         project.description?.let { desc ->
@@ -88,7 +120,6 @@ fun projectView(
             )
         }
 
-        // Chat Input Field (at top)
         OutlinedTextField(
             value = inputText,
             onValueChange = {
@@ -110,9 +141,9 @@ fun projectView(
                 .padding(bottom = 16.dp),
             minLines = 3,
             maxLines = 10,
+            colors = ComponentColors.outlinedTextFieldColors(),
         )
 
-        // Sessions list title
         if (projectSessions.isNotEmpty()) {
             Text(
                 text = "Recent Chats",
@@ -123,7 +154,6 @@ fun projectView(
             )
         }
 
-        // Sessions list (sorted by latest first)
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -138,10 +168,14 @@ fun projectView(
                     )
                 }
             } else {
-                items(projectSessions) { session ->
+                itemsIndexed(projectSessions) { index, session ->
                     sessionCard(
                         session = session,
+                        index = index,
                         onClick = { onResumeSession(session.id) },
+                        onDeleteSession = onDeleteSession,
+                        onRenameSession = onRenameSession,
+                        onExportSession = onExportSession,
                     )
                 }
             }
@@ -152,8 +186,20 @@ fun projectView(
 @Composable
 private fun sessionCard(
     session: ChatSession,
+    index: Int,
     onClick: () -> Unit,
+    onDeleteSession: (String) -> Unit,
+    onRenameSession: (String, String) -> Unit,
+    onExportSession: (String) -> Unit,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    val backgroundColor = if (index % 2 == 0) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -161,44 +207,68 @@ private fun sessionCard(
             .pointerHoverIcon(PointerIcon.Hand),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            containerColor = backgroundColor,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Chat,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             ) {
                 Text(
                     text = session.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = formatDateTime(session.updatedAt),
+                    text = TimeUtil.formatDisplay(session.updatedAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .size(24.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    SessionActionMenu.projectViewMenu(
+                        onExport = { onExportSession(session.id) },
+                        onRename = { onRenameSession(session.id, session.title) },
+                        onDelete = { onDeleteSession(session.id) },
+                        onDismiss = { showMenu = false },
+                    )
+                }
+            }
         }
     }
-}
-
-private fun formatDateTime(dateTime: java.time.LocalDateTime): String {
-    val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
-    return dateTime.format(formatter)
 }

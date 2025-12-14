@@ -5,37 +5,18 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.SessionMemory
+import io.askimo.core.chat.domain.SessionMemoryTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
-import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
-
-/**
- * Exposed table definition for session_memory.
- */
-object SessionMemoryTable : Table("session_memory") {
-    val sessionId = varchar("session_id", 255).references(
-        ChatSessionsTable.id,
-        onDelete = ReferenceOption.CASCADE,
-        onUpdate = ReferenceOption.CASCADE,
-    )
-    val memorySummary = text("memory_summary").nullable()
-    val memoryMessages = text("memory_messages")
-    val lastUpdated = sqliteDatetime("last_updated")
-    val createdAt = sqliteDatetime("created_at")
-
-    override val primaryKey = PrimaryKey(sessionId)
-}
 
 /**
  * Extension function to map an Exposed ResultRow to a SessionMemory object.

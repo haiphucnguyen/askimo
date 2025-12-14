@@ -4,33 +4,17 @@
  */
 package io.askimo.core.chat.repository
 
+import io.askimo.core.chat.domain.ChatMessageAttachmentsTable
 import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
-
-/**
- * Exposed table definition for chat_message_attachments.
- */
-object ChatMessageAttachmentsTable : Table("chat_message_attachments") {
-    val id = varchar("id", 36)
-    val messageId = varchar("message_id", 36).references(ChatMessagesTable.id)
-    val sessionId = varchar("session_id", 36).references(ChatSessionsTable.id)
-    val fileName = varchar("file_name", 255)
-    val mimeType = varchar("mime_type", 100)
-    val size = long("size")
-    val createdAt = sqliteDatetime("created_at")
-
-    override val primaryKey = PrimaryKey(id)
-}
 
 /**
  * Extension function to map an Exposed ResultRow to a FileAttachment object.

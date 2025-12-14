@@ -12,13 +12,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object TimeUtil {
-    private val shortFmt = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
-    private val timestampFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private val instantDisplayFmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm:ss")
 
     fun stamp(): String = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-
-    fun shortStamp(): String = LocalDateTime.now().format(shortFmt)
 
     /**
      * Formats a LocalDateTime with the standard display format for the given locale.

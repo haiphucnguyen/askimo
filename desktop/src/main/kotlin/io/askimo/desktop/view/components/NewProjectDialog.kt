@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.Project
@@ -50,6 +53,7 @@ import kotlinx.serialization.json.Json
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.time.LocalDateTime
 
 /**
  * Validation result for folder path
@@ -189,8 +193,8 @@ fun newProjectDialog(
                     name = projectName.trim(),
                     description = projectDescription.takeIf { it.isNotBlank() },
                     indexedPaths = indexedPathsJson,
-                    createdAt = java.time.LocalDateTime.now(),
-                    updatedAt = java.time.LocalDateTime.now(),
+                    createdAt = LocalDateTime.now(),
+                    updatedAt = LocalDateTime.now(),
                 )
 
                 projectRepository.createProject(project)
@@ -289,6 +293,8 @@ fun newProjectDialog(
                         supportingText = nameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )
 
                     // Description Field (Optional)
@@ -300,6 +306,9 @@ fun newProjectDialog(
                         minLines = 3,
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { handleCreate() }),
                     )
 
                     // Folder Selection
@@ -343,6 +352,7 @@ fun newProjectDialog(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
+                                colors = ComponentColors.outlinedTextFieldColors(),
                             )
 
                             OutlinedButton(

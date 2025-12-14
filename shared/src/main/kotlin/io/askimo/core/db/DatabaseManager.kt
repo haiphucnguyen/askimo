@@ -45,9 +45,6 @@ class DatabaseManager private constructor(
         useInMemory: Boolean,
     ): HikariDataSource {
         val jdbcUrl = if (useInMemory) {
-            // Use in-memory database for tests to avoid file locking issues on Windows
-            // Use file URI with cache=shared so all connections in the pool share the same database
-            // Each repository instance will have its own isolated in-memory database
             "jdbc:sqlite:file:memdb_${System.nanoTime()}?mode=memory&cache=shared"
         } else {
             val dbPath = AskimoHome.base().resolve(databaseFileName).toString()
@@ -117,6 +114,8 @@ class DatabaseManager private constructor(
 
     private fun createSessionsTable(conn: Connection) {
         conn.createStatement().use { stmt ->
+            stmt.execute("PRAGMA foreign_keys = ON")
+
             stmt.executeUpdate(
                 """
                 CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -140,7 +139,6 @@ class DatabaseManager private constructor(
                     """,
                 )
             } catch (e: Exception) {
-                // Column already exists, ignore the error
             }
         }
     }

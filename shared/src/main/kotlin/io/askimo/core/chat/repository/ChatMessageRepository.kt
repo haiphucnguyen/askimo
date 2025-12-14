@@ -5,15 +5,15 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatMessage
+import io.askimo.core.chat.domain.ChatMessageAttachmentsTable
+import io.askimo.core.chat.domain.ChatMessagesTable
 import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
@@ -29,23 +29,6 @@ import java.util.UUID
 enum class PaginationDirection {
     FORWARD,
     BACKWARD,
-}
-
-/**
- * Exposed table definition for chat_messages.
- */
-object ChatMessagesTable : Table("chat_messages") {
-    val id = varchar("id", 36)
-    val sessionId = varchar("session_id", 36)
-    val role = varchar("role", 50)
-    val content = text("content")
-    val createdAt = sqliteDatetime("created_at")
-    val isOutdated = integer("is_outdated").default(0)
-    val editParentId = varchar("edit_parent_id", 36).nullable()
-    val isEdited = integer("is_edited").default(0)
-    val isFailed = integer("is_failed").default(0)
-
-    override val primaryKey = PrimaryKey(id)
 }
 
 /**

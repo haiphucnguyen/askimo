@@ -9,6 +9,7 @@ import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.project.FileWatcherManager
+import io.askimo.core.project.PgVectorContentRetriever
 import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.PostgresContainerManager
 import io.askimo.core.project.ProjectStore
@@ -80,7 +81,7 @@ class CreateProjectCommandHandler(
         appContext.setScope(meta)
 
         if (indexer != null) {
-            appContext.enableRagWith(indexer)
+            appContext.enableRagWith(PgVectorContentRetriever(indexer))
 
             // Start file watcher for the project
             FileWatcherManager.startWatchingProject(projectPath, indexer)

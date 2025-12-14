@@ -25,8 +25,9 @@ import kotlinx.coroutines.withContext
 class SessionsViewModel(
     private val scope: CoroutineScope,
     private val sessionService: ChatSessionService,
-    private val sessionManager: SessionManager? = null,
-    private val onCreateNewSession: (() -> String)? = null,
+    private val sessionManager: SessionManager,
+    private val onCreateNewSession: () -> String,
+    private val onRenameComplete: () -> Unit = {}, // Callback when rename completes
 ) {
     private val log = logger<SessionsViewModel>()
     companion object {
@@ -330,6 +331,7 @@ class SessionsViewModel(
                 if (updated) {
                     refresh()
                     dismissRenameDialog()
+                    onRenameComplete()
                 } else {
                     errorMessage = LocalizationManager.getString("sessions.error.rename.failed")
                 }

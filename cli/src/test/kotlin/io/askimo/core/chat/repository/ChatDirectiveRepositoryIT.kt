@@ -5,6 +5,8 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatDirective
+import io.askimo.core.chat.domain.DIRECTIVE_CONTENT_MAX_LENGTH
+import io.askimo.core.chat.domain.DIRECTIVE_NAME_MAX_LENGTH
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterAll

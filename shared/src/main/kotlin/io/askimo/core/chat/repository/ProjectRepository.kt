@@ -4,36 +4,23 @@
  */
 package io.askimo.core.chat.repository
 
+import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.db.sqliteDatetime
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 import java.util.UUID
-
-/**
- * Exposed table definition for projects.
- */
-object ProjectsTable : Table("projects") {
-    val id = varchar("id", 36)
-    val name = varchar("name", 255)
-    val description = text("description").nullable()
-    val indexedPaths = text("indexed_paths") // JSON array as text
-    val createdAt = sqliteDatetime("created_at")
-    val updatedAt = sqliteDatetime("updated_at")
-
-    override val primaryKey = PrimaryKey(id)
-}
 
 /**
  * Extension function to map an Exposed ResultRow to a Project object.
@@ -135,9 +122,7 @@ class ProjectRepository internal constructor(
     }
 
     /**
-     * Delete a project.
-     * Note: Due to CASCADE constraints, all sessions belonging to this project will be deleted.
-     * This also cascades to messages, attachments, and session memory.
+     * Delete a project and all its associated sessions.
      *
      * @param projectId The project id to delete
      * @return true if deleted successfully
@@ -148,7 +133,7 @@ class ProjectRepository internal constructor(
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
         }
         if (deleted) {
-            log.debug("Deleted project $projectId and all associated sessions")
+            log.debug("Successfully deleted project $projectId")
         }
         return deleted
     }

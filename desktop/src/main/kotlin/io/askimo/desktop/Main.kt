@@ -85,6 +85,7 @@ import io.askimo.desktop.view.View
 import io.askimo.desktop.view.about.aboutDialog
 import io.askimo.desktop.view.chat.chatView
 import io.askimo.desktop.view.components.NativeMenuBar
+import io.askimo.desktop.view.components.editProjectDialog
 import io.askimo.desktop.view.components.eventLogPanel
 import io.askimo.desktop.view.components.eventLogWindow
 import io.askimo.desktop.view.components.exportSessionDialog
@@ -232,7 +233,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var previousView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
-    var isProjectsExpanded by remember { mutableStateOf(false) }
+    var isProjectsExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
     var sidebarWidth by remember { mutableStateOf(280.dp) }
@@ -244,6 +245,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
+    var showEditProjectDialog by remember { mutableStateOf(false) }
+    var editingProjectId by remember { mutableStateOf<String?>(null) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -264,6 +267,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     val appContext = remember { koin.get<AppContext>() }
     val chatSessionService = remember { koin.get<ChatSessionService>() }
 
+    var projectViewRefreshTrigger by remember { mutableStateOf(0) }
+
     val sessionManager = remember { koin.get<SessionManager>() }
     val sessionsViewModel = remember {
         koin.get<SessionsViewModel> {
@@ -278,6 +283,10 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             directiveId = null,
                         ),
                     ).id
+                },
+                {
+                    // Callback when rename completes - refresh ProjectView sessions
+                    projectViewRefreshTrigger++
                 },
             )
         }
@@ -594,6 +603,13 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         onNavigateToChat = {
                                             currentView = View.CHAT
                                         },
+                                        onProjectSessionsChanged = {
+                                            projectViewRefreshTrigger++
+                                        },
+                                        onEditProject = { projectId ->
+                                            editingProjectId = projectId
+                                            showEditProjectDialog = true
+                                        },
                                         activeSessionId = activeSessionId,
                                         sessionChatState = sessionChatStates[activeSessionId],
                                         onChatStateChange = { inputText, attachments, editingMessage ->
@@ -606,6 +622,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                             }
                                         },
                                         selectedProjectId = selectedProjectId,
+                                        projectViewRefreshTrigger = projectViewRefreshTrigger,
                                     )
                                 } else {
                                     Box(
@@ -954,6 +971,27 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
+            // Edit Project Dialog
+            if (showEditProjectDialog) {
+                val projectToEdit = editingProjectId?.let { id ->
+                    projectsViewModel.projects.find { it.id == id }
+                }
+                if (projectToEdit != null) {
+                    editProjectDialog(
+                        project = projectToEdit,
+                        onDismiss = {
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                        onSave = { projectId, name, description, indexedPaths ->
+                            projectsViewModel.updateProject(projectId, name, description, indexedPaths)
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                    )
+                }
+            }
+
             // Event Log Window (Developer Mode - Detached)
             if (showEventLogWindow) {
                 eventLogWindow(
@@ -980,10 +1018,13 @@ fun mainContent(
     onResumeSession: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
+    onProjectSessionsChanged: () -> Unit,
+    onEditProject: (String) -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
+    projectViewRefreshTrigger: Int,
 ) {
     Box(
         modifier = Modifier
@@ -1083,6 +1124,18 @@ fun mainContent(
                                 )
                             },
                             onResumeSession = onResumeSession,
+                            onDeleteSession = { sessionId ->
+                                sessionsViewModel.deleteSessionWithCleanup(sessionId)
+                                onProjectSessionsChanged()
+                            },
+                            onRenameSession = { sessionId, _ ->
+                                sessionsViewModel.showRenameDialog(sessionId)
+                            },
+                            onExportSession = { sessionId ->
+                                sessionsViewModel.exportSession(sessionId)
+                            },
+                            onEditProject = onEditProject,
+                            refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
