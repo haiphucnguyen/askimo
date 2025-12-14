@@ -71,6 +71,7 @@ class DesktopModuleTest : KoinTest {
                     scope,
                     sessionManager,
                     { "test-session-id" },
+                    { }, // onRenameComplete callback
                 )
             },
         )
