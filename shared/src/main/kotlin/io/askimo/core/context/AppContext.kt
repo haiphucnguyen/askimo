@@ -4,7 +4,6 @@
  */
 package io.askimo.core.context
 
-import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
@@ -27,7 +26,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.isInitialized
-
 
 data class Scope(
     val projectName: String,

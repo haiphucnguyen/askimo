@@ -324,13 +324,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    chatViewModel?.setOnMessageCompleteCallback {
-        sessionsViewModel.loadRecentSessions()
+    // Set message complete callback once per chatViewModel instance
+    LaunchedEffect(chatViewModel) {
+        chatViewModel?.setOnMessageCompleteCallback {
+            sessionsViewModel.loadRecentSessions()
 
-        // Track chat completion for star prompt
-        StarPromptPreferences.incrementChatCount()
-        if (StarPromptPreferences.shouldShowStarPrompt()) {
-            showStarPromptDialog = true
+            // Track chat completion for star prompt
+            StarPromptPreferences.incrementChatCount()
+            if (StarPromptPreferences.shouldShowStarPrompt()) {
+                showStarPromptDialog = true
+            }
         }
     }
 
@@ -1114,12 +1117,13 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            onStartChat = { projId, message ->
+                            onStartChat = { projId, message, attachments ->
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
                                     projectName = project.name,
                                     message = message,
+                                    attachments = attachments,
                                     onComplete = { onNavigateToChat() },
                                 )
                             },

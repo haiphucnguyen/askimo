@@ -6,6 +6,12 @@ cat > .git/hooks/pre-commit <<'EOF'
 echo "🔍 Running spotlessApply before commit..."
 ./gradlew spotlessApply
 
+# Check if spotlessApply failed
+if [ $? -ne 0 ]; then
+    echo "❌ Spotless formatting failed! Please fix the errors and try again."
+    exit 1
+fi
+
 # Re-add files that may have been changed by Spotless
 git add -u
 

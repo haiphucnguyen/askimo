@@ -261,8 +261,8 @@ fun messageBubble(
                     Modifier.padding(top = 20.dp)
                 } else {
                     Modifier
-                }
-            )
+                },
+            ),
     ) {
         val maxBubbleWidth = when {
             maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
