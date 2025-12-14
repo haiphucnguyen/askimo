@@ -7,13 +7,9 @@ package io.askimo.core.context
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
-import io.askimo.core.context.MemoryPolicy.KEEP_PER_PROVIDER_MODEL
-import io.askimo.core.context.MemoryPolicy.RESET_FOR_THIS_COMBO
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.project.PgVectorContentRetriever
-import io.askimo.core.project.PgVectorIndexer
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatClient
@@ -27,39 +23,10 @@ import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-/**
- * Controls what happens to the *chat memory* when the active [ChatClient] is re-created
- * (e.g., after `:set-param`, switching provider/model, or any programmatic rebuild).
- *
- * The “combo” refers to the pair **(provider, modelName)** used as the memory bucket key.
- *
- * - [KEEP_PER_PROVIDER_MODEL] – Reuse the existing memory bucket for the current combo.
- *   If the provider or model changes, a different bucket is selected automatically.
- *   Choose this to preserve conversation context across minor setting changes.
- *
- * - [RESET_FOR_THIS_COMBO] – Drop and recreate the memory bucket for the current combo
- *   before rebuilding. Choose this when you want a clean slate (benchmarks, prompt iteration,
- *   avoiding context carryover).
- */
-enum class MemoryPolicy {
-    /**
-     * Reuse the existing memory for the current **(provider, modelName)**.
-     *
-     * If the provider/model changes, the session naturally switches to a different memory bucket
-     * keyed by that new combo. Best for normal chat UX where continuity is expected.
-     */
-    KEEP_PER_PROVIDER_MODEL,
-
-    /**
-     * Clear and recreate the memory for the current **(provider, modelName)** before rebuilding.
-     *
-     * Useful when prior context could bias results or when you want reproducible, clean runs
-     * after each parameter change (e.g., style/verbosity tweaks, API key changes, etc.).
-     */
-    RESET_FOR_THIS_COMBO,
-}
 
 data class Scope(
     val projectName: String,
@@ -89,10 +56,9 @@ class AppContext(
     val mode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
 ) {
     private val log = logger<AppContext>()
-    private val memoryMap = mutableMapOf<String, ChatMemory>()
 
     @Volatile
-    private var autoSaveScheduler: java.util.concurrent.ScheduledExecutorService? = null
+    private var autoSaveScheduler: ScheduledExecutorService? = null
 
     init {
         Runtime.getRuntime().addShutdownHook(
@@ -118,7 +84,7 @@ class AppContext(
      * Start periodic auto-save scheduler
      */
     private fun startPeriodicAutoSave() {
-        autoSaveScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+        autoSaveScheduler = Executors.newSingleThreadScheduledExecutor { r ->
             Thread(r, "memory-auto-saver").apply {
                 isDaemon = true
             }
@@ -260,7 +226,7 @@ class AppContext(
      * @return A newly created [ChatClient] instance that becomes the active model for this session.
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
-    fun rebuildActiveChatClient(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatClient {
+    fun rebuildActiveChatClient(): ChatClient {
         val provider = params.currentProvider
         val factory =
             getModelFactory(provider)
@@ -268,11 +234,6 @@ class AppContext(
 
         val settings = getOrCreateProviderSettings(provider)
         val modelName = params.model
-
-        if (memoryPolicy == RESET_FOR_THIS_COMBO) {
-            val key = "${provider.name}/$modelName"
-            memoryMap.remove(key)
-        }
 
         val newModel = createChatClientFromFactory(factory, modelName, settings, executionMode = mode)
         setChatClient(newModel)
@@ -282,11 +243,8 @@ class AppContext(
     /**
      * Returns the active [ChatClient]. If a model has not been created yet for the
      * current (provider, model) and settings, it will be built now.
-     *
-     * @param memoryPolicy Controls whether the existing memory bucket for this
-     * (provider, model) is reused or reset when building for the first time.
      */
-    fun getChatClient(memoryPolicy: MemoryPolicy = KEEP_PER_PROVIDER_MODEL): ChatClient = if (hasChatClient()) chatClient else rebuildActiveChatClient(memoryPolicy)
+    fun getChatClient(): ChatClient = if (hasChatClient()) chatClient else rebuildActiveChatClient()
 
     /**
      * Enables Retrieval-Augmented Generation (RAG) for the current session using
