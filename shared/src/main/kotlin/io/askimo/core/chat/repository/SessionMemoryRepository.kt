@@ -9,7 +9,6 @@ import io.askimo.core.chat.domain.SessionMemoryTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -77,7 +76,7 @@ class SessionMemoryRepository internal constructor(
      * @param sessionId The session ID to load memory for
      * @return The session memory, or null if not found
      */
-    fun loadMemory(sessionId: String): SessionMemory? = transaction(database) {
+    fun getBySessionId(sessionId: String): SessionMemory? = transaction(database) {
         SessionMemoryTable
             .selectAll()
             .where { SessionMemoryTable.sessionId eq sessionId }

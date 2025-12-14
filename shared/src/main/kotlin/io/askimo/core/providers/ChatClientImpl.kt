@@ -49,7 +49,7 @@ class ChatClientImpl(
 
         // Load new session memory
         try {
-            val savedMemory = sessionMemoryRepository.loadMemory(sessionId)
+            val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
             if (savedMemory != null) {
                 restoreMemoryState(savedMemory)
                 log.debug("Restored memory for session: $sessionId")

@@ -63,6 +63,7 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.i18n.LocalizationManager
@@ -93,6 +94,7 @@ import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
 import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.renameSessionDialog
+import io.askimo.desktop.view.components.sessionMemoryDialog
 import io.askimo.desktop.view.components.starPromptDialog
 import io.askimo.desktop.view.project.projectView
 import io.askimo.desktop.view.sessions.sessionsView
@@ -104,7 +106,10 @@ import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import io.askimo.desktop.viewmodel.UpdateViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
@@ -318,6 +323,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     var showProviderSetupDialog by remember { mutableStateOf(false) }
+    var showSessionMemoryDialog by remember { mutableStateOf(false) }
+    var sessionMemoryToShow by remember { mutableStateOf<io.askimo.core.chat.domain.SessionMemory?>(null) }
+
     LaunchedEffect(Unit) {
         if (appContext.getActiveProvider() == ModelProvider.UNKNOWN) {
             showProviderSetupDialog = true
@@ -543,6 +551,17 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     },
                                     onExportSession = { sessionId ->
                                         sessionsViewModel.exportSession(sessionId)
+                                    },
+                                    onShowSessionSummary = { sessionId ->
+                                        // Query session memory from repository
+                                        scope.launch {
+                                            val memory = withContext(Dispatchers.IO) {
+                                                val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
+                                                repository.getBySessionId(sessionId)
+                                            }
+                                            sessionMemoryToShow = memory
+                                            showSessionMemoryDialog = true
+                                        }
                                     },
                                     onNavigateToSettings = {
                                         previousView = currentView
@@ -936,6 +955,17 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                         sessionsViewModel.executeRename(newTitle)
                         // Refresh the session title in ChatViewModel if currently viewing this session
                         chatViewModel?.refreshSessionTitle()
+                    },
+                )
+            }
+
+            // Session Memory Dialog (Developer Mode)
+            if (showSessionMemoryDialog) {
+                sessionMemoryDialog(
+                    sessionMemory = sessionMemoryToShow,
+                    onDismiss = {
+                        showSessionMemoryDialog = false
+                        sessionMemoryToShow = null
                     },
                 )
             }

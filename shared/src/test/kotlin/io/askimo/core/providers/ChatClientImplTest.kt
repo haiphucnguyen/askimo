@@ -97,7 +97,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -105,7 +105,7 @@ class ChatClientImplTest {
         // Then
         assertEquals(sessionId, chatClient.getCurrentSessionId())
         verify(chatMemory).importState(any())
-        verify(sessionMemoryRepository).loadMemory(sessionId)
+        verify(sessionMemoryRepository).getBySessionId(sessionId)
     }
 
     @Test
@@ -120,7 +120,7 @@ class ChatClientImplTest {
         val state = MemoryState(messages, null)
 
         whenever(chatMemory.exportState()) doReturn state
-        whenever(sessionMemoryRepository.loadMemory(any())) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(any())) doReturn null
 
         // Switch to old session first
         chatClient.switchSession(oldSessionId)
@@ -131,14 +131,14 @@ class ChatClientImplTest {
         // Then
         assertEquals(newSessionId, chatClient.getCurrentSessionId())
         verify(sessionMemoryRepository).saveMemory(argThat { memory -> memory.sessionId == oldSessionId })
-        verify(sessionMemoryRepository).loadMemory(newSessionId)
+        verify(sessionMemoryRepository).getBySessionId(newSessionId)
     }
 
     @Test
     fun `switchSession clears memory when no saved memory exists`() = runBlocking {
         // Given
         val sessionId = "new-session"
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn null
 
         // When
         chatClient.switchSession(sessionId)
@@ -152,7 +152,7 @@ class ChatClientImplTest {
     fun `switchSession handles load error gracefully by clearing memory`() = runBlocking {
         // Given
         val sessionId = "problematic-session"
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doThrow RuntimeException("DB error")
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doThrow RuntimeException("DB error")
 
         // When
         chatClient.switchSession(sessionId)
@@ -169,7 +169,7 @@ class ChatClientImplTest {
         val newSessionId = "session-2"
 
         whenever(chatMemory.exportState()) doThrow RuntimeException("Export failed")
-        whenever(sessionMemoryRepository.loadMemory(any())) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(any())) doReturn null
 
         // Switch to old session first
         chatClient.switchSession(oldSessionId)
@@ -179,7 +179,7 @@ class ChatClientImplTest {
 
         // Then
         assertEquals(newSessionId, chatClient.getCurrentSessionId())
-        verify(sessionMemoryRepository).loadMemory(newSessionId)
+        verify(sessionMemoryRepository).getBySessionId(newSessionId)
     }
 
     @Test
@@ -193,7 +193,7 @@ class ChatClientImplTest {
         val state = MemoryState(messages, null)
 
         whenever(chatMemory.exportState()) doReturn state
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn null
 
         chatClient.switchSession(sessionId)
 
@@ -223,7 +223,7 @@ class ChatClientImplTest {
         val state = MemoryState(messages, summary)
 
         whenever(chatMemory.exportState()) doReturn state
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn null
 
         chatClient.switchSession(sessionId)
 
@@ -270,7 +270,7 @@ class ChatClientImplTest {
         val state = MemoryState(messages, null)
 
         whenever(chatMemory.exportState()) doReturn state
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn null
 
         chatClient.switchSession(sessionId)
 
@@ -300,7 +300,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -325,7 +325,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -350,7 +350,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -374,7 +374,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = "this is not valid JSON",
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -401,7 +401,7 @@ class ChatClientImplTest {
             memorySummary = null,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -427,7 +427,7 @@ class ChatClientImplTest {
             memorySummary = summaryJson,
             memoryMessages = savedMessages,
         )
-        whenever(sessionMemoryRepository.loadMemory(sessionId)) doReturn savedMemory
+        whenever(sessionMemoryRepository.getBySessionId(sessionId)) doReturn savedMemory
 
         // When
         chatClient.switchSession(sessionId)
@@ -455,7 +455,7 @@ class ChatClientImplTest {
         whenever(chatMemory.exportState())
             .doReturn(state1)
             .doReturn(state2)
-        whenever(sessionMemoryRepository.loadMemory(any())) doReturn null
+        whenever(sessionMemoryRepository.getBySessionId(any())) doReturn null
 
         // When
         chatClient.switchSession(session1)

@@ -100,6 +100,7 @@ fun navigationSidebar(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit,
 ) {
     // Animated width for smooth transition
@@ -131,6 +132,7 @@ fun navigationSidebar(
             onStarSession = onStarSession,
             onRenameSession = onRenameSession,
             onExportSession = onExportSession,
+            onShowSessionSummary = onShowSessionSummary,
             onNavigateToSettings = onNavigateToSettings,
         )
     } else {
@@ -168,6 +170,7 @@ private fun expandedNavigationSidebar(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit,
 ) {
     Column(
@@ -322,6 +325,7 @@ private fun expandedNavigationSidebar(
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
+                    onShowSessionSummary = onShowSessionSummary,
                 )
             }
         }
@@ -691,6 +695,7 @@ private fun sessionsList(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
 ) {
     var isStarredExpanded by remember { mutableStateOf(true) }
 
@@ -768,6 +773,7 @@ private fun sessionsList(
                                 onStarSession = onStarSession,
                                 onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
+                                onShowSessionSummary = onShowSessionSummary,
                             )
                         }
                     }
@@ -795,6 +801,7 @@ private fun sessionsList(
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
+                    onShowSessionSummary = onShowSessionSummary,
                 )
             }
 
@@ -832,6 +839,7 @@ private fun sessionItemWithMenu(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -900,6 +908,7 @@ private fun sessionItemWithMenu(
                     onRename = { onRenameSession(session.id, session.title ?: "") },
                     onStar = { onStarSession(session.id, !session.isStarred) },
                     onDelete = { onDeleteSession(session.id) },
+                    onShowSessionSummary = { onShowSessionSummary(session.id) },
                     onDismiss = { showMenu = false },
                 )
             }
