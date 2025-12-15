@@ -87,11 +87,26 @@ class ChatSessionService(
         val session = sessionRepository.getSession(sessionId)
         val projectId = session?.projectId
 
-        // Create memory instance for this session
+        // Get current provider settings to check if AI summarization is enabled
+        val provider = appContext.getActiveProvider()
+        val factory = appContext.getModelFactory(provider)
+        val settings = appContext.getCurrentProviderSettings()
+
+        // Get summarizer from factory if available
+        @Suppress("UNCHECKED_CAST")
+        val summarizer = (factory as? io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+            ?.createSummarizer(settings)
+
+        // Create memory instance for this session with AI summarizer
         val memory = TokenAwareSummarizingMemory.Builder()
             .maxTokens(4000)
             .summarizationThreshold(0.75)
             .asyncSummarization(true)
+            .apply {
+                if (summarizer != null) {
+                    summarizer(summarizer)
+                }
+            }
             .build()
 
         // Create base delegate client from AppContext
@@ -263,15 +278,22 @@ class ChatSessionService(
         return createdMessage
     }
 
-    fun saveAiResponse(sessionId: String, response: String, isFailed: Boolean = false): ChatMessage = addMessage(
-        ChatMessage(
-            id = "",
-            sessionId = sessionId,
-            role = MessageRole.ASSISTANT,
-            content = response,
-            isFailed = isFailed,
-        ),
-    )
+    fun saveAiResponse(sessionId: String, response: String, isFailed: Boolean = false): ChatMessage {
+        val message = addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = sessionId,
+                role = MessageRole.ASSISTANT,
+                content = response,
+                isFailed = isFailed,
+            ),
+        )
+
+        // Save memory after AI response
+        saveSessionMemory(sessionId)
+
+        return message
+    }
 
     /**
      * Get all messages for a session.
@@ -456,6 +478,9 @@ class ChatSessionService(
             ),
         )
         sessionRepository.touchSession(sessionId)
+
+        // Save memory after adding user message
+        saveSessionMemory(sessionId)
 
         // Generate title from first user message
         val messages = messageRepository.getMessages(sessionId)

@@ -4,12 +4,16 @@
  */
 package io.askimo.core.providers.openai
 
+import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiChatModel.OpenAiChatModelBuilder
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
@@ -68,13 +72,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                     configureProxy(settings.apiKey)
                 }.build()
 
-        // Create separate summarizer model if AI summarization enabled
-        val summarizerModel = if (settings.enableAiSummarization) {
-            createSummarizerModel(settings)
-        } else {
-            null
-        }
-
         // Note: Memory is NOT included in the delegate returned by factory.
         // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
@@ -114,6 +111,51 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         return builder.build()
     }
 
+    override fun createSummarizer(settings: OpenAiSettings): ((String) -> ConversationSummary)? {
+        if (!settings.enableAiSummarization) {
+            return null
+        }
+
+        val summarizerModel = createSummarizerModel(settings)
+
+        return { conversationText ->
+            // Use the summarizer model to generate structured summary
+            val prompt = """
+                Analyze the following conversation and provide a structured summary in JSON format.
+                Extract key facts, main topics, and recent context.
+
+                Conversation:
+                $conversationText
+
+                Respond with JSON only (no markdown formatting):
+                {
+                    "keyFacts": {"fact_name": "fact_value", ...},
+                    "mainTopics": ["topic1", "topic2", ...],
+                    "recentContext": "brief summary of the most recent discussion"
+                }
+            """.trimIndent()
+
+            try {
+                val response = summarizerModel.chat(UserMessage.from(prompt))
+                // Parse JSON response into ConversationSummary
+                val json = response.aiMessage().text()
+                    .removePrefix("```json").removeSuffix("```").trim()
+
+                kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                }.decodeFromString<ConversationSummary>(json)
+            } catch (e: Exception) {
+                // Fallback to simple extractive summary
+                ConversationSummary(
+                    keyFacts = emptyMap(),
+                    mainTopics = emptyList(),
+                    recentContext = conversationText.takeLast(500),
+                )
+            }
+        }
+    }
+
     private fun supportsSampling(model: String): Boolean {
         val m = model.lowercase()
         return !(m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
@@ -134,9 +176,9 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     /**
      * Configure proxy settings for OpenAI streaming chat model builder.
      */
-    private fun OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder.configureProxy(
+    private fun OpenAiStreamingChatModelBuilder.configureProxy(
         apiKey: String,
-    ): OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder {
+    ): OpenAiStreamingChatModelBuilder {
         if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             baseUrl("${AppConfig.proxy.url}/openai/v1")
             customHeaders(buildProxyHeaders(apiKey))
@@ -147,9 +189,9 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     /**
      * Configure proxy settings for OpenAI chat model builder.
      */
-    private fun OpenAiChatModel.OpenAiChatModelBuilder.configureProxy(
+    private fun OpenAiChatModelBuilder.configureProxy(
         apiKey: String,
-    ): OpenAiChatModel.OpenAiChatModelBuilder {
+    ): OpenAiChatModelBuilder {
         if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             baseUrl("${AppConfig.proxy.url}/openai/v1")
             customHeaders(buildProxyHeaders(apiKey))

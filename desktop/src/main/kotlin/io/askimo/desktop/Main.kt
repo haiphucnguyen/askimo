@@ -68,6 +68,7 @@ import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.provideLocalization
@@ -114,6 +115,7 @@ import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
+import org.koin.java.KoinJavaComponent.inject
 import java.awt.Cursor
 import java.awt.Desktop
 import java.util.UUID
@@ -147,6 +149,8 @@ fun detectMacOSDarkMode(): Boolean {
         false
     }
 }
+
+private val log = logger("Main")
 
 fun main() {
     startKoin {
@@ -205,7 +209,16 @@ fun main() {
 
         Window(
             icon = icon,
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                // Save all session memories before closing
+                val chatSessionService: ChatSessionService by inject(ChatSessionService::class.java)
+                try {
+                    chatSessionService.saveAllSessionMemories()
+                } catch (e: Exception) {
+                    log.error("Failed to save session memories on exit: ${e.message}")
+                }
+                exitApplication()
+            },
             title = "Askimo",
             state = windowState,
         ) {
@@ -306,11 +319,11 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(5000)
+        delay(5000)
         updateViewModel.checkForUpdates(silent = true)
 
         while (true) {
-            kotlinx.coroutines.delay(24 * 60 * 60 * 1000L) // 24 hours
+            delay(24 * 60 * 60 * 1000L) // 24 hours
             updateViewModel.checkForUpdates(silent = true)
         }
     }
