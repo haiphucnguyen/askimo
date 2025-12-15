@@ -21,11 +21,10 @@ import org.slf4j.LoggerFactory
 class ChatClientImpl(
     private val delegate: ChatClient,
     private val chatMemory: TokenAwareSummarizingMemory,
+    private val sessionId: String,
     private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
 ) : ChatClient {
-    private var currentSessionId: String? = null
     private val log = LoggerFactory.getLogger(ChatClientImpl::class.java)
-    private val chatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository()
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -35,50 +34,11 @@ class ChatClientImpl(
 
     override fun sendMessage(prompt: String): String = delegate.sendMessage(prompt)
 
-    override suspend fun switchSession(sessionId: String) {
-        log.info("Switching session from ${currentSessionId ?: "none"} to $sessionId")
-
-        // Save current session if exists
-        currentSessionId?.let { oldSessionId ->
-            try {
-                saveCurrentSession()
-                log.debug("Saved memory for session: $oldSessionId")
-            } catch (e: Exception) {
-                log.error("Failed to save memory for session: $oldSessionId", e)
-            }
-        }
-
-        val session = chatSessionRepository.getSession(sessionId)
-        val projectId = session?.projectId
-
-        if (projectId != null) {
-            log.debug("Session $sessionId belongs to project: $projectId")
-            // TODO: Handle project-specific session (RAG enabled)
-        } else {
-            try {
-                val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
-                if (savedMemory != null) {
-                    restoreMemoryState(savedMemory)
-                    log.debug("Restored memory for session: $sessionId")
-                } else {
-                    chatMemory.clear()
-                    log.debug("No existing memory found for session: $sessionId, starting fresh")
-                }
-            } catch (e: Exception) {
-                log.error("Failed to load memory for session: $sessionId", e)
-                chatMemory.clear()
-            }
-        }
-
-        currentSessionId = sessionId
-    }
-
-    override suspend fun saveCurrentSession() {
-        val sessionId = currentSessionId ?: run {
-            log.warn("Cannot save memory: no current session")
-            return
-        }
-
+    /**
+     * Save the current memory state for this session.
+     * Should be called explicitly when the session needs to be persisted.
+     */
+    fun saveMemory() {
         try {
             val state = chatMemory.exportState()
             val sessionMemory = SessionMemory(
@@ -94,22 +54,25 @@ class ChatClientImpl(
         }
     }
 
-    override fun getCurrentSessionId(): String? = currentSessionId
-
     override fun clearMemory() {
         chatMemory.clear()
-        log.debug("Cleared memory for session: ${currentSessionId ?: "none"}")
+        log.debug("Cleared memory for session: $sessionId")
     }
 
-    private fun restoreMemoryState(savedMemory: SessionMemory) {
+    /**
+     * Restore memory state from saved session memory.
+     * Typically called during client initialization.
+     */
+    fun restoreMemoryState(savedMemory: SessionMemory) {
         try {
             val summary = savedMemory.memorySummary?.let {
                 json.decodeFromString<ConversationSummary>(it)
             }
             val messages = deserializeMessages(savedMemory.memoryMessages)
             chatMemory.importState(MemoryState(messages, summary))
+            log.debug("Restored memory for session: $sessionId")
         } catch (e: Exception) {
-            log.error("Failed to deserialize memory state", e)
+            log.error("Failed to deserialize memory state for session: $sessionId", e)
             chatMemory.clear()
         }
     }

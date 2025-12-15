@@ -9,6 +9,7 @@ import io.askimo.core.chat.domain.SessionMemoryTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -82,6 +83,16 @@ class SessionMemoryRepository internal constructor(
             .where { SessionMemoryTable.sessionId eq sessionId }
             .singleOrNull()
             ?.toSessionMemory()
+    }
+
+    /**
+     * Delete session memory by session ID.
+     *
+     * @param sessionId The session ID to delete memory for
+     * @return Number of records deleted (0 or 1)
+     */
+    fun deleteBySessionId(sessionId: String): Int = transaction(database) {
+        SessionMemoryTable.deleteWhere { SessionMemoryTable.sessionId eq sessionId }
     }
 
     /**

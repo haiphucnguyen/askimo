@@ -18,13 +18,9 @@ import io.askimo.core.providers.NoopChatClient
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import kotlin.isInitialized
 
 data class Scope(
@@ -55,69 +51,6 @@ class AppContext(
     val mode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
 ) {
     private val log = logger<AppContext>()
-
-    @Volatile
-    private var autoSaveScheduler: ScheduledExecutorService? = null
-
-    init {
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                try {
-                    log.info("Shutdown hook triggered - saving session memory")
-                    if (::_chatClient.isInitialized) {
-                        runBlocking {
-                            _chatClient.saveCurrentSession()
-                        }
-                        log.info("Successfully saved memory on application shutdown")
-                    }
-                } catch (e: Exception) {
-                    log.error("Failed to save memory on shutdown", e)
-                }
-            },
-        )
-
-        startPeriodicAutoSave()
-    }
-
-    /**
-     * Start periodic auto-save scheduler
-     */
-    private fun startPeriodicAutoSave() {
-        autoSaveScheduler = Executors.newSingleThreadScheduledExecutor { r ->
-            Thread(r, "memory-auto-saver").apply {
-                isDaemon = true
-            }
-        }
-
-        autoSaveScheduler?.scheduleAtFixedRate({
-            try {
-                if (::_chatClient.isInitialized) {
-                    runBlocking {
-                        _chatClient.saveCurrentSession()
-                    }
-                    log.debug("Periodic auto-save completed")
-                }
-            } catch (e: Exception) {
-                log.error("Periodic auto-save failed", e)
-            }
-        }, 5, 5, TimeUnit.MINUTES)
-    }
-
-    /**
-     * Stop the periodic auto-save scheduler
-     */
-    fun stopAutoSave() {
-        autoSaveScheduler?.shutdown()
-        try {
-            val terminated = autoSaveScheduler?.awaitTermination(10, TimeUnit.SECONDS) ?: true
-            if (!terminated) {
-                autoSaveScheduler?.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            autoSaveScheduler?.shutdownNow()
-            Thread.currentThread().interrupt()
-        }
-    }
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
@@ -212,8 +145,6 @@ class AppContext(
     /**
      * Rebuilds and returns a new instance of the active chat model based on current session parameters.
      *
-     * @param memoryPolicy Controls whether to keep or reset the chat memory for the current
-     *                     provider/model combination. Default is [MemoryPolicy.KEEP_PER_PROVIDER_MODEL].
      * @return A newly created [ChatClient] instance that becomes the active model for this session.
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
@@ -239,21 +170,19 @@ class AppContext(
 
     /**
      * Enables Retrieval-Augmented Generation (RAG) for the current session using
-     * the provided PgVectorIndexer.
+     * the provided content retriever.
      *
-     * This method wires the indexer into a PgVectorContentRetriever and builds a
-     * retrieval augmentor, then recreates the active ChatClient with the same
-     * provider, model, settings, and memory bucket, but augmented with retrieval.
+     * This method wires the retriever into a retrieval augmentor and rebuilds the
+     * active ChatClient with the same provider, model, and settings, but augmented
+     * with retrieval capabilities.
      *
      * Notes:
-     * - Memory is preserved; the conversation context for the current (provider, model)
-     *   is reused.
      * - Requires that a model factory is registered for the current provider; otherwise
      *   an IllegalStateException is thrown.
      * - Typically called after setScope(...) when switching to a project that has
      *   indexed content.
      *
-     * @param indexer The PgVector-backed indexer to use for retrieving relevant context.
+     * @param retriever The content retriever to use for retrieving relevant context.
      */
     fun enableRagWith(retriever: ContentRetriever) {
         val rag = buildRetrievalAugmentor(retriever)

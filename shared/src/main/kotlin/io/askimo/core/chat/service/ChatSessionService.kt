@@ -14,13 +14,16 @@ import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
+import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import kotlinx.coroutines.runBlocking
+import io.askimo.core.memory.TokenAwareSummarizingMemory
+import io.askimo.core.providers.ChatClientImpl
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Result of resuming a chat session.
@@ -54,16 +57,94 @@ data class ResumeSessionPaginatedResult(
  *
  * @param sessionRepository The chat session repository
  * @param messageRepository The chat message repository
- * @param conversationSummaryRepository The conversation summary repository
- * @param folderRepository The chat folder repository
+ * @param directiveRepository The chat directive repository
+ * @param sessionMemoryRepository The session memory repository
+ * @param appContext The application context
  */
 class ChatSessionService(
     private val sessionRepository: ChatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository(),
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
     private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository(),
+    private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
     private val appContext: AppContext,
 ) {
     private val log = logger<ChatSessionService>()
+
+    /**
+     * Cache of session-specific ChatClient instances.
+     * Each session gets its own client with bound memory.
+     */
+    private val clientCache = ConcurrentHashMap<String, ChatClientImpl>()
+
+    /**
+     * Get or create a ChatClient for a specific session.
+     * - For sessions without a project: Creates a standard client
+     * - For sessions with a project: Creates a RAG-enabled client (TODO: implement RAG)
+     * - Loads saved memory from database if available
+     * - Caches the client for reuse
+     */
+    private fun getOrCreateClientForSession(sessionId: String): ChatClientImpl = clientCache.getOrPut(sessionId) {
+        val session = sessionRepository.getSession(sessionId)
+        val projectId = session?.projectId
+
+        // Create memory instance for this session
+        val memory = TokenAwareSummarizingMemory.Builder()
+            .maxTokens(4000)
+            .summarizationThreshold(0.75)
+            .asyncSummarization(true)
+            .build()
+
+        // Create base delegate client from AppContext
+        val baseDelegate = appContext.getChatClient()
+
+        // Create session-bound client
+        val client = ChatClientImpl(
+            delegate = baseDelegate,
+            chatMemory = memory,
+            sessionId = sessionId,
+            sessionMemoryRepository = sessionMemoryRepository,
+        )
+
+        // Load saved memory if available
+        val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
+        if (savedMemory != null) {
+            client.restoreMemoryState(savedMemory)
+            log.debug("Restored memory for session: $sessionId")
+        } else {
+            log.debug("No existing memory found for session: $sessionId, starting fresh")
+        }
+
+        if (projectId != null) {
+            log.debug("Session $sessionId belongs to project: $projectId")
+            // TODO: Enable RAG for project sessions
+            // This will be implemented when RAG feature is ready
+        }
+
+        client
+    }
+
+    /**
+     * Save memory for a specific session.
+     * Should be called when switching sessions or before app shutdown.
+     */
+    private fun saveSessionMemory(sessionId: String) {
+        clientCache[sessionId]?.saveMemory()
+    }
+
+    /**
+     * Save all active session memories.
+     * Useful before app shutdown.
+     */
+    fun saveAllSessionMemories() {
+        clientCache.keys.forEach { sessionId ->
+            try {
+                saveSessionMemory(sessionId)
+                log.debug("Saved memory for session: $sessionId")
+            } catch (e: Exception) {
+                log.error("Failed to save memory for session: $sessionId", e)
+            }
+        }
+    }
 
     /**
      * Get all sessions sorted by most recently updated first.
@@ -129,9 +210,8 @@ class ChatSessionService(
     fun createSession(session: ChatSession): ChatSession {
         val createdSession = sessionRepository.createSession(session)
 
-        runBlocking {
-            appContext.getChatClient().switchSession(createdSession.id)
-        }
+        // Pre-create the client for this session to initialize memory
+        getOrCreateClientForSession(createdSession.id)
 
         return createdSession
     }
@@ -144,7 +224,11 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
+        // Remove from client cache and clean up
+        clientCache.remove(sessionId)
+
         messageRepository.deleteMessagesBySession(sessionId)
+        sessionMemoryRepository.deleteBySessionId(sessionId)
 
         return sessionRepository.deleteSession(sessionId)
     }
@@ -251,9 +335,8 @@ class ChatSessionService(
      * @return ResumeSessionResult containing success status, messages, and any error
      */
     fun resumeSession(sessionId: String): ResumeSessionResult {
-        runBlocking {
-            appContext.getChatClient().switchSession(sessionId)
-        }
+        // Get or create client for this session
+        getOrCreateClientForSession(sessionId)
 
         val messages = messageRepository.getMessages(sessionId)
         return ResumeSessionResult(
@@ -275,9 +358,8 @@ class ChatSessionService(
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
-            runBlocking {
-                appContext.getChatClient().switchSession(sessionId)
-            }
+            // Get or create client for this session
+            getOrCreateClientForSession(sessionId)
 
             val (messages, cursor) = messageRepository.getMessagesPaginated(
                 sessionId = sessionId,

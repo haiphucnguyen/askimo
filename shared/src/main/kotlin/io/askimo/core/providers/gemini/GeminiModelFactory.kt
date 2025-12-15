@@ -9,11 +9,8 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiTokenCountEstimator
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils
@@ -70,21 +67,12 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .modelName(model)
             .build()
 
-        val memoryConfig = MemoryConfig(
-            maxTokens = AppConfig.chat.maxTokens,
-            summarizationThreshold = AppConfig.chat.summarizationThreshold,
-            tokenEstimator = tokenEstimator::estimateTokenCountInMessage,
-            summarizerModel = summarizerModel,
-            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
-        )
-
-        val chatMemory = memoryConfig.createMemory()
-
+        // Note: Memory is NOT included in the delegate returned by factory.
+        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
@@ -129,7 +117,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 
     private fun supportsSampling(model: String): Boolean = true

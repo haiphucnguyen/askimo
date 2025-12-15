@@ -9,9 +9,7 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -58,17 +56,12 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     temperature(s.temperature)
                     topP(s.topP)
                 }.build()
-
-        val chatMemory = TokenAwareSummarizingMemory.builder()
-            .maxTokens(8000)
-            .summarizationThreshold(0.75)
-            .build()
-
+        // Note: Memory is NOT included in the delegate returned by factory.
+        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
@@ -100,6 +93,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 }
