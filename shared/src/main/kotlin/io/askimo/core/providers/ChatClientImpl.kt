@@ -25,6 +25,7 @@ class ChatClientImpl(
 ) : ChatClient {
     private var currentSessionId: String? = null
     private val log = LoggerFactory.getLogger(ChatClientImpl::class.java)
+    private val chatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository()
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -47,19 +48,26 @@ class ChatClientImpl(
             }
         }
 
-        // Load new session memory
-        try {
-            val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
-            if (savedMemory != null) {
-                restoreMemoryState(savedMemory)
-                log.debug("Restored memory for session: $sessionId")
-            } else {
+        val session = chatSessionRepository.getSession(sessionId)
+        val projectId = session?.projectId
+
+        if (projectId != null) {
+            log.debug("Session $sessionId belongs to project: $projectId")
+            // TODO: Handle project-specific session (RAG enabled)
+        } else {
+            try {
+                val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
+                if (savedMemory != null) {
+                    restoreMemoryState(savedMemory)
+                    log.debug("Restored memory for session: $sessionId")
+                } else {
+                    chatMemory.clear()
+                    log.debug("No existing memory found for session: $sessionId, starting fresh")
+                }
+            } catch (e: Exception) {
+                log.error("Failed to load memory for session: $sessionId", e)
                 chatMemory.clear()
-                log.debug("No existing memory found for session: $sessionId, starting fresh")
             }
-        } catch (e: Exception) {
-            log.error("Failed to load memory for session: $sessionId", e)
-            chatMemory.clear()
         }
 
         currentSessionId = sessionId

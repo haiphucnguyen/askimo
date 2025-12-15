@@ -4,14 +4,19 @@
  */
 package io.askimo.desktop.view.components
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -104,17 +109,31 @@ fun sessionMemoryDialog(
                         }
 
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp),
                             colors = ComponentColors.surfaceVariantCardColors(),
                         ) {
-                            androidx.compose.foundation.text.selection.SelectionContainer {
-                                Text(
-                                    text = formatJson(sessionMemory.memorySummary ?: stringResource("developer.session.memory.empty")),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                val scrollState = rememberScrollState()
+                                SelectionContainer {
+                                    Text(
+                                        text = formatJson(sessionMemory.memorySummary ?: stringResource("developer.session.memory.empty")),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .fillMaxWidth()
+                                            .verticalScroll(scrollState),
+                                    )
+                                }
+                                VerticalScrollbar(
                                     modifier = Modifier
-                                        .padding(16.dp)
-                                        .fillMaxWidth(),
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 4.dp),
+                                    adapter = rememberScrollbarAdapter(scrollState),
                                 )
                             }
                         }
@@ -154,16 +173,26 @@ fun sessionMemoryDialog(
                                 .height(300.dp),
                             colors = ComponentColors.surfaceVariantCardColors(),
                         ) {
-                            val scrollState = rememberScrollState()
-                            androidx.compose.foundation.text.selection.SelectionContainer {
-                                Text(
-                                    text = formatJson(sessionMemory.memoryMessages.ifBlank { stringResource("developer.session.memory.empty") }),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                val scrollState = rememberScrollState()
+                                SelectionContainer {
+                                    Text(
+                                        text = formatJson(sessionMemory.memoryMessages.ifBlank { stringResource("developer.session.memory.empty") }),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .fillMaxWidth()
+                                            .verticalScroll(scrollState),
+                                    )
+                                }
+                                VerticalScrollbar(
                                     modifier = Modifier
-                                        .padding(16.dp)
-                                        .fillMaxWidth()
-                                        .verticalScroll(scrollState),
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 4.dp),
+                                    adapter = rememberScrollbarAdapter(scrollState),
                                 )
                             }
                         }
@@ -205,7 +234,6 @@ private fun formatJson(text: String): String {
     if (text.isBlank()) return text
 
     return try {
-        // Try to parse and re-format the JSON with indentation
         val objectMapper = ObjectMapper()
         val jsonNode = objectMapper.readTree(text)
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode)
