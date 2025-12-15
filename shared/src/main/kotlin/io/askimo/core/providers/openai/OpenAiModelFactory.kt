@@ -69,6 +69,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         settings: OpenAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
@@ -83,8 +84,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                     configureProxy(settings.apiKey)
                 }.build()
 
-        // Note: Memory is NOT included in the delegate returned by factory.
-        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
@@ -93,6 +92,10 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                     // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
+                    }
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
                     }
                 }
                 .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)

@@ -34,6 +34,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         settings: AnthropicSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         val chatModel =
             AnthropicStreamingChatModel
@@ -51,6 +52,10 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .streamingChatModel(chatModel)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }

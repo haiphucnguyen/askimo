@@ -16,7 +16,6 @@ import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
-import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
@@ -67,7 +66,11 @@ class LuceneIndexer(
 
     private fun buildEmbeddingModel(): EmbeddingModel = getEmbeddingModel(appContext)
 
-    private val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
+    /**
+     * The embedding model used for creating embeddings.
+     * Exposed for creating ContentRetriever in ChatSessionService.
+     */
+    val embeddingModel: EmbeddingModel by lazy { buildEmbeddingModel() }
 
     private val dimension: Int by lazy {
         AppConfig.embedding.preferredDim ?: embeddingModel.dimension()
@@ -76,8 +79,9 @@ class LuceneIndexer(
     /**
      * Cached embedding store instance to avoid recreating it multiple times.
      * Initialized lazily when first accessed.
+     * Exposed for creating ContentRetriever in ChatSessionService.
      */
-    private val embeddingStore: EmbeddingStore<TextSegment> by lazy { newStore() }
+    val embeddingStore: EmbeddingStore<TextSegment> by lazy { newStore() }
 
     private fun newStore(): EmbeddingStore<TextSegment> {
         // Ensure index directory exists
@@ -91,6 +95,76 @@ class LuceneIndexer(
             .build()
     }
 
+    /**
+     * Index multiple paths (files or directories) recursively.
+     * This is used when a project has multiple indexed paths configured.
+     *
+     * @param paths List of paths to index (can be files or directories)
+     * @return Number of files indexed
+     */
+    fun indexPaths(paths: List<Path>): Int {
+        var totalIndexedFiles = 0
+
+        paths.forEach { path ->
+            if (!Files.exists(path)) {
+                println("⚠️  Path does not exist, skipping: $path")
+                return@forEach
+            }
+
+            totalIndexedFiles += if (Files.isDirectory(path)) {
+                indexProject(path)
+            } else if (Files.isRegularFile(path)) {
+                indexSingleFile(path)
+                1
+            } else {
+                0
+            }
+        }
+
+        return totalIndexedFiles
+    }
+
+    /**
+     * Index a single file.
+     *
+     * @param filePath Path to the file to index
+     */
+    private fun indexSingleFile(filePath: Path) {
+        try {
+            if (tooLargeToIndex(filePath)) {
+                println("  ⚠️  Skipped ${filePath.fileName}: file too large")
+                return
+            }
+
+            val content = safeReadText(filePath)
+            if (content.isBlank()) {
+                return
+            }
+
+            val fileName = filePath.fileName.toString()
+            val header = buildFileHeader(fileName, filePath)
+            val body = header + content
+
+            val chunks = chunkText(body, maxCharsPerChunk, chunkOverlap, filePath.extension.lowercase())
+
+            chunks.forEach { chunk ->
+                val textSegment = TextSegment.from(chunk, createMetadata(fileName, filePath))
+                val embedding = embeddingModel.embed(textSegment).content()
+                embeddingStore.add(embedding, textSegment)
+            }
+
+            println("  ✅ Indexed: $fileName (${chunks.size} chunks)")
+        } catch (e: Exception) {
+            println("  ❌ Failed to index ${filePath.fileName}: ${e.message}")
+        }
+    }
+
+    /**
+     * Indexes an entire project directory recursively.
+     *
+     * @param root Root directory of the project to index
+     * @return Number of files indexed
+     */
     fun indexProject(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
 
@@ -208,54 +282,6 @@ class LuceneIndexer(
     }
 
     /**
-     * Indexes a single file and adds it to the embedding store.
-     */
-    fun indexSingleFile(filePath: Path, relativePath: String) {
-        if (!Files.exists(filePath) || !filePath.isRegularFile()) {
-            return
-        }
-
-        if (tooLargeToIndex(filePath)) {
-            log.display("⚠️ Skipped ${filePath.fileName}: file > $maxFileBytes bytes")
-            return
-        }
-
-        val content = safeReadText(filePath)
-        if (content.isBlank()) return
-
-        val header = buildFileHeader(relativePath, filePath)
-        val body = header + content
-
-        val chunks = chunkText(body, maxCharsPerChunk, chunkOverlap, filePath.extension.lowercase())
-
-        chunks.forEachIndexed { idx, chunk ->
-            val seg = TextSegment.from(
-                chunk,
-                Metadata(
-                    mapOf(
-                        "project_id" to projectId,
-                        "file_path" to relativePath,
-                        "file_name" to filePath.fileName.toString(),
-                        "extension" to filePath.extension,
-                        "chunk_index" to idx.toString(),
-                        "chunk_total" to chunks.size.toString(),
-                    ),
-                ),
-            )
-
-            try {
-                val embedding = withRetry(retryAttempts, retryBaseDelayMs) {
-                    embeddingModel.embed(seg)
-                }
-                embeddingStore.add(embedding.content(), seg)
-                throttle()
-            } catch (e: Throwable) {
-                log.displayError("Failed to index chunk $idx of ${filePath.fileName}", e)
-            }
-        }
-    }
-
-    /**
      * Removes all chunks for a specific file from the embedding store.
      */
     fun removeFileFromIndex(relativePath: String) {
@@ -353,6 +379,21 @@ class LuceneIndexer(
         appendLine("EXT: ${filePath.extension.lowercase()}")
         appendLine("---")
     }
+
+    /**
+     * Create metadata for a text segment.
+     */
+    private fun createMetadata(
+        fileName: String,
+        filePath: Path,
+    ): Metadata = Metadata(
+        mapOf(
+            "project_id" to projectId,
+            "file_path" to fileName,
+            "file_name" to fileName,
+            "extension" to filePath.extension,
+        ),
+    )
 
     /** Prefer reading as UTF-8; if it fails, try platform default; then ASCII fallback. */
     private fun safeReadText(path: Path): String = try {

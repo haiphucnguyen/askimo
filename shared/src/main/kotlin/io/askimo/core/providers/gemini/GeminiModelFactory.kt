@@ -42,6 +42,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         settings: GeminiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         val chatModel =
             GoogleAiGeminiStreamingChatModel
@@ -74,6 +75,10 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }

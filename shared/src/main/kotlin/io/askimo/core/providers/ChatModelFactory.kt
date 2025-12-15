@@ -40,6 +40,8 @@ interface ChatModelFactory<T : ProviderSettings> {
      * into prompts during generation. Pass null to disable retrieval augmentation.
      * @param executionMode The execution mode indicating how the user is running the application.
      * Tools are disabled for DESKTOP mode.
+     * @param chatMemory Optional chat memory for conversation context. If provided, memory will be
+     * integrated into the LangChain4j AI service.
      * @return A configured ChatModel instance
      */
     fun create(
@@ -47,6 +49,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        chatMemory: dev.langchain4j.memory.ChatMemory? = null,
     ): ChatClient
 
     /**

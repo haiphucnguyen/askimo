@@ -147,7 +147,14 @@ class AppContext(
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-    ): ChatClient = (factory as ChatModelFactory<T>).create(model, settings, retrievalAugmentor, executionMode)
+        chatMemory: dev.langchain4j.memory.ChatMemory? = null,
+    ): ChatClient = (factory as ChatModelFactory<T>).create(
+        model = model,
+        settings = settings,
+        retrievalAugmentor = retrievalAugmentor,
+        executionMode = executionMode,
+        chatMemory = chatMemory,
+    )
 
     /**
      * Rebuilds and returns a new instance of the active chat model based on current session parameters.
@@ -199,14 +206,19 @@ class AppContext(
      * Unlike getChatClient(), this method:
      * - Does NOT use the cached _chatClient
      * - Creates a new instance every time
-     * - Provides a stateless base for wrapping with session-specific memory
+     * - Properly integrates memory into the LangChain4j AI service
      *
      * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
      *                  If provided, the client will be created with RAG capabilities.
+     * @param memory Optional chat memory for conversation context. If provided, memory will be
+     *               integrated into the LangChain4j AI service.
      * @return A newly created [ChatClient] instance
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
-    fun createFreshChatClient(retriever: ContentRetriever? = null): ChatClient {
+    fun createFreshChatClient(
+        retriever: ContentRetriever? = null,
+        memory: dev.langchain4j.memory.ChatMemory? = null,
+    ): ChatClient {
         val provider = params.currentProvider
         val factory = getModelFactory(provider)
             ?: error("No model factory registered for $provider")
@@ -221,6 +233,7 @@ class AppContext(
             settings = settings,
             retrievalAugmentor = retrievalAugmentor,
             executionMode = mode,
+            chatMemory = memory,
         )
     }
 

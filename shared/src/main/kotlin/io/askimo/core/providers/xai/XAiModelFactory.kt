@@ -38,6 +38,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         settings: XAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
@@ -60,6 +61,10 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .streamingChatModel(chatModel)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }

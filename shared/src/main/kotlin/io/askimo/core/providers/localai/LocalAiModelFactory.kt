@@ -42,6 +42,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         settings: LocalAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         val chatModel =
             LocalAiStreamingChatModel
@@ -64,6 +65,10 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .streamingChatModel(chatModel)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }

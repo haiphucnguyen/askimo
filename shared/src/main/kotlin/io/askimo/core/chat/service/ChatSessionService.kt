@@ -22,9 +22,13 @@ import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
-import io.askimo.core.providers.ChatClientImpl
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.rag.lucence.LuceneIndexer
+import kotlinx.serialization.json.Json
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
@@ -76,19 +80,20 @@ class ChatSessionService(
 
     /**
      * Cache of session-specific ChatClient instances.
-     * Each session gets its own client with bound memory.
+     * Each session gets its own client with integrated memory.
      */
-    private val clientCache = ConcurrentHashMap<String, ChatClientImpl>()
+    private val clientCache = ConcurrentHashMap<String, ChatClient>()
 
     /**
      * Get or create a ChatClient for a specific session.
      * - Creates a self-managing memory that handles its own persistence
-     * - For sessions with a project: Creates a RAG-enabled client (TODO: implement RAG)
+     * - Integrates memory directly into LangChain4j AI service
+     * - For sessions with a project: Creates a RAG-enabled client if project has indexed paths
      * - Memory automatically loads from database on creation
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    private fun getOrCreateClientForSession(sessionId: String): ChatClientImpl = clientCache.getOrPut(sessionId) {
+    private fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
@@ -102,7 +107,6 @@ class ChatSessionService(
             ?.createSummarizer(settings)
 
         // Create self-managing memory that handles its own persistence
-        // Memory automatically loads from database in init block
         val memory = TokenAwareSummarizingMemory(
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
@@ -112,32 +116,86 @@ class ChatSessionService(
             asyncSummarization = true,
         )
 
-        // Create FRESH base delegate client - NOT from AppContext cache
-        // This ensures each session gets a clean, stateless client as its base
-        val baseDelegate = if (project != null) {
+        // Create content retriever if project has indexed paths
+        val retriever = if (project != null) {
             log.debug("Session $sessionId belongs to project: ${project.id}")
-            // TODO: Create content retriever for project and enable RAG
-            val retriever = null // Will be implemented when RAG is ready
-            appContext.createFreshChatClient(retriever)
+            createRetrieverForProject(project)
         } else {
-            appContext.createFreshChatClient()
+            null
         }
 
-        // Create session-bound client
-        // Note: We don't pass sessionMemoryRepository to ChatClientImpl because
-        // TokenAwareSummarizingMemory now handles its own persistence
-        ChatClientImpl(
-            delegate = baseDelegate,
-            chatMemory = memory,
-            sessionId = sessionId,
-            sessionMemoryRepository = null, // Not needed - memory handles persistence itself
-        )
+        // Memory is now properly integrated into the LangChain4j AI service
+        appContext.createFreshChatClient(retriever = retriever, memory = memory)
+    }
+
+    /**
+     * Create a content retriever for a project if it has indexed paths.
+     *
+     * @param project The project to create a retriever for
+     * @return Content retriever if project has indexed paths, null otherwise
+     */
+    private fun createRetrieverForProject(project: io.askimo.core.chat.domain.Project): dev.langchain4j.rag.content.retriever.ContentRetriever? {
+        try {
+            // Parse indexed paths from JSON array
+            val indexedPaths = parseIndexedPaths(project.indexedPaths)
+
+            if (indexedPaths.isEmpty()) {
+                log.debug("Project ${project.id} has no indexed paths, RAG disabled")
+                return null
+            }
+
+            log.debug("Creating RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
+
+            // Create LuceneIndexer for this project
+            val indexer = LuceneIndexer(
+                projectId = project.id,
+                appContext = appContext,
+            )
+
+            // Create content retriever from the indexer's embedding store
+            return dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
+                .builder()
+                .embeddingStore(indexer.embeddingStore)
+                .embeddingModel(indexer.embeddingModel)
+                .maxResults(5)
+                .minScore(0.7)
+                .build()
+        } catch (e: Exception) {
+            log.error("Failed to create content retriever for project ${project.id}", e)
+            return null
+        }
+    }
+
+    /**
+     * Parse indexed paths from JSON array string.
+     *
+     * @param indexedPathsJson JSON array string of paths, e.g., "['/path1', '/path2']"
+     * @return List of Path objects
+     */
+    private fun parseIndexedPaths(indexedPathsJson: String): List<Path> = try {
+        val json = Json { ignoreUnknownKeys = true }
+        val paths = json.decodeFromString<List<String>>(indexedPathsJson)
+        paths.map { Paths.get(it) }
+    } catch (e: Exception) {
+        log.error("Failed to parse indexed paths: $indexedPathsJson", e)
+        emptyList()
     }
 
     /**
      * Get all sessions sorted by most recently updated first.
      */
     fun getAllSessionsSorted(): List<ChatSession> = sessionRepository.getAllSessions().sortedByDescending { it.createdAt }
+
+    /**
+     * Clear memory for a specific session.
+     * This removes all conversation history from memory but does not delete the session or messages from the database.
+     *
+     * @param sessionId The ID of the session to clear memory for
+     */
+    fun clearSessionMemory(sessionId: String) {
+        clientCache[sessionId]?.clearMemory()
+        log.debug("Cleared memory for session: $sessionId")
+    }
 
     /**
      * Get all sessions without a project, sorted by star status and updated time.
@@ -198,7 +256,6 @@ class ChatSessionService(
     fun createSession(session: ChatSession): ChatSession {
         val createdSession = sessionRepository.createSession(session)
 
-        // Pre-create the client for this session to initialize memory
         getOrCreateClientForSession(createdSession.id)
 
         return createdSession

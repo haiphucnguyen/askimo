@@ -38,6 +38,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         settings: LmStudioSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: dev.langchain4j.memory.ChatMemory?,
     ): ChatClient {
         // LMStudio requires HTTP/1.1
         val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
@@ -64,6 +65,10 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .streamingChatModel(chatModel)
                 .apply {
                     // Only enable tools for non-DESKTOP modes
+                    // Integrate chat memory if provided
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
