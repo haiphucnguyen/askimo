@@ -4,6 +4,7 @@
  */
 package io.askimo.core.chat.repository
 
+import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
@@ -86,6 +87,22 @@ class ProjectRepository internal constructor(
         ProjectsTable
             .selectAll()
             .where { ProjectsTable.id eq projectId }
+            .singleOrNull()
+            ?.toProject()
+    }
+
+    /**
+     * Find a project by session ID.
+     * Joins the sessions table to find which project a session belongs to.
+     *
+     * @param sessionId The chat session id
+     * @return The project that the session belongs to, or null if session has no project or not found
+     */
+    fun findProjectBySessionId(sessionId: String): Project? = transaction(database) {
+        ProjectsTable
+            .innerJoin(ChatSessionsTable)
+            .selectAll()
+            .where { ChatSessionsTable.id eq sessionId }
             .singleOrNull()
             ?.toProject()
     }

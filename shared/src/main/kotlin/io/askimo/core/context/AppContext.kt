@@ -68,7 +68,14 @@ class AppContext(
      * Sets the chat model for this session.
      *
      * @param chatClient The chat model to use for this session
+     * @deprecated This method is part of the old global caching mechanism. Use createFreshChatClient() instead.
+     * Will be removed once CLI is refactored to use session-specific clients.
      */
+    @Deprecated(
+        message = "Use createFreshChatClient() for session-specific clients",
+        replaceWith = ReplaceWith("createFreshChatClient()"),
+        level = DeprecationLevel.WARNING,
+    )
     fun setChatClient(chatClient: ChatClient) {
         this._chatClient = chatClient
         if (chatClient is NoopChatClient) {
@@ -134,7 +141,7 @@ class AppContext(
      * factory and settings types match for each provider.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun <T : ProviderSettings> createChatClientFromFactory(
+    fun <T : ProviderSettings> createChatClientFromFactory(
         factory: ChatModelFactory<*>,
         model: String,
         settings: T,
@@ -147,7 +154,15 @@ class AppContext(
      *
      * @return A newly created [ChatClient] instance that becomes the active model for this session.
      * @throws IllegalStateException if no model factory is registered for the current provider.
+     * @deprecated This method is part of the old global caching mechanism. Use createFreshChatClient() instead.
+     * Will be removed once CLI is refactored to use session-specific clients.
      */
+    @Deprecated(
+        message = "Use createFreshChatClient() for session-specific clients",
+        replaceWith = ReplaceWith("createFreshChatClient()"),
+        level = DeprecationLevel.WARNING,
+    )
+    @Suppress("DEPRECATION")
     fun rebuildActiveChatClient(): ChatClient {
         val provider = params.currentProvider
         val factory =
@@ -165,8 +180,49 @@ class AppContext(
     /**
      * Returns the active [ChatClient]. If a model has not been created yet for the
      * current (provider, model) and settings, it will be built now.
+     *
+     * @deprecated This method returns a cached client that may have state from previous sessions.
+     * Use createFreshChatClient() for session-specific clients. Will be removed once CLI is refactored.
      */
+    @Deprecated(
+        message = "Use createFreshChatClient() for session-specific clients",
+        replaceWith = ReplaceWith("createFreshChatClient()"),
+        level = DeprecationLevel.WARNING,
+    )
+    @Suppress("DEPRECATION")
     fun getChatClient(): ChatClient = if (::_chatClient.isInitialized) _chatClient else rebuildActiveChatClient()
+
+    /**
+     * Creates a fresh ChatClient instance without using cache.
+     * This should be used when you need a clean client as a base delegate for session-specific clients.
+     *
+     * Unlike getChatClient(), this method:
+     * - Does NOT use the cached _chatClient
+     * - Creates a new instance every time
+     * - Provides a stateless base for wrapping with session-specific memory
+     *
+     * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
+     *                  If provided, the client will be created with RAG capabilities.
+     * @return A newly created [ChatClient] instance
+     * @throws IllegalStateException if no model factory is registered for the current provider.
+     */
+    fun createFreshChatClient(retriever: ContentRetriever? = null): ChatClient {
+        val provider = params.currentProvider
+        val factory = getModelFactory(provider)
+            ?: error("No model factory registered for $provider")
+        val settings = getOrCreateProviderSettings(provider)
+        val modelName = params.model
+
+        val retrievalAugmentor = retriever?.let { buildRetrievalAugmentor(it) }
+
+        return createChatClientFromFactory(
+            factory = factory,
+            model = modelName,
+            settings = settings,
+            retrievalAugmentor = retrievalAugmentor,
+            executionMode = mode,
+        )
+    }
 
     /**
      * Enables Retrieval-Augmented Generation (RAG) for the current session using
@@ -184,6 +240,7 @@ class AppContext(
      *
      * @param retriever The content retriever to use for retrieving relevant context.
      */
+    @Suppress("DEPRECATION")
     fun enableRagWith(retriever: ContentRetriever) {
         val rag = buildRetrievalAugmentor(retriever)
 

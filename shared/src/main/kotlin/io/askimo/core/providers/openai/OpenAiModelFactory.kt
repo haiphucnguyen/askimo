@@ -13,6 +13,7 @@ import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
@@ -24,8 +25,18 @@ import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import kotlinx.serialization.json.Json
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
+    private val log = logger<OpenAiModelFactory>()
+
+    companion object {
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+    }
+
     override fun availableModels(settings: OpenAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
 
@@ -119,7 +130,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         val summarizerModel = createSummarizerModel(settings)
 
         return { conversationText ->
-            // Use the summarizer model to generate structured summary
             val prompt = """
                 Analyze the following conversation and provide a structured summary in JSON format.
                 Extract key facts, main topics, and recent context.
@@ -137,16 +147,12 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
             try {
                 val response = summarizerModel.chat(UserMessage.from(prompt))
-                // Parse JSON response into ConversationSummary
-                val json = response.aiMessage().text()
+                val jsonText = response.aiMessage().text()
                     .removePrefix("```json").removeSuffix("```").trim()
 
-                kotlinx.serialization.json.Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                }.decodeFromString<ConversationSummary>(json)
+                json.decodeFromString<ConversationSummary>(jsonText)
             } catch (e: Exception) {
-                // Fallback to simple extractive summary
+                log.error("Failed to generate conversation summary with OpenAI summarizer", e)
                 ConversationSummary(
                     keyFacts = emptyMap(),
                     mainTopics = emptyList(),

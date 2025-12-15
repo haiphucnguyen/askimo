@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
+import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
@@ -22,6 +23,8 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClientImpl
+import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ProviderSettings
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
@@ -66,6 +69,7 @@ class ChatSessionService(
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
     private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository(),
     private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
+    private val projectRepository: ProjectRepository = DatabaseManager.getInstance().getProjectRepository(),
     private val appContext: AppContext,
 ) {
     private val log = logger<ChatSessionService>()
@@ -78,14 +82,14 @@ class ChatSessionService(
 
     /**
      * Get or create a ChatClient for a specific session.
-     * - For sessions without a project: Creates a standard client
+     * - Creates a self-managing memory that handles its own persistence
      * - For sessions with a project: Creates a RAG-enabled client (TODO: implement RAG)
-     * - Loads saved memory from database if available
+     * - Memory automatically loads from database on creation
+     * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
     private fun getOrCreateClientForSession(sessionId: String): ChatClientImpl = clientCache.getOrPut(sessionId) {
-        val session = sessionRepository.getSession(sessionId)
-        val projectId = session?.projectId
+        val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
         val provider = appContext.getActiveProvider()
@@ -94,71 +98,40 @@ class ChatSessionService(
 
         // Get summarizer from factory if available
         @Suppress("UNCHECKED_CAST")
-        val summarizer = (factory as? io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+        val summarizer = (factory as? ChatModelFactory<ProviderSettings>)
             ?.createSummarizer(settings)
 
-        // Create memory instance for this session with AI summarizer
-        val memory = TokenAwareSummarizingMemory.Builder()
-            .maxTokens(4000)
-            .summarizationThreshold(0.75)
-            .asyncSummarization(true)
-            .apply {
-                if (summarizer != null) {
-                    summarizer(summarizer)
-                }
-            }
-            .build()
+        // Create self-managing memory that handles its own persistence
+        // Memory automatically loads from database in init block
+        val memory = TokenAwareSummarizingMemory(
+            sessionId = sessionId,
+            sessionMemoryRepository = sessionMemoryRepository,
+            maxTokens = 4000,
+            summarizationThreshold = 0.75,
+            summarizer = summarizer,
+            asyncSummarization = true,
+        )
 
-        // Create base delegate client from AppContext
-        val baseDelegate = appContext.getChatClient()
+        // Create FRESH base delegate client - NOT from AppContext cache
+        // This ensures each session gets a clean, stateless client as its base
+        val baseDelegate = if (project != null) {
+            log.debug("Session $sessionId belongs to project: ${project.id}")
+            // TODO: Create content retriever for project and enable RAG
+            val retriever = null // Will be implemented when RAG is ready
+            appContext.createFreshChatClient(retriever)
+        } else {
+            appContext.createFreshChatClient()
+        }
 
         // Create session-bound client
-        val client = ChatClientImpl(
+        // Note: We don't pass sessionMemoryRepository to ChatClientImpl because
+        // TokenAwareSummarizingMemory now handles its own persistence
+        ChatClientImpl(
             delegate = baseDelegate,
             chatMemory = memory,
             sessionId = sessionId,
-            sessionMemoryRepository = sessionMemoryRepository,
+            sessionMemoryRepository = null, // Not needed - memory handles persistence itself
         )
-
-        // Load saved memory if available
-        val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
-        if (savedMemory != null) {
-            client.restoreMemoryState(savedMemory)
-            log.debug("Restored memory for session: $sessionId")
-        } else {
-            log.debug("No existing memory found for session: $sessionId, starting fresh")
-        }
-
-        if (projectId != null) {
-            log.debug("Session $sessionId belongs to project: $projectId")
-            // TODO: Enable RAG for project sessions
-            // This will be implemented when RAG feature is ready
-        }
-
-        client
-    }
-
-    /**
-     * Save memory for a specific session.
-     * Should be called when switching sessions or before app shutdown.
-     */
-    private fun saveSessionMemory(sessionId: String) {
-        clientCache[sessionId]?.saveMemory()
-    }
-
-    /**
-     * Save all active session memories.
-     * Useful before app shutdown.
-     */
-    fun saveAllSessionMemories() {
-        clientCache.keys.forEach { sessionId ->
-            try {
-                saveSessionMemory(sessionId)
-                log.debug("Saved memory for session: $sessionId")
-            } catch (e: Exception) {
-                log.error("Failed to save memory for session: $sessionId", e)
-            }
-        }
     }
 
     /**
@@ -289,9 +262,6 @@ class ChatSessionService(
             ),
         )
 
-        // Save memory after AI response
-        saveSessionMemory(sessionId)
-
         return message
     }
 
@@ -357,7 +327,6 @@ class ChatSessionService(
      * @return ResumeSessionResult containing success status, messages, and any error
      */
     fun resumeSession(sessionId: String): ResumeSessionResult {
-        // Get or create client for this session
         getOrCreateClientForSession(sessionId)
 
         val messages = messageRepository.getMessages(sessionId)
@@ -478,9 +447,6 @@ class ChatSessionService(
             ),
         )
         sessionRepository.touchSession(sessionId)
-
-        // Save memory after adding user message
-        saveSessionMemory(sessionId)
 
         // Generate title from first user message
         val messages = messageRepository.getMessages(sessionId)

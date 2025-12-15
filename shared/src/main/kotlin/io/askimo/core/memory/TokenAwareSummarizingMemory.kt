@@ -9,6 +9,7 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
+import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.logging.logger
 import kotlinx.serialization.Serializable
 import java.util.Collections
@@ -34,22 +35,39 @@ data class ConversationSummary(
  * AI-powered summary or a simple extractive summary of older messages to preserve
  * context without exceeding token limits.
  *
- * @param maxTokens Maximum number of tokens to keep in memory (excluding summary)
- * @param tokenEstimator Function to estimate token count for a message (words * 1.3 is a reasonable approximation)
- * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization
+ * Memory persistence is mandatory - sessionId and sessionMemoryRepository are required.
+ * The memory automatically loads from database on creation and saves after every change.
+ *
+ * @param sessionId The session ID this memory belongs to (required for persistence)
+ * @param sessionMemoryRepository Repository for persisting memory state (required)
+ * @param maxTokens Maximum number of tokens to keep in memory (excluding summary), default 4000
+ * @param tokenEstimator Function to estimate token count for a message (default: words * 1.3)
+ * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization, default 0.75
  * @param summarizer Optional function that takes conversation text and returns a ConversationSummary (for AI-powered summarization)
- * @param executorService ExecutorService for async summarization operations
- * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds
+ * @param asyncSummarization Whether to run summarization asynchronously, default true
+ * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 30
  */
-class TokenAwareSummarizingMemory private constructor(
-    private val maxTokens: Int,
-    private val tokenEstimator: (ChatMessage) -> Int,
-    private val summarizationThreshold: Double,
-    private val summarizer: ((String) -> ConversationSummary)?,
-    private val executorService: ExecutorService,
-    private val summarizationTimeoutSeconds: Long,
+class TokenAwareSummarizingMemory(
+    private val sessionId: String,
+    private val sessionMemoryRepository: SessionMemoryRepository,
+    private val maxTokens: Int = 4000,
+    private val tokenEstimator: (ChatMessage) -> Int = defaultTokenEstimator(),
+    private val summarizationThreshold: Double = 0.75,
+    private val summarizer: ((String) -> ConversationSummary)? = null,
+    asyncSummarization: Boolean = true,
+    private val summarizationTimeoutSeconds: Long = 30,
 ) : ChatMemory,
     AutoCloseable {
+
+    private val executorService: ExecutorService = if (asyncSummarization) {
+        Executors.newSingleThreadExecutor { r ->
+            Thread(r, "memory-summarizer").apply {
+                isDaemon = true
+            }
+        }
+    } else {
+        Executors.newSingleThreadExecutor()
+    }
     private val messages = Collections.synchronizedList(mutableListOf<ChatMessage>())
 
     @Volatile private var structuredSummary: ConversationSummary? = null
@@ -60,14 +78,23 @@ class TokenAwareSummarizingMemory private constructor(
     private val summarizationLock = ReentrantLock()
     private val log = logger<TokenAwareSummarizingMemory>()
 
+    init {
+        // Load existing memory from database on initialization
+        loadFromDatabase()
+    }
+
     override fun id(): Any = this.hashCode()
 
     /**
      * Add message to memory. Non-blocking - triggers async summarization if needed.
+     * Automatically persists to database if configured with sessionId and repository.
      */
     override fun add(message: ChatMessage) {
         messages.add(message)
         log.debug("Added message. Total messages: ${messages.size}")
+
+        // Persist to database after adding message
+        persistToDatabase()
 
         val totalTokens = estimateTotalTokens()
         val threshold = (maxTokens * summarizationThreshold).toInt()
@@ -84,7 +111,6 @@ class TokenAwareSummarizingMemory private constructor(
         structuredSummary?.let { summary ->
             add(SystemMessage.from(buildStructuredSummaryMessage(summary)))
         } ?: basicSummary?.let { summary ->
-            // Fallback to basic summary if structured one isn't available
             add(
                 SystemMessage.from(
                     """
@@ -207,6 +233,9 @@ class TokenAwareSummarizingMemory private constructor(
                 messages.removeAt(0)
             }
         }
+
+        // Persist updated memory state to database
+        persistToDatabase()
 
         log.info("Summarization complete. Remaining: ${messages.size}, Tokens: ${estimateTotalTokens()}")
     }
@@ -361,101 +390,135 @@ class TokenAwareSummarizingMemory private constructor(
         val summary: ConversationSummary?,
     )
 
+    /**
+     * Load memory state from database.
+     * Called automatically during initialization.
+     */
+    private fun loadFromDatabase() {
+        try {
+            val savedMemory = sessionMemoryRepository.getBySessionId(sessionId)
+            if (savedMemory != null) {
+                // Deserialize and restore state
+                val state = deserializeMemoryState(savedMemory)
+                importState(state)
+                log.info("Loaded memory from database for session: $sessionId (${messages.size} messages)")
+            } else {
+                log.debug("No existing memory found in database for session: $sessionId")
+            }
+        } catch (e: Exception) {
+            log.error("Failed to load memory from database for session: $sessionId", e)
+        }
+    }
+
+    /**
+     * Persist current memory state to database.
+     * Called automatically after adding messages or summarizing.
+     */
+    private fun persistToDatabase() {
+        try {
+            val state = exportState()
+            val sessionMemory = serializeMemoryState(sessionId, state)
+            sessionMemoryRepository.saveMemory(sessionMemory)
+            log.debug("Persisted memory to database for session: $sessionId")
+        } catch (e: Exception) {
+            log.error("Failed to persist memory to database for session: $sessionId", e)
+        }
+    }
+
+    /**
+     * Serialize memory state to SessionMemory domain object for database storage.
+     */
+    private fun serializeMemoryState(
+        sessionId: String,
+        state: MemoryState,
+    ): io.askimo.core.chat.domain.SessionMemory {
+        val summaryJson = state.summary?.let {
+            kotlinx.serialization.json.Json.encodeToString(
+                ConversationSummary.serializer(),
+                it,
+            )
+        }
+
+        // Convert ChatMessage to serializable format
+        val serializableMessages = state.messages.map { msg ->
+            SerializableMessage(
+                type = when (msg) {
+                    is UserMessage -> "user"
+                    is AiMessage -> "assistant"
+                    is SystemMessage -> "system"
+                    else -> "unknown"
+                },
+                content = msg.getTextContent(),
+            )
+        }
+
+        val messagesJson = kotlinx.serialization.json.Json.encodeToString(
+            kotlinx.serialization.builtins.ListSerializer(SerializableMessage.serializer()),
+            serializableMessages,
+        )
+
+        return io.askimo.core.chat.domain.SessionMemory(
+            sessionId = sessionId,
+            memorySummary = summaryJson,
+            memoryMessages = messagesJson,
+            lastUpdated = java.time.LocalDateTime.now(),
+        )
+    }
+
+    /**
+     * Deserialize SessionMemory from database to MemoryState.
+     */
+    private fun deserializeMemoryState(
+        sessionMemory: io.askimo.core.chat.domain.SessionMemory,
+    ): MemoryState {
+        val summary = sessionMemory.memorySummary?.let {
+            kotlinx.serialization.json.Json.decodeFromString(
+                ConversationSummary.serializer(),
+                it,
+            )
+        }
+
+        val serializableMessages = kotlinx.serialization.json.Json.decodeFromString(
+            kotlinx.serialization.builtins.ListSerializer(SerializableMessage.serializer()),
+            sessionMemory.memoryMessages,
+        )
+
+        // Convert back to ChatMessage
+        val messages = serializableMessages.map { msg ->
+            when (msg.type) {
+                "user" -> UserMessage.from(msg.content)
+                "assistant" -> AiMessage.from(msg.content)
+                "system" -> SystemMessage.from(msg.content)
+                else -> UserMessage.from(msg.content) // fallback
+            }
+        }
+
+        return MemoryState(messages = messages, summary = summary)
+    }
+
+    /**
+     * Serializable representation of a chat message for database storage.
+     */
+    @Serializable
+    private data class SerializableMessage(
+        val type: String,
+        val content: String,
+    )
+
     companion object {
         private const val MAX_SUMMARY_LENGTH = 500 // characters
 
         /**
-         * Creates a builder for TokenAwareSummarizingMemory
+         * Default token estimator that approximates token count as word count * 1.3
          */
-        fun builder(): Builder = Builder()
-    }
-
-    /**
-     * Builder for TokenAwareSummarizingMemory with fluent API
-     */
-    class Builder {
-        private var maxTokens: Int = 4000
-        private var tokenEstimator: ((ChatMessage) -> Int)? = null
-        private var summarizationThreshold: Double = 0.75
-        private var summarizer: ((String) -> ConversationSummary)? = null
-        private var asyncSummarization: Boolean = true
-        private var summarizationTimeoutSeconds: Long = 30
-
-        /**
-         * Set maximum tokens to keep in memory (excluding summary)
-         */
-        fun maxTokens(maxTokens: Int) = apply { this.maxTokens = maxTokens }
-
-        /**
-         * Set custom token estimator function. If not set, uses default word count * 1.3 estimation.
-         *
-         * Example with OpenAI tokenizer:
-         * ```
-         * val tokenEstimator = OpenAiTokenCountEstimator(OpenAiChatModelName.GPT_4_1_MINI)
-         * .tokenEstimator { message -> tokenEstimator.estimateTokenCountInMessage(message) }
-         * ```
-         *
-         * Or simply pass the tokenizer object directly:
-         * ```
-         * .tokenEstimator(OpenAiTokenCountEstimator(OpenAiChatModelName.GPT_4_1_MINI)::estimateTokenCountInMessage)
-         * ```
-         */
-        fun tokenEstimator(estimator: (ChatMessage) -> Int) = apply { this.tokenEstimator = estimator }
-
-        /**
-         * Set summarization threshold (0.0-1.0). Default is 0.75 (75% of maxTokens)
-         */
-        fun summarizationThreshold(threshold: Double) = apply { this.summarizationThreshold = threshold }
-
-        /**
-         * Set optional AI-powered summarizer function
-         */
-        fun summarizer(summarizer: (String) -> ConversationSummary) = apply { this.summarizer = summarizer }
-
-        /**
-         * Enable/disable async summarization. Default: true (async).
-         * Disable only for testing or simple use cases.
-         */
-        fun asyncSummarization(enabled: Boolean) = apply { this.asyncSummarization = enabled }
-
-        /**
-         * Timeout for summarization operations in seconds. Default: 30.
-         */
-        fun summarizationTimeout(seconds: Long) = apply { this.summarizationTimeoutSeconds = seconds }
-
-        /**
-         * Build the TokenAwareSummarizingMemory instance
-         */
-        fun build(): TokenAwareSummarizingMemory {
-            val finalTokenEstimator = tokenEstimator ?: { message ->
-                // Default: approximate token count as word count * 1.3
-                val text = when (message) {
-                    is UserMessage -> message.singleText() ?: ""
-                    is AiMessage -> message.text() ?: ""
-                    is SystemMessage -> message.text() ?: ""
-                    else -> ""
-                }
-                (text.split("\\s+".toRegex()).size * 1.3).toInt()
+        fun defaultTokenEstimator(): (ChatMessage) -> Int = { message ->
+            val text = when (message) {
+                is UserMessage -> message.singleText() ?: ""
+                is AiMessage -> message.text() ?: ""
+                is SystemMessage -> message.text() ?: ""
+                else -> ""
             }
-
-            val executorService = if (asyncSummarization) {
-                Executors.newSingleThreadExecutor { r ->
-                    Thread(r, "memory-summarizer").apply {
-                        isDaemon = true
-                    }
-                }
-            } else {
-                Executors.newSingleThreadExecutor()
-            }
-
-            return TokenAwareSummarizingMemory(
-                maxTokens = maxTokens,
-                tokenEstimator = finalTokenEstimator,
-                summarizationThreshold = summarizationThreshold,
-                summarizer = summarizer,
-                executorService = executorService,
-                summarizationTimeoutSeconds = summarizationTimeoutSeconds,
-            )
+            (text.split("\\s+".toRegex()).size * 1.3).toInt()
         }
     }
 }

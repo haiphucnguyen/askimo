@@ -115,7 +115,6 @@ import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
-import org.koin.java.KoinJavaComponent.inject
 import java.awt.Cursor
 import java.awt.Desktop
 import java.util.UUID
@@ -210,13 +209,6 @@ fun main() {
         Window(
             icon = icon,
             onCloseRequest = {
-                // Save all session memories before closing
-                val chatSessionService: ChatSessionService by inject(ChatSessionService::class.java)
-                try {
-                    chatSessionService.saveAllSessionMemories()
-                } catch (e: Exception) {
-                    log.error("Failed to save session memories on exit: ${e.message}")
-                }
                 exitApplication()
             },
             title = "Askimo",

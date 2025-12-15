@@ -50,6 +50,7 @@ object AppContextFactory {
         }
     }
 
+    @Suppress("DEPRECATION") // Legacy CLI initialization - will be refactored to use session-specific clients
     private fun buildAppContext(params: AppContextParams, mode: ExecutionMode): AppContext {
         log.debug("Building session with params: {}, mode: {}", params, mode)
 
