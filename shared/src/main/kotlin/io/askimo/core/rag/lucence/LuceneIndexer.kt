@@ -96,6 +96,21 @@ class LuceneIndexer(
     }
 
     /**
+     * Check if the Lucene index has any content.
+     * Returns false if the index is empty or doesn't exist.
+     */
+    fun isIndexPopulated(): Boolean {
+        return try {
+            val testEmbedding = embed("test")
+            val results = similaritySearch(testEmbedding, 1)
+            results.isNotEmpty()
+        } catch (e: Exception) {
+            log.debug("Index check failed, assuming empty: ${e.message}")
+            false
+        }
+    }
+
+    /**
      * Index multiple paths (files or directories) recursively.
      * This is used when a project has multiple indexed paths configured.
      *

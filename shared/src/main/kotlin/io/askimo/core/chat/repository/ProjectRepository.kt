@@ -10,6 +10,7 @@ import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -100,12 +101,13 @@ class ProjectRepository internal constructor(
      */
     fun findProjectBySessionId(sessionId: String): Project? = transaction(database) {
         ProjectsTable
-            .innerJoin(ChatSessionsTable)
-            .selectAll()
+            .join(ChatSessionsTable, JoinType.INNER, ProjectsTable.id, ChatSessionsTable.projectId)
+            .select(ProjectsTable.columns)
             .where { ChatSessionsTable.id eq sessionId }
             .singleOrNull()
             ?.toProject()
     }
+
 
     /**
      * Update a project's information.

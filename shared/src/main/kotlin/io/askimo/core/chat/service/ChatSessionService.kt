@@ -4,8 +4,11 @@
  */
 package io.askimo.core.chat.service
 
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
@@ -134,7 +137,7 @@ class ChatSessionService(
      * @param project The project to create a retriever for
      * @return Content retriever if project has indexed paths, null otherwise
      */
-    private fun createRetrieverForProject(project: io.askimo.core.chat.domain.Project): dev.langchain4j.rag.content.retriever.ContentRetriever? {
+    private fun createRetrieverForProject(project: Project): ContentRetriever? {
         try {
             // Parse indexed paths from JSON array
             val indexedPaths = parseIndexedPaths(project.indexedPaths)
@@ -153,7 +156,7 @@ class ChatSessionService(
             )
 
             // Create content retriever from the indexer's embedding store
-            return dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
+            return EmbeddingStoreContentRetriever
                 .builder()
                 .embeddingStore(indexer.embeddingStore)
                 .embeddingModel(indexer.embeddingModel)
