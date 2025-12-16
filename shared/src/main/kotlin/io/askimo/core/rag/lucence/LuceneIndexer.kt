@@ -18,6 +18,10 @@ import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
 import io.askimo.core.util.AskimoHome
 import org.apache.lucene.store.FSDirectory
+import org.apache.tika.parser.AutoDetectParser
+import org.apache.tika.parser.ParseContext
+import org.apache.tika.sax.BodyContentHandler
+import java.io.FileInputStream
 import java.nio.charset.Charset
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -35,6 +39,7 @@ import kotlin.io.path.readText
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.streams.asSequence
+import org.apache.tika.metadata.Metadata as TikaMetadata
 
 /**
  * Status of the indexing process for a project.
@@ -53,7 +58,7 @@ enum class IndexStatus {
 data class IndexProgress(
     val status: IndexStatus,
     val filesIndexed: Int = 0,
-    val filesTotal: Int = 0, // Estimated, can grow
+    val filesTotal: Int = 0,
     val lastUpdated: LocalDateTime = LocalDateTime.now(),
     val error: String? = null,
     val isWatching: Boolean = false,
@@ -198,7 +203,7 @@ class LuceneIndexer private constructor(
                 true
             }
             IndexStatus.READY, IndexStatus.WATCHING -> {
-                log.debug("Index ready for project $projectId (status: ${progress.status})")
+                log.debug("Index ready for project {} (status: {})", projectId, progress.status)
                 true
             }
             IndexStatus.FAILED -> {
@@ -360,6 +365,44 @@ class LuceneIndexer private constructor(
                 isWatching = false,
             )
         }
+    }
+
+    /**
+     * Clear the existing index and perform a fresh re-index.
+     * This is useful when the index may be corrupted or out of sync.
+     *
+     * @param paths List of paths to re-index
+     * @param watchForChanges If true, monitor paths for new/modified files after indexing
+     */
+    fun clearAndReindex(
+        paths: List<Path>,
+        watchForChanges: Boolean = true,
+    ) {
+        log.info("Clearing and re-indexing project: $projectId")
+
+        // Stop watching first
+        stopWatching()
+
+        // Delete index directory
+        if (Files.exists(indexPath)) {
+            try {
+                indexPath.toFile().deleteRecursively()
+                log.debug("Deleted index directory: {}", indexPath)
+            } catch (e: Exception) {
+                log.error("Failed to delete index directory: $indexPath", e)
+            }
+        }
+
+        // Clear tracked files
+        indexedFiles.clear()
+
+        // Reset status
+        indexProgress = IndexProgress(IndexStatus.NOT_STARTED)
+
+        // Trigger fresh indexing
+        indexPathsAsync(paths, watchForChanges)
+
+        log.info("Re-index initiated for project: $projectId")
     }
 
     // ---------- Internals ----------
@@ -537,6 +580,44 @@ class LuceneIndexer private constructor(
         }
     }
 
+    /**
+     * Extract text from a file. For PDF files, uses Apache Tika to extract text.
+     * For other files, uses standard text reading.
+     *
+     * @param path The file path to extract text from
+     * @return Extracted text content
+     */
+    private fun extractTextFromFile(path: Path): String {
+        val extension = path.extension.lowercase()
+
+        return when (extension) {
+            "pdf" -> extractPdfText(path)
+            else -> safeReadText(path)
+        }
+    }
+
+    /**
+     * Extract text from a PDF file using Apache Tika.
+     *
+     * @param path The PDF file path
+     * @return Extracted text content
+     */
+    private fun extractPdfText(path: Path): String = try {
+        val parser = AutoDetectParser()
+        val handler = BodyContentHandler(-1) // No character limit
+        val metadata = TikaMetadata()
+        val parseContext = ParseContext()
+
+        FileInputStream(path.toFile()).use { stream ->
+            parser.parse(stream, handler, metadata, parseContext)
+            handler.toString()
+        }
+    } catch (e: Exception) {
+        log.error("Failed to extract text from PDF: ${path.fileName}", e)
+        // Return empty string or a placeholder
+        ""
+    }
+
     private fun tooLargeToIndex(path: Path): Boolean = try {
         Files.size(path) > maxFileBytes
     } catch (_: Exception) {
@@ -621,16 +702,15 @@ class LuceneIndexer private constructor(
      * Register a directory and all its subdirectories for watching.
      */
     private fun registerDirectoryTree(root: Path) {
-        val detectedTypes = detectProjectTypes(root)
-
         Files.walk(root)
             .asSequence()
             .filter { Files.isDirectory(it) }
             .filter { !shouldExcludeDirectory(root.relativize(it).toString()) }
             .forEach { dir ->
                 try {
+                    val ws = watchService ?: return@forEach
                     dir.register(
-                        watchService,
+                        ws,
                         StandardWatchEventKinds.ENTRY_CREATE,
                         StandardWatchEventKinds.ENTRY_MODIFY,
                         StandardWatchEventKinds.ENTRY_DELETE,
@@ -773,7 +853,7 @@ class LuceneIndexer private constructor(
                 return
             }
 
-            val content = safeReadText(filePath)
+            val content = extractTextFromFile(filePath)
             if (content.isBlank()) {
                 return
             }

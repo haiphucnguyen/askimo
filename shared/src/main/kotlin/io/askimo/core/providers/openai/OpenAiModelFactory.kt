@@ -89,11 +89,9 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
-                    // Integrate chat memory if provided
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }

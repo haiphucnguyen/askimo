@@ -78,8 +78,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                     topP(s.topP)
                 }.build()
 
-        // Note: Memory is NOT included in the delegate returned by factory.
-        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
             AiServices
                 .builder(ChatClient::class.java)

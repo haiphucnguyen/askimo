@@ -54,11 +54,11 @@ data class ProjectType(
 )
 
 data class IndexingConfig(
-    val maxFileBytes: Long = 2_000_000,
+    val maxFileBytes: Long = 5_000_000,
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
-        "md", "txt", "gradle", "properties", "toml",
+        "md", "txt", "gradle", "properties", "toml", "pdf",
     ),
     val binaryExtensions: Set<String> = setOf(
         // Images
@@ -73,8 +73,8 @@ data class IndexingConfig(
         "exe", "dll", "so", "dylib", "bin", "obj", "o", "a", "lib",
         // Databases
         "db", "sqlite", "sqlite3", "mdb", "accdb",
-        // Documents (binary formats)
-        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        // Documents (binary formats - now excluding pdf as we can extract text from it)
+        "doc", "docx", "xls", "xlsx", "ppt", "pptx",
         // Fonts
         "ttf", "otf", "woff", "woff2", "eot",
         // Other binary
@@ -431,7 +431,7 @@ object AppConfig {
         val idx =
             IndexingConfig(
                 maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
-                supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml"),
+                supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml,pdf"),
                 commonExcludes = envList("ASKIMO_INDEXING_COMMON_EXCLUDES", ".git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/"),
             )
         val dev =

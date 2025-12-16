@@ -68,14 +68,11 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .modelName(model)
             .build()
 
-        // Note: Memory is NOT included in the delegate returned by factory.
-        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    // Integrate chat memory if provided
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }

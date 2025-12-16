@@ -340,9 +340,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     // Set message complete callback once per chatViewModel instance
     LaunchedEffect(chatViewModel) {
         chatViewModel?.setOnMessageCompleteCallback {
-            sessionsViewModel.loadRecentSessions()
-
-            // Track chat completion for star prompt
             StarPromptPreferences.incrementChatCount()
             if (StarPromptPreferences.shouldShowStarPrompt()) {
                 showStarPromptDialog = true
@@ -623,6 +620,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         onResumeSession = handleResumeSession,
                                         onNavigateToChat = {
                                             currentView = View.CHAT
+                                        },
+                                        onNavigateToSessions = {
+                                            currentView = View.SESSIONS
                                         },
                                         onProjectSessionsChanged = {
                                             projectViewRefreshTrigger++
@@ -1054,6 +1054,7 @@ fun mainContent(
     sessionManager: SessionManager,
     onResumeSession: (String) -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToSessions: () -> Unit,
     onProjectSessionsChanged: () -> Unit,
     onEditProject: (String) -> Unit,
     activeSessionId: String?,
@@ -1152,6 +1153,7 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
+                            appContext = appContext,
                             onStartChat = { projId, message, attachments ->
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
@@ -1174,6 +1176,10 @@ fun mainContent(
                                 sessionsViewModel.exportSession(sessionId)
                             },
                             onEditProject = onEditProject,
+                            onDeleteProject = { projectId ->
+                                projectsViewModel.deleteProject(projectId)
+                                onNavigateToSessions()
+                            },
                             refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )

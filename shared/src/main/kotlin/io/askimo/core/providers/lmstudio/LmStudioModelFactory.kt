@@ -57,15 +57,12 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     temperature(s.temperature)
                     topP(s.topP)
                 }.build()
-        // Note: Memory is NOT included in the delegate returned by factory.
-        // ChatSessionService will create session-specific memory and wrap this delegate in ChatClientImpl.
+
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
-                    // Integrate chat memory if provided
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }

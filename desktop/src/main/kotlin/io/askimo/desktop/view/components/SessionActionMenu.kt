@@ -189,4 +189,65 @@ object SessionActionMenu {
         renameMenuItem(onRename = onRename, onDismiss = onDismiss)
         deleteMenuItem(onDelete = onDelete, onDismiss = onDismiss)
     }
+
+    /**
+     * Menu for project header actions (edit, delete, reindex for developers).
+     */
+    @Composable
+    fun projectActionMenu(
+        onEditProject: () -> Unit,
+        onDeleteProject: () -> Unit,
+        onReindexProject: (() -> Unit)? = null,
+        onDismiss: () -> Unit,
+    ) {
+        DropdownMenuItem(
+            text = { Text(stringResource("project.edit")) },
+            onClick = {
+                onDismiss()
+                onEditProject()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = null,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+        )
+
+        // Re-index Project - only shown when developer mode is enabled
+        onReindexProject?.let { reindex ->
+            DropdownMenuItem(
+                text = { Text(stringResource("project.reindex")) },
+                onClick = {
+                    onDismiss()
+                    reindex()
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.DeveloperMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                    )
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+        }
+
+        DropdownMenuItem(
+            text = { Text(stringResource("project.delete")) },
+            onClick = {
+                onDismiss()
+                onDeleteProject()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+        )
+    }
 }
