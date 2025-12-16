@@ -5,6 +5,7 @@
 package io.askimo.core.providers.openai
 
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel.OpenAiChatModelBuilder
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
@@ -69,7 +70,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         settings: OpenAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
-        chatMemory: dev.langchain4j.memory.ChatMemory?,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel

@@ -4,6 +4,7 @@
  */
 package io.askimo.core.context
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
@@ -147,7 +148,7 @@ class AppContext(
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-        chatMemory: dev.langchain4j.memory.ChatMemory? = null,
+        chatMemory: ChatMemory,
     ): ChatClient = (factory as ChatModelFactory<T>).create(
         model = model,
         settings = settings,
@@ -217,7 +218,7 @@ class AppContext(
      */
     fun createFreshChatClient(
         retriever: ContentRetriever? = null,
-        memory: dev.langchain4j.memory.ChatMemory? = null,
+        memory: ChatMemory,
     ): ChatClient {
         val provider = params.currentProvider
         val factory = getModelFactory(provider)

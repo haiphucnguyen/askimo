@@ -5,6 +5,7 @@
 package io.askimo.core.providers.lmstudio
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -38,7 +39,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         settings: LmStudioSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
-        chatMemory: dev.langchain4j.memory.ChatMemory?,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         // LMStudio requires HTTP/1.1
         val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)

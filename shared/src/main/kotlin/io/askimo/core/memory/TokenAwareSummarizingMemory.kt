@@ -9,9 +9,13 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
+import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.logging.logger
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import java.time.LocalDateTime
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -431,9 +435,9 @@ class TokenAwareSummarizingMemory(
     private fun serializeMemoryState(
         sessionId: String,
         state: MemoryState,
-    ): io.askimo.core.chat.domain.SessionMemory {
+    ): SessionMemory {
         val summaryJson = state.summary?.let {
-            kotlinx.serialization.json.Json.encodeToString(
+            Json.encodeToString(
                 ConversationSummary.serializer(),
                 it,
             )
@@ -452,16 +456,16 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        val messagesJson = kotlinx.serialization.json.Json.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(SerializableMessage.serializer()),
+        val messagesJson = Json.encodeToString(
+            ListSerializer(SerializableMessage.serializer()),
             serializableMessages,
         )
 
-        return io.askimo.core.chat.domain.SessionMemory(
+        return SessionMemory(
             sessionId = sessionId,
             memorySummary = summaryJson,
             memoryMessages = messagesJson,
-            lastUpdated = java.time.LocalDateTime.now(),
+            lastUpdated = LocalDateTime.now(),
         )
     }
 
@@ -469,17 +473,17 @@ class TokenAwareSummarizingMemory(
      * Deserialize SessionMemory from database to MemoryState.
      */
     private fun deserializeMemoryState(
-        sessionMemory: io.askimo.core.chat.domain.SessionMemory,
+        sessionMemory: SessionMemory,
     ): MemoryState {
         val summary = sessionMemory.memorySummary?.let {
-            kotlinx.serialization.json.Json.decodeFromString(
+            Json.decodeFromString(
                 ConversationSummary.serializer(),
                 it,
             )
         }
 
-        val serializableMessages = kotlinx.serialization.json.Json.decodeFromString(
-            kotlinx.serialization.builtins.ListSerializer(SerializableMessage.serializer()),
+        val serializableMessages = Json.decodeFromString(
+            ListSerializer(SerializableMessage.serializer()),
             sessionMemory.memoryMessages,
         )
 

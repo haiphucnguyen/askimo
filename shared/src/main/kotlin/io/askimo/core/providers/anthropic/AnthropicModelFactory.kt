@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.anthropic
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
@@ -34,7 +35,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         settings: AnthropicSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
-        chatMemory: dev.langchain4j.memory.ChatMemory?,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             AnthropicStreamingChatModel

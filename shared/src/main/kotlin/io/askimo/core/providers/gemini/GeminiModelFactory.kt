@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.gemini
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiTokenCountEstimator
@@ -42,7 +43,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         settings: GeminiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
-        chatMemory: dev.langchain4j.memory.ChatMemory?,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             GoogleAiGeminiStreamingChatModel

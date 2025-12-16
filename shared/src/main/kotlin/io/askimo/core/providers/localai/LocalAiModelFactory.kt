@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.localai
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.localai.LocalAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -42,7 +43,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         settings: LocalAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
-        chatMemory: dev.langchain4j.memory.ChatMemory?,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             LocalAiStreamingChatModel
