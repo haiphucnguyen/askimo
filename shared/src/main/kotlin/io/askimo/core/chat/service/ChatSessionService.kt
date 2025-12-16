@@ -127,7 +127,6 @@ class ChatSessionService(
             null
         }
 
-        // Memory is now properly integrated into the LangChain4j AI service
         appContext.createFreshChatClient(retriever = retriever, memory = memory)
     }
 
@@ -139,7 +138,6 @@ class ChatSessionService(
      */
     private fun createRetrieverForProject(project: Project): ContentRetriever? {
         try {
-            // Parse indexed paths from JSON array
             val indexedPaths = parseIndexedPaths(project.indexedPaths)
 
             if (indexedPaths.isEmpty()) {
@@ -149,13 +147,17 @@ class ChatSessionService(
 
             log.debug("Creating RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
 
-            // Create LuceneIndexer for this project
-            val indexer = LuceneIndexer(
+            // Get cached indexer instance for this project (singleton per project)
+            val indexer = LuceneIndexer.getInstance(
                 projectId = project.id,
                 appContext = appContext,
             )
 
-            // Create content retriever from the indexer's embedding store
+            if (!indexer.ensureIndexed(indexedPaths, watchForChanges = true)) {
+                log.error("Failed to ensure index for project ${project.id}")
+                return null
+            }
+
             return EmbeddingStoreContentRetriever
                 .builder()
                 .embeddingStore(indexer.embeddingStore)

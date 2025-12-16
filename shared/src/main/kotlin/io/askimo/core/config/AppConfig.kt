@@ -60,6 +60,34 @@ data class IndexingConfig(
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
         "md", "txt", "gradle", "properties", "toml",
     ),
+    val binaryExtensions: Set<String> = setOf(
+        // Images
+        "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp", "tiff", "tif",
+        // Videos
+        "mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v",
+        // Audio
+        "mp3", "wav", "ogg", "flac", "aac", "m4a", "wma",
+        // Archives
+        "zip", "tar", "gz", "bz2", "7z", "rar", "xz", "tgz",
+        // Executables
+        "exe", "dll", "so", "dylib", "bin", "obj", "o", "a", "lib",
+        // Databases
+        "db", "sqlite", "sqlite3", "mdb", "accdb",
+        // Documents (binary formats)
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        // Fonts
+        "ttf", "otf", "woff", "woff2", "eot",
+        // Other binary
+        "class", "jar", "war", "ear", "pyc", "pyo",
+    ),
+    val excludeFileNames: Set<String> = setOf(
+        // System files
+        ".DS_Store", "Thumbs.db", "desktop.ini",
+        // Lock files
+        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock", "Gemfile.lock",
+        // IDE files
+        ".project", ".classpath", ".factorypath",
+    ),
     val projectTypes: List<ProjectType> = listOf(
         ProjectType(
             name = "Gradle",
@@ -243,6 +271,8 @@ object AppConfig {
         indexing:
           max_file_bytes: ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
           supported_extensions: ${'$'}{ASKIMO_INDEXING_SUPPORTED_EXTENSIONS:java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml}
+          binary_extensions: ${'$'}{ASKIMO_INDEXING_BINARY_EXTENSIONS:png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,pdf,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc}
+          exclude_file_names: ${'$'}{ASKIMO_INDEXING_EXCLUDE_FILE_NAMES:.DS_Store,Thumbs.db,desktop.ini,package-lock.json,yarn.lock,pnpm-lock.yaml,poetry.lock,Gemfile.lock}
           common_excludes: ${'$'}{ASKIMO_INDEXING_COMMON_EXCLUDES:.git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/}
           # Project types are configured with default values and can be customized via environment variables
           # ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_MARKERS and ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_EXCLUDES

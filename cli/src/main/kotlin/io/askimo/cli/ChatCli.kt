@@ -282,7 +282,6 @@ fun main(args: Array<String>) {
                 trimmed == ":exit" ||
                 trimmed == ":quit"
             ) {
-                // Memory persists automatically - no need to save explicitly
                 terminal.writer().println("Thank you for using askimo. Goodbye!")
                 terminal.flush()
                 break
