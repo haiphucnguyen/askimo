@@ -47,7 +47,7 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.jvector.JVectorIndexer
+import io.askimo.core.rag.ProjectIndexer
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -159,7 +159,7 @@ fun projectView(
 
                                         if (indexedPaths.isNotEmpty()) {
                                             // Get indexer instance and trigger clear + re-index
-                                            val indexer = JVectorIndexer.getInstance(
+                                            val indexer = ProjectIndexer.getInstance(
                                                 projectId = project.id,
                                                 appContext = appContext,
                                             )

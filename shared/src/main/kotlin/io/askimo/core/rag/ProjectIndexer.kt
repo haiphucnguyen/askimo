@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.rag.jvector
+package io.askimo.core.rag
 
 import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.document.Metadata
@@ -16,7 +16,6 @@ import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
-import io.askimo.core.rag.lucene.LuceneKeywordRetriever
 import io.askimo.core.util.AskimoHome
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
@@ -85,24 +84,24 @@ data class IndexedFileEntry(
  *
  * Use [getInstance] to get a cached instance per project.
  */
-class JVectorIndexer private constructor(
+class ProjectIndexer private constructor(
     private val projectId: String,
     private val appContext: AppContext,
 ) {
     companion object {
-        private val log = logger<JVectorIndexer>()
+        private val log = logger<ProjectIndexer>()
 
         /**
          * Cache of indexer instances per project.
          * Ensures only one indexer exists per project to avoid duplicate file watchers.
          */
-        private val instances = ConcurrentHashMap<String, JVectorIndexer>()
+        private val instances = ConcurrentHashMap<String, ProjectIndexer>()
 
         init {
             Runtime.getRuntime().addShutdownHook(
                 Thread {
                     try {
-                        log.info("Shutdown hook triggered - cleaning up all JVectorIndexer instances")
+                        log.info("Shutdown hook triggered - cleaning up all ProjectIndexer instances")
                         shutdownAll()
                         log.info("Successfully cleaned up all indexers")
                     } catch (e: Exception) {
@@ -113,19 +112,19 @@ class JVectorIndexer private constructor(
         }
 
         /**
-         * Get or create a JVectorIndexer instance for a project.
+         * Get or create a ProjectIndexer instance for a project.
          * Instances are cached per project ID.
          *
          * @param projectId The project ID
          * @param appContext The application context
-         * @return Cached or new JVectorIndexer instance
+         * @return Cached or new ProjectIndexer instance
          */
         fun getInstance(
             projectId: String,
             appContext: AppContext,
-        ): JVectorIndexer = instances.getOrPut(projectId) {
-            log.debug("Creating new JVectorIndexer instance for project: $projectId")
-            JVectorIndexer(projectId, appContext)
+        ): ProjectIndexer = instances.getOrPut(projectId) {
+            log.debug("Creating new ProjectIndexer instance for project: $projectId")
+            ProjectIndexer(projectId, appContext)
         }
 
         /**
@@ -146,7 +145,7 @@ class JVectorIndexer private constructor(
          * Automatically called by shutdown hook.
          */
         private fun shutdownAll() {
-            log.debug("Shutting down all JVectorIndexer instances")
+            log.debug("Shutting down all ProjectIndexer instances")
             instances.values.forEach { it.stopWatching() }
             instances.clear()
         }
@@ -243,6 +242,18 @@ class JVectorIndexer private constructor(
         LuceneKeywordRetriever(keywordIndexPath, maxResults = 10)
     }
 
+    /**
+     * Hybrid indexer that coordinates indexing into both JVector and Lucene.
+     * Encapsulates the dual-indexing logic.
+     */
+    private val hybridIndexer: HybridIndexer by lazy {
+        HybridIndexer(
+            embeddingStore = embeddingStore,
+            embeddingModel = embeddingModel,
+            keywordRetriever = keywordRetriever,
+        )
+    }
+
     private fun newStore(): EmbeddingStore<TextSegment> {
         Files.createDirectories(indexPath)
 
@@ -254,7 +265,6 @@ class JVectorIndexer private constructor(
 
         log.info("Creating JVector embedding store at: $persistencePath (dimension: $dimension)")
 
-        // JVector embedding store with file-based persistence
         return JVectorEmbeddingStore.builder()
             .dimension(dimension)
             .persistencePath(persistencePath)
@@ -314,7 +324,7 @@ class JVectorIndexer private constructor(
                 )
             }
         }.apply {
-            name = "JVectorIndexer-$projectId"
+            name = "ProjectIndexer-$projectId"
             isDaemon = true
         }.start()
     }
@@ -865,27 +875,18 @@ class JVectorIndexer private constructor(
 
             val chunks = chunkText(body, maxCharsPerChunk, chunkOverlap, filePath.extension.lowercase())
 
-            val textSegments = mutableListOf<TextSegment>()
-
-            chunks.forEachIndexed { idx, chunk ->
-                val textSegment = createTextSegment(
+            val textSegments = chunks.mapIndexed { idx, chunk ->
+                createTextSegment(
                     chunk = chunk,
                     filePath = filePath,
                     relativePath = relativePath,
                     chunkIndex = idx,
                 )
-
-                // Add to vector store (JVector)
-                val embedding = embeddingModel.embed(textSegment).content()
-                embeddingStore.add(embedding, textSegment)
-
-                // Collect for batch keyword indexing
-                textSegments.add(textSegment)
             }
 
-            // Batch index in Lucene for keyword search
+            // Use HybridIndexer to index in both JVector and Lucene
             if (textSegments.isNotEmpty()) {
-                keywordRetriever.indexSegments(textSegments)
+                hybridIndexer.indexSegments(textSegments)
             }
 
             log.debug("  ✅ Indexed: $relativePath (${chunks.size} chunks)")

@@ -10,7 +10,7 @@ import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.jvector.JVectorIndexer
+import io.askimo.core.rag.ProjectIndexer
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -151,7 +151,7 @@ class ProjectRepository internal constructor(
         }
         if (deleted) {
             try {
-                JVectorIndexer.removeInstance(projectId)
+                ProjectIndexer.removeInstance(projectId)
             } catch (e: Exception) {
                 log.error("Failed to cleanup indexer for project $projectId", e)
             }

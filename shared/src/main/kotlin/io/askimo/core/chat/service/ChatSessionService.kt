@@ -32,7 +32,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.HybridContentRetriever
-import io.askimo.core.rag.jvector.JVectorIndexer
+import io.askimo.core.rag.ProjectIndexer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -189,7 +189,7 @@ class ChatSessionService(
             log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
 
             // Get cached indexer instance for this project (singleton per project)
-            val indexer = JVectorIndexer.getInstance(
+            val indexer = ProjectIndexer.getInstance(
                 projectId = project.id,
                 appContext = appContext,
             )

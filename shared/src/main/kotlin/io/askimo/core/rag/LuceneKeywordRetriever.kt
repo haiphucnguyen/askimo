@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.rag.lucene
+package io.askimo.core.rag
 
 import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
@@ -93,7 +93,6 @@ class LuceneKeywordRetriever(
                 queryParser.parse(query.text())
             } catch (e: Exception) {
                 log.warn("Failed to parse query: ${query.text()}, using simple term query", e)
-                // Fallback to escaped query
                 queryParser.parse(QueryParser.escape(query.text()))
             }
 
