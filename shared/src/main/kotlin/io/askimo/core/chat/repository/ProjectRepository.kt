@@ -10,7 +10,7 @@ import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.lucence.LuceneIndexer
+import io.askimo.core.rag.jvector.JVectorIndexer
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -150,9 +150,8 @@ class ProjectRepository internal constructor(
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
         }
         if (deleted) {
-            // Stop file watcher and remove indexer instance
             try {
-                LuceneIndexer.removeInstance(projectId)
+                JVectorIndexer.removeInstance(projectId)
             } catch (e: Exception) {
                 log.error("Failed to cleanup indexer for project $projectId", e)
             }

@@ -46,7 +46,8 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.rag.lucence.LuceneIndexer
+import io.askimo.core.logging.logger
+import io.askimo.core.rag.jvector.JVectorIndexer
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -60,6 +61,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.nio.file.Paths
+
+private val log = logger("ProjectView")
 
 /**
  * Project view showing project details and chat interface.
@@ -156,15 +159,14 @@ fun projectView(
 
                                         if (indexedPaths.isNotEmpty()) {
                                             // Get indexer instance and trigger clear + re-index
-                                            val indexer = LuceneIndexer.getInstance(
+                                            val indexer = JVectorIndexer.getInstance(
                                                 projectId = project.id,
                                                 appContext = appContext,
                                             )
                                             indexer.clearAndReindex(indexedPaths, watchForChanges = true)
                                         }
                                     } catch (e: Exception) {
-                                        println("Failed to re-index project ${project.id}: ${e.message}")
-                                        e.printStackTrace()
+                                        log.error("Failed to re-index project ${project.id}: ${e.message}", e)
                                     }
                                 }
                                 showProjectMenu = false

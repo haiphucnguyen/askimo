@@ -31,7 +31,7 @@ import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.rag.lucence.LuceneIndexer
+import io.askimo.core.rag.jvector.JVectorIndexer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -184,7 +184,7 @@ class ChatSessionService(
             log.debug("Creating RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
 
             // Get cached indexer instance for this project (singleton per project)
-            val indexer = LuceneIndexer.getInstance(
+            val indexer = JVectorIndexer.getInstance(
                 projectId = project.id,
                 appContext = appContext,
             )
