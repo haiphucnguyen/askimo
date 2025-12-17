@@ -886,6 +886,9 @@ class ChatViewModel(
         hasMoreMessages = false
         currentSessionId.value = null
 
+        // Clear session title
+        sessionTitle = null
+
         // Clear search state
         clearSearch()
 

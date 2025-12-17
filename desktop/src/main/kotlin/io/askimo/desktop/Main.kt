@@ -374,6 +374,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     }
                 },
                 onNewChat = {
+                    sessionManager.clearActiveSession()
                     chatViewModel?.clearChat()
                     currentView = View.CHAT
                 },
