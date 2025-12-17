@@ -7,7 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.ModelChangedEvent
+import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider

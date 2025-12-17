@@ -6,7 +6,7 @@ package io.askimo.desktop.service
 
 import io.askimo.core.VersionInfo
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.UpdateAvailableEvent
+import io.askimo.core.event.system.UpdateAvailableEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.service.UpdateChecker
 import io.askimo.core.service.UpdateInfo

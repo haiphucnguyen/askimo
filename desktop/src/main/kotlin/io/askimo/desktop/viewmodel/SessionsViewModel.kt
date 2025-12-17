@@ -10,12 +10,15 @@ import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.desktop.model.ExportFormat
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -90,6 +93,23 @@ class SessionsViewModel(
     init {
         loadSessions(1)
         loadRecentSessions()
+        subscribeToSessionEvents()
+    }
+
+    /**
+     * Subscribe to internal events to keep session list updated.
+     */
+    private fun subscribeToSessionEvents() {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<SessionCreatedEvent>()
+                .collect { event ->
+                    if (event.projectId == null) {
+                        log.debug("New session created: ${event.sessionId}, refreshing sidebar")
+                        loadRecentSessions()
+                    }
+                }
+        }
     }
 
     /**

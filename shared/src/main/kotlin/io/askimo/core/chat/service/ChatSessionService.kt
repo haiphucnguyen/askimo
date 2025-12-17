@@ -24,7 +24,8 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.ModelChangedEvent
+import io.askimo.core.event.internal.ModelChangedEvent
+import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
@@ -297,6 +298,15 @@ class ChatSessionService(
         val createdSession = sessionRepository.createSession(session)
 
         getOrCreateClientForSession(createdSession.id)
+
+        eventScope.launch {
+            EventBus.emit(
+                SessionCreatedEvent(
+                    sessionId = createdSession.id,
+                    projectId = createdSession.projectId,
+                ),
+            )
+        }
 
         return createdSession
     }

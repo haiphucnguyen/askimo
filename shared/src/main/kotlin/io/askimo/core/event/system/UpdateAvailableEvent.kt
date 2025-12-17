@@ -2,8 +2,11 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.event
+package io.askimo.core.event.system
 
+import io.askimo.core.event.Event
+import io.askimo.core.event.EventSource
+import io.askimo.core.event.EventType
 import java.time.Instant
 
 /**

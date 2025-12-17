@@ -11,7 +11,7 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.ModelChangedEvent
+import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory

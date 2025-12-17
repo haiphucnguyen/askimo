@@ -30,7 +30,7 @@ enum class EventType {
 /**
  * Base interface for all events in the system.
  */
-sealed interface Event {
+interface Event {
     /**
      * Type of event determines routing and visibility
      */
@@ -49,7 +49,7 @@ sealed interface Event {
 /**
  * Base interface for developer events (debugging and diagnostics)
  */
-sealed interface DeveloperEvent : Event {
+interface DeveloperEvent : Event {
     override val type: EventType get() = EventType.DEVELOPER
 }
 
