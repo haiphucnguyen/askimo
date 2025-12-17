@@ -31,6 +31,7 @@ import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.rag.HybridContentRetriever
 import io.askimo.core.rag.jvector.JVectorIndexer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -168,6 +169,10 @@ class ChatSessionService(
 
     /**
      * Create a content retriever for a project if it has indexed paths.
+     * Uses hybrid search combining:
+     * - JVector for semantic similarity (vector embeddings)
+     * - Lucene for keyword matching (BM25)
+     * - Reciprocal Rank Fusion to merge results
      *
      * @param project The project to create a retriever for
      * @return Content retriever if project has indexed paths, null otherwise
@@ -181,7 +186,7 @@ class ChatSessionService(
                 return null
             }
 
-            log.debug("Creating RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
+            log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
 
             // Get cached indexer instance for this project (singleton per project)
             val indexer = JVectorIndexer.getInstance(
@@ -194,13 +199,27 @@ class ChatSessionService(
                 return null
             }
 
-            return EmbeddingStoreContentRetriever
-                .builder()
+            // Vector-based retriever (semantic search via JVector)
+            val vectorRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(indexer.embeddingStore)
                 .embeddingModel(indexer.embeddingModel)
-                .maxResults(5)
-                .minScore(0.7)
+                .maxResults(10) // Get more candidates for fusion
+                .minScore(0.5) // Lower threshold to catch more semantic matches
                 .build()
+
+            // Keyword-based retriever (BM25 search via Lucene)
+            val keywordRetriever = indexer.keywordRetriever
+
+            // Combine with hybrid retriever using Reciprocal Rank Fusion
+            val hybridRetriever = HybridContentRetriever(
+                vectorRetriever = vectorRetriever,
+                keywordRetriever = keywordRetriever,
+                maxResults = 5, // Final number of results to return
+                k = 60, // RRF constant
+            )
+
+            log.info("✓ Hybrid RAG retriever created successfully for project ${project.id} (vector + keyword fusion)")
+            return hybridRetriever
         } catch (e: Exception) {
             log.error("Failed to create content retriever for project ${project.id}", e)
             return null
