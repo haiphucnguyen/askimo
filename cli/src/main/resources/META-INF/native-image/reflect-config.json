@@ -1140,23 +1140,6 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiCountTokensRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "contents", "parameterTypes": [] },
-      { "name": "generateContentRequest", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiCountTokensResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": ["java.lang.Integer"] }]
-  },
-  {
     "name": "dev.langchain4j.model.googleai.GeminiFunctionDeclaration",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2235,6 +2218,61 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.chat.repository.ProjectRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      {
+        "name": "should cascade delete sessions when project is deleted",
+        "parameterTypes": []
+      },
+      { "name": "should create and retrieve a project", "parameterTypes": [] },
+      {
+        "name": "should create project with indexed paths",
+        "parameterTypes": []
+      },
+      { "name": "should get all projects", "parameterTypes": [] },
+      {
+        "name": "should handle project names with special characters",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not affect other projects when deleting one",
+        "parameterTypes": []
+      },
+      {
+        "name": "should order projects by updated_at descending",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty list when no projects exist",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return false when updating non-existent project",
+        "parameterTypes": []
+      },
+      { "name": "should update project", "parameterTypes": [] },
+      {
+        "name": "should update project with null description",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ProjectRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.chat.repository.SessionMemoryRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2500,6 +2538,8 @@
         "parameterTypes": [
           "long",
           "java.util.Set",
+          "java.util.Set",
+          "java.util.Set",
           "java.util.List",
           "java.util.Set"
         ]
@@ -2509,6 +2549,8 @@
         "parameterTypes": [
           "long",
           "java.util.Set",
+          "java.util.Set",
+          "java.util.Set",
           "java.util.List",
           "java.util.Set",
           "int",
@@ -2516,7 +2558,9 @@
         ]
       },
       { "name": "getAllExcludes", "parameterTypes": [] },
+      { "name": "getBinaryExtensions", "parameterTypes": [] },
       { "name": "getCommonExcludes", "parameterTypes": [] },
+      { "name": "getExcludeFileNames", "parameterTypes": [] },
       { "name": "getMaxFileBytes", "parameterTypes": [] },
       { "name": "getProjectTypes", "parameterTypes": [] },
       { "name": "getSkipDirectoryNames", "parameterTypes": [] }
@@ -2610,10 +2654,6 @@
           "io.askimo.core.context.AppContextParams",
           "io.askimo.core.context.ExecutionMode"
         ]
-      },
-      {
-        "name": "enableRagWith",
-        "parameterTypes": ["io.askimo.core.project.PgVectorIndexer"]
       },
       { "name": "getActiveProvider", "parameterTypes": [] },
       { "name": "getParams", "parameterTypes": [] },
@@ -4517,7 +4557,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$Z9aZfsdy",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$pBUl4r9u",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

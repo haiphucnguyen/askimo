@@ -20,9 +20,6 @@
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.internal.spi.OpenAiClientBuilderFactory\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiChatModelBuilderFactory\\E"
-      },
-      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiStreamingChatModelBuilderFactory\\E"
       },
       {
@@ -138,18 +135,6 @@
       },
       {
         "pattern": "\\Qcom/github/dockerjava/zerodep/shaded/org/apache/hc/client5/version.properties\\E"
-      },
-      {
-        "pattern": "\\Qcom/knuddels/jtokkit/cl100k_base.tiktoken\\E"
-      },
-      {
-        "pattern": "\\Qcom/knuddels/jtokkit/o200k_base.tiktoken\\E"
-      },
-      {
-        "pattern": "\\Qcom/knuddels/jtokkit/p50k_base.tiktoken\\E"
-      },
-      {
-        "pattern": "\\Qcom/knuddels/jtokkit/r50k_base.tiktoken\\E"
       },
       {
         "pattern": "\\Qdocker-java.properties\\E"
