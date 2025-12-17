@@ -23,12 +23,19 @@ import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.ModelChangedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.lucence.LuceneIndexer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -81,11 +88,39 @@ class ChatSessionService(
 ) {
     private val log = logger<ChatSessionService>()
 
+    // Coroutine scope for event subscriptions
+    private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /**
      * Cache of session-specific ChatClient instances.
      * Each session gets its own client with integrated memory.
      */
     private val clientCache = ConcurrentHashMap<String, ChatClient>()
+
+    init {
+        subscribeToInternalEvents()
+    }
+
+    /**
+     * Subscribe to internal events for component-to-component communication.
+     */
+    private fun subscribeToInternalEvents() {
+        eventScope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<ModelChangedEvent>()
+                .collect { event ->
+                    handleModelChanged(event)
+                }
+        }
+    }
+
+    /**
+     * Handle model change event - clear all cached clients since they use the old model.
+     */
+    private fun handleModelChanged(event: ModelChangedEvent) {
+        log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached clients")
+        clientCache.clear()
+    }
 
     /**
      * Get or create a ChatClient for a specific session.
@@ -96,7 +131,7 @@ class ChatSessionService(
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    private fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
+    public fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
@@ -127,7 +162,7 @@ class ChatSessionService(
             null
         }
 
-        appContext.createFreshChatClient(retriever = retriever, memory = memory)
+        appContext.createStatefulChatSession(retriever = retriever, memory = memory)
     }
 
     /**
@@ -495,8 +530,8 @@ class ChatSessionService(
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
     fun prepareContextAndGetPromptForChat(
-        userMessage: String,
         sessionId: String,
+        userMessage: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
     ): String {
         messageRepository.addMessage(
@@ -522,14 +557,6 @@ class ChatSessionService(
             sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
         }
 
-        return preparePromptWithContext(sessionId, userMessage, attachments)
-    }
-
-    private fun preparePromptWithContext(
-        sessionId: String,
-        userMessage: String,
-        attachments: List<FileAttachmentDTO>,
-    ): String {
         val directivePrompt = buildDirectivePrompt(sessionId)
 
         val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)

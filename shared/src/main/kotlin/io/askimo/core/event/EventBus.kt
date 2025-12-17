@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Central event bus for all application events.
- * Events are automatically routed to appropriate channels based on isDeveloperEvent property.
+ * Events are automatically routed to appropriate channels based on event.type property.
  */
 object EventBus {
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -31,6 +31,12 @@ object EventBus {
         extraBufferCapacity = 100,
     )
 
+    // Internal events (component-to-component communication, not shown in UI)
+    private val _internalEvents = MutableSharedFlow<Event>(
+        replay = 0,
+        extraBufferCapacity = 200,
+    )
+
     /**
      * Developer-only events (requires developer mode enabled)
      * Subscribe to this for debugging/development tools
@@ -44,14 +50,20 @@ object EventBus {
     val userEvents: SharedFlow<Event> = _userEvents.asSharedFlow()
 
     /**
+     * Internal events for component-to-component communication
+     * Subscribe to this for reacting to system-level changes (model changes, indexing completion, etc.)
+     */
+    val internalEvents: SharedFlow<Event> = _internalEvents.asSharedFlow()
+
+    /**
      * Emit an event - automatically routes to the appropriate channel
-     * based on event.isDeveloperEvent property
+     * based on event.type property
      */
     suspend fun emit(event: Event) {
-        if (event.isDeveloperEvent) {
-            _developerEvents.emit(event)
-        } else {
-            _userEvents.emit(event)
+        when (event.type) {
+            EventType.DEVELOPER -> _developerEvents.emit(event)
+            EventType.INTERNAL -> _internalEvents.emit(event)
+            EventType.USER -> _userEvents.emit(event)
         }
     }
 

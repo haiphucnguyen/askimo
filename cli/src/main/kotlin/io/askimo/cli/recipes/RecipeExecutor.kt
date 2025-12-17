@@ -85,7 +85,7 @@ class RecipeExecutor(
         val firstTokenSeen = AtomicBoolean(false)
         val output =
             appContext
-                .getChatClient()
+                .getStatelessChatClient()
                 .sendStreamingMessageWithCallback(prompt) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()

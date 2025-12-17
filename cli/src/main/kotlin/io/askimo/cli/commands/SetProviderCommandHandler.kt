@@ -6,10 +6,15 @@ package io.askimo.cli.commands
 
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.ModelChangedEvent
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jline.reader.ParsedLine
 
 /**
@@ -71,7 +76,9 @@ class SetProviderCommandHandler(
         appContext.params.model = model
 
         AppContextConfigManager.save(appContext.params)
-        appContext.rebuildActiveChatClient()
+        CoroutineScope(Dispatchers.Default).launch {
+            EventBus.emit(ModelChangedEvent(provider, ""))
+        }
 
         log.display("✅ Model provider set to: ${provider.name.lowercase()}")
         log.display("💡 Use `:models` to list all available models for this provider.")

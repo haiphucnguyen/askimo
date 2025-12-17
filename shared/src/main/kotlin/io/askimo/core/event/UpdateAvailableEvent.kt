@@ -18,7 +18,7 @@ data class UpdateAvailableEvent(
     override val timestamp: Instant = Instant.now(),
 ) : Event {
     override val source: EventSource = EventSource.SYSTEM
-    override val isDeveloperEvent: Boolean = false
+    override val type: EventType = EventType.USER
 
     override fun getDetails(): String = "Update available: v$latestVersion (current: v$currentVersion)"
 }

@@ -5,24 +5,20 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.project.ProjectMeta
 import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.NoopChatClient
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
-import kotlin.isInitialized
 
 data class Scope(
     val projectName: String,
@@ -58,31 +54,6 @@ class AppContext(
      * This can be updated when the user changes locale or wants to modify AI's behavior.
      */
     var systemDirective: String? = null
-
-    /**
-     * The active chat model for this session.
-     * This property is initialized lazily and can only be set through setChatModel().
-     */
-    private lateinit var _chatClient: ChatClient
-
-    /**
-     * Sets the chat model for this session.
-     *
-     * @param chatClient The chat model to use for this session
-     * @deprecated This method is part of the old global caching mechanism. Use createFreshChatClient() instead.
-     * Will be removed once CLI is refactored to use session-specific clients.
-     */
-    @Deprecated(
-        message = "Use createFreshChatClient() for session-specific clients",
-        replaceWith = ReplaceWith("createFreshChatClient()"),
-        level = DeprecationLevel.WARNING,
-    )
-    fun setChatClient(chatClient: ChatClient) {
-        this._chatClient = chatClient
-        if (chatClient is NoopChatClient) {
-            (this._chatClient as NoopChatClient).appContext = this
-        }
-    }
 
     /**
      * Gets the currently active model provider for this session.
@@ -136,42 +107,7 @@ class AppContext(
      */
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
 
-    /**
-     * Safely calls create on a factory with the given settings.
-     * Uses unchecked cast which is safe because the registry ensures
-     * factory and settings types match for each provider.
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun <T : ProviderSettings> createChatClientFromFactory(
-        factory: ChatModelFactory<*>,
-        model: String,
-        settings: T,
-        retrievalAugmentor: RetrievalAugmentor? = null,
-        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-        chatMemory: ChatMemory,
-    ): ChatClient = (factory as ChatModelFactory<T>).create(
-        model = model,
-        settings = settings,
-        retrievalAugmentor = retrievalAugmentor,
-        executionMode = executionMode,
-        chatMemory = chatMemory,
-    )
-
-    /**
-     * Rebuilds and returns a new instance of the active chat model based on current session parameters.
-     *
-     * @return A newly created [ChatClient] instance that becomes the active model for this session.
-     * @throws IllegalStateException if no model factory is registered for the current provider.
-     * @deprecated This method is part of the old global caching mechanism. Use createFreshChatClient() instead.
-     * Will be removed once CLI is refactored to use session-specific clients.
-     */
-    @Deprecated(
-        message = "Use createFreshChatClient() for session-specific clients",
-        replaceWith = ReplaceWith("createFreshChatClient()"),
-        level = DeprecationLevel.WARNING,
-    )
-    @Suppress("DEPRECATION")
-    fun rebuildActiveChatClient(): ChatClient {
+    fun getStatelessChatClient(): ChatClient {
         val provider = params.currentProvider
         val factory =
             getModelFactory(provider)
@@ -180,25 +116,13 @@ class AppContext(
         val settings = getOrCreateProviderSettings(provider)
         val modelName = params.model
 
-        val newModel = createChatClientFromFactory(factory, modelName, settings, executionMode = mode)
-        setChatClient(newModel)
-        return newModel
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).create(
+            model = modelName,
+            settings = settings,
+            executionMode = ExecutionMode.CLI_PROMPT,
+        )
     }
-
-    /**
-     * Returns the active [ChatClient]. If a model has not been created yet for the
-     * current (provider, model) and settings, it will be built now.
-     *
-     * @deprecated This method returns a cached client that may have state from previous sessions.
-     * Use createFreshChatClient() for session-specific clients. Will be removed once CLI is refactored.
-     */
-    @Deprecated(
-        message = "Use createFreshChatClient() for session-specific clients",
-        replaceWith = ReplaceWith("createFreshChatClient()"),
-        level = DeprecationLevel.WARNING,
-    )
-    @Suppress("DEPRECATION")
-    fun getChatClient(): ChatClient = if (::_chatClient.isInitialized) _chatClient else rebuildActiveChatClient()
 
     /**
      * Creates a fresh ChatClient instance without using cache.
@@ -216,7 +140,8 @@ class AppContext(
      * @return A newly created [ChatClient] instance
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
-    fun createFreshChatClient(
+    fun createStatefulChatSession(
+        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
     ): ChatClient {
@@ -228,53 +153,14 @@ class AppContext(
 
         val retrievalAugmentor = retriever?.let { buildRetrievalAugmentor(it) }
 
-        return createChatClientFromFactory(
-            factory = factory,
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).create(
             model = modelName,
             settings = settings,
+            executionMode = ExecutionMode.DESKTOP,
             retrievalAugmentor = retrievalAugmentor,
-            executionMode = mode,
             chatMemory = memory,
         )
-    }
-
-    /**
-     * Enables Retrieval-Augmented Generation (RAG) for the current session using
-     * the provided content retriever.
-     *
-     * This method wires the retriever into a retrieval augmentor and rebuilds the
-     * active ChatClient with the same provider, model, and settings, but augmented
-     * with retrieval capabilities.
-     *
-     * Notes:
-     * - Requires that a model factory is registered for the current provider; otherwise
-     *   an IllegalStateException is thrown.
-     * - Typically called after setScope(...) when switching to a project that has
-     *   indexed content.
-     *
-     * @param retriever The content retriever to use for retrieving relevant context.
-     */
-    @Suppress("DEPRECATION")
-    fun enableRagWith(retriever: ContentRetriever) {
-        val rag = buildRetrievalAugmentor(retriever)
-
-        val provider = params.currentProvider
-        val model = params.model
-        val settings = getCurrentProviderSettings()
-
-        val factory =
-            getModelFactory(provider)
-                ?: error("No model factory registered for $provider")
-
-        val upgraded = createChatClientFromFactory(
-            factory = factory,
-            model = model,
-            settings = settings,
-            retrievalAugmentor = rag,
-            executionMode = mode,
-        )
-        log.display("RAG enabled for $model")
-        setChatClient(upgraded)
     }
 
     /**

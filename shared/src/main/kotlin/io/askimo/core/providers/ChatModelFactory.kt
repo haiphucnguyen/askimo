@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.memory.ConversationSummary
@@ -49,7 +50,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-        chatMemory: dev.langchain4j.memory.ChatMemory? = null,
+        chatMemory: ChatMemory? = null,
     ): ChatClient
 
     /**

@@ -5,11 +5,6 @@
 package io.askimo.core.context
 
 import io.askimo.core.logging.logger
-import io.askimo.core.providers.ChatModelFactory
-import io.askimo.core.providers.NoopChatClient
-import io.askimo.core.providers.NoopProviderSettings
-import io.askimo.core.providers.ProviderRegistry
-import io.askimo.core.providers.ProviderSettings
 
 object AppContextFactory {
     private val log = logger<AppContextFactory>()
@@ -50,35 +45,8 @@ object AppContextFactory {
         }
     }
 
-    @Suppress("DEPRECATION") // Legacy CLI initialization - will be refactored to use session-specific clients
     private fun buildAppContext(params: AppContextParams, mode: ExecutionMode): AppContext {
         log.debug("Building session with params: {}, mode: {}", params, mode)
-
-        val appContext = AppContext(params, mode)
-        val provider = appContext.params.currentProvider
-        val modelName = appContext.params.getModel(provider)
-
-        val factory = ProviderRegistry.getFactory(provider)
-
-        val settings: ProviderSettings =
-            appContext.params.providerSettings[provider]
-                ?: factory?.defaultSettings()
-                ?: NoopProviderSettings
-
-        val chatClient = if (factory != null) {
-            try {
-                @Suppress("UNCHECKED_CAST")
-                (factory as ChatModelFactory<ProviderSettings>)
-                    .create(modelName, settings, executionMode = mode)
-            } catch (e: Exception) {
-                log.error("Failed to create chat service", e)
-                NoopChatClient
-            }
-        } else {
-            NoopChatClient
-        }
-        appContext.setChatClient(chatClient)
-
-        return appContext
+        return AppContext(params, mode)
     }
 }

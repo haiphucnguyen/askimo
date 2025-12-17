@@ -46,6 +46,7 @@ import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
@@ -186,7 +187,7 @@ fun main(args: Array<String>) {
         if (promptText != null) {
             val stdinText = readStdinIfAny()
             val prompt = buildPrompt(promptText, stdinText)
-            sendNonInteractiveChatMessage(appContext, prompt, TerminalBuilder.builder().system(true).build())
+            sendNonInteractiveChatMessage(appContext.getStatelessChatClient(), prompt, TerminalBuilder.builder().system(true).build())
             return
         }
 
@@ -299,7 +300,7 @@ fun main(args: Array<String>) {
                 }
             } else {
                 val prompt = parsedLine.line()
-                val output = sendChatMessage(appContext, prompt, reader.terminal, chatSessionService)
+                val output = sendChatMessage(prompt, reader.terminal, chatSessionService)
                 CliInteractiveContext.setLastResponse(output)
                 reader.terminal.writer().println()
                 reader.terminal.writer().flush()
@@ -313,13 +314,12 @@ fun main(args: Array<String>) {
 }
 
 private fun sendNonInteractiveChatMessage(
-    appContext: AppContext,
+    chatClient: ChatClient,
     prompt: String,
     terminal: Terminal,
-): String = streamChatResponse(appContext, prompt, terminal)
+): String = streamChatResponse(chatClient, prompt, terminal)
 
 private fun sendChatMessage(
-    appContext: AppContext,
     prompt: String,
     terminal: Terminal,
     chatSessionService: ChatSessionService,
@@ -335,9 +335,9 @@ private fun sendChatMessage(
         CliInteractiveContext.setCurrentSession(session)
         currentSession = session
     }
-    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(prompt, currentSession.id)
-
-    val output = streamChatResponse(appContext, promptWithContext, terminal)
+    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId = currentSession.id, userMessage = prompt)
+    val chatClient = chatSessionService.getOrCreateClientForSession(currentSession.id)
+    val output = streamChatResponse(chatClient, promptWithContext, terminal)
     chatSessionService.saveAiResponse(currentSession.id, output)
     return output
 }
@@ -347,7 +347,7 @@ private fun sendChatMessage(
  * Handles the streaming, indicator management, and markdown formatting.
  */
 private fun streamChatResponse(
-    appContext: AppContext,
+    chatClient: ChatClient,
     promptWithContext: String,
     terminal: Terminal,
 ): String {
@@ -356,7 +356,7 @@ private fun streamChatResponse(
     val mdRenderer = MarkdownJLineRenderer()
     val mdSink = MarkdownStreamingSink(terminal, mdRenderer)
 
-    val output = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
+    val output = chatClient.sendStreamingMessageWithCallback(promptWithContext) { token ->
         if (firstTokenSeen.compareAndSet(false, true)) {
             indicator.stopWithElapsed()
             terminal.flush()

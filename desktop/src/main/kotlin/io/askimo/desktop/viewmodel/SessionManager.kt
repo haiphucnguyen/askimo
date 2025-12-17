@@ -23,8 +23,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
@@ -139,8 +141,8 @@ class SessionManager(
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runBlocking {
+                withContext(Dispatchers.IO) {
                     chatSessionService.createSession(
                         ChatSession(
                             id = sessionId,
@@ -184,13 +186,13 @@ class SessionManager(
         log.debug("Streaming thread $threadId for session $sessionId started. Active streams: ${activeThreads.size}")
 
         // Prepare context and save user message to DB
-        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(userMessage, sessionId, attachments)
+        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, attachments)
         log.debug("Saved prompt for session $sessionId: $promptWithContext")
 
         // Start streaming in background
         streamingScope.launch(thread.job) {
             try {
-                val fullResponse = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
+                val fullResponse = chatSessionService.getOrCreateClientForSession(sessionId).sendStreamingMessageWithCallback(promptWithContext) { token ->
                     streamingScope.launch {
                         thread.appendChunk(token)
                         val currentContent = thread.getCurrentContent()
