@@ -9,8 +9,9 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.ProjectIndexer
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -150,11 +151,8 @@ class ProjectRepository internal constructor(
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
         }
         if (deleted) {
-            try {
-                ProjectIndexer.removeInstance(projectId)
-            } catch (e: Exception) {
-                log.error("Failed to cleanup indexer for project $projectId", e)
-            }
+            // Publish event for cleanup (e.g., stop file watcher, remove indexer instance)
+            EventBus.post(ProjectDeletedEvent(projectId))
             log.debug("Successfully deleted project $projectId")
         }
         return deleted

@@ -5,11 +5,13 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.input.PromptTemplate
+import dev.langchain4j.rag.DefaultRetrievalAugmentor
+import dev.langchain4j.rag.content.injector.DefaultContentInjector
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.core.project.ProjectMeta
-import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
@@ -222,4 +224,30 @@ class AppContext(
             }
         }
     }
+
+    /**
+     * Build a retrieval augmentor with custom prompt template for RAG.
+     * This configures how retrieved context is injected into the LLM prompt.
+     */
+    private fun buildRetrievalAugmentor(retriever: ContentRetriever) = DefaultRetrievalAugmentor
+        .builder()
+        .contentRetriever(retriever)
+        .contentInjector(
+            DefaultContentInjector
+                .builder()
+                .promptTemplate(
+                    PromptTemplate.from(
+                        """
+                        You are grounded by the following retrieved context. Prefer it over general knowledge.
+                        If the answer is not present, say so.
+
+                        === Retrieved Context ===
+                        {{contents}}
+                        === End Context ===
+
+                        {{userMessage}}
+                        """.trimIndent(),
+                    ),
+                ).build(),
+        ).build()
 }

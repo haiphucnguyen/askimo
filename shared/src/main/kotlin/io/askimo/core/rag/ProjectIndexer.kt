@@ -14,9 +14,16 @@ import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
 import io.askimo.core.util.AskimoHome
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.sax.BodyContentHandler
@@ -97,6 +104,8 @@ class ProjectIndexer private constructor(
          */
         private val instances = ConcurrentHashMap<String, ProjectIndexer>()
 
+        private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
         init {
             Runtime.getRuntime().addShutdownHook(
                 Thread {
@@ -109,6 +118,16 @@ class ProjectIndexer private constructor(
                     }
                 },
             )
+
+            // Listen for project deletion events
+            eventScope.launch {
+                EventBus.internalEvents
+                    .filterIsInstance<ProjectDeletedEvent>()
+                    .collect { event ->
+                        log.debug("Received ProjectDeletedEvent for project: {}", event.projectId)
+                        removeInstance(event.projectId)
+                    }
+            }
         }
 
         /**
