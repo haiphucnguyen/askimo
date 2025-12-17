@@ -191,6 +191,7 @@ graalvmNative {
                     "--enable-url-protocols=https",
                     "--report-unsupported-elements-at-runtime",
                     "--features=io.askimo.cli.graal.AskimoFeature",
+                    "-Dorg.apache.lucene.store.MMapDirectory.enableMemorySegments=false",
                     "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
                     "--initialize-at-run-time=kotlinx.coroutines,kotlin.coroutines,io.askimo.core.project.ProjectFileWatcher",
                     "-H:IncludeResources=logback.xml|logback-.*\\.xml",
