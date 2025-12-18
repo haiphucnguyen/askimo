@@ -1,5 +1,5 @@
 [versions]
-graalvm-plugin = "0.11.1"
+graalvm-plugin = "0.11.3"
 jline = "3.30.6"
 langchain4j = "1.9.1"
 commonmark = "0.27.0"
@@ -25,6 +25,8 @@ coil = "3.3.0"
 koin = "4.1.1"
 jlatexmath = "1.0.7"
 tika = "3.2.3"
+lucene = "10.3.2"
+jvector = "1.9.1-beta17"
 
 [libraries]
 # JLine
@@ -74,6 +76,13 @@ logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.
 tika-core = { group = "org.apache.tika", name = "tika-core", version.ref = "tika" }
 tika-parser-pdf = { group = "org.apache.tika", name = "tika-parser-pdf-module", version.ref = "tika" }
 tika-parser-microsoft = { group = "org.apache.tika", name = "tika-parser-microsoft-module", version.ref = "tika" }
+
+# Apache Lucene
+lucene-core = { group = "org.apache.lucene", name = "lucene-core", version.ref = "lucene" }
+lucene-queryparser = { group = "org.apache.lucene", name = "lucene-queryparser", version.ref = "lucene" }
+
+# LangChain4j JVector
+langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "jvector" }
 
 # Database and MCP SDK
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
