@@ -46,6 +46,9 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectsRefreshRequested
+import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.ProjectIndexer
 import io.askimo.core.util.TimeUtil
@@ -54,6 +57,7 @@ import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.SessionActionMenu
 import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.deleteProjectDialog
+import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +91,16 @@ fun projectView(
     var showProjectMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var localRefreshTrigger by remember { mutableStateOf(0) }
+
+    val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
+
+    // Load all projects for Move to Project functionality
+    var allProjects by remember { mutableStateOf<List<Project>>(emptyList()) }
+    LaunchedEffect(refreshTrigger, localRefreshTrigger) {
+        allProjects = withContext(Dispatchers.IO) {
+            projectRepository.getAllProjects()
+        }
+    }
 
     // Load sessions for this project - refreshes when project.id, refreshTrigger, or localRefreshTrigger changes
     LaunchedEffect(project.id, refreshTrigger, localRefreshTrigger) {
@@ -242,6 +256,8 @@ fun projectView(
                         },
                         onRenameSession = onRenameSession,
                         onExportSession = onExportSession,
+                        currentProject = project,
+                        allProjects = allProjects,
                     )
                 }
             }
@@ -269,8 +285,15 @@ private fun sessionCard(
     onDeleteSession: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    currentProject: Project,
+    allProjects: List<Project>,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showNewProjectDialog by remember { mutableStateOf(false) }
+    var sessionIdToMove by remember { mutableStateOf<String?>(null) }
+
+    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
+    val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
 
     val backgroundColor = if (index % 2 == 0) {
         MaterialTheme.colorScheme.surface
@@ -344,13 +367,83 @@ private fun sessionCard(
                     onDismissRequest = { showMenu = false },
                 ) {
                     SessionActionMenu.projectViewMenu(
+                        sessionId = session.id,
+                        currentProjectId = currentProject.id,
+                        currentProjectName = currentProject.name,
+                        availableProjects = allProjects,
                         onExport = { onExportSession(session.id) },
                         onRename = { onRenameSession(session.id, session.title) },
                         onDelete = { onDeleteSession(session.id) },
+                        onMoveToNewProject = {
+                            sessionIdToMove = session.id
+                            showNewProjectDialog = true
+                        },
+                        onMoveToExistingProject = { selectedProject ->
+                            // Move session to another project
+                            sessionRepository.updateSessionProject(session.id, selectedProject.id)
+                            // Publish events to refresh both projects and sessions
+                            EventBus.post(
+                                ProjectsRefreshRequested(
+                                    reason = "Session ${session.id} moved from ${currentProject.id} to ${selectedProject.id}",
+                                ),
+                            )
+                            EventBus.post(
+                                SessionsRefreshRequested(
+                                    reason = "Session ${session.id} moved to project ${selectedProject.id}",
+                                ),
+                            )
+                        },
+                        onRemoveFromProject = {
+                            // Remove session from current project (set projectId to null)
+                            sessionRepository.updateSessionProject(session.id, null)
+                            // Publish events to refresh both projects and sessions
+                            EventBus.post(
+                                ProjectsRefreshRequested(
+                                    reason = "Session ${session.id} removed from project ${currentProject.id}",
+                                ),
+                            )
+                            EventBus.post(
+                                SessionsRefreshRequested(
+                                    reason = "Session ${session.id} removed from project",
+                                ),
+                            )
+                        },
                         onDismiss = { showMenu = false },
                     )
                 }
             }
         }
+    }
+
+    // New Project Dialog
+    if (showNewProjectDialog && sessionIdToMove != null) {
+        newProjectDialog(
+            onDismiss = {
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+            onCreateProject = { name, description, folderPath ->
+                // Project is already created in the dialog, now associate session with it
+                val createdProject = projectRepository.findProjectByName(name)
+
+                if (createdProject != null) {
+                    sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
+                    // Publish events to refresh both projects and sessions
+                    EventBus.post(
+                        ProjectsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved from ${currentProject.id} to new project ${createdProject.id}",
+                        ),
+                    )
+                    EventBus.post(
+                        SessionsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
+                        ),
+                    )
+                }
+
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+        )
     }
 }

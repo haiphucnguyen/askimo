@@ -24,13 +24,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectsRefreshRequested
+import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
 import io.askimo.desktop.theme.ComponentColors
 
 /**
  * Reusable session actions menu component that provides a dropdown with session-related actions.
- * Currently supports Rename, Export, Delete, and Show Session Summary (developer mode) actions.
+ * Currently supports Rename, Export, Move to Project, Delete, and Show Session Summary (developer mode) actions.
  *
  * @param sessionId The ID of the session to perform actions on
  * @param onRenameSession Callback invoked when the rename action is triggered
@@ -49,6 +53,30 @@ fun sessionActionsMenu(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showNewProjectDialog by remember { mutableStateOf(false) }
+    var sessionIdToMove by remember { mutableStateOf<String?>(null) }
+
+    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
+    val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
+
+    // Load current session to check if it belongs to a project
+    val currentSession = remember(sessionId) { sessionRepository.getSession(sessionId) }
+    val currentProjectId = currentSession?.projectId
+    val currentProject = remember(currentProjectId) {
+        currentProjectId?.let { projectRepository.getProject(it) }
+    }
+
+    // Load available projects and filter out the project the session already belongs to
+    val availableProjects = remember(sessionId) {
+        val allProjects = projectRepository.getAllProjects()
+
+        // Exclude the project the session already belongs to
+        if (currentProjectId != null) {
+            allProjects.filter { it.id != currentProjectId }
+        } else {
+            allProjects
+        }
+    }
 
     Box {
         IconButton(
@@ -107,6 +135,54 @@ fun sessionActionsMenu(
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             )
 
+            // Move to Project submenu
+            moveToProjectMenuItem(
+                projects = availableProjects,
+                onNewProject = {
+                    sessionIdToMove = sessionId
+                    showNewProjectDialog = true
+                },
+                onSelectProject = { selectedProject ->
+                    // Associate session with existing project
+                    sessionRepository.updateSessionProject(sessionId, selectedProject.id)
+                    // Publish events to refresh both projects and sessions
+                    EventBus.post(
+                        ProjectsRefreshRequested(
+                            reason = "Session $sessionId moved to project ${selectedProject.id}",
+                        ),
+                    )
+                    EventBus.post(
+                        SessionsRefreshRequested(
+                            reason = "Session $sessionId moved to project ${selectedProject.id}",
+                        ),
+                    )
+                },
+                onDismiss = { expanded = false },
+            )
+
+            // Remove from Project - separate menu item at same level (only if session belongs to a project)
+            if (currentProject != null) {
+                removeFromProjectMenuItem(
+                    projectName = currentProject.name,
+                    onRemoveFromProject = {
+                        // Remove session from current project (set projectId to null)
+                        sessionRepository.updateSessionProject(sessionId, null)
+                        // Publish events to refresh both projects and sessions
+                        EventBus.post(
+                            ProjectsRefreshRequested(
+                                reason = "Session $sessionId removed from project",
+                            ),
+                        )
+                        EventBus.post(
+                            SessionsRefreshRequested(
+                                reason = "Session $sessionId removed from project",
+                            ),
+                        )
+                    },
+                    onDismiss = { expanded = false },
+                )
+            }
+
             // Show Session Summary - only visible in developer mode
             if (DeveloperModePreferences.isEnabled() &&
                 DeveloperModePreferences.isActive.value
@@ -154,5 +230,37 @@ fun sessionActionsMenu(
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             )
         }
+    }
+
+    // New Project Dialog
+    if (showNewProjectDialog && sessionIdToMove != null) {
+        newProjectDialog(
+            onDismiss = {
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+            onCreateProject = { name, description, folderPath ->
+                // Project is already created in the dialog, now associate session with it
+                val createdProject = projectRepository.findProjectByName(name)
+
+                if (createdProject != null) {
+                    sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
+                    // Publish events to refresh both projects and sessions
+                    EventBus.post(
+                        ProjectsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
+                        ),
+                    )
+                    EventBus.post(
+                        SessionsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
+                        ),
+                    )
+                }
+
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+        )
     }
 }
