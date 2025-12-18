@@ -12,6 +12,7 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
+import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.desktop.model.ExportFormat
@@ -100,6 +101,7 @@ class SessionsViewModel(
      * Subscribe to internal events to keep session list updated.
      */
     private fun subscribeToSessionEvents() {
+        // Listen for new session creation
         scope.launch {
             EventBus.internalEvents
                 .filterIsInstance<SessionCreatedEvent>()
@@ -108,6 +110,16 @@ class SessionsViewModel(
                         log.debug("New session created: ${event.sessionId}, refreshing sidebar")
                         loadRecentSessions()
                     }
+                }
+        }
+
+        // Listen for generic session refresh requests
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<SessionsRefreshRequested>()
+                .collect { event ->
+                    log.debug("Sessions refresh requested: ${event.reason ?: "no reason specified"}")
+                    loadRecentSessions()
                 }
         }
     }

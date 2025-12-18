@@ -84,14 +84,28 @@ class ProjectRepository internal constructor(
     /**
      * Get a project by id.
      * @param projectId The project id
-     * @return The project, or null if not found
+     * @return The project or null if not found
      */
     fun getProject(projectId: String): Project? = transaction(database) {
         ProjectsTable
             .selectAll()
             .where { ProjectsTable.id eq projectId }
-            .singleOrNull()
-            ?.toProject()
+            .map { it.toProject() }
+            .firstOrNull()
+    }
+
+    /**
+     * Find a project by name.
+     * @param name The project name
+     * @return The project or null if not found
+     */
+    fun findProjectByName(name: String): Project? = transaction(database) {
+        ProjectsTable
+            .selectAll()
+            .where { ProjectsTable.name eq name }
+            .orderBy(ProjectsTable.createdAt to SortOrder.DESC)
+            .map { it.toProject() }
+            .firstOrNull()
     }
 
     /**

@@ -9,8 +9,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectsRefreshRequested
 import io.askimo.core.logging.logger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 
 /**
@@ -30,6 +33,21 @@ class ProjectsViewModel(
 
     init {
         loadProjects()
+        subscribeToProjectEvents()
+    }
+
+    /**
+     * Subscribe to internal events to keep project list updated.
+     */
+    private fun subscribeToProjectEvents() {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<ProjectsRefreshRequested>()
+                .collect { event ->
+                    log.debug("Projects refresh requested: ${event.reason ?: "no reason specified"}")
+                    loadProjects()
+                }
+        }
     }
 
     /**
