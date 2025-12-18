@@ -189,16 +189,41 @@ object SessionActionMenu {
 
     /**
      * Menu for project view sessions (no star/unstar).
+     * Includes move to project functionality.
      */
     @Composable
     fun projectViewMenu(
+        sessionId: String,
+        currentProjectId: String,
+        currentProjectName: String,
+        availableProjects: List<Project>,
         onExport: () -> Unit,
         onRename: () -> Unit,
         onDelete: () -> Unit,
+        onMoveToNewProject: () -> Unit,
+        onMoveToExistingProject: (Project) -> Unit,
+        onRemoveFromProject: () -> Unit,
         onDismiss: () -> Unit,
     ) {
         exportMenuItem(onExport = onExport, onDismiss = onDismiss)
         renameMenuItem(onRename = onRename, onDismiss = onDismiss)
+
+        // Move to Project submenu - exclude current project
+        val projectsToShow = availableProjects.filter { it.id != currentProjectId }
+        moveToProjectMenuItem(
+            projects = projectsToShow,
+            onNewProject = onMoveToNewProject,
+            onSelectProject = onMoveToExistingProject,
+            onDismiss = onDismiss,
+        )
+
+        // Remove from Project - separate menu item at same level
+        removeFromProjectMenuItem(
+            projectName = currentProjectName,
+            onRemoveFromProject = onRemoveFromProject,
+            onDismiss = onDismiss,
+        )
+
         deleteMenuItem(onDelete = onDelete, onDismiss = onDismiss)
     }
 

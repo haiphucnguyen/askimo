@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,11 +45,11 @@ import io.askimo.desktop.theme.ComponentColors
  * - Separator
  * - List of existing projects
  *
- * This component is reusable across different views (NavigationSidebar, ChatView, etc.)
+ * This component is reusable across different views (NavigationSidebar, ChatView, ProjectView, etc.)
  *
  * @param projects List of available projects
- * @param onNewProject Callback when "New Project" is selected (for future implementation)
- * @param onSelectProject Callback when a project is selected (for future implementation)
+ * @param onNewProject Callback when "New Project" is selected
+ * @param onSelectProject Callback when a project is selected
  * @param onDismiss Callback to close the parent menu
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -170,4 +171,37 @@ fun moveToProjectMenuItem(
             }
         }
     }
+}
+
+/**
+ * Reusable "Remove from Project" menu item.
+ * Displays a menu item to remove a session from its current project.
+ *
+ * @param projectName Name of the current project
+ * @param onRemoveFromProject Callback when remove is selected
+ * @param onDismiss Callback to close the parent menu
+ */
+@Composable
+fun removeFromProjectMenuItem(
+    projectName: String,
+    onRemoveFromProject: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = {
+            Text(stringResource("session.remove.from.project", projectName))
+        },
+        onClick = {
+            onDismiss()
+            onRemoveFromProject()
+        },
+        leadingIcon = {
+            Icon(
+                Icons.Default.FolderOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
+        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+    )
 }
