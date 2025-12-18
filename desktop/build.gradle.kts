@@ -86,6 +86,24 @@ compose.desktop {
     application {
         mainClass = "io.askimo.desktop.MainKt"
 
+        // Configure JVM args for SQLite temp directory
+        val sqliteTmpDir =
+            layout.buildDirectory
+                .dir("sqlite-tmp")
+                .get()
+                .asFile
+        val javaTmpDir =
+            layout.buildDirectory
+                .dir("tmp")
+                .get()
+                .asFile
+
+        jvmArgs +=
+            listOf(
+                "-Dorg.sqlite.tmpdir=${sqliteTmpDir.absolutePath}",
+                "-Djava.io.tmpdir=${javaTmpDir.absolutePath}",
+            )
+
         nativeDistributions {
             targetFormats(
                 TargetFormat.Dmg,
@@ -126,6 +144,26 @@ tasks.withType<Zip> {
 
 tasks.test {
     useJUnitPlatform()
+
+    // Configure SQLite temp directory for tests
+    val sqliteTmpDir =
+        layout.buildDirectory
+            .dir("sqlite-tmp")
+            .get()
+            .asFile
+    val javaTmpDir =
+        layout.buildDirectory
+            .dir("tmp")
+            .get()
+            .asFile
+
+    doFirst {
+        sqliteTmpDir.mkdirs()
+        javaTmpDir.mkdirs()
+    }
+
+    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
+    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 kotlin {
     jvmToolchain(21)

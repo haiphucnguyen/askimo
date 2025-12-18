@@ -64,6 +64,26 @@ tasks.test {
         environment(key, value)
     }
 
+    // Configure SQLite temp directory for tests
+    val sqliteTmpDir =
+        layout.buildDirectory
+            .dir("sqlite-tmp")
+            .get()
+            .asFile
+    val javaTmpDir =
+        layout.buildDirectory
+            .dir("tmp")
+            .get()
+            .asFile
+
+    doFirst {
+        sqliteTmpDir.mkdirs()
+        javaTmpDir.mkdirs()
+    }
+
+    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
+    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
+
     jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
 
     if (traceAgent) {
@@ -166,6 +186,26 @@ tasks.named<ProcessResources>("processResources") {
 
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+
+    // Configure SQLite temp directory for development runs
+    val sqliteTmpDir =
+        layout.buildDirectory
+            .dir("sqlite-tmp")
+            .get()
+            .asFile
+    val javaTmpDir =
+        layout.buildDirectory
+            .dir("tmp")
+            .get()
+            .asFile
+
+    doFirst {
+        sqliteTmpDir.mkdirs()
+        javaTmpDir.mkdirs()
+    }
+
+    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
+    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 
 tasks.register<Sync>("syncGraalMetadata") {

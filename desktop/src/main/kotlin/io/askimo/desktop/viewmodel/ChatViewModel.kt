@@ -902,7 +902,20 @@ class ChatViewModel(
      */
     fun setDirective(directiveId: String?) {
         selectedDirective = directiveId
-        // TODO: Persist directive selection to the session if needed
+
+        val sessionId = currentSessionId.value
+        if (sessionId != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        chatSessionService.updateSessionDirective(sessionId, directiveId)
+                    }
+                    log.debug("Updated directive for session $sessionId to $directiveId")
+                } catch (e: Exception) {
+                    log.error("Failed to update session directive: ${e.message}", e)
+                }
+            }
+        }
     }
 
     /**

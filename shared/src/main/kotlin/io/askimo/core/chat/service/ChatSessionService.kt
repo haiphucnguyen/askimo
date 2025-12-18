@@ -366,6 +366,15 @@ class ChatSessionService(
     fun renameTitle(sessionId: String, newTitle: String): Boolean = sessionRepository.updateSessionTitle(sessionId, newTitle)
 
     /**
+     * Update the directive for a chat session.
+     *
+     * @param sessionId The ID of the session to update
+     * @param directiveId The directive ID to set (null to clear directive)
+     * @return true if the session was updated, false if it didn't exist
+     */
+    fun updateSessionDirective(sessionId: String, directiveId: String?): Boolean = sessionRepository.updateSessionDirective(sessionId, directiveId)
+
+    /**
      * Add a message to a session and update the session's timestamp.
      *
      * @param message The message to add
@@ -569,6 +578,31 @@ class ChatSessionService(
      */
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
+    /**
+     * Prepares user message with attachments and returns combined prompt including any active directive.
+     *
+     * The directive (system instructions + session-specific directive) is prepended to the user message
+     * to act as system-level instructions. While ideally these would be separate system messages,
+     * the current LangChain4j AI Services architecture sets system messages at build time,
+     * so we prepend directives to user messages to allow per-session customization.
+     *
+     * The format is:
+     * ```
+     * [System Directive]
+     *
+     * ---
+     *
+     * [Session-Specific Directive]
+     *
+     * ---
+     *
+     * [User Message with Attachments]
+     * ```
+     *
+     * If attachments are present, they will be included inline in the message using file:// format.
+     *
+     * @return The complete prompt string ready to send to the AI (directive prepended if present)
+     */
     fun prepareContextAndGetPromptForChat(
         sessionId: String,
         userMessage: String,
@@ -601,28 +635,43 @@ class ChatSessionService(
 
         val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)
 
+        // Build the final prompt with directive acting as system-level instructions
         return if (directivePrompt != null) {
-            "$directivePrompt\n\n$messageWithAttachments"
+            buildString {
+                append(directivePrompt)
+                appendLine()
+                appendLine()
+                appendLine("---")
+                appendLine()
+                append(messageWithAttachments)
+            }
         } else {
             messageWithAttachments
         }
     }
 
+    /**
+     * Builds the directive prompt by combining system-level and session-specific directives.
+     *
+     * This creates a system instruction that is prepended to user messages to provide
+     * context and constraints for the AI's behavior.
+     *
+     * @return The combined directive text, or null if no directives are active
+     */
     private fun buildDirectivePrompt(sessionId: String): String? {
         val parts = mutableListOf<String>()
 
+        // Add system-level directive (applies to all sessions)
         appContext.systemDirective?.let { sysDir ->
             if (sysDir.isNotBlank()) {
                 parts.add(sysDir.trim())
             }
         }
 
+        // Add session-specific directive (applies only to this session)
         val directive = directiveRepository.findDirectiveBySessionId(sessionId)
         if (directive != null) {
-            val sessionDirectiveText = buildString {
-                appendLine("USER DIRECTIVE: ${directive.name}")
-                appendLine(directive.content.trim())
-            }.trim()
+            val sessionDirectiveText = directive.content.trim()
             parts.add(sessionDirectiveText)
         }
 

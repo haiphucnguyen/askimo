@@ -23,10 +23,9 @@ dependencies {
     api(libs.postgresql)
     api(libs.langchain4j.pgvector)
     api(libs.testcontainers.postgresql)
-    // Lucene embedding store (community)
-    api("dev.langchain4j:langchain4j-community-lucene:1.9.1-beta17")
-    // JVector embedding store (community)
-    api("dev.langchain4j:langchain4j-community-jvector:1.9.1-beta17")
+    api(libs.lucene.core)
+    api(libs.lucene.queryparser)
+    api(libs.langchain4j.jvector)
     api(libs.jackson.module.kotlin)
     api(libs.jackson.dataformat.yaml)
     api(libs.sqlite.jdbc)
@@ -57,6 +56,26 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+
+    // Configure SQLite temp directory for tests
+    val sqliteTmpDir =
+        layout.buildDirectory
+            .dir("sqlite-tmp")
+            .get()
+            .asFile
+    val javaTmpDir =
+        layout.buildDirectory
+            .dir("tmp")
+            .get()
+            .asFile
+
+    doFirst {
+        sqliteTmpDir.mkdirs()
+        javaTmpDir.mkdirs()
+    }
+
+    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
+    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 kotlin {
     jvmToolchain(21)
