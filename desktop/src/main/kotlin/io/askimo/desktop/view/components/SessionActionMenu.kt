@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import io.askimo.core.chat.domain.Project
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
 
@@ -154,16 +155,27 @@ object SessionActionMenu {
     @Composable
     fun sidebarMenu(
         isStarred: Boolean,
+        projects: List<Project>,
         onExport: () -> Unit,
         onRename: () -> Unit,
         onStar: () -> Unit,
         onDelete: () -> Unit,
+        onMoveToNewProject: () -> Unit,
+        onMoveToExistingProject: (Project) -> Unit,
         onShowSessionSummary: () -> Unit = {},
         onDismiss: () -> Unit,
     ) {
         exportMenuItem(onExport = onExport, onDismiss = onDismiss)
         renameMenuItem(onRename = onRename, onDismiss = onDismiss)
         starMenuItem(isStarred = isStarred, onStar = onStar, onDismiss = onDismiss)
+
+        // Move to Project submenu
+        moveToProjectMenuItem(
+            projects = projects,
+            onNewProject = onMoveToNewProject,
+            onSelectProject = onMoveToExistingProject,
+            onDismiss = onDismiss,
+        )
 
         // Show Session Summary - only in developer mode
         if (DeveloperModePreferences.isEnabled() &&

@@ -58,6 +58,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectsRefreshRequested
+import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
@@ -320,6 +324,7 @@ private fun expandedNavigationSidebar(
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
                     onShowSessionSummary = onShowSessionSummary,
+                    projectsViewModel = projectsViewModel,
                 )
             }
         }
@@ -460,7 +465,7 @@ private fun projectsList(
         if (projectsViewModel.projects.isEmpty()) {
             // No projects yet
             Text(
-                text = "No projects yet",
+                text = stringResource("project.none"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(
@@ -473,7 +478,6 @@ private fun projectsList(
             projectsViewModel.projects.forEach { project ->
                 projectItemWithMenu(
                     project = project,
-                    fontScale = fontScale,
                     onProjectClick = { onSelectProject(project.id) },
                     onDeleteProject = { projectToDelete = it },
                 )
@@ -511,11 +515,52 @@ private fun projectsList(
     }
 }
 
+/**
+ * Reusable label composable for navigation items with a menu button.
+ * Displays text with ellipsis and a three-dot menu button on the right.
+ */
+@Composable
+private fun navigationItemLabelWithMenu(
+    text: String,
+    onMenuClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+
+        Box(
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            IconButton(
+                onClick = onMenuClick,
+                modifier = Modifier
+                    .size(24.dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun projectItemWithMenu(
     project: Project,
-    fontScale: Float,
     onProjectClick: () -> Unit,
     onDeleteProject: (Project) -> Unit,
 ) {
@@ -538,37 +583,10 @@ private fun projectItemWithMenu(
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Folder, contentDescription = null) },
                 label = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = project.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-
-                        Box(
-                            modifier = Modifier.padding(start = 4.dp),
-                        ) {
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                            ) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = "More options",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    }
+                    navigationItemLabelWithMenu(
+                        text = project.name,
+                        onMenuClick = { showMenu = true },
+                    )
                 },
                 selected = false,
                 onClick = onProjectClick,
@@ -618,6 +636,7 @@ private fun sessionsList(
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
+    projectsViewModel: ProjectsViewModel,
 ) {
     var isStarredExpanded by remember { mutableStateOf(true) }
 
@@ -696,6 +715,7 @@ private fun sessionsList(
                                 onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
                                 onShowSessionSummary = onShowSessionSummary,
+                                availableProjects = projectsViewModel.projects,
                             )
                         }
                     }
@@ -724,6 +744,7 @@ private fun sessionsList(
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
                     onShowSessionSummary = onShowSessionSummary,
+                    availableProjects = projectsViewModel.projects,
                 )
             }
 
@@ -762,8 +783,13 @@ private fun sessionItemWithMenu(
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
+    availableProjects: List<Project>,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showNewProjectDialog by remember { mutableStateOf(false) }
+    var sessionIdToMove by remember { mutableStateOf<String?>(null) }
+
+    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
 
     Box(
         modifier = Modifier
@@ -776,37 +802,10 @@ private fun sessionItemWithMenu(
             NavigationDrawerItem(
                 icon = null,
                 label = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = session.title,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-
-                        Box(
-                            modifier = Modifier.padding(start = 4.dp),
-                        ) {
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                            ) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = "More options",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    }
+                    navigationItemLabelWithMenu(
+                        text = session.title,
+                        onMenuClick = { showMenu = true },
+                    )
                 },
                 selected = isSelected,
                 onClick = { onResumeSession(session.id) },
@@ -826,14 +825,67 @@ private fun sessionItemWithMenu(
             ) {
                 SessionActionMenu.sidebarMenu(
                     isStarred = session.isStarred,
+                    projects = availableProjects,
                     onExport = { onExportSession(session.id) },
                     onRename = { onRenameSession(session.id, session.title ?: "") },
                     onStar = { onStarSession(session.id, !session.isStarred) },
                     onDelete = { onDeleteSession(session.id) },
+                    onMoveToNewProject = {
+                        sessionIdToMove = session.id
+                        showNewProjectDialog = true
+                    },
+                    onMoveToExistingProject = { selectedProject ->
+                        // Associate session with existing project
+                        sessionRepository.updateSessionProject(session.id, selectedProject.id)
+                        // Publish events to refresh both projects and sessions
+                        EventBus.post(
+                            ProjectsRefreshRequested(
+                                reason = "Session ${session.id} moved to project ${selectedProject.id}",
+                            ),
+                        )
+                        EventBus.post(
+                            SessionsRefreshRequested(
+                                reason = "Session ${session.id} moved to project ${selectedProject.id}",
+                            ),
+                        )
+                    },
                     onShowSessionSummary = { onShowSessionSummary(session.id) },
                     onDismiss = { showMenu = false },
                 )
             }
         }
+    }
+
+    // New Project Dialog
+    if (showNewProjectDialog && sessionIdToMove != null) {
+        newProjectDialog(
+            onDismiss = {
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+            onCreateProject = { name, description, folderPath ->
+                // Project is already created in the dialog, now associate session with it
+                val projectRepository = DatabaseManager.getInstance().getProjectRepository()
+                val createdProject = projectRepository.findProjectByName(name)
+
+                if (createdProject != null) {
+                    sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
+                    // Publish events to refresh both projects and sessions
+                    EventBus.post(
+                        ProjectsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
+                        ),
+                    )
+                    EventBus.post(
+                        SessionsRefreshRequested(
+                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
+                        ),
+                    )
+                }
+
+                showNewProjectDialog = false
+                sessionIdToMove = null
+            },
+        )
     }
 }
