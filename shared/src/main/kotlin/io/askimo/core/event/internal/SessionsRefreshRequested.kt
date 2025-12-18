@@ -34,4 +34,3 @@ data class SessionsRefreshRequested(
     override fun getDetails() = reason?.let { "Sessions refresh requested: $it" }
         ?: "Sessions refresh requested"
 }
-

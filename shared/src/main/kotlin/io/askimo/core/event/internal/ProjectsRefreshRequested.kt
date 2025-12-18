@@ -34,4 +34,3 @@ data class ProjectsRefreshRequested(
     override fun getDetails() = reason?.let { "Projects refresh requested: $it" }
         ?: "Projects refresh requested"
 }
-

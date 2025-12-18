@@ -170,7 +170,7 @@ object SessionActionMenu {
         starMenuItem(isStarred = isStarred, onStar = onStar, onDismiss = onDismiss)
 
         // Move to Project submenu
-        MoveToProjectMenuItem(
+        moveToProjectMenuItem(
             projects = projects,
             onNewProject = onMoveToNewProject,
             onSelectProject = onMoveToExistingProject,

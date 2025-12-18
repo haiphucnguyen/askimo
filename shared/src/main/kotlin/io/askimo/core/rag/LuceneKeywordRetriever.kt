@@ -44,8 +44,10 @@ class LuceneKeywordRetriever(
     private val analyzer = StandardAnalyzer()
     private val directory: Directory
 
-    private val FIELD_CONTENT = "content"
-    private val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
+    companion object {
+        private val FIELD_CONTENT = "content"
+        private val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
+    }
 
     init {
         // 1) Disable Lucene's MemorySegment-backed mmap optimizations (native-image linker friendly)

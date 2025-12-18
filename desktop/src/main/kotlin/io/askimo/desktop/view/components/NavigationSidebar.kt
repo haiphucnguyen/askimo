@@ -520,7 +520,7 @@ private fun projectsList(
  * Displays text with ellipsis and a three-dot menu button on the right.
  */
 @Composable
-private fun NavigationItemLabelWithMenu(
+private fun navigationItemLabelWithMenu(
     text: String,
     onMenuClick: () -> Unit,
 ) {
@@ -583,7 +583,7 @@ private fun projectItemWithMenu(
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Folder, contentDescription = null) },
                 label = {
-                    NavigationItemLabelWithMenu(
+                    navigationItemLabelWithMenu(
                         text = project.name,
                         onMenuClick = { showMenu = true },
                     )
@@ -802,7 +802,7 @@ private fun sessionItemWithMenu(
             NavigationDrawerItem(
                 icon = null,
                 label = {
-                    NavigationItemLabelWithMenu(
+                    navigationItemLabelWithMenu(
                         text = session.title,
                         onMenuClick = { showMenu = true },
                     )

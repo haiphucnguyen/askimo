@@ -53,7 +53,7 @@ import io.askimo.desktop.theme.ComponentColors
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MoveToProjectMenuItem(
+fun moveToProjectMenuItem(
     projects: List<Project>,
     onNewProject: () -> Unit,
     onSelectProject: (Project) -> Unit,
