@@ -43,7 +43,7 @@ fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext
         val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             "${AppConfig.proxy.url}/openai"
         } else {
-            "https://api.openai.com"
+            "https://api.openai.com/v1"
         }
         OpenAiEmbeddingModelBuilder()
             .apiKey(safeApiKey(openAiKey))

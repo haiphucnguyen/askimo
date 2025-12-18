@@ -4,11 +4,15 @@
  */
 package io.askimo.core.chat.repository
 
+import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -91,6 +95,22 @@ class ProjectRepository internal constructor(
     }
 
     /**
+     * Find a project by session ID.
+     * Joins the sessions table to find which project a session belongs to.
+     *
+     * @param sessionId The chat session id
+     * @return The project that the session belongs to, or null if session has no project or not found
+     */
+    fun findProjectBySessionId(sessionId: String): Project? = transaction(database) {
+        ProjectsTable
+            .join(ChatSessionsTable, JoinType.INNER, ProjectsTable.id, ChatSessionsTable.projectId)
+            .select(ProjectsTable.columns)
+            .where { ChatSessionsTable.id eq sessionId }
+            .singleOrNull()
+            ?.toProject()
+    }
+
+    /**
      * Update a project's information.
      * Updates name, description, and indexed paths. Also updates the updatedAt timestamp.
      *
@@ -131,6 +151,8 @@ class ProjectRepository internal constructor(
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
         }
         if (deleted) {
+            // Publish event for cleanup (e.g., stop file watcher, remove indexer instance)
+            EventBus.post(ProjectDeletedEvent(projectId))
             log.debug("Successfully deleted project $projectId")
         }
         return deleted

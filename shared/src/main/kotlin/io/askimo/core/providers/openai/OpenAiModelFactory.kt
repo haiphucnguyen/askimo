@@ -4,16 +4,19 @@
  */
 package io.askimo.core.providers.openai
 
+import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiChatModel.OpenAiChatModelBuilder
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
-import dev.langchain4j.model.openai.OpenAiTokenCountEstimator
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.MemoryConfig
+import io.askimo.core.logging.logger
+import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils
@@ -23,8 +26,18 @@ import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import kotlinx.serialization.json.Json
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
+    private val log = logger<OpenAiModelFactory>()
+
+    companion object {
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+    }
+
     override fun availableModels(settings: OpenAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
 
@@ -57,6 +70,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         settings: OpenAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
@@ -71,33 +85,16 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                     configureProxy(settings.apiKey)
                 }.build()
 
-        // Create separate summarizer model if AI summarization enabled
-        val summarizerModel = if (settings.enableAiSummarization) {
-            createSummarizerModel(settings)
-        } else {
-            null
-        }
-
-        // Create memory config with OpenAI-specific token estimator
-        val memoryConfig = MemoryConfig(
-            maxTokens = AppConfig.chat.maxTokens,
-            summarizationThreshold = AppConfig.chat.summarizationThreshold,
-            tokenEstimator = OpenAiTokenCountEstimator(model)::estimateTokenCountInMessage,
-            summarizerModel = summarizerModel,
-            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
-        )
-
-        val chatMemory = memoryConfig.createMemory()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
+                    }
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
                     }
                 }
                 .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
@@ -124,7 +121,47 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
+    }
+
+    override fun createSummarizer(settings: OpenAiSettings): ((String) -> ConversationSummary)? {
+        if (!settings.enableAiSummarization) {
+            return null
+        }
+
+        val summarizerModel = createSummarizerModel(settings)
+
+        return { conversationText ->
+            val prompt = """
+                Analyze the following conversation and provide a structured summary in JSON format.
+                Extract key facts, main topics, and recent context.
+
+                Conversation:
+                $conversationText
+
+                Respond with JSON only (no markdown formatting):
+                {
+                    "keyFacts": {"fact_name": "fact_value", ...},
+                    "mainTopics": ["topic1", "topic2", ...],
+                    "recentContext": "brief summary of the most recent discussion"
+                }
+            """.trimIndent()
+
+            try {
+                val response = summarizerModel.chat(UserMessage.from(prompt))
+                val jsonText = response.aiMessage().text()
+                    .removePrefix("```json").removeSuffix("```").trim()
+
+                json.decodeFromString<ConversationSummary>(jsonText)
+            } catch (e: Exception) {
+                log.error("Failed to generate conversation summary with OpenAI summarizer", e)
+                ConversationSummary(
+                    keyFacts = emptyMap(),
+                    mainTopics = emptyList(),
+                    recentContext = conversationText.takeLast(500),
+                )
+            }
+        }
     }
 
     private fun supportsSampling(model: String): Boolean {
@@ -147,9 +184,9 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     /**
      * Configure proxy settings for OpenAI streaming chat model builder.
      */
-    private fun OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder.configureProxy(
+    private fun OpenAiStreamingChatModelBuilder.configureProxy(
         apiKey: String,
-    ): OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder {
+    ): OpenAiStreamingChatModelBuilder {
         if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             baseUrl("${AppConfig.proxy.url}/openai/v1")
             customHeaders(buildProxyHeaders(apiKey))
@@ -160,9 +197,9 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     /**
      * Configure proxy settings for OpenAI chat model builder.
      */
-    private fun OpenAiChatModel.OpenAiChatModelBuilder.configureProxy(
+    private fun OpenAiChatModelBuilder.configureProxy(
         apiKey: String,
-    ): OpenAiChatModel.OpenAiChatModelBuilder {
+    ): OpenAiChatModelBuilder {
         if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             baseUrl("${AppConfig.proxy.url}/openai/v1")
             customHeaders(buildProxyHeaders(apiKey))

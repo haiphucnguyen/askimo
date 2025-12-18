@@ -52,12 +52,17 @@ class ChatSessionServiceIT {
             sessionRepository = databaseManager.getChatSessionRepository()
             messageRepository = databaseManager.getChatMessageRepository()
             directiveRepository = databaseManager.getChatDirectiveRepository()
+            val sessionMemoryRepository = databaseManager.getSessionMemoryRepository()
+            val projectRepository = databaseManager.getProjectRepository()
 
             val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
 
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
+                directiveRepository = directiveRepository,
+                sessionMemoryRepository = sessionMemoryRepository,
+                projectRepository = projectRepository,
                 appContext = appContext,
             )
         }

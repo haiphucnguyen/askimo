@@ -7,9 +7,14 @@ package io.askimo.cli.commands
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.ParamKey
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jline.reader.ParsedLine
 
 /**
@@ -61,7 +66,9 @@ class SetParamCommandHandler(
             appContext.params.providerSettings[provider] = providerSettings
             AppContextConfigManager.save(appContext.params)
 
-            appContext.rebuildActiveChatClient()
+            CoroutineScope(Dispatchers.Default).launch {
+                EventBus.emit(ModelChangedEvent(provider, ""))
+            }
             log.display("✅ '${key.key}' is updated")
         } catch (e: IllegalArgumentException) {
             log.displayError("❌ Invalid value for '$keyInput': ${e.message}", e)

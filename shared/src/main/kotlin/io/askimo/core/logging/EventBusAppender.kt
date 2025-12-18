@@ -7,7 +7,7 @@ package io.askimo.core.logging
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.LoggingEvent
+import io.askimo.core.event.dev.LoggingEvent
 import java.time.Instant
 
 /**

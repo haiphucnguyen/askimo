@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,8 +33,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -43,9 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +56,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.desktop.i18n.stringResource
@@ -100,6 +94,7 @@ fun navigationSidebar(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit,
 ) {
     // Animated width for smooth transition
@@ -131,6 +126,7 @@ fun navigationSidebar(
             onStarSession = onStarSession,
             onRenameSession = onRenameSession,
             onExportSession = onExportSession,
+            onShowSessionSummary = onShowSessionSummary,
             onNavigateToSettings = onNavigateToSettings,
         )
     } else {
@@ -168,6 +164,7 @@ private fun expandedNavigationSidebar(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit,
 ) {
     Column(
@@ -322,6 +319,7 @@ private fun expandedNavigationSidebar(
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
+                    onShowSessionSummary = onShowSessionSummary,
                 )
             }
         }
@@ -502,7 +500,7 @@ private fun projectsList(
 
     // Delete confirmation dialog
     projectToDelete?.let { project ->
-        deleteProjectConfirmationDialog(
+        deleteProjectDialog(
             projectName = project.name,
             onConfirm = {
                 projectsViewModel.deleteProject(project.id)
@@ -609,78 +607,6 @@ private fun projectItemWithMenu(
 }
 
 @Composable
-private fun deleteProjectConfirmationDialog(
-    projectName: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier.width(450.dp),
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 8.dp,
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                // Title with warning icon
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(32.dp),
-                    )
-                    Text(
-                        text = stringResource("project.delete.confirm.title"),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-
-                // Confirmation message
-                Text(
-                    text = stringResource("project.delete.confirm.message", projectName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                // Action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        colors = ComponentColors.primaryTextButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Text(stringResource("project.delete.confirm.cancel"))
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = onConfirm,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                        ),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Text(stringResource("project.delete.confirm.button"))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun sessionsList(
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
@@ -691,6 +617,7 @@ private fun sessionsList(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
 ) {
     var isStarredExpanded by remember { mutableStateOf(true) }
 
@@ -768,6 +695,7 @@ private fun sessionsList(
                                 onStarSession = onStarSession,
                                 onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
+                                onShowSessionSummary = onShowSessionSummary,
                             )
                         }
                     }
@@ -795,6 +723,7 @@ private fun sessionsList(
                     onStarSession = onStarSession,
                     onRenameSession = onRenameSession,
                     onExportSession = onExportSession,
+                    onShowSessionSummary = onShowSessionSummary,
                 )
             }
 
@@ -832,6 +761,7 @@ private fun sessionItemWithMenu(
     onStarSession: (String, Boolean) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
+    onShowSessionSummary: (String) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -900,6 +830,7 @@ private fun sessionItemWithMenu(
                     onRename = { onRenameSession(session.id, session.title ?: "") },
                     onStar = { onStarSession(session.id, !session.isStarred) },
                     onDelete = { onDeleteSession(session.id) },
+                    onShowSessionSummary = { onShowSessionSummary(session.id) },
                     onDismiss = { showMenu = false },
                 )
             }

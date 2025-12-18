@@ -77,12 +77,22 @@ class SessionMemoryRepository internal constructor(
      * @param sessionId The session ID to load memory for
      * @return The session memory, or null if not found
      */
-    fun loadMemory(sessionId: String): SessionMemory? = transaction(database) {
+    fun getBySessionId(sessionId: String): SessionMemory? = transaction(database) {
         SessionMemoryTable
             .selectAll()
             .where { SessionMemoryTable.sessionId eq sessionId }
             .singleOrNull()
             ?.toSessionMemory()
+    }
+
+    /**
+     * Delete session memory by session ID.
+     *
+     * @param sessionId The session ID to delete memory for
+     * @return Number of records deleted (0 or 1)
+     */
+    fun deleteBySessionId(sessionId: String): Int = transaction(database) {
+        SessionMemoryTable.deleteWhere { SessionMemoryTable.sessionId eq sessionId }
     }
 
     /**

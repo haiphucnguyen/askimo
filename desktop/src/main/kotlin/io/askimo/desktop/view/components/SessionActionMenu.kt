@@ -6,6 +6,7 @@ package io.askimo.desktop.view.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import io.askimo.desktop.i18n.stringResource
+import io.askimo.desktop.preferences.DeveloperModePreferences
 
 /**
  * Reusable session action menu items.
@@ -124,8 +126,30 @@ object SessionActionMenu {
         )
     }
 
+    @Composable
+    fun showSessionSummaryMenuItem(
+        onShowSessionSummary: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        DropdownMenuItem(
+            text = { Text(stringResource("developer.menu.show.session.summary")) },
+            onClick = {
+                onDismiss()
+                onShowSessionSummary()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.DeveloperMode,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+        )
+    }
+
     /**
-     * Complete menu for navigation sidebar (includes star/unstar).
+     * Menu for sidebar sessions (includes star/unstar and developer mode options).
      */
     @Composable
     fun sidebarMenu(
@@ -134,11 +158,20 @@ object SessionActionMenu {
         onRename: () -> Unit,
         onStar: () -> Unit,
         onDelete: () -> Unit,
+        onShowSessionSummary: () -> Unit = {},
         onDismiss: () -> Unit,
     ) {
         exportMenuItem(onExport = onExport, onDismiss = onDismiss)
         renameMenuItem(onRename = onRename, onDismiss = onDismiss)
         starMenuItem(isStarred = isStarred, onStar = onStar, onDismiss = onDismiss)
+
+        // Show Session Summary - only in developer mode
+        if (DeveloperModePreferences.isEnabled() &&
+            DeveloperModePreferences.isActive.value
+        ) {
+            showSessionSummaryMenuItem(onShowSessionSummary = onShowSessionSummary, onDismiss = onDismiss)
+        }
+
         deleteMenuItem(onDelete = onDelete, onDismiss = onDismiss)
     }
 
@@ -155,5 +188,66 @@ object SessionActionMenu {
         exportMenuItem(onExport = onExport, onDismiss = onDismiss)
         renameMenuItem(onRename = onRename, onDismiss = onDismiss)
         deleteMenuItem(onDelete = onDelete, onDismiss = onDismiss)
+    }
+
+    /**
+     * Menu for project header actions (edit, delete, reindex for developers).
+     */
+    @Composable
+    fun projectActionMenu(
+        onEditProject: () -> Unit,
+        onDeleteProject: () -> Unit,
+        onReindexProject: (() -> Unit)? = null,
+        onDismiss: () -> Unit,
+    ) {
+        DropdownMenuItem(
+            text = { Text(stringResource("project.edit")) },
+            onClick = {
+                onDismiss()
+                onEditProject()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = null,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+        )
+
+        // Re-index Project - only shown when developer mode is enabled
+        onReindexProject?.let { reindex ->
+            DropdownMenuItem(
+                text = { Text(stringResource("project.reindex")) },
+                onClick = {
+                    onDismiss()
+                    reindex()
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.DeveloperMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                    )
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+        }
+
+        DropdownMenuItem(
+            text = { Text(stringResource("project.delete")) },
+            onClick = {
+                onDismiss()
+                onDeleteProject()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+        )
     }
 }

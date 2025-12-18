@@ -56,6 +56,7 @@ import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
@@ -65,6 +66,10 @@ import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.manageDirectivesDialog
 import io.askimo.desktop.view.components.newDirectiveDialog
 import io.askimo.desktop.view.components.sessionActionsMenu
+import io.askimo.desktop.view.components.sessionMemoryDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
 import java.awt.Frame
@@ -133,6 +138,11 @@ fun chatView(
     // Load all directives
     var availableDirectives by remember { mutableStateOf<List<ChatDirective>>(emptyList()) }
     var showNewDirectiveDialog by remember { mutableStateOf(false) }
+
+    // Session memory dialog state
+    var showSessionMemoryDialog by remember { mutableStateOf(false) }
+    var sessionMemory by remember { mutableStateOf<io.askimo.core.chat.domain.SessionMemory?>(null) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         availableDirectives = directiveService.listAllDirectives()
@@ -487,6 +497,17 @@ fun chatView(
                                 onRenameSession = onRenameSession,
                                 onExportSession = onExportSession,
                                 onDeleteSession = onDeleteSession,
+                                onShowSessionSummary = { sid ->
+                                    // Query session memory from repository
+                                    coroutineScope.launch {
+                                        val memory = withContext(Dispatchers.IO) {
+                                            val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
+                                            repository.getBySessionId(sid)
+                                        }
+                                        sessionMemory = memory
+                                        showSessionMemoryDialog = true
+                                    }
+                                },
                             )
                         }
                     }
@@ -745,6 +766,17 @@ fun chatView(
                 message.id?.let { messageId ->
                     onUpdateAIMessage(messageId, newContent)
                 }
+            },
+        )
+    }
+
+    // Session memory dialog
+    if (showSessionMemoryDialog) {
+        sessionMemoryDialog(
+            sessionMemory = sessionMemory,
+            onDismiss = {
+                showSessionMemoryDialog = false
+                sessionMemory = null
             },
         )
     }

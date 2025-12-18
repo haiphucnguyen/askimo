@@ -63,10 +63,12 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.provideLocalization
@@ -93,6 +95,7 @@ import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
 import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.renameSessionDialog
+import io.askimo.desktop.view.components.sessionMemoryDialog
 import io.askimo.desktop.view.components.starPromptDialog
 import io.askimo.desktop.view.project.projectView
 import io.askimo.desktop.view.sessions.sessionsView
@@ -104,7 +107,10 @@ import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import io.askimo.desktop.viewmodel.UpdateViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image
 import org.koin.core.context.GlobalContext.get
 import org.koin.core.context.startKoin
@@ -142,6 +148,8 @@ fun detectMacOSDarkMode(): Boolean {
         false
     }
 }
+
+private val log = logger("Main")
 
 fun main() {
     startKoin {
@@ -200,7 +208,9 @@ fun main() {
 
         Window(
             icon = icon,
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                exitApplication()
+            },
             title = "Askimo",
             state = windowState,
         ) {
@@ -301,11 +311,11 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(5000)
+        delay(5000)
         updateViewModel.checkForUpdates(silent = true)
 
         while (true) {
-            kotlinx.coroutines.delay(24 * 60 * 60 * 1000L) // 24 hours
+            delay(24 * 60 * 60 * 1000L) // 24 hours
             updateViewModel.checkForUpdates(silent = true)
         }
     }
@@ -318,6 +328,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     var showProviderSetupDialog by remember { mutableStateOf(false) }
+    var showSessionMemoryDialog by remember { mutableStateOf(false) }
+    var sessionMemoryToShow by remember { mutableStateOf<io.askimo.core.chat.domain.SessionMemory?>(null) }
+
     LaunchedEffect(Unit) {
         if (appContext.getActiveProvider() == ModelProvider.UNKNOWN) {
             showProviderSetupDialog = true
@@ -327,9 +340,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     // Set message complete callback once per chatViewModel instance
     LaunchedEffect(chatViewModel) {
         chatViewModel?.setOnMessageCompleteCallback {
-            sessionsViewModel.loadRecentSessions()
-
-            // Track chat completion for star prompt
             StarPromptPreferences.incrementChatCount()
             if (StarPromptPreferences.shouldShowStarPrompt()) {
                 showStarPromptDialog = true
@@ -364,6 +374,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     }
                 },
                 onNewChat = {
+                    sessionManager.clearActiveSession()
                     chatViewModel?.clearChat()
                     currentView = View.CHAT
                 },
@@ -544,6 +555,17 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                     onExportSession = { sessionId ->
                                         sessionsViewModel.exportSession(sessionId)
                                     },
+                                    onShowSessionSummary = { sessionId ->
+                                        // Query session memory from repository
+                                        scope.launch {
+                                            val memory = withContext(Dispatchers.IO) {
+                                                val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
+                                                repository.getBySessionId(sessionId)
+                                            }
+                                            sessionMemoryToShow = memory
+                                            showSessionMemoryDialog = true
+                                        }
+                                    },
                                     onNavigateToSettings = {
                                         previousView = currentView
                                         currentView = View.SETTINGS
@@ -599,6 +621,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                         onResumeSession = handleResumeSession,
                                         onNavigateToChat = {
                                             currentView = View.CHAT
+                                        },
+                                        onNavigateToSessions = {
+                                            currentView = View.SESSIONS
                                         },
                                         onProjectSessionsChanged = {
                                             projectViewRefreshTrigger++
@@ -940,6 +965,17 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 )
             }
 
+            // Session Memory Dialog (Developer Mode)
+            if (showSessionMemoryDialog) {
+                sessionMemoryDialog(
+                    sessionMemory = sessionMemoryToShow,
+                    onDismiss = {
+                        showSessionMemoryDialog = false
+                        sessionMemoryToShow = null
+                    },
+                )
+            }
+
             // Star Prompt Dialog (One-time after usage)
             if (showStarPromptDialog) {
                 starPromptDialog(
@@ -1019,6 +1055,7 @@ fun mainContent(
     sessionManager: SessionManager,
     onResumeSession: (String) -> Unit,
     onNavigateToChat: () -> Unit,
+    onNavigateToSessions: () -> Unit,
     onProjectSessionsChanged: () -> Unit,
     onEditProject: (String) -> Unit,
     activeSessionId: String?,
@@ -1117,6 +1154,7 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
+                            appContext = appContext,
                             onStartChat = { projId, message, attachments ->
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
@@ -1139,6 +1177,10 @@ fun mainContent(
                                 sessionsViewModel.exportSession(sessionId)
                             },
                             onEditProject = onEditProject,
+                            onDeleteProject = { projectId ->
+                                projectsViewModel.deleteProject(projectId)
+                                onNavigateToSessions()
+                            },
                             refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )

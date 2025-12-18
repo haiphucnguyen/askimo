@@ -4,16 +4,14 @@
  */
 package io.askimo.core.providers.gemini
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiTokenCountEstimator
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils
@@ -45,6 +43,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         settings: GeminiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             GoogleAiGeminiStreamingChatModel
@@ -70,22 +69,14 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .modelName(model)
             .build()
 
-        val memoryConfig = MemoryConfig(
-            maxTokens = AppConfig.chat.maxTokens,
-            summarizationThreshold = AppConfig.chat.summarizationThreshold,
-            tokenEstimator = tokenEstimator::estimateTokenCountInMessage,
-            summarizerModel = summarizerModel,
-            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
-        )
-
-        val chatMemory = memoryConfig.createMemory()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
@@ -129,7 +120,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 
     private fun supportsSampling(model: String): Boolean = true

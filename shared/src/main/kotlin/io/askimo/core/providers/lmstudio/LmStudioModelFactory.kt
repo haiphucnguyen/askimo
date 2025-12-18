@@ -5,13 +5,12 @@
 package io.askimo.core.providers.lmstudio
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -40,6 +39,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         settings: LmStudioSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         // LMStudio requires HTTP/1.1
         val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
@@ -59,18 +59,14 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     topP(s.topP)
                 }.build()
 
-        val chatMemory = TokenAwareSummarizingMemory.builder()
-            .maxTokens(8000)
-            .summarizationThreshold(0.75)
-            .build()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
@@ -100,6 +96,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 }

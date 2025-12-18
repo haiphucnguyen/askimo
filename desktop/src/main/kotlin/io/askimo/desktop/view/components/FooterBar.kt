@@ -60,7 +60,7 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.EventSource
-import io.askimo.core.event.UpdateAvailableEvent
+import io.askimo.core.event.system.UpdateAvailableEvent
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.monitoring.SystemResourceMonitor

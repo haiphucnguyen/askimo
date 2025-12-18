@@ -18,6 +18,7 @@ import io.askimo.desktop.viewmodel.SessionsViewModel
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import io.askimo.desktop.viewmodel.UpdateViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.dsl.module
 
@@ -51,12 +52,10 @@ val desktopModule = module {
 
     single { SystemResourceMonitor() }
 
-    // SessionManager - manages multiple ChatViewModel instances AND streaming infrastructure
     single {
         SessionManager(
             chatSessionService = get(),
-            appContext = get(),
-            scope = CoroutineScope(kotlinx.coroutines.Dispatchers.Default + SupervisorJob()),
+            scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
         )
     }
 

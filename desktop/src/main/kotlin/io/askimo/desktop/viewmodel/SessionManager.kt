@@ -11,7 +11,8 @@ import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
@@ -22,9 +23,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
@@ -46,7 +51,6 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class SessionManager(
     private val chatSessionService: ChatSessionService,
-    private val appContext: AppContext,
     private val scope: CoroutineScope,
 ) {
     private val log = logger<SessionManager>()
@@ -79,6 +83,23 @@ class SessionManager(
                 shutdown()
             },
         )
+        subscribeToSessionEvents()
+    }
+
+    /**
+     * Subscribe to internal events to keep activeSessionId in sync.
+     */
+    private fun subscribeToSessionEvents() {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<SessionCreatedEvent>()
+                .collect { event ->
+                    if (activeSessionId == null && event.projectId == null) {
+                        log.debug("New session created: ${event.sessionId}, setting as active")
+                        setActiveSession(event.sessionId)
+                    }
+                }
+        }
     }
 
     /**
@@ -139,8 +160,8 @@ class SessionManager(
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runBlocking {
+                withContext(Dispatchers.IO) {
                     chatSessionService.createSession(
                         ChatSession(
                             id = sessionId,
@@ -184,13 +205,13 @@ class SessionManager(
         log.debug("Streaming thread $threadId for session $sessionId started. Active streams: ${activeThreads.size}")
 
         // Prepare context and save user message to DB
-        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(userMessage, sessionId, attachments)
+        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, attachments)
         log.debug("Saved prompt for session $sessionId: $promptWithContext")
 
         // Start streaming in background
         streamingScope.launch(thread.job) {
             try {
-                val fullResponse = appContext.getChatClient().sendStreamingMessageWithCallback(promptWithContext) { token ->
+                val fullResponse = chatSessionService.getOrCreateClientForSession(sessionId).sendStreamingMessageWithCallback(promptWithContext) { token ->
                     streamingScope.launch {
                         thread.appendChunk(token)
                         val currentContent = thread.getCurrentContent()
@@ -299,7 +320,24 @@ class SessionManager(
     }
 
     /**
-     * Create a new session associated with a project, switch to it, and send the first message.
+     * Clear the active session (for "New Chat" state).
+     * Sets activeSessionId to null to indicate no active session.
+     */
+    fun clearActiveSession() {
+        activeSessionId = null
+    }
+
+    /**
+     * Set the active session ID without triggering any side effects.
+     * Used when a new session is created by sending a message in "New Chat" state.
+     */
+    fun setActiveSession(sessionId: String) {
+        activeSessionId = sessionId
+        createdSessions.add(sessionId)
+    }
+
+    /**
+     * Create a new session associated with a project and send the first message.
      * This is used when starting a chat from ProjectView.
      *
      * @param projectId The project ID to associate with the session

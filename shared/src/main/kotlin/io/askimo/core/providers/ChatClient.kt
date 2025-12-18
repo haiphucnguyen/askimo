@@ -37,25 +37,6 @@ interface ChatClient {
     fun sendMessage(@UserMessage prompt: String): String
 
     /**
-     * Switch to a different chat session, saving the current session's memory and loading the new one.
-     *
-     * @param sessionId The ID of the session to switch to
-     */
-    suspend fun switchSession(sessionId: String)
-
-    /**
-     * Save the current session's memory to the database.
-     */
-    suspend fun saveCurrentSession()
-
-    /**
-     * Get the current session ID.
-     *
-     * @return The current session ID, or null if no session is active
-     */
-    fun getCurrentSessionId(): String?
-
-    /**
      * Clear all memory from the current session.
      */
     fun clearMemory()

@@ -74,7 +74,7 @@ class SessionMemoryRepositoryIT {
         assertEquals(memory.memorySummary, saved.memorySummary)
         assertEquals(memory.memoryMessages, saved.memoryMessages)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
         assertEquals(session.id, retrieved!!.sessionId)
         assertEquals(memory.memorySummary, retrieved.memorySummary)
@@ -83,7 +83,7 @@ class SessionMemoryRepositoryIT {
 
     @Test
     fun `should return null for non-existent session memory`() {
-        val result = memoryRepository.loadMemory("non-existent-session-id")
+        val result = memoryRepository.getBySessionId("non-existent-session-id")
         assertNull(result)
     }
 
@@ -103,7 +103,7 @@ class SessionMemoryRepositoryIT {
         assertNull(saved.memorySummary)
         assertEquals(memory.memoryMessages, saved.memoryMessages)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
         assertNull(retrieved.memorySummary)
     }
@@ -129,7 +129,7 @@ class SessionMemoryRepositoryIT {
 
         memoryRepository.saveMemory(memory2)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
         assertEquals(memory2.memorySummary, retrieved!!.memorySummary)
         assertEquals(memory2.memoryMessages, retrieved.memoryMessages)
@@ -146,7 +146,7 @@ class SessionMemoryRepositoryIT {
         )
 
         memoryRepository.saveMemory(memory1)
-        val firstRetrieved = memoryRepository.loadMemory(session.id)
+        val firstRetrieved = memoryRepository.getBySessionId(session.id)
         val firstTimestamp = firstRetrieved!!.lastUpdated
 
         Thread.sleep(10)
@@ -159,7 +159,7 @@ class SessionMemoryRepositoryIT {
         )
 
         memoryRepository.saveMemory(memory2)
-        val secondRetrieved = memoryRepository.loadMemory(session.id)
+        val secondRetrieved = memoryRepository.getBySessionId(session.id)
         val secondTimestamp = secondRetrieved!!.lastUpdated
 
         assertTrue(secondTimestamp.isAfter(firstTimestamp) || secondTimestamp.isEqual(firstTimestamp))
@@ -176,12 +176,12 @@ class SessionMemoryRepositoryIT {
         )
 
         memoryRepository.saveMemory(memory)
-        assertNotNull(memoryRepository.loadMemory(session.id))
+        assertNotNull(memoryRepository.getBySessionId(session.id))
 
         // Delete the session - memory should be cascade deleted
         sessionRepository.deleteSession(session.id)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNull(retrieved)
     }
 
@@ -206,8 +206,8 @@ class SessionMemoryRepositoryIT {
 
         sessionRepository.deleteSession(session1.id)
 
-        assertNull(memoryRepository.loadMemory(session1.id))
-        assertNotNull(memoryRepository.loadMemory(session2.id))
+        assertNull(memoryRepository.getBySessionId(session1.id))
+        assertNotNull(memoryRepository.getBySessionId(session2.id))
     }
 
     @Test
@@ -240,8 +240,8 @@ class SessionMemoryRepositoryIT {
         val deletedCount = memoryRepository.cleanupOldMemories(threshold)
 
         assertEquals(1, deletedCount)
-        assertNull(memoryRepository.loadMemory(session1.id))
-        assertNotNull(memoryRepository.loadMemory(session2.id))
+        assertNull(memoryRepository.getBySessionId(session1.id))
+        assertNotNull(memoryRepository.getBySessionId(session2.id))
     }
 
     @Test
@@ -260,7 +260,7 @@ class SessionMemoryRepositoryIT {
         val deletedCount = memoryRepository.cleanupOldMemories(threshold)
 
         assertEquals(0, deletedCount)
-        assertNotNull(memoryRepository.loadMemory(session.id))
+        assertNotNull(memoryRepository.getBySessionId(session.id))
     }
 
     @Test
@@ -274,7 +274,7 @@ class SessionMemoryRepositoryIT {
         )
 
         memoryRepository.saveMemory(memory1)
-        val firstRetrieved = memoryRepository.loadMemory(session.id)
+        val firstRetrieved = memoryRepository.getBySessionId(session.id)
         val originalCreatedAt = firstRetrieved!!.createdAt
 
         Thread.sleep(10)
@@ -288,7 +288,7 @@ class SessionMemoryRepositoryIT {
         )
 
         memoryRepository.saveMemory(memory2)
-        val secondRetrieved = memoryRepository.loadMemory(session.id)
+        val secondRetrieved = memoryRepository.getBySessionId(session.id)
 
         assertEquals(originalCreatedAt.withNano(0), secondRetrieved!!.createdAt.withNano(0))
     }
@@ -316,7 +316,7 @@ class SessionMemoryRepositoryIT {
         val saved = memoryRepository.saveMemory(memory)
         assertNotNull(saved)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
         assertEquals(largeMessages, retrieved.memoryMessages)
     }
@@ -334,7 +334,7 @@ class SessionMemoryRepositoryIT {
         val saved = memoryRepository.saveMemory(memory)
         assertNotNull(saved)
 
-        val retrieved = memoryRepository.loadMemory(session.id)
+        val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
         assertEquals(memory.memorySummary, retrieved.memorySummary)
         assertEquals(memory.memoryMessages, retrieved.memoryMessages)

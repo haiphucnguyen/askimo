@@ -4,13 +4,12 @@
  */
 package io.askimo.core.providers.xai
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils
@@ -40,6 +39,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         settings: XAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             OpenAiStreamingChatModel
@@ -54,19 +54,14 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                     }
                 }.build()
 
-        // Create token-aware summarizing memory
-        val chatMemory = TokenAwareSummarizingMemory.builder()
-            .maxTokens(8000)
-            .summarizationThreshold(0.75)
-            .build()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
@@ -96,7 +91,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 
     private fun supportsSampling(model: String): Boolean = true

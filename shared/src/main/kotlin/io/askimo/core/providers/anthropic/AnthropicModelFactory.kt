@@ -4,15 +4,13 @@
  */
 package io.askimo.core.providers.anthropic
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.MemoryConfig
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatClientImpl
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
 import io.askimo.core.providers.verbosityInstruction
@@ -37,6 +35,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         settings: AnthropicSettings,
         retrievalAugmentor: RetrievalAugmentor?,
         executionMode: ExecutionMode,
+        chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
             AnthropicStreamingChatModel
@@ -46,29 +45,14 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .baseUrl(settings.baseUrl)
                 .build()
 
-        val summarizerModel = if (settings.enableAiSummarization) {
-            createSummarizerModel(settings)
-        } else {
-            null
-        }
-
-        val memoryConfig = MemoryConfig(
-            maxTokens = AppConfig.chat.maxTokens,
-            summarizationThreshold = AppConfig.chat.summarizationThreshold,
-            tokenEstimator = null, // Use default word-count * 1.3 estimation
-            summarizerModel = summarizerModel,
-            enableAsyncSummarization = AppConfig.chat.enableAsyncSummarization,
-        )
-
-        val chatMemory = memoryConfig.createMemory()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
-                .chatMemory(chatMemory)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
+                    if (chatMemory != null) {
+                        chatMemory(chatMemory)
+                    }
                     if (executionMode != ExecutionMode.DESKTOP) {
                         tools(LocalFsTools)
                     }
@@ -99,7 +83,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             builder.retrievalAugmentor(retrievalAugmentor)
         }
 
-        return ChatClientImpl(builder.build(), chatMemory)
+        return builder.build()
     }
 
     private fun createSummarizerModel(settings: AnthropicSettings): AnthropicChatModel = AnthropicChatModel.builder()

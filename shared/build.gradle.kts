@@ -25,6 +25,8 @@ dependencies {
     api(libs.testcontainers.postgresql)
     // Lucene embedding store (community)
     api("dev.langchain4j:langchain4j-community-lucene:1.9.1-beta17")
+    // JVector embedding store (community)
+    api("dev.langchain4j:langchain4j-community-jvector:1.9.1-beta17")
     api(libs.jackson.module.kotlin)
     api(libs.jackson.dataformat.yaml)
     api(libs.sqlite.jdbc)

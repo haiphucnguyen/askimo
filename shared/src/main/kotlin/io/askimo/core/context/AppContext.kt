@@ -4,28 +4,23 @@
  */
 package io.askimo.core.context
 
-import dev.langchain4j.rag.RetrievalAugmentor
+import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.input.PromptTemplate
+import dev.langchain4j.rag.DefaultRetrievalAugmentor
+import dev.langchain4j.rag.content.injector.DefaultContentInjector
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.project.ProjectMeta
-import io.askimo.core.project.buildRetrievalAugmentor
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.NoopChatClient
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
-import kotlin.isInitialized
 
 data class Scope(
     val projectName: String,
@@ -56,92 +51,11 @@ class AppContext(
 ) {
     private val log = logger<AppContext>()
 
-    @Volatile
-    private var autoSaveScheduler: ScheduledExecutorService? = null
-
-    init {
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                try {
-                    log.info("Shutdown hook triggered - saving session memory")
-                    if (::_chatClient.isInitialized) {
-                        runBlocking {
-                            _chatClient.saveCurrentSession()
-                        }
-                        log.info("Successfully saved memory on application shutdown")
-                    }
-                } catch (e: Exception) {
-                    log.error("Failed to save memory on shutdown", e)
-                }
-            },
-        )
-
-        startPeriodicAutoSave()
-    }
-
-    /**
-     * Start periodic auto-save scheduler
-     */
-    private fun startPeriodicAutoSave() {
-        autoSaveScheduler = Executors.newSingleThreadScheduledExecutor { r ->
-            Thread(r, "memory-auto-saver").apply {
-                isDaemon = true
-            }
-        }
-
-        autoSaveScheduler?.scheduleAtFixedRate({
-            try {
-                if (::_chatClient.isInitialized) {
-                    runBlocking {
-                        _chatClient.saveCurrentSession()
-                    }
-                    log.debug("Periodic auto-save completed")
-                }
-            } catch (e: Exception) {
-                log.error("Periodic auto-save failed", e)
-            }
-        }, 5, 5, TimeUnit.MINUTES)
-    }
-
-    /**
-     * Stop the periodic auto-save scheduler
-     */
-    fun stopAutoSave() {
-        autoSaveScheduler?.shutdown()
-        try {
-            val terminated = autoSaveScheduler?.awaitTermination(10, TimeUnit.SECONDS) ?: true
-            if (!terminated) {
-                autoSaveScheduler?.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            autoSaveScheduler?.shutdownNow()
-            Thread.currentThread().interrupt()
-        }
-    }
-
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
      * This can be updated when the user changes locale or wants to modify AI's behavior.
      */
     var systemDirective: String? = null
-
-    /**
-     * The active chat model for this session.
-     * This property is initialized lazily and can only be set through setChatModel().
-     */
-    private lateinit var _chatClient: ChatClient
-
-    /**
-     * Sets the chat model for this session.
-     *
-     * @param chatClient The chat model to use for this session
-     */
-    fun setChatClient(chatClient: ChatClient) {
-        this._chatClient = chatClient
-        if (chatClient is NoopChatClient) {
-            (this._chatClient as NoopChatClient).appContext = this
-        }
-    }
 
     /**
      * Gets the currently active model provider for this session.
@@ -195,29 +109,7 @@ class AppContext(
      */
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
 
-    /**
-     * Safely calls create on a factory with the given settings.
-     * Uses unchecked cast which is safe because the registry ensures
-     * factory and settings types match for each provider.
-     */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : ProviderSettings> createChatClientFromFactory(
-        factory: ChatModelFactory<*>,
-        model: String,
-        settings: T,
-        retrievalAugmentor: RetrievalAugmentor? = null,
-        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
-    ): ChatClient = (factory as ChatModelFactory<T>).create(model, settings, retrievalAugmentor, executionMode)
-
-    /**
-     * Rebuilds and returns a new instance of the active chat model based on current session parameters.
-     *
-     * @param memoryPolicy Controls whether to keep or reset the chat memory for the current
-     *                     provider/model combination. Default is [MemoryPolicy.KEEP_PER_PROVIDER_MODEL].
-     * @return A newly created [ChatClient] instance that becomes the active model for this session.
-     * @throws IllegalStateException if no model factory is registered for the current provider.
-     */
-    fun rebuildActiveChatClient(): ChatClient {
+    fun getStatelessChatClient(): ChatClient {
         val provider = params.currentProvider
         val factory =
             getModelFactory(provider)
@@ -226,55 +118,51 @@ class AppContext(
         val settings = getOrCreateProviderSettings(provider)
         val modelName = params.model
 
-        val newModel = createChatClientFromFactory(factory, modelName, settings, executionMode = mode)
-        setChatClient(newModel)
-        return newModel
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).create(
+            model = modelName,
+            settings = settings,
+            executionMode = ExecutionMode.CLI_PROMPT,
+        )
     }
 
     /**
-     * Returns the active [ChatClient]. If a model has not been created yet for the
-     * current (provider, model) and settings, it will be built now.
+     * Creates a fresh ChatClient instance without using cache.
+     * This should be used when you need a clean client as a base delegate for session-specific clients.
+     *
+     * Unlike getChatClient(), this method:
+     * - Does NOT use the cached _chatClient
+     * - Creates a new instance every time
+     * - Properly integrates memory into the LangChain4j AI service
+     *
+     * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
+     *                  If provided, the client will be created with RAG capabilities.
+     * @param memory Optional chat memory for conversation context. If provided, memory will be
+     *               integrated into the LangChain4j AI service.
+     * @return A newly created [ChatClient] instance
+     * @throws IllegalStateException if no model factory is registered for the current provider.
      */
-    fun getChatClient(): ChatClient = if (::_chatClient.isInitialized) _chatClient else rebuildActiveChatClient()
-
-    /**
-     * Enables Retrieval-Augmented Generation (RAG) for the current session using
-     * the provided PgVectorIndexer.
-     *
-     * This method wires the indexer into a PgVectorContentRetriever and builds a
-     * retrieval augmentor, then recreates the active ChatClient with the same
-     * provider, model, settings, and memory bucket, but augmented with retrieval.
-     *
-     * Notes:
-     * - Memory is preserved; the conversation context for the current (provider, model)
-     *   is reused.
-     * - Requires that a model factory is registered for the current provider; otherwise
-     *   an IllegalStateException is thrown.
-     * - Typically called after setScope(...) when switching to a project that has
-     *   indexed content.
-     *
-     * @param indexer The PgVector-backed indexer to use for retrieving relevant context.
-     */
-    fun enableRagWith(retriever: ContentRetriever) {
-        val rag = buildRetrievalAugmentor(retriever)
-
+    fun createStatefulChatSession(
+        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        retriever: ContentRetriever? = null,
+        memory: ChatMemory,
+    ): ChatClient {
         val provider = params.currentProvider
-        val model = params.model
-        val settings = getCurrentProviderSettings()
+        val factory = getModelFactory(provider)
+            ?: error("No model factory registered for $provider")
+        val settings = getOrCreateProviderSettings(provider)
+        val modelName = params.model
 
-        val factory =
-            getModelFactory(provider)
-                ?: error("No model factory registered for $provider")
+        val retrievalAugmentor = retriever?.let { buildRetrievalAugmentor(it) }
 
-        val upgraded = createChatClientFromFactory(
-            factory = factory,
-            model = model,
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).create(
+            model = modelName,
             settings = settings,
-            retrievalAugmentor = rag,
-            executionMode = mode,
+            executionMode = ExecutionMode.DESKTOP,
+            retrievalAugmentor = retrievalAugmentor,
+            chatMemory = memory,
         )
-        log.display("RAG enabled for $model")
-        setChatClient(upgraded)
     }
 
     /**
@@ -336,4 +224,30 @@ class AppContext(
             }
         }
     }
+
+    /**
+     * Build a retrieval augmentor with custom prompt template for RAG.
+     * This configures how retrieved context is injected into the LLM prompt.
+     */
+    private fun buildRetrievalAugmentor(retriever: ContentRetriever) = DefaultRetrievalAugmentor
+        .builder()
+        .contentRetriever(retriever)
+        .contentInjector(
+            DefaultContentInjector
+                .builder()
+                .promptTemplate(
+                    PromptTemplate.from(
+                        """
+                        You are grounded by the following retrieved context. Prefer it over general knowledge.
+                        If the answer is not present, say so.
+
+                        === Retrieved Context ===
+                        {{contents}}
+                        === End Context ===
+
+                        {{userMessage}}
+                        """.trimIndent(),
+                    ),
+                ).build(),
+        ).build()
 }

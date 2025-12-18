@@ -4,8 +4,10 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.memory.ConversationSummary
 
 /**
  * Factory interface for creating chat model instances for a specific AI provider.
@@ -39,6 +41,8 @@ interface ChatModelFactory<T : ProviderSettings> {
      * into prompts during generation. Pass null to disable retrieval augmentation.
      * @param executionMode The execution mode indicating how the user is running the application.
      * Tools are disabled for DESKTOP mode.
+     * @param chatMemory Optional chat memory for conversation context. If provided, memory will be
+     * integrated into the LangChain4j AI service.
      * @return A configured ChatModel instance
      */
     fun create(
@@ -46,6 +50,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
         executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        chatMemory: ChatMemory? = null,
     ): ChatClient
 
     /**
@@ -55,4 +60,13 @@ interface ChatModelFactory<T : ProviderSettings> {
      * @return Help text explaining how to set up or configure the provider
      */
     fun getNoModelsHelpText(): String = "Please check your provider configuration."
+
+    /**
+     * Creates a summarizer function for AI-powered conversation summarization.
+     * Returns null if AI summarization is not supported or not enabled for this provider.
+     *
+     * @param settings Provider-specific settings
+     * @return A function that takes conversation text and returns a ConversationSummary, or null
+     */
+    fun createSummarizer(settings: T): ((String) -> ConversationSummary)? = null
 }

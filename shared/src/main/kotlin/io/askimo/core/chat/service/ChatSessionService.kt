@@ -4,8 +4,11 @@
  */
 package io.askimo.core.chat.service
 
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
@@ -14,13 +17,32 @@ import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
+import io.askimo.core.chat.repository.ProjectRepository
+import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ModelChangedEvent
+import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.logging.logger
-import kotlinx.coroutines.runBlocking
+import io.askimo.core.memory.TokenAwareSummarizingMemory
+import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.rag.HybridContentRetriever
+import io.askimo.core.rag.ProjectIndexer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Result of resuming a chat session.
@@ -54,21 +76,186 @@ data class ResumeSessionPaginatedResult(
  *
  * @param sessionRepository The chat session repository
  * @param messageRepository The chat message repository
- * @param conversationSummaryRepository The conversation summary repository
- * @param folderRepository The chat folder repository
+ * @param directiveRepository The chat directive repository
+ * @param sessionMemoryRepository The session memory repository
+ * @param appContext The application context
  */
 class ChatSessionService(
     private val sessionRepository: ChatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository(),
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
     private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository(),
+    private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
+    private val projectRepository: ProjectRepository = DatabaseManager.getInstance().getProjectRepository(),
     private val appContext: AppContext,
 ) {
     private val log = logger<ChatSessionService>()
+
+    // Coroutine scope for event subscriptions
+    private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Cache of session-specific ChatClient instances.
+     * Each session gets its own client with integrated memory.
+     */
+    private val clientCache = ConcurrentHashMap<String, ChatClient>()
+
+    init {
+        subscribeToInternalEvents()
+    }
+
+    /**
+     * Subscribe to internal events for component-to-component communication.
+     */
+    private fun subscribeToInternalEvents() {
+        eventScope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<ModelChangedEvent>()
+                .collect { event ->
+                    handleModelChanged(event)
+                }
+        }
+    }
+
+    /**
+     * Handle model change event - clear all cached clients since they use the old model.
+     */
+    private fun handleModelChanged(event: ModelChangedEvent) {
+        log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached clients")
+        clientCache.clear()
+    }
+
+    /**
+     * Get or create a ChatClient for a specific session.
+     * - Creates a self-managing memory that handles its own persistence
+     * - Integrates memory directly into LangChain4j AI service
+     * - For sessions with a project: Creates a RAG-enabled client if project has indexed paths
+     * - Memory automatically loads from database on creation
+     * - Memory automatically saves to database when messages are added/summarized
+     * - Caches the client for reuse
+     */
+    public fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
+        val project = projectRepository.findProjectBySessionId(sessionId)
+
+        // Get current provider settings to check if AI summarization is enabled
+        val provider = appContext.getActiveProvider()
+        val factory = appContext.getModelFactory(provider)
+        val settings = appContext.getCurrentProviderSettings()
+
+        // Get summarizer from factory if available
+        @Suppress("UNCHECKED_CAST")
+        val summarizer = (factory as? ChatModelFactory<ProviderSettings>)
+            ?.createSummarizer(settings)
+
+        // Create self-managing memory that handles its own persistence
+        val memory = TokenAwareSummarizingMemory(
+            sessionId = sessionId,
+            sessionMemoryRepository = sessionMemoryRepository,
+            maxTokens = 4000,
+            summarizationThreshold = 0.75,
+            summarizer = summarizer,
+            asyncSummarization = true,
+        )
+
+        // Create content retriever if project has indexed paths
+        val retriever = if (project != null) {
+            log.debug("Session $sessionId belongs to project: ${project.id}")
+            createRetrieverForProject(project)
+        } else {
+            null
+        }
+
+        appContext.createStatefulChatSession(retriever = retriever, memory = memory)
+    }
+
+    /**
+     * Create a content retriever for a project if it has indexed paths.
+     * Uses hybrid search combining:
+     * - JVector for semantic similarity (vector embeddings)
+     * - Lucene for keyword matching (BM25)
+     * - Reciprocal Rank Fusion to merge results
+     *
+     * @param project The project to create a retriever for
+     * @return Content retriever if project has indexed paths, null otherwise
+     */
+    private fun createRetrieverForProject(project: Project): ContentRetriever? {
+        try {
+            val indexedPaths = parseIndexedPaths(project.indexedPaths)
+
+            if (indexedPaths.isEmpty()) {
+                log.debug("Project ${project.id} has no indexed paths, RAG disabled")
+                return null
+            }
+
+            log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
+
+            // Get cached indexer instance for this project (singleton per project)
+            val indexer = ProjectIndexer.getInstance(
+                projectId = project.id,
+                appContext = appContext,
+            )
+
+            if (!indexer.ensureIndexed(indexedPaths, watchForChanges = true)) {
+                log.error("Failed to ensure index for project ${project.id}")
+                return null
+            }
+
+            // Vector-based retriever (semantic search via JVector)
+            val vectorRetriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(indexer.embeddingStore)
+                .embeddingModel(indexer.embeddingModel)
+                .maxResults(10) // Get more candidates for fusion
+                .minScore(0.5) // Lower threshold to catch more semantic matches
+                .build()
+
+            // Keyword-based retriever (BM25 search via Lucene)
+            val keywordRetriever = indexer.keywordRetriever
+
+            // Combine with hybrid retriever using Reciprocal Rank Fusion
+            val hybridRetriever = HybridContentRetriever(
+                vectorRetriever = vectorRetriever,
+                keywordRetriever = keywordRetriever,
+                maxResults = 5, // Final number of results to return
+                k = 60, // RRF constant
+            )
+
+            log.info("✓ Hybrid RAG retriever created successfully for project ${project.id} (vector + keyword fusion)")
+            return hybridRetriever
+        } catch (e: Exception) {
+            log.error("Failed to create content retriever for project ${project.id}", e)
+            return null
+        }
+    }
+
+    /**
+     * Parse indexed paths from JSON array string.
+     *
+     * @param indexedPathsJson JSON array string of paths, e.g., "['/path1', '/path2']"
+     * @return List of Path objects
+     */
+    private fun parseIndexedPaths(indexedPathsJson: String): List<Path> = try {
+        val json = Json { ignoreUnknownKeys = true }
+        val paths = json.decodeFromString<List<String>>(indexedPathsJson)
+        paths.map { Paths.get(it) }
+    } catch (e: Exception) {
+        log.error("Failed to parse indexed paths: $indexedPathsJson", e)
+        emptyList()
+    }
 
     /**
      * Get all sessions sorted by most recently updated first.
      */
     fun getAllSessionsSorted(): List<ChatSession> = sessionRepository.getAllSessions().sortedByDescending { it.createdAt }
+
+    /**
+     * Clear memory for a specific session.
+     * This removes all conversation history from memory but does not delete the session or messages from the database.
+     *
+     * @param sessionId The ID of the session to clear memory for
+     */
+    fun clearSessionMemory(sessionId: String) {
+        clientCache[sessionId]?.clearMemory()
+        log.debug("Cleared memory for session: $sessionId")
+    }
 
     /**
      * Get all sessions without a project, sorted by star status and updated time.
@@ -129,8 +316,15 @@ class ChatSessionService(
     fun createSession(session: ChatSession): ChatSession {
         val createdSession = sessionRepository.createSession(session)
 
-        runBlocking {
-            appContext.getChatClient().switchSession(createdSession.id)
+        getOrCreateClientForSession(createdSession.id)
+
+        eventScope.launch {
+            EventBus.emit(
+                SessionCreatedEvent(
+                    sessionId = createdSession.id,
+                    projectId = createdSession.projectId,
+                ),
+            )
         }
 
         return createdSession
@@ -144,7 +338,11 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
+        // Remove from client cache and clean up
+        clientCache.remove(sessionId)
+
         messageRepository.deleteMessagesBySession(sessionId)
+        sessionMemoryRepository.deleteBySessionId(sessionId)
 
         return sessionRepository.deleteSession(sessionId)
     }
@@ -179,15 +377,19 @@ class ChatSessionService(
         return createdMessage
     }
 
-    fun saveAiResponse(sessionId: String, response: String, isFailed: Boolean = false): ChatMessage = addMessage(
-        ChatMessage(
-            id = "",
-            sessionId = sessionId,
-            role = MessageRole.ASSISTANT,
-            content = response,
-            isFailed = isFailed,
-        ),
-    )
+    fun saveAiResponse(sessionId: String, response: String, isFailed: Boolean = false): ChatMessage {
+        val message = addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = sessionId,
+                role = MessageRole.ASSISTANT,
+                content = response,
+                isFailed = isFailed,
+            ),
+        )
+
+        return message
+    }
 
     /**
      * Get all messages for a session.
@@ -245,14 +447,18 @@ class ChatSessionService(
     fun getActiveMessages(sessionId: String): List<ChatMessage> = messageRepository.getActiveMessages(sessionId)
 
     /**
-     * Resume a chat session by ID and return the result with messages.
+     * Resume a chat session by ID.
      *
      * @param sessionId The ID of the session to resume
      * @return ResumeSessionResult containing success status, messages, and any error
      */
     fun resumeSession(sessionId: String): ResumeSessionResult {
-        runBlocking {
-            appContext.getChatClient().switchSession(sessionId)
+        // Try to pre-create/cache the chat client for this session
+        // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
+        try {
+            getOrCreateClientForSession(sessionId)
+        } catch (e: Exception) {
+            log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
         }
 
         val messages = messageRepository.getMessages(sessionId)
@@ -275,8 +481,12 @@ class ChatSessionService(
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
-            runBlocking {
-                appContext.getChatClient().switchSession(sessionId)
+            // Try to pre-create/cache the chat client for this session
+            // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
+            try {
+                getOrCreateClientForSession(sessionId)
+            } catch (e: Exception) {
+                log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
             }
 
             val (messages, cursor) = messageRepository.getMessagesPaginated(
@@ -360,8 +570,8 @@ class ChatSessionService(
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
     fun prepareContextAndGetPromptForChat(
-        userMessage: String,
         sessionId: String,
+        userMessage: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
     ): String {
         messageRepository.addMessage(
@@ -387,14 +597,6 @@ class ChatSessionService(
             sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
         }
 
-        return preparePromptWithContext(sessionId, userMessage, attachments)
-    }
-
-    private fun preparePromptWithContext(
-        sessionId: String,
-        userMessage: String,
-        attachments: List<FileAttachmentDTO>,
-    ): String {
         val directivePrompt = buildDirectivePrompt(sessionId)
 
         val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)

@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,15 +43,26 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.logging.logger
+import io.askimo.core.rag.ProjectIndexer
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.SessionActionMenu
 import io.askimo.desktop.view.components.chatInputField
+import io.askimo.desktop.view.components.deleteProjectDialog
 import io.askimo.desktop.view.components.themedTooltip
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.nio.file.Paths
+
+private val log = logger("ProjectView")
 
 /**
  * Project view showing project details and chat interface.
@@ -60,21 +70,26 @@ import kotlinx.coroutines.withContext
 @Composable
 fun projectView(
     project: Project,
+    appContext: AppContext,
     onStartChat: (projectId: String, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onEditProject: (String) -> Unit,
-    refreshTrigger: Int = 0, // External trigger to refresh sessions list
+    onDeleteProject: (String) -> Unit,
+    refreshTrigger: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var attachments by remember { mutableStateOf<List<FileAttachmentDTO>>(emptyList()) }
     var projectSessions by remember { mutableStateOf<List<ChatSession>>(emptyList()) }
+    var showProjectMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var localRefreshTrigger by remember { mutableStateOf(0) }
 
-    // Load sessions for this project - refreshes when project.id or refreshTrigger changes
-    LaunchedEffect(project.id, refreshTrigger) {
+    // Load sessions for this project - refreshes when project.id, refreshTrigger, or localRefreshTrigger changes
+    LaunchedEffect(project.id, refreshTrigger, localRefreshTrigger) {
         projectSessions = withContext(Dispatchers.IO) {
             DatabaseManager.getInstance()
                 .getChatSessionRepository()
@@ -101,15 +116,65 @@ fun projectView(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            themedTooltip(text = stringResource("project.edit.tooltip")) {
-                IconButton(
-                    onClick = { onEditProject(project.id) },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            Box {
+                themedTooltip(text = stringResource("project.menu.tooltip")) {
+                    IconButton(
+                        onClick = { showProjectMenu = true },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource("project.menu.tooltip"),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = showProjectMenu,
+                    onDismissRequest = { showProjectMenu = false },
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = stringResource("project.edit.tooltip"),
-                        tint = MaterialTheme.colorScheme.primary,
+                    SessionActionMenu.projectActionMenu(
+                        onEditProject = {
+                            onEditProject(project.id)
+                            showProjectMenu = false
+                        },
+                        onDeleteProject = {
+                            showDeleteDialog = true
+                            showProjectMenu = false
+                        },
+                        onReindexProject = if (AppConfig.developer.enabled && AppConfig.developer.active) {
+                            {
+                                // Clear existing index and trigger fresh re-index
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        // Parse indexed paths from project configuration
+                                        val json = Json { ignoreUnknownKeys = true }
+                                        val indexedPaths = try {
+                                            json.decodeFromString<List<String>>(project.indexedPaths)
+                                                .map { Paths.get(it) }
+                                        } catch (_: Exception) {
+                                            emptyList()
+                                        }
+
+                                        if (indexedPaths.isNotEmpty()) {
+                                            // Get indexer instance and trigger clear + re-index
+                                            val indexer = ProjectIndexer.getInstance(
+                                                projectId = project.id,
+                                                appContext = appContext,
+                                            )
+                                            indexer.clearAndReindex(indexedPaths, watchForChanges = true)
+                                        }
+                                    } catch (e: Exception) {
+                                        log.error("Failed to re-index project ${project.id}: ${e.message}", e)
+                                    }
+                                }
+                                showProjectMenu = false
+                            }
+                        } else {
+                            null
+                        },
+                        onDismiss = { showProjectMenu = false },
                     )
                 }
             }
@@ -171,12 +236,27 @@ fun projectView(
                         session = session,
                         index = index,
                         onClick = { onResumeSession(session.id) },
-                        onDeleteSession = onDeleteSession,
+                        onDeleteSession = { sessionId ->
+                            onDeleteSession(sessionId)
+                            localRefreshTrigger++
+                        },
                         onRenameSession = onRenameSession,
                         onExportSession = onExportSession,
                     )
                 }
             }
+        }
+
+        // Delete project confirmation dialog
+        if (showDeleteDialog) {
+            deleteProjectDialog(
+                projectName = project.name,
+                onConfirm = {
+                    onDeleteProject(project.id)
+                    showDeleteDialog = false
+                },
+                onDismiss = { showDeleteDialog = false },
+            )
         }
     }
 }
