@@ -123,6 +123,18 @@ compose.desktop {
             macOS {
                 bundleID = "io.askimo.desktop"
                 iconFile.set(project.file("src/main/resources/images/askimo.icns"))
+
+                // Code signing configuration
+                signing {
+                    sign.set(true)
+                    identity.set(System.getenv("MACOS_IDENTITY"))
+                }
+
+                notarization {
+                    appleID.set(System.getenv("APPLE_ID"))
+                    password.set(System.getenv("APPLE_PASSWORD"))
+                    teamID.set(System.getenv("APPLE_TEAM_ID"))
+                }
             }
             windows {
                 iconFile.set(project.file("src/main/resources/images/askimo.ico"))

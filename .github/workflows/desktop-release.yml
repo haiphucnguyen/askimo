@@ -78,6 +78,47 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
+      # Import Apple Developer ID certificate for code signing (macOS only)
+      - name: Import Code Signing Certificate
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          # Decode certificate from base64
+          echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Import certificate to keychain
+          security import certificate.p12 \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -k "$KEYCHAIN_PATH" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/productsign
+          
+          # Set keychain to be used by codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Find and export certificate identity
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | \
+            grep "Developer ID Application" | \
+            head -1 | \
+            awk '{print $2}')
+          
+          echo "MACOS_IDENTITY=$IDENTITY" >> $GITHUB_ENV
+          
+          # Clean up certificate file
+          rm -f certificate.p12
+
       - name: Build desktop application (Linux/macOS)
         if: runner.os != 'Windows'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:build
@@ -89,6 +130,10 @@ jobs:
 
       - name: Package desktop installer (Linux/macOS)
         if: runner.os != 'Windows'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
 
       - name: Package desktop installer (Windows)
