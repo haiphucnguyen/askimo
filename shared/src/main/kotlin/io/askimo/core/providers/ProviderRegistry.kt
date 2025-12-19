@@ -5,6 +5,7 @@
 package io.askimo.core.providers
 
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
+import io.askimo.core.providers.ModelProvider.DOCKER
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ModelProvider.LMSTUDIO
 import io.askimo.core.providers.ModelProvider.LOCALAI
@@ -12,6 +13,7 @@ import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.anthropic.AnthropicModelFactory
+import io.askimo.core.providers.docker.DockerAiModelFactory
 import io.askimo.core.providers.gemini.GeminiModelFactory
 import io.askimo.core.providers.lmstudio.LmStudioModelFactory
 import io.askimo.core.providers.localai.LocalAiModelFactory
@@ -41,6 +43,7 @@ object ProviderRegistry {
             XAI to XAiModelFactory(),
             GEMINI to GeminiModelFactory(),
             OLLAMA to OllamaModelFactory(),
+            DOCKER to DockerAiModelFactory(),
             ANTHROPIC to AnthropicModelFactory(),
             LOCALAI to LocalAiModelFactory(),
             LMSTUDIO to LmStudioModelFactory(),

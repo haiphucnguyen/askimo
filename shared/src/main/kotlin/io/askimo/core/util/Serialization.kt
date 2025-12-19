@@ -6,6 +6,7 @@ package io.askimo.core.util
 
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.docker.DockerAiSettings
 import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.localai.LocalAiSettings
@@ -21,6 +22,7 @@ val coreProvidersModule =
         polymorphic(ProviderSettings::class) {
             subclass(OpenAiSettings::class, OpenAiSettings.serializer())
             subclass(OllamaSettings::class, OllamaSettings.serializer())
+            subclass(DockerAiSettings::class, DockerAiSettings.serializer())
             subclass(XAiSettings::class, XAiSettings.serializer())
             subclass(GeminiSettings::class, GeminiSettings.serializer())
             subclass(AnthropicSettings::class, AnthropicSettings.serializer())

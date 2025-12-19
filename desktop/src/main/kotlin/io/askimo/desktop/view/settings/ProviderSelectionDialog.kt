@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -46,6 +47,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -469,6 +471,70 @@ fun providerSelectionDialog(
                                                         color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
                                                     )
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Embedding model warning (only relevant for RAG features)
+                            if (viewModel.embeddingModelWarning != null) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    ),
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.Top,
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = "Info",
+                                                tint = MaterialTheme.colorScheme.tertiary,
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = stringResource("settings.embedding.rag_feature_only"),
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = viewModel.embeddingModelWarning ?: "",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f),
+                                                )
+                                            }
+                                        }
+
+                                        // Show download button for Ollama if model can be pulled
+                                        if (viewModel.canPullEmbeddingModel && viewModel.embeddingModelProvider == "OLLAMA") {
+                                            Button(
+                                                onClick = {
+                                                    val baseUrl = viewModel.providerFieldValues["baseUrl"] ?: ""
+                                                    if (baseUrl.isNotBlank()) {
+                                                        viewModel.pullEmbeddingModel(ModelProvider.OLLAMA, baseUrl)
+                                                    }
+                                                },
+                                                enabled = !viewModel.isCheckingEmbeddingModel,
+                                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                            ) {
+                                                if (viewModel.isCheckingEmbeddingModel) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(16.dp),
+                                                        strokeWidth = 2.dp,
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                }
+                                                Text(stringResource("settings.embedding.download_model"))
                                             }
                                         }
                                     }

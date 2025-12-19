@@ -12,6 +12,7 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
+import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
@@ -110,6 +111,16 @@ class SessionsViewModel(
                         log.debug("New session created: ${event.sessionId}, refreshing sidebar")
                         loadRecentSessions()
                     }
+                }
+        }
+
+        // Listen for session title updates
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<SessionTitleUpdatedEvent>()
+                .collect { event ->
+                    log.debug("Session ${event.sessionId} title updated to: ${event.newTitle}, refreshing sidebar")
+                    loadRecentSessions()
                 }
         }
 

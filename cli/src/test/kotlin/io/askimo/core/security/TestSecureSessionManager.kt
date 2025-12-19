@@ -10,6 +10,7 @@ import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.docker.DockerAiSettings
 import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
@@ -209,6 +210,10 @@ class TestSecureSessionManager {
         ModelProvider.OLLAMA -> {
             val ollamaSettings = settings as OllamaSettings
             ollamaSettings.copy()
+        }
+        ModelProvider.DOCKER -> {
+            val dockerSettings = settings as DockerAiSettings
+            dockerSettings.copy()
         }
         ModelProvider.LOCALAI -> {
             val localAiSettings = settings as OllamaSettings

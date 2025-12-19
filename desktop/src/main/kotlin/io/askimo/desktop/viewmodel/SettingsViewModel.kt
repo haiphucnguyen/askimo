@@ -118,6 +118,18 @@ class SettingsViewModel(
     var isInitialSetup by mutableStateOf(false)
         private set
 
+    var isCheckingEmbeddingModel by mutableStateOf(false)
+        private set
+
+    var embeddingModelWarning by mutableStateOf<String?>(null)
+        private set
+
+    var embeddingModelProvider by mutableStateOf<String?>(null)
+        private set
+
+    var canPullEmbeddingModel by mutableStateOf(false)
+        private set
+
     init {
         loadConfiguration()
     }
@@ -140,8 +152,21 @@ class SettingsViewModel(
     fun onChangeProvider(isInitialSetup: Boolean = false) {
         this.isInitialSetup = isInitialSetup
         availableProviders = ProviderRegistry.getSupportedProviders().toList()
+
+        // Reset all dialog states to prevent showing cached screens
         connectionError = null
         connectionErrorHelp = null
+        connectionTestSuccess = false
+        showModelSelectionInProviderDialog = false
+        pendingModelForNewProvider = null
+        availableModels = emptyList()
+        isLoadingModels = false
+        modelError = null
+        modelErrorHelp = null
+        embeddingModelWarning = null
+        embeddingModelProvider = null
+        canPullEmbeddingModel = false
+        isCheckingEmbeddingModel = false
 
         // Pre-select the current provider if it exists
         val currentProvider = provider
@@ -175,8 +200,21 @@ class SettingsViewModel(
      */
     fun selectProviderForChange(newProvider: ModelProvider) {
         selectedProvider = newProvider
+
+        // Reset connection and model states when changing provider
         connectionError = null
         connectionErrorHelp = null
+        connectionTestSuccess = false
+        showModelSelectionInProviderDialog = false
+        pendingModelForNewProvider = null
+        availableModels = emptyList()
+        isLoadingModels = false
+        modelError = null
+        modelErrorHelp = null
+        embeddingModelWarning = null
+        embeddingModelProvider = null
+        canPullEmbeddingModel = false
+        isCheckingEmbeddingModel = false
 
         // Get existing settings if available
         val existingSettings = appContext.params.providerSettings[newProvider]
@@ -271,6 +309,12 @@ class SettingsViewModel(
                     // Automatically load models for provider selection flow
                     showModelSelectionInProviderDialog = true
                     loadModelsForSelectedProvider()
+
+                    // Check embedding model availability for local providers
+                    val baseUrl = providerFieldValues["baseUrl"]
+                    if (baseUrl != null && baseUrl.isNotBlank()) {
+                        checkEmbeddingModelAvailability(provider, baseUrl)
+                    }
                 }
                 is ProviderTestResult.Failure -> {
                     connectionError = result.message
@@ -462,6 +506,14 @@ class SettingsViewModel(
         connectionTestSuccess = false
         showModelSelectionInProviderDialog = false
         pendingModelForNewProvider = null
+        availableModels = emptyList()
+        isLoadingModels = false
+        modelError = null
+        modelErrorHelp = null
+        embeddingModelWarning = null
+        embeddingModelProvider = null
+        canPullEmbeddingModel = false
+        isCheckingEmbeddingModel = false
     }
 
     /**
@@ -622,5 +674,146 @@ class SettingsViewModel(
         } else {
             true
         }
+    }
+
+    /**
+     * Check if the embedding model is available for the selected provider.
+     * This is only relevant for RAG features with local providers.
+     */
+    fun checkEmbeddingModelAvailability(provider: ModelProvider, baseUrl: String) {
+        isCheckingEmbeddingModel = true
+        embeddingModelWarning = null
+        embeddingModelProvider = null
+        canPullEmbeddingModel = false
+
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    when (provider) {
+                        ModelProvider.OLLAMA -> {
+                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.ollama
+                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                                provider,
+                                baseUrl,
+                                modelName,
+                            )
+                        }
+                        ModelProvider.DOCKER -> {
+                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.docker
+                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                                provider,
+                                baseUrl,
+                                modelName,
+                            )
+                        }
+                        ModelProvider.LOCALAI -> {
+                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.localai
+                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                                provider,
+                                baseUrl,
+                                modelName,
+                            )
+                        }
+                        ModelProvider.LMSTUDIO -> {
+                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.lmstudio
+                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                                provider,
+                                baseUrl,
+                                modelName,
+                            )
+                        }
+                        ModelProvider.ANTHROPIC -> {
+                            io.askimo.core.providers.ModelAvailabilityResult.NotAvailable(
+                                reason = LocalizationManager.getString("settings.embedding.anthropic_no_embedding"),
+                                canAutoPull = false,
+                            )
+                        }
+                        ModelProvider.XAI -> {
+                            io.askimo.core.providers.ModelAvailabilityResult.NotAvailable(
+                                reason = LocalizationManager.getString("settings.embedding.xai_no_embedding"),
+                                canAutoPull = false,
+                            )
+                        }
+                        else -> io.askimo.core.providers.ModelAvailabilityResult.Available
+                    }
+                }
+
+                when (result) {
+                    is io.askimo.core.providers.ModelAvailabilityResult.Available -> {
+                        // Model is available, no warning needed
+                        embeddingModelWarning = null
+                    }
+                    is io.askimo.core.providers.ModelAvailabilityResult.NotAvailable -> {
+                        embeddingModelWarning = LocalizationManager.getString(
+                            "settings.embedding.not_available_rag_only",
+                            result.reason,
+                        )
+                        embeddingModelProvider = provider.name
+                        canPullEmbeddingModel = result.canAutoPull
+                    }
+                    is io.askimo.core.providers.ModelAvailabilityResult.ProviderUnreachable -> {
+                        embeddingModelWarning = LocalizationManager.getString(
+                            "settings.embedding.provider_unreachable",
+                            result.error,
+                        )
+                        embeddingModelProvider = provider.name
+                        canPullEmbeddingModel = false
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("Error checking embedding model availability", e)
+                embeddingModelWarning = LocalizationManager.getString(
+                    "settings.embedding.check_failed",
+                    e.message ?: "Unknown error",
+                )
+            } finally {
+                isCheckingEmbeddingModel = false
+            }
+        }
+    }
+
+    /**
+     * Attempt to pull/download the embedding model (for Ollama)
+     */
+    fun pullEmbeddingModel(provider: ModelProvider, baseUrl: String) {
+        if (provider != ModelProvider.OLLAMA) return
+
+        isCheckingEmbeddingModel = true
+        scope.launch {
+            try {
+                val modelName = io.askimo.core.config.AppConfig.embeddingModels.ollama
+                val success = withContext(Dispatchers.IO) {
+                    io.askimo.core.providers.LocalModelValidator.pullOllamaModel(baseUrl, modelName)
+                }
+
+                if (success) {
+                    embeddingModelWarning = null
+                    successMessage = LocalizationManager.getString("settings.embedding.download_success", modelName)
+                    showSuccessMessage = true
+                } else {
+                    embeddingModelWarning = LocalizationManager.getString(
+                        "settings.embedding.download_failed",
+                        modelName,
+                    )
+                }
+            } catch (e: Exception) {
+                log.error("Error pulling embedding model", e)
+                embeddingModelWarning = LocalizationManager.getString(
+                    "settings.embedding.download_error",
+                    e.message ?: "Unknown error",
+                )
+            } finally {
+                isCheckingEmbeddingModel = false
+            }
+        }
+    }
+
+    /**
+     * Clear embedding model warning
+     */
+    fun clearEmbeddingWarning() {
+        embeddingModelWarning = null
+        embeddingModelProvider = null
+        canPullEmbeddingModel = false
     }
 }
