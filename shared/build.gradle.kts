@@ -25,6 +25,7 @@ dependencies {
     api(libs.testcontainers.postgresql)
     api(libs.lucene.core)
     api(libs.lucene.queryparser)
+    api(libs.lucene.backward.codecs)
     api(libs.langchain4j.jvector)
     api(libs.jackson.module.kotlin)
     api(libs.jackson.dataformat.yaml)

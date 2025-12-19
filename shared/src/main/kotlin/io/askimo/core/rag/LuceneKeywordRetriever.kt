@@ -102,37 +102,47 @@ class LuceneKeywordRetriever(
             return emptyList()
         }
 
-        DirectoryReader.open(directory).use { reader ->
-            val searcher = IndexSearcher(reader)
+        return try {
+            DirectoryReader.open(directory).use { reader ->
+                val searcher = IndexSearcher(reader)
 
-            val queryParser = QueryParser(FIELD_CONTENT, analyzer)
-            val luceneQuery = try {
-                queryParser.parse(query.text())
-            } catch (e: Exception) {
-                log.warn("Failed to parse query: ${query.text()} - falling back to escaped query", e)
-                queryParser.parse(QueryParser.escape(query.text()))
-            }
-
-            val topDocs = searcher.search(luceneQuery, maxResults)
-            log.debug("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
-
-            return topDocs.scoreDocs.mapNotNull { scoreDoc ->
-                val doc = searcher.storedFields().document(scoreDoc.doc)
-                val content = doc.get(FIELD_CONTENT) ?: return@mapNotNull null
-
-                // Reconstruct metadata from stored fields
-                val metadataMap = mutableMapOf<String, Any>()
-                for (field in doc.fields) {
-                    val name = field.name()
-                    if (name.startsWith(FIELD_META_PREFIX)) {
-                        val key = name.removePrefix(FIELD_META_PREFIX)
-                        metadataMap[key] = field.stringValue()
+                val queryParser = QueryParser(FIELD_CONTENT, analyzer)
+                val luceneQuery = try {
+                    queryParser.parse(query.text())
+                } catch (e: Exception) {
+                    log.warn("Failed to parse query: '${query.text()}' - attempting with escaped query", e)
+                    try {
+                        queryParser.parse(QueryParser.escape(query.text()))
+                    } catch (e2: Exception) {
+                        log.warn("Failed to parse even escaped query: '${query.text()}' - skipping keyword search", e2)
+                        return emptyList()
                     }
                 }
 
-                val textSegment = TextSegment.from(content, Metadata.from(metadataMap))
-                Content.from(textSegment)
+                val topDocs = searcher.search(luceneQuery, maxResults)
+                log.debug("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
+
+                topDocs.scoreDocs.mapNotNull { scoreDoc ->
+                    val doc = searcher.storedFields().document(scoreDoc.doc)
+                    val content = doc.get(FIELD_CONTENT) ?: return@mapNotNull null
+
+                    // Reconstruct metadata from stored fields
+                    val metadataMap = mutableMapOf<String, Any>()
+                    for (field in doc.fields) {
+                        val name = field.name()
+                        if (name.startsWith(FIELD_META_PREFIX)) {
+                            val key = name.removePrefix(FIELD_META_PREFIX)
+                            metadataMap[key] = field.stringValue()
+                        }
+                    }
+
+                    val textSegment = TextSegment.from(content, Metadata.from(metadataMap))
+                    Content.from(textSegment)
+                }
             }
+        } catch (e: Exception) {
+            log.error("Unexpected error during keyword retrieval for query: '${query.text()}'", e)
+            emptyList()
         }
     }
 
