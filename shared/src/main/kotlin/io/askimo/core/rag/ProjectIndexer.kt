@@ -46,6 +46,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.streams.asSequence
 import org.apache.tika.metadata.Metadata as TikaMetadata
+import dev.langchain4j.exception.ModelNotFoundException
 
 /**
  * Status of the indexing process for a project.
@@ -1227,6 +1228,22 @@ class ProjectIndexer private constructor(
      */
     private fun indexProjectWithProgress(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
+
+        // Check embedding model availability before indexing
+        try {
+            // This will throw ModelNotFoundException if not available
+            hybridIndexer.javaClass.getDeclaredMethod("checkEmbeddingModelAvailable").apply { isAccessible = true }.invoke(hybridIndexer)
+        } catch (e: Exception) {
+            val cause = e.cause ?: e
+            if (cause is ModelNotFoundException || cause.message?.contains("model not found", ignoreCase = true) == true) {
+                log.error("❌ Embedding model not found, aborting indexing: ${cause.message}")
+                // Inform user here, e.g. via UI or CLI output
+                println("❌ Embedding model not found: ${cause.message}")
+                return 0
+            } else {
+                throw e
+            }
+        }
 
         val detectedTypes = detectProjectTypes(root)
         log.debug("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
