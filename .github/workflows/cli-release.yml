@@ -68,7 +68,7 @@ jobs:
 
       - name: Build native image (macOS)
         if: runner.os == 'macOS'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pgraalvm.native-image.memory=5g :cli:nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pgraalvm.native-image.memory=6g :cli:nativeCompile
 
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
