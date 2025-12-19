@@ -1148,15 +1148,32 @@ class ProjectIndexer private constructor(
 
     /**
      * Remove all segments for a file from the index.
+     * Note: JVectorEmbeddingStore doesn't support removeAll(Filter) yet,
+     * so we only remove from Lucene keyword index. The orphaned embeddings
+     * in JVector won't affect search results since we rely on Lucene for
+     * file filtering.
+     *
      * @param absolutePath The absolute path of the file to remove
      */
     private fun removeFileFromIndex(absolutePath: String) {
         try {
-            val filter = IsEqualTo("file_path", absolutePath)
-            embeddingStore.removeAll(filter as Filter)
+            // Remove from keyword index (this is the primary filter for file-based retrieval)
             keywordRetriever.removeFile(absolutePath)
+            log.debug("Removed file from keyword index: $absolutePath")
+
+            // Try to remove from vector store if supported
+            // JVectorEmbeddingStore doesn't support this yet, so we catch and log
+            try {
+                val filter = IsEqualTo("file_path", absolutePath)
+                embeddingStore.removeAll(filter as Filter)
+                log.debug("Removed file from vector index: $absolutePath")
+            } catch (e: UnsupportedOperationException) {
+                log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
+            } catch (e: dev.langchain4j.exception.UnsupportedFeatureException) {
+                log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
+            }
         } catch (e: Exception) {
-            log.debug("Failed to remove file from index: $absolutePath", e)
+            log.warn("Failed to remove file from index: $absolutePath", e)
         }
     }
 
