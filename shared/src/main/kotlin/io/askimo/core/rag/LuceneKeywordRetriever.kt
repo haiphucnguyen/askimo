@@ -96,6 +96,25 @@ class LuceneKeywordRetriever(
         log.debug("Cleared keyword index at $indexPath")
     }
 
+    /**
+     * Remove all documents for a specific file from the index.
+     * @param filePath The absolute path of the file to remove
+     */
+    fun removeFile(filePath: String) {
+        try {
+            val config = IndexWriterConfig(analyzer)
+            IndexWriter(directory, config).use { writer ->
+                val queryParser = QueryParser(FIELD_META_PREFIX + "file_path", analyzer)
+                val query = queryParser.parse(QueryParser.escape(filePath))
+                writer.deleteDocuments(query)
+                writer.commit()
+            }
+            log.debug("Removed file from keyword index: $filePath")
+        } catch (e: Exception) {
+            log.debug("Failed to remove file from keyword index: $filePath", e)
+        }
+    }
+
     override fun retrieve(query: Query): List<Content> {
         if (!DirectoryReader.indexExists(directory)) {
             log.debug("Keyword index does not exist yet at $indexPath")
@@ -110,12 +129,22 @@ class LuceneKeywordRetriever(
                 val luceneQuery = try {
                     queryParser.parse(query.text())
                 } catch (e: Exception) {
-                    log.warn("Failed to parse query: '${query.text()}' - attempting with escaped query", e)
+                    log.debug("Failed to parse query: '${query.text()}' - attempting with escaped query")
                     try {
+                        // First try: escape special characters
                         queryParser.parse(QueryParser.escape(query.text()))
                     } catch (e2: Exception) {
-                        log.warn("Failed to parse even escaped query: '${query.text()}' - skipping keyword search", e2)
-                        return emptyList()
+                        log.debug("Escaped query also failed - attempting phrase query as final fallback")
+                        try {
+                            // Second try: wrap in quotes for phrase query (most robust)
+                            // This treats the entire query as a literal phrase
+                            val escapedText = query.text().replace("\"", "\\\"")
+                            queryParser.parse("\"$escapedText\"")
+                        } catch (e3: Exception) {
+                            // If even phrase query fails, log and skip keyword search
+                            log.warn("All query parsing attempts failed for: '${query.text()}' - skipping keyword search", e3)
+                            return emptyList()
+                        }
                     }
                 }
 

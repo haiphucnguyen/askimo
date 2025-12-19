@@ -165,7 +165,14 @@ class ProjectIndexer private constructor(
          */
         private fun shutdownAll() {
             log.debug("Shutting down all ProjectIndexer instances")
-            instances.values.forEach { it.stopWatching() }
+            instances.values.forEach { indexer ->
+                indexer.stopWatching()
+                try {
+                    indexer.stateRepository.close()
+                } catch (e: Exception) {
+                    log.error("Failed to close state repository", e)
+                }
+            }
             instances.clear()
         }
     }
@@ -180,12 +187,21 @@ class ProjectIndexer private constructor(
 
     private val defaultCharset: Charset = Charsets.UTF_8
 
+    // Persistent state repository (SQLite database per project)
+    private val stateRepository: IndexStateRepository by lazy {
+        IndexStateRepository(indexPath)
+    }
+
     // Track indexing status
     @Volatile
     private var indexProgress = IndexProgress(IndexStatus.NOT_STARTED)
 
-    // Track indexed files with their modification times
+    // Track indexed files with their modification times (absolute paths)
     private val indexedFiles = ConcurrentHashMap<String, IndexedFileEntry>()
+
+    // Track if state has been loaded from database
+    @Volatile
+    private var stateLoaded = false
 
     // File watcher for detecting changes
     private var watchService: WatchService? = null
@@ -197,8 +213,225 @@ class ProjectIndexer private constructor(
     fun getIndexProgress(): IndexProgress = indexProgress
 
     /**
+     * Load persisted state from SQLite database.
+     */
+    private fun loadPersistedState() {
+        try {
+            val persistedFiles = stateRepository.getAllIndexedFiles()
+
+            // Restore indexed files (absolute paths)
+            indexedFiles.clear()
+            persistedFiles.forEach { (absolutePath, info) ->
+                indexedFiles[absolutePath] = IndexedFileEntry(
+                    path = info.path,
+                    lastModified = info.lastModified,
+                    indexed = info.indexedAt,
+                )
+            }
+
+            // Restore progress from metadata
+            val status = stateRepository.getMetadata("status")?.let { statusStr ->
+                IndexStatus.entries.find { it.name == statusStr } ?: IndexStatus.NOT_STARTED
+            } ?: IndexStatus.NOT_STARTED
+
+            if (indexedFiles.isNotEmpty() && status != IndexStatus.FAILED) {
+                indexProgress = IndexProgress(
+                    status = if (status == IndexStatus.INDEXING) IndexStatus.READY else status,
+                    filesIndexed = indexedFiles.size,
+                    filesTotal = indexedFiles.size,
+                    lastUpdated = LocalDateTime.now(),
+                )
+            }
+
+            log.debug("Loaded persisted state for project $projectId: ${indexedFiles.size} files, status: ${indexProgress.status}")
+        } catch (e: Exception) {
+            log.warn("Failed to load persisted state for project $projectId: ${e.message}")
+        }
+    }
+
+    /**
+     * Save current state to SQLite database.
+     */
+    private fun saveState() {
+        try {
+            // Save metadata
+            stateRepository.setMetadata("status", indexProgress.status.name)
+            stateRepository.setMetadata("last_updated", indexProgress.lastUpdated.toString())
+            stateRepository.setMetadata("files_indexed", indexedFiles.size.toString())
+
+            log.debug("Saved state for project $projectId: ${indexedFiles.size} files, status: ${indexProgress.status}")
+        } catch (e: Exception) {
+            log.error("Failed to save state for project $projectId", e)
+        }
+    }
+
+    /**
+     * Detect changes in the file system compared to persisted state.
+     * Returns files that need to be added, updated, or removed from the index.
+     */
+    private fun detectFileSystemChanges(paths: List<Path>): FileChanges {
+        val currentFiles = mutableMapOf<String, IndexedFileInfo>()
+
+        paths.forEach { path ->
+            if (!Files.exists(path)) return@forEach
+
+            if (Files.isDirectory(path)) {
+                val detectedTypes = detectProjectTypes(path)
+                Files.walk(path)
+                    .asSequence()
+                    .filter { it.isRegularFile() }
+                    .filter { isIndexableFile(it, path, detectedTypes) }
+                    .filter { !tooLargeToIndex(it) }
+                    .forEach { filePath ->
+                        val absolutePath = filePath.toAbsolutePath().toString()
+                        val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+                        val size = Files.size(filePath)
+
+                        currentFiles[absolutePath] = IndexedFileInfo(
+                            path = absolutePath,
+                            lastModified = lastModified,
+                            indexedAt = LocalDateTime.now(),
+                            size = size,
+                        )
+                    }
+            } else if (Files.isRegularFile(path) && !tooLargeToIndex(path)) {
+                val absolutePath = path.toAbsolutePath().toString()
+                currentFiles[absolutePath] = IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = Files.getLastModifiedTime(path).toMillis(),
+                    indexedAt = LocalDateTime.now(),
+                    size = Files.size(path),
+                )
+            }
+        }
+
+        return stateRepository.detectChanges(currentFiles)
+    }
+
+    /**
+     * Apply incremental changes to the index.
+     * This is called when changes are detected on app restart.
+     */
+    private fun applyIncrementalChanges(
+        changes: FileChanges,
+        rootPaths: List<Path>,
+        watchForChanges: Boolean,
+    ) {
+        Thread {
+            try {
+                val totalChanges = changes.totalChanges
+
+                indexProgress = IndexProgress(
+                    status = IndexStatus.INDEXING,
+                    filesTotal = totalChanges,
+                )
+
+                log.info("Applying incremental changes for project $projectId: $changes")
+
+                var processed = 0
+
+                // Remove deleted files
+                changes.toRemove.forEach { absolutePath ->
+                    try {
+                        removeFileFromIndex(absolutePath)
+                        indexedFiles.remove(absolutePath)
+                        stateRepository.removeFile(absolutePath)
+                        log.debug("Removed deleted file: $absolutePath")
+
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    } catch (e: Exception) {
+                        log.error("Failed to remove file from index: $absolutePath", e)
+                    }
+                }
+
+                // Index new and modified files
+                (changes.toAdd + changes.toUpdate).forEach { fileInfo ->
+                    try {
+                        val filePath = Path.of(fileInfo.path)
+
+                        if (!Files.exists(filePath)) {
+                            log.warn("File no longer exists, skipping: $filePath")
+                            processed++
+                            indexProgress = indexProgress.copy(filesIndexed = processed)
+                            return@forEach
+                        }
+
+                        // Find which root this file belongs to
+                        val root = rootPaths.firstOrNull { filePath.startsWith(it) }
+                        if (root == null) {
+                            log.warn("File doesn't belong to any indexed root, skipping: $filePath")
+                            processed++
+                            indexProgress = indexProgress.copy(filesIndexed = processed)
+                            return@forEach
+                        }
+
+                        // Remove old version if exists
+                        removeFileFromIndex(fileInfo.path)
+
+                        // Index new version
+                        indexSingleFileWithTracking(filePath, root)
+
+                        // Update in-memory tracking
+                        indexedFiles[fileInfo.path] = IndexedFileEntry(
+                            path = fileInfo.path,
+                            lastModified = fileInfo.lastModified,
+                            indexed = LocalDateTime.now(),
+                        )
+
+                        // Update database
+                        stateRepository.upsertFile(fileInfo.copy(indexedAt = LocalDateTime.now()))
+
+                        log.debug("Indexed changed file: ${fileInfo.path}")
+
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    } catch (e: Exception) {
+                        log.error("Failed to index file: ${fileInfo.path}", e)
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    }
+                }
+
+                // Save final state
+                saveState()
+
+                if (watchForChanges) {
+                    startWatching(rootPaths)
+                    indexProgress = IndexProgress(
+                        status = IndexStatus.WATCHING,
+                        filesIndexed = indexedFiles.size,
+                        filesTotal = indexedFiles.size,
+                        isWatching = true,
+                    )
+                    log.info("Incremental indexing completed and watching for changes: project $projectId")
+                } else {
+                    indexProgress = IndexProgress(
+                        status = IndexStatus.READY,
+                        filesIndexed = indexedFiles.size,
+                        filesTotal = indexedFiles.size,
+                    )
+                    log.info("Incremental indexing completed for project $projectId: ${indexedFiles.size} files")
+                }
+            } catch (e: Exception) {
+                log.error("Incremental indexing failed for project $projectId", e)
+                indexProgress = IndexProgress(
+                    status = IndexStatus.FAILED,
+                    error = e.message ?: "Unknown error",
+                )
+            }
+        }.apply {
+            name = "ProjectIndexer-Incremental-$projectId"
+            isDaemon = true
+        }.start()
+    }
+
+    /**
      * Ensure the index is ready by starting indexing if needed.
-     * This method encapsulates the indexing decision logic.
+     * This method implements smart change detection:
+     * - If index exists and is up-to-date, just start watching
+     * - If files have changed, perform incremental indexing
+     * - If no index exists, perform full indexing
      *
      * @param paths List of paths to index
      * @param watchForChanges If true, monitor paths for new/modified files
@@ -212,8 +445,36 @@ class ProjectIndexer private constructor(
 
         return when (progress.status) {
             IndexStatus.NOT_STARTED -> {
-                log.debug("Starting indexing for project $projectId")
-                indexPathsAsync(paths, watchForChanges)
+                // Check if we have persisted state
+                if (indexedFiles.isNotEmpty()) {
+                    log.info("Found existing index for project $projectId with ${indexedFiles.size} files")
+
+                    // Detect changes since last indexing
+                    val changes = detectFileSystemChanges(paths)
+
+                    if (changes.hasChanges) {
+                        log.info("Detected changes for project $projectId: $changes")
+                        applyIncrementalChanges(changes, paths, watchForChanges)
+                    } else {
+                        log.info("Index up-to-date for project $projectId")
+                        indexProgress = IndexProgress(
+                            status = IndexStatus.READY,
+                            filesIndexed = indexedFiles.size,
+                            filesTotal = indexedFiles.size,
+                        )
+
+                        if (watchForChanges) {
+                            startWatching(paths)
+                            indexProgress = indexProgress.copy(
+                                status = IndexStatus.WATCHING,
+                                isWatching = true,
+                            )
+                        }
+                    }
+                } else {
+                    log.info("No existing index found, performing full indexing for project $projectId")
+                    indexPathsAsync(paths, watchForChanges)
+                }
                 true
             }
             IndexStatus.INDEXING -> {
@@ -307,6 +568,12 @@ class ProjectIndexer private constructor(
 
         Thread {
             try {
+                // Load persisted state first if not already loaded
+                if (!stateLoaded) {
+                    loadPersistedState()
+                    stateLoaded = true
+                }
+
                 val estimatedTotal = countIndexableFiles(paths)
                 indexProgress = IndexProgress(
                     status = IndexStatus.INDEXING,
@@ -436,6 +703,14 @@ class ProjectIndexer private constructor(
             } catch (e: Exception) {
                 log.error("Failed to delete index directory: $indexPath", e)
             }
+        }
+
+        // Clear database state
+        try {
+            stateRepository.clearAll()
+            log.debug("Cleared database state")
+        } catch (e: Exception) {
+            log.error("Failed to clear database state", e)
         }
 
         // Clear tracked files
@@ -590,17 +865,18 @@ class ProjectIndexer private constructor(
 
     /**
      * Create a TextSegment with standardized metadata for indexing.
+     * Uses absolute path for file_path to support multiple project roots.
      */
     private fun createTextSegment(
         chunk: String,
         filePath: Path,
-        relativePath: String,
+        absolutePath: String,
         chunkIndex: Int,
     ): TextSegment = TextSegment.from(
         chunk,
         Metadata(
             mapOf(
-                "file_path" to relativePath,
+                "file_path" to absolutePath,
                 "file_name" to filePath.fileName.toString(),
                 "extension" to filePath.extension,
                 "chunk_index" to chunkIndex.toString(),
@@ -806,29 +1082,39 @@ class ProjectIndexer private constructor(
         val detectedTypes = detectProjectTypes(root)
         if (!isIndexableFile(path, root, detectedTypes)) return
 
-        val relativePath = root.relativize(path).toString()
+        val absolutePath = path.toAbsolutePath().toString()
         val lastModified = Files.getLastModifiedTime(path).toMillis()
 
         // Check if file needs reindexing
-        val existing = indexedFiles[relativePath]
+        val existing = indexedFiles[absolutePath]
         if (existing != null && existing.lastModified == lastModified) {
             return // No change
         }
 
-        log.debug("Indexing changed file: $relativePath")
+        log.debug("Indexing changed file: $absolutePath")
 
         try {
             // Remove old segments for this file
-            removeFileFromIndex(relativePath)
+            removeFileFromIndex(absolutePath)
 
             // Index the new/modified file
             indexSingleFileWithTracking(path, root)
 
             // Update tracked files
-            indexedFiles[relativePath] = IndexedFileEntry(
-                path = relativePath,
+            indexedFiles[absolutePath] = IndexedFileEntry(
+                path = absolutePath,
                 lastModified = lastModified,
                 indexed = LocalDateTime.now(),
+            )
+
+            // Save to database
+            stateRepository.upsertFile(
+                IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = lastModified,
+                    indexedAt = LocalDateTime.now(),
+                    size = Files.size(path),
+                ),
             )
 
             // Update progress
@@ -837,7 +1123,7 @@ class ProjectIndexer private constructor(
                 filesTotal = max(indexedFiles.size, indexProgress.filesTotal),
             )
         } catch (e: Exception) {
-            log.error("Failed to index changed file: $relativePath", e)
+            log.error("Failed to index changed file: $absolutePath", e)
         }
     }
 
@@ -845,9 +1131,11 @@ class ProjectIndexer private constructor(
      * Handle file deletion.
      */
     private fun handleFileDelete(path: Path) {
-        val fileName = path.fileName.toString()
-        indexedFiles.remove(fileName)?.let {
+        val absolutePath = path.toAbsolutePath().toString()
+
+        indexedFiles.remove(absolutePath)?.let {
             removeFileFromIndex(it.path)
+            stateRepository.removeFile(absolutePath)
             log.debug("Removed deleted file from index: ${it.path}")
 
             // Update progress
@@ -860,13 +1148,15 @@ class ProjectIndexer private constructor(
 
     /**
      * Remove all segments for a file from the index.
+     * @param absolutePath The absolute path of the file to remove
      */
-    private fun removeFileFromIndex(relativePath: String) {
+    private fun removeFileFromIndex(absolutePath: String) {
         try {
-            val filter = IsEqualTo("file_path", relativePath)
+            val filter = IsEqualTo("file_path", absolutePath)
             embeddingStore.removeAll(filter as Filter)
+            keywordRetriever.removeFile(absolutePath)
         } catch (e: Exception) {
-            log.debug("Failed to remove file from index: $relativePath", e)
+            log.debug("Failed to remove file from index: $absolutePath", e)
         }
     }
 
@@ -889,6 +1179,7 @@ class ProjectIndexer private constructor(
             }
 
             val relativePath = root.relativize(filePath).toString()
+            val absolutePath = filePath.toAbsolutePath().toString()
             val header = buildFileHeader(relativePath, filePath)
             val body = header + content
 
@@ -898,7 +1189,7 @@ class ProjectIndexer private constructor(
                 createTextSegment(
                     chunk = chunk,
                     filePath = filePath,
-                    relativePath = relativePath,
+                    absolutePath = absolutePath,
                     chunkIndex = idx,
                 )
             }
@@ -923,33 +1214,90 @@ class ProjectIndexer private constructor(
         val detectedTypes = detectProjectTypes(root)
         log.debug("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
+        // Detect changes compared to persisted state
+        val changes = detectFileSystemChanges(listOf(root))
+
+        if (!changes.hasChanges) {
+            log.debug("✅ No changes detected for project at $root - skipping indexing")
+            return indexedFiles.size
+        }
+
+        log.debug("📝 Detected changes: ${changes.totalChanges} files (add: ${changes.toAdd.size}, update: ${changes.toUpdate.size}, remove: ${changes.toRemove.size})")
+
         var indexedFilesCount = 0
+        val filesToSave = mutableListOf<IndexedFileInfo>()
 
-        Files.walk(root)
-            .asSequence()
-            .filter { it.isRegularFile() }
-            .filter { isIndexableFile(it, root, detectedTypes) }
-            .forEach { filePath ->
-                indexSingleFileWithTracking(filePath, root)
+        // Remove deleted files from indexes
+        if (changes.toRemove.isNotEmpty()) {
+            changes.toRemove.forEach { absolutePath ->
+                try {
+                    removeFileFromIndex(absolutePath)
+                    indexedFiles.remove(absolutePath)
 
-                val relativePath = root.relativize(filePath).toString()
-                val lastModified = Files.getLastModifiedTime(filePath).toMillis()
-
-                // Track indexed file
-                indexedFiles[relativePath] = IndexedFileEntry(
-                    path = relativePath,
-                    lastModified = lastModified,
-                    indexed = LocalDateTime.now(),
-                )
-
-                indexedFilesCount++
-
-                // Update progress every 10 files
-                if (indexedFilesCount % 10 == 0) {
-                    indexProgress = indexProgress.copy(filesIndexed = indexedFilesCount)
+                    log.debug("🗑️  Removed deleted file from indexes: $absolutePath")
+                } catch (e: Exception) {
+                    log.error("Failed to remove file from indexes: $absolutePath", e)
                 }
             }
+            // Remove from database
+            stateRepository.removeFiles(changes.toRemove)
+        }
 
+        // Index new and modified files
+        val filesToIndex = (changes.toAdd + changes.toUpdate).map { Path.of(it.path) }
+
+        filesToIndex.forEach { filePath ->
+            if (!Files.exists(filePath)) {
+                log.debug("⚠️  File no longer exists, skipping: $filePath")
+                return@forEach
+            }
+
+            indexSingleFileWithTracking(filePath, root)
+
+            val absolutePath = filePath.toAbsolutePath().toString()
+            val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+            val size = Files.size(filePath)
+
+            // Track indexed file (absolute path)
+            indexedFiles[absolutePath] = IndexedFileEntry(
+                path = absolutePath,
+                lastModified = lastModified,
+                indexed = LocalDateTime.now(),
+            )
+
+            // Prepare for batch save
+            filesToSave.add(
+                IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = lastModified,
+                    indexedAt = LocalDateTime.now(),
+                    size = size,
+                ),
+            )
+
+            indexedFilesCount++
+
+            // Update progress and save to database every 10 files
+            if (indexedFilesCount % 10 == 0) {
+                indexProgress = indexProgress.copy(filesIndexed = indexedFiles.size)
+
+                // Batch save to database
+                if (filesToSave.isNotEmpty()) {
+                    stateRepository.upsertFiles(filesToSave)
+                    filesToSave.clear()
+                }
+            }
+        }
+
+        // Save remaining files
+        if (filesToSave.isNotEmpty()) {
+            stateRepository.upsertFiles(filesToSave)
+        }
+
+        // Save final state
+        saveState()
+
+        log.debug("✅ Indexing completed: $indexedFilesCount files processed")
         return indexedFilesCount
     }
 }
