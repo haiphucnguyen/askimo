@@ -15,6 +15,8 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.IndexingErrorEvent
+import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
@@ -567,6 +569,39 @@ class ProjectIndexer private constructor(
             return
         }
 
+        // Check embedding model availability before starting thread
+        try {
+            checkEmbeddingModelAvailable()
+        } catch (e: Exception) {
+            val cause = e.cause ?: e
+            if (cause is ModelNotFoundException || cause.message?.contains("model not found", ignoreCase = true) == true) {
+                val modelName = Regex("model: get model '([^']+)'[:]").find(cause.message ?: "")?.groupValues?.getOrNull(1) ?: "(unknown)"
+
+                // Set failed status
+                indexProgress = IndexProgress(
+                    status = IndexStatus.FAILED,
+                    error = cause.message ?: "Embedding model not found",
+                )
+
+                // Publish event for UI/CLI to handle
+                EventBus.post(
+                    IndexingErrorEvent(
+                        projectId = projectId,
+                        errorType = IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND,
+                        details = mapOf(
+                            "modelName" to modelName,
+                            "provider" to "your AI provider (e.g., OpenAI, Ollama, Docker AI)"
+                        )
+                    )
+                )
+
+                log.error("Embedding model not found: $modelName")
+                return
+            } else {
+                throw e
+            }
+        }
+
         Thread {
             try {
                 // Load persisted state first if not already loaded
@@ -586,7 +621,6 @@ class ProjectIndexer private constructor(
                 val indexed = indexPathsSync(paths)
 
                 if (watchForChanges) {
-                    // Start watching for changes
                     startWatching(paths)
                     indexProgress = IndexProgress(
                         status = IndexStatus.WATCHING,
@@ -653,9 +687,7 @@ class ProjectIndexer private constructor(
                 count += Files.walk(path)
                     .asSequence()
                     .filter { it.isRegularFile() }
-                    .filter { isIndexableFile(it, path, detectedTypes) }
-                    .filter { !tooLargeToIndex(it) }
-                    .count()
+                    .filter { isIndexableFile(it, path, detectedTypes) }.count { !tooLargeToIndex(it) }
             } else if (Files.isRegularFile(path) && !tooLargeToIndex(path)) {
                 count++
             }
@@ -1225,25 +1257,10 @@ class ProjectIndexer private constructor(
 
     /**
      * Index project with progress updates.
+     * Returns the number of files indexed.
      */
     private fun indexProjectWithProgress(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
-
-        // Check embedding model availability before indexing
-        try {
-            // This will throw ModelNotFoundException if not available
-            hybridIndexer.javaClass.getDeclaredMethod("checkEmbeddingModelAvailable").apply { isAccessible = true }.invoke(hybridIndexer)
-        } catch (e: Exception) {
-            val cause = e.cause ?: e
-            if (cause is ModelNotFoundException || cause.message?.contains("model not found", ignoreCase = true) == true) {
-                log.error("❌ Embedding model not found, aborting indexing: ${cause.message}")
-                // Inform user here, e.g. via UI or CLI output
-                println("❌ Embedding model not found: ${cause.message}")
-                return 0
-            } else {
-                throw e
-            }
-        }
 
         val detectedTypes = detectProjectTypes(root)
         log.debug("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
@@ -1253,7 +1270,7 @@ class ProjectIndexer private constructor(
 
         if (!changes.hasChanges) {
             log.debug("✅ No changes detected for project at $root - skipping indexing")
-            return indexedFiles.size
+            return 0
         }
 
         log.debug("📝 Detected changes: ${changes.totalChanges} files (add: ${changes.toAdd.size}, update: ${changes.toUpdate.size}, remove: ${changes.toRemove.size})")
@@ -1333,5 +1350,22 @@ class ProjectIndexer private constructor(
 
         log.debug("✅ Indexing completed: $indexedFilesCount files processed")
         return indexedFilesCount
+    }
+
+    /**
+     * Checks if the embedding model is available by attempting a dry-run embed.
+     * Throws ModelNotFoundException if the model is not available.
+     */
+    private fun checkEmbeddingModelAvailable() {
+        try {
+            embeddingModel.embed(TextSegment.from("ping"))
+        } catch (e: Exception) {
+            if (e is ModelNotFoundException || e.message?.contains("model not found", ignoreCase = true) == true) {
+                log.error("Embedding model not found: ${e.message}")
+                throw ModelNotFoundException("Embedding model not found: ${e.message}")
+            } else {
+                throw e
+            }
+        }
     }
 }
