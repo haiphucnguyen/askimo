@@ -11,6 +11,25 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Load environment variables from .env file if it exists
+val envFile = rootProject.file(".env")
+val envVars = mutableMapOf<String, String>()
+
+if (envFile.exists()) {
+    envFile.readLines().forEach { line ->
+        val trimmed = line.trim()
+        if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && "=" in trimmed) {
+            val key = trimmed.substringBefore("=").trim().removePrefix("export ")
+            val value = trimmed.substringAfter("=").trim().removeSurrounding("\"")
+            envVars[key] = value
+            System.setProperty(key, value)
+        }
+    }
+    println("✅ Loaded ${envVars.size} variables from .env file")
+}
+
+// Helper function to get value from either environment variable or .env file
+fun getEnvOrProperty(key: String): String? = System.getenv(key) ?: envVars[key] ?: System.getProperty(key)
 group = rootProject.group
 version = rootProject.version
 
@@ -125,15 +144,21 @@ compose.desktop {
                 iconFile.set(project.file("src/main/resources/images/askimo.icns"))
 
                 // Code signing configuration
+                // Reads from environment variables or .env file
+                val macosIdentity = getEnvOrProperty("MACOS_IDENTITY")
+                val appleId = getEnvOrProperty("APPLE_ID")
+                val applePassword = getEnvOrProperty("APPLE_PASSWORD")
+                val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID")
+
                 signing {
                     sign.set(true)
-                    identity.set(System.getenv("MACOS_IDENTITY"))
+                    identity.set(macosIdentity)
                 }
 
                 notarization {
-                    appleID.set(System.getenv("APPLE_ID"))
-                    password.set(System.getenv("APPLE_PASSWORD"))
-                    teamID.set(System.getenv("APPLE_TEAM_ID"))
+                    appleID.set(appleId)
+                    password.set(applePassword)
+                    teamID.set(appleTeamId)
                 }
             }
             windows {
