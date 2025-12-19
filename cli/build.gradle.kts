@@ -225,9 +225,11 @@ graalvmNative {
             imageName.set("askimo")
             javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 
+            val graalvmMemory = project.findProperty("graalvm.native-image.memory") as? String ?: "8g"
+
             buildArgs.addAll(
                 listOf(
-                    "-J-Xmx8g",
+                    "-J-Xmx$graalvmMemory",
                     "--enable-url-protocols=https",
                     "--report-unsupported-elements-at-runtime",
                     "--features=io.askimo.cli.graal.AskimoFeature",

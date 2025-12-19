@@ -62,9 +62,13 @@ jobs:
           path: cli/build/reports/tests/test
           retention-days: 7
 
-      - name: Build native image (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" :cli:nativeCompile
+      - name: Build native image (Linux)
+        if: runner.os == 'Linux'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pgraalvm.native-image.memory=6g :cli:nativeCompile
+
+      - name: Build native image (macOS)
+        if: runner.os == 'macOS'
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pgraalvm.native-image.memory=5g :cli:nativeCompile
 
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
@@ -157,7 +161,7 @@ jobs:
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -PDISABLE_DOCKER_TESTS=true clean :cli:test
 
       - name: Build native image (arm64)
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" :cli:nativeCompile
+        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" -Pgraalvm.native-image.memory=6g :cli:nativeCompile
 
       - name: Locate native binary path
         id: arm_paths
