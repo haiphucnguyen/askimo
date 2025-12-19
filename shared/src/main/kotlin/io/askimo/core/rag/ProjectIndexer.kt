@@ -24,6 +24,7 @@ import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
+import io.askimo.core.project.getModelTokenLimit
 import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -200,8 +201,21 @@ class ProjectIndexer private constructor(
 
     private val indexPath: Path = AskimoHome.base().resolve("projects").resolve(projectId).resolve("jvector-indexes")
 
-    private val maxCharsPerChunk = AppConfig.embedding.maxCharsPerChunk
-    private val chunkOverlap = AppConfig.embedding.chunkOverlap
+    private val maxCharsPerChunk: Int by lazy {
+        calculateSafeMaxChars()
+    }
+
+    // Dynamic overlap based on chunk size (5% of chunk size, capped at configured max)
+    private val chunkOverlap: Int by lazy {
+        val calculatedOverlap = (maxCharsPerChunk * 0.05).toInt()
+        val configuredMax = AppConfig.embedding.chunkOverlap
+        val minOverlap = 50
+
+        calculatedOverlap.coerceIn(minOverlap, configuredMax).also {
+            log.info("Calculated chunk overlap: $it chars (${(it.toFloat() / maxCharsPerChunk * 100).toInt()}% of chunk size)")
+        }
+    }
+
     private val maxFileBytes = AppConfig.indexing.maxFileBytes
     private val concurrentIndexingThreads = AppConfig.indexing.concurrentIndexingThreads
 
@@ -825,7 +839,31 @@ class ProjectIndexer private constructor(
         log.info("Re-index initiated for project: $projectId")
     }
 
-    // ---------- Internals ----------
+    private fun calculateSafeMaxChars(): Int {
+        val tokenLimit = try {
+            getModelTokenLimit(appContext)
+        } catch (e: Exception) {
+            log.warn("Failed to get model token limit, using default from config: ${e.message}")
+            return AppConfig.embedding.maxCharsPerChunk
+        }
+
+        val safeTokenLimit = (tokenLimit * 0.8).toInt()
+
+        val safeChars = safeTokenLimit * 4
+
+        val configuredMax = AppConfig.embedding.maxCharsPerChunk
+        val minChars = 500
+
+        val calculated = safeChars.coerceIn(minChars, configuredMax)
+
+        log.info(
+            "Calculated chunk size: $calculated chars " +
+            "(model limit: $tokenLimit tokens, safe limit: $safeTokenLimit tokens, configured max: $configuredMax)"
+        )
+
+        return calculated
+    }
+
     private fun detectProjectTypes(root: Path): List<ProjectType> {
         val detected = mutableListOf<ProjectType>()
 
