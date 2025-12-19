@@ -28,8 +28,15 @@ import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.sax.BodyContentHandler
@@ -180,6 +187,12 @@ class ProjectIndexer private constructor(
                 } catch (e: Exception) {
                     log.error("Failed to close state repository", e)
                 }
+                try {
+                    // Close Lucene IndexWriter to release file locks
+                    indexer.keywordRetriever.close()
+                } catch (e: Exception) {
+                    log.error("Failed to close keyword retriever", e)
+                }
             }
             instances.clear()
         }
@@ -190,6 +203,7 @@ class ProjectIndexer private constructor(
     private val maxCharsPerChunk = AppConfig.embedding.maxCharsPerChunk
     private val chunkOverlap = AppConfig.embedding.chunkOverlap
     private val maxFileBytes = AppConfig.indexing.maxFileBytes
+    private val concurrentIndexingThreads = AppConfig.indexing.concurrentIndexingThreads
 
     private val defaultCharset: Charset = Charsets.UTF_8
 
@@ -1281,6 +1295,8 @@ class ProjectIndexer private constructor(
                 return
             }
 
+            log.debug("Start indexing file: {}", filePath.fileName)
+
             val relativePath = root.relativize(filePath).toString()
             val absolutePath = filePath.toAbsolutePath().toString()
             val header = buildFileHeader(relativePath, filePath)
@@ -1328,8 +1344,8 @@ class ProjectIndexer private constructor(
 
         log.debug("📝 Detected changes: ${changes.totalChanges} files (add: ${changes.toAdd.size}, update: ${changes.toUpdate.size}, remove: ${changes.toRemove.size})")
 
-        var indexedFilesCount = 0
-        val filesToSave = mutableListOf<IndexedFileInfo>()
+        val indexedFilesCount = AtomicInteger(0)
+        val filesToSave = ConcurrentLinkedQueue<IndexedFileInfo>()
 
         // Remove deleted files from indexes
         if (changes.toRemove.isNotEmpty()) {
@@ -1347,80 +1363,90 @@ class ProjectIndexer private constructor(
             stateRepository.removeFiles(changes.toRemove)
         }
 
-        // Index new and modified files
         val filesToIndex = (changes.toAdd + changes.toUpdate).map { Path.of(it.path) }
 
-        filesToIndex.forEach { filePath ->
-            try {
-                if (!Files.exists(filePath)) {
-                    log.debug("⚠️  File no longer exists, skipping: $filePath")
-                    return@forEach
-                }
+        runBlocking {
+            val semaphore = Semaphore(concurrentIndexingThreads)
 
-                indexSingleFileWithTracking(filePath, root)
-
-                val absolutePath = filePath.toAbsolutePath().toString()
-                val lastModified = Files.getLastModifiedTime(filePath).toMillis()
-                val size = Files.size(filePath)
-
-                // Track indexed file (absolute path)
-                indexedFiles[absolutePath] = IndexedFileEntry(
-                    path = absolutePath,
-                    lastModified = lastModified,
-                    indexed = LocalDateTime.now(),
-                )
-
-                // Prepare for batch save
-                filesToSave.add(
-                    IndexedFileInfo(
-                        path = absolutePath,
-                        lastModified = lastModified,
-                        indexedAt = LocalDateTime.now(),
-                        size = size,
-                    ),
-                )
-
-                indexedFilesCount++
-
-                // Update progress and save to database every 10 files
-                if (indexedFilesCount % 10 == 0) {
-                    indexProgress = indexProgress.copy(filesIndexed = indexedFiles.size)
-
-                    // Batch save to database
-                    if (filesToSave.isNotEmpty()) {
-                        stateRepository.upsertFiles(filesToSave)
-                        filesToSave.clear()
-                    }
-
-                    // Publish progress event every 10 files
-                    try {
-                        EventBus.post(
-                            IndexingInProgressEvent(
-                                projectId = projectId,
-                                projectName = projectName,
-                                filesIndexed = indexedFilesCount,
-                                totalFiles = filesToIndex.size
-                            )
-                        )
-                    } catch (e: Exception) {
-                        log.error("Failed to publish indexing progress event", e)
+            filesToIndex.map { filePath ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        processFileForIndexing(filePath, root, indexedFilesCount, filesToSave, filesToIndex.size)
                     }
                 }
-            } catch (e: Exception) {
-                log.error("Failed to process file ${filePath}: ${e.message}", e)
-            }
+            }.awaitAll()
         }
 
-        // Save remaining files
         if (filesToSave.isNotEmpty()) {
-            stateRepository.upsertFiles(filesToSave)
+            stateRepository.upsertFiles(filesToSave.toList())
         }
 
-        // Save final state
         saveState()
 
-        log.debug("✅ Indexing completed: $indexedFilesCount files processed")
-        return indexedFilesCount
+        log.debug("✅ Indexing completed: ${indexedFilesCount.get()} files processed")
+        return indexedFilesCount.get()
+    }
+
+    /**
+     * Process a single file for indexing (used in parallel processing).
+     * This method is thread-safe and designed to be called concurrently.
+     */
+    private fun processFileForIndexing(
+        filePath: Path,
+        root: Path,
+        indexedFilesCount: AtomicInteger,
+        filesToSave: ConcurrentLinkedQueue<IndexedFileInfo>,
+        totalFiles: Int
+    ) {
+        try {
+            if (!Files.exists(filePath)) {
+                log.debug("⚠️  File no longer exists, skipping: $filePath")
+                return
+            }
+
+            indexSingleFileWithTracking(filePath, root)
+
+            val absolutePath = filePath.toAbsolutePath().toString()
+            val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+            val size = Files.size(filePath)
+
+            indexedFiles[absolutePath] = IndexedFileEntry(
+                path = absolutePath,
+                lastModified = lastModified,
+                indexed = LocalDateTime.now(),
+            )
+
+            filesToSave.add(
+                IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = lastModified,
+                    indexedAt = LocalDateTime.now(),
+                    size = size,
+                ),
+            )
+
+            val count = indexedFilesCount.incrementAndGet()
+
+            // Update progress every 10 files
+            if (count % 10 == 0) {
+                indexProgress = indexProgress.copy(filesIndexed = count)
+
+                try {
+                    EventBus.post(
+                        IndexingInProgressEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = count,
+                            totalFiles = totalFiles
+                        )
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing progress event", e)
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Failed to process file ${filePath}: ${e.message}", e)
+        }
     }
 
     /**

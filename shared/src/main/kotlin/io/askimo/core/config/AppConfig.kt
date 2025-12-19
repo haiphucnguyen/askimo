@@ -34,7 +34,7 @@ data class PgVectorConfig(
 
 data class EmbeddingConfig(
     val maxCharsPerChunk: Int = 1500,
-    val chunkOverlap: Int = 150,
+    val chunkOverlap: Int = 100,
     val preferredDim: Int? = null,
 )
 
@@ -64,6 +64,7 @@ data class ProjectType(
 
 data class IndexingConfig(
     val maxFileBytes: Long = 5_000_000,
+    val concurrentIndexingThreads: Int = 20,
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",

@@ -44,6 +44,13 @@ class LuceneKeywordRetriever(
     private val analyzer = StandardAnalyzer()
     private val directory: Directory
 
+    // Reuse single IndexWriter instance (thread-safe for concurrent writes)
+    private val indexWriter: IndexWriter by lazy {
+        val config = IndexWriterConfig(analyzer)
+            .setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
+        IndexWriter(directory, config)
+    }
+
     companion object {
         private val FIELD_CONTENT = "content"
         private val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
@@ -62,25 +69,23 @@ class LuceneKeywordRetriever(
 
     /**
      * Index multiple text segments in batch.
+     * Thread-safe: IndexWriter handles concurrent addDocument calls.
      */
     fun indexSegments(textSegments: List<TextSegment>) {
-        val config = IndexWriterConfig(analyzer)
-        IndexWriter(directory, config).use { writer ->
-            for (textSegment in textSegments) {
-                val doc = Document().apply {
-                    // Store + index content for BM25
-                    add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
+        for (textSegment in textSegments) {
+            val doc = Document().apply {
+                // Store + index content for BM25
+                add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
 
-                    // Store metadata (stored-only fields). Prefix keys to avoid conflicts.
-                    textSegment.metadata().toMap().forEach { (key, value) ->
-                        val safeKey = FIELD_META_PREFIX + key
-                        add(StoredField(safeKey, value.toString()))
-                    }
+                // Store metadata (stored-only fields). Prefix keys to avoid conflicts.
+                textSegment.metadata().toMap().forEach { (key, value) ->
+                    val safeKey = FIELD_META_PREFIX + key
+                    add(StoredField(safeKey, value.toString()))
                 }
-                writer.addDocument(doc)
             }
-            writer.commit()
+            indexWriter.addDocument(doc)
         }
+        indexWriter.commit()
         log.debug("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
     }
 
@@ -88,11 +93,8 @@ class LuceneKeywordRetriever(
      * Clear the keyword index.
      */
     fun clearIndex() {
-        val config = IndexWriterConfig(analyzer)
-        IndexWriter(directory, config).use { writer ->
-            writer.deleteAll()
-            writer.commit()
-        }
+        indexWriter.deleteAll()
+        indexWriter.commit()
         log.debug("Cleared keyword index at $indexPath")
     }
 
@@ -102,13 +104,10 @@ class LuceneKeywordRetriever(
      */
     fun removeFile(filePath: String) {
         try {
-            val config = IndexWriterConfig(analyzer)
-            IndexWriter(directory, config).use { writer ->
-                val queryParser = QueryParser(FIELD_META_PREFIX + "file_path", analyzer)
-                val query = queryParser.parse(QueryParser.escape(filePath))
-                writer.deleteDocuments(query)
-                writer.commit()
-            }
+            val queryParser = QueryParser(FIELD_META_PREFIX + "file_path", analyzer)
+            val query = queryParser.parse(QueryParser.escape(filePath))
+            indexWriter.deleteDocuments(query)
+            indexWriter.commit()
             log.debug("Removed file from keyword index: $filePath")
         } catch (e: Exception) {
             log.debug("Failed to remove file from keyword index: $filePath", e)
@@ -122,6 +121,9 @@ class LuceneKeywordRetriever(
         }
 
         return try {
+            // Ensure latest changes are visible to readers
+            indexWriter.commit()
+
             DirectoryReader.open(directory).use { reader ->
                 val searcher = IndexSearcher(reader)
 
@@ -176,6 +178,12 @@ class LuceneKeywordRetriever(
     }
 
     fun close() {
-        directory.close()
+        try {
+            indexWriter.commit()
+            indexWriter.close()
+            directory.close()
+        } catch (e: Exception) {
+            log.error("Failed to close Lucene resources", e)
+        }
     }
 }
