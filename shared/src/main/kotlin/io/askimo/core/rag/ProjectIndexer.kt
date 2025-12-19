@@ -18,6 +18,10 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.IndexingErrorEvent
 import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.event.internal.ProjectDeletedEvent
+import io.askimo.core.event.user.IndexingCompletedEvent
+import io.askimo.core.event.user.IndexingFailedEvent
+import io.askimo.core.event.user.IndexingInProgressEvent
+import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
 import io.askimo.core.util.AskimoHome
@@ -49,6 +53,7 @@ import kotlin.math.min
 import kotlin.streams.asSequence
 import org.apache.tika.metadata.Metadata as TikaMetadata
 import dev.langchain4j.exception.ModelNotFoundException
+import io.askimo.core.db.DatabaseManager
 
 /**
  * Status of the indexing process for a project.
@@ -180,8 +185,6 @@ class ProjectIndexer private constructor(
         }
     }
 
-    private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
-
     private val indexPath: Path = AskimoHome.base().resolve("projects").resolve(projectId).resolve("jvector-indexes")
 
     private val maxCharsPerChunk = AppConfig.embedding.maxCharsPerChunk
@@ -189,6 +192,15 @@ class ProjectIndexer private constructor(
     private val maxFileBytes = AppConfig.indexing.maxFileBytes
 
     private val defaultCharset: Charset = Charsets.UTF_8
+
+    // Cached project repository and name
+    private val projectRepository by lazy {
+        DatabaseManager.getInstance().getProjectRepository()
+    }
+
+    private val projectName: String by lazy {
+        projectRepository.getProject(projectId)?.name ?: projectId
+    }
 
     // Persistent state repository (SQLite database per project)
     private val stateRepository: IndexStateRepository by lazy {
@@ -594,8 +606,6 @@ class ProjectIndexer private constructor(
                         )
                     )
                 )
-
-                log.error("Embedding model not found: $modelName")
                 return
             } else {
                 throw e
@@ -618,6 +628,20 @@ class ProjectIndexer private constructor(
 
                 log.debug("Starting async indexing for project $projectId: ${paths.size} paths, ~$estimatedTotal files")
 
+                // Publish user event for indexing start
+                try {
+
+                    EventBus.post(
+                        IndexingStartedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            estimatedFiles = estimatedTotal
+                        )
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing started event", e)
+                }
+
                 val indexed = indexPathsSync(paths)
 
                 if (watchForChanges) {
@@ -637,12 +661,41 @@ class ProjectIndexer private constructor(
                     )
                     log.debug("Indexing completed for project $projectId: $indexed files")
                 }
+
+                // Publish user event for successful indexing
+                try {
+
+                    EventBus.post(
+                        IndexingCompletedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = indexed
+                        )
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing completed event", e)
+                }
             } catch (e: Exception) {
                 log.error("Indexing failed for project $projectId", e)
+                val errorMessage = e.message ?: "Unknown error"
                 indexProgress = IndexProgress(
                     status = IndexStatus.FAILED,
-                    error = e.message ?: "Unknown error",
+                    error = errorMessage,
                 )
+
+                // Publish user event for failed indexing
+                try {
+
+                    EventBus.post(
+                        IndexingFailedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            errorMessage = errorMessage
+                        )
+                    )
+                } catch (eventError: Exception) {
+                    log.error("Failed to publish indexing failed event", eventError)
+                }
             }
         }.apply {
             name = "ProjectIndexer-$projectId"
@@ -1303,6 +1356,7 @@ class ProjectIndexer private constructor(
                 return@forEach
             }
 
+            log.debug("Indexing file: $filePath")
             indexSingleFileWithTracking(filePath, root)
 
             val absolutePath = filePath.toAbsolutePath().toString()
@@ -1336,6 +1390,20 @@ class ProjectIndexer private constructor(
                 if (filesToSave.isNotEmpty()) {
                     stateRepository.upsertFiles(filesToSave)
                     filesToSave.clear()
+                }
+
+                // Publish progress event every 10 files
+                try {
+                    EventBus.post(
+                        IndexingInProgressEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = indexedFilesCount,
+                            totalFiles = filesToIndex.size
+                        )
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing progress event", e)
                 }
             }
         }
