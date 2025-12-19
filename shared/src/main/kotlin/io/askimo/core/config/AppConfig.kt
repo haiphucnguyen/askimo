@@ -40,10 +40,10 @@ data class EmbeddingConfig(
 
 data class EmbeddingModelsConfig(
     val openai: String = "text-embedding-3-small",
-    val docker: String = "ai/mxbai-embed-large:latest",
+    val docker: String = "ai/qwen3-embedding:0.6B-F16",
     val ollama: String = "nomic-embed-text:latest",
-    val localai: String = "mxbai-embed-large:latest",
-    val lmstudio: String = "mxbai-embed-large:latest",
+    val localai: String = "nomic-embed-text:latest",
+    val lmstudio: String = "nomic-embed-text:latest",
     val gemini: String = "text-embedding-004",
 )
 

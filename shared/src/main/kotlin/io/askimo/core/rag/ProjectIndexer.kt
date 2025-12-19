@@ -1351,60 +1351,63 @@ class ProjectIndexer private constructor(
         val filesToIndex = (changes.toAdd + changes.toUpdate).map { Path.of(it.path) }
 
         filesToIndex.forEach { filePath ->
-            if (!Files.exists(filePath)) {
-                log.debug("⚠️  File no longer exists, skipping: $filePath")
-                return@forEach
-            }
+            try {
+                if (!Files.exists(filePath)) {
+                    log.debug("⚠️  File no longer exists, skipping: $filePath")
+                    return@forEach
+                }
 
-            log.debug("Indexing file: $filePath")
-            indexSingleFileWithTracking(filePath, root)
+                indexSingleFileWithTracking(filePath, root)
 
-            val absolutePath = filePath.toAbsolutePath().toString()
-            val lastModified = Files.getLastModifiedTime(filePath).toMillis()
-            val size = Files.size(filePath)
+                val absolutePath = filePath.toAbsolutePath().toString()
+                val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+                val size = Files.size(filePath)
 
-            // Track indexed file (absolute path)
-            indexedFiles[absolutePath] = IndexedFileEntry(
-                path = absolutePath,
-                lastModified = lastModified,
-                indexed = LocalDateTime.now(),
-            )
-
-            // Prepare for batch save
-            filesToSave.add(
-                IndexedFileInfo(
+                // Track indexed file (absolute path)
+                indexedFiles[absolutePath] = IndexedFileEntry(
                     path = absolutePath,
                     lastModified = lastModified,
-                    indexedAt = LocalDateTime.now(),
-                    size = size,
-                ),
-            )
+                    indexed = LocalDateTime.now(),
+                )
 
-            indexedFilesCount++
+                // Prepare for batch save
+                filesToSave.add(
+                    IndexedFileInfo(
+                        path = absolutePath,
+                        lastModified = lastModified,
+                        indexedAt = LocalDateTime.now(),
+                        size = size,
+                    ),
+                )
 
-            // Update progress and save to database every 10 files
-            if (indexedFilesCount % 10 == 0) {
-                indexProgress = indexProgress.copy(filesIndexed = indexedFiles.size)
+                indexedFilesCount++
 
-                // Batch save to database
-                if (filesToSave.isNotEmpty()) {
-                    stateRepository.upsertFiles(filesToSave)
-                    filesToSave.clear()
-                }
+                // Update progress and save to database every 10 files
+                if (indexedFilesCount % 10 == 0) {
+                    indexProgress = indexProgress.copy(filesIndexed = indexedFiles.size)
 
-                // Publish progress event every 10 files
-                try {
-                    EventBus.post(
-                        IndexingInProgressEvent(
-                            projectId = projectId,
-                            projectName = projectName,
-                            filesIndexed = indexedFilesCount,
-                            totalFiles = filesToIndex.size
+                    // Batch save to database
+                    if (filesToSave.isNotEmpty()) {
+                        stateRepository.upsertFiles(filesToSave)
+                        filesToSave.clear()
+                    }
+
+                    // Publish progress event every 10 files
+                    try {
+                        EventBus.post(
+                            IndexingInProgressEvent(
+                                projectId = projectId,
+                                projectName = projectName,
+                                filesIndexed = indexedFilesCount,
+                                totalFiles = filesToIndex.size
+                            )
                         )
-                    )
-                } catch (e: Exception) {
-                    log.error("Failed to publish indexing progress event", e)
+                    } catch (e: Exception) {
+                        log.error("Failed to publish indexing progress event", e)
+                    }
                 }
+            } catch (e: Exception) {
+                log.error("Failed to process file ${filePath}: ${e.message}", e)
             }
         }
 
