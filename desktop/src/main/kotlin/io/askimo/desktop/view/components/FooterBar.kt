@@ -60,6 +60,7 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.EventSource
+import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.event.system.UpdateAvailableEvent
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.desktop.i18n.stringResource
@@ -70,14 +71,19 @@ import org.koin.java.KoinJavaComponent.get
 import java.awt.Desktop
 import java.net.URI
 
-/**
- * Displays the current AI provider and model configuration.
- * Clicking opens the provider configuration dialog.
- */
 @Composable
 private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
     val appContext = remember { get<AppContext>(AppContext::class.java) }
-    val configInfo = remember(appContext) { appContext.getConfigInfo() }
+    var configInfo by remember { mutableStateOf(appContext.getConfigInfo()) }
+
+    LaunchedEffect(Unit) {
+        EventBus.internalEvents.collect { event ->
+            if (event is ModelChangedEvent) {
+                configInfo = appContext.getConfigInfo()
+            }
+        }
+    }
+
     val provider = configInfo.provider.name
     val model = configInfo.model
 

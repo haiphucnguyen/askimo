@@ -40,6 +40,12 @@ enum class ModelProvider {
     OLLAMA,
 
     /**
+     * Represents Docker AI's locally-hosted models.
+     */
+    @SerialName("DOCKER")
+    DOCKER,
+
+    /**
      * Represents Anthropic's models
      */
     @SerialName("ANTHROPIC")

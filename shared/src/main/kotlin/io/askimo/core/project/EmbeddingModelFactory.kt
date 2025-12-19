@@ -5,6 +5,7 @@
 package io.askimo.core.project
 
 import dev.langchain4j.model.embedding.EmbeddingModel
+import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import io.askimo.core.config.AppConfig
@@ -12,8 +13,11 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.LocalModelValidator
+import io.askimo.core.providers.ModelAvailabilityResult
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.ANTHROPIC
+import io.askimo.core.providers.ModelProvider.DOCKER
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ModelProvider.LMSTUDIO
 import io.askimo.core.providers.ModelProvider.LOCALAI
@@ -21,24 +25,20 @@ import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ModelProvider.UNKNOWN
 import io.askimo.core.providers.ModelProvider.XAI
+import io.askimo.core.providers.docker.DockerAiSettings
+import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
+import io.askimo.core.providers.localai.LocalAiSettings
+import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
-import java.net.HttpURLConnection
-import java.net.URI
-import java.util.concurrent.atomic.AtomicBoolean
-
-private const val DEFAULT_OLLAMA_URL = "http://localhost:11434"
-private const val DEFAULT_OLLAMA_EMBED_MODEL = "nomic-embed-text:latest"
-private const val DEFAULT_OPENAI_EMBED_MODEL = "text-embedding-3-small"
-
-private val warnedOllamaOnce = AtomicBoolean(false)
 
 private val log = logger("EmbeddingModelFactory")
 
 fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext.getActiveProvider()) {
     OPENAI -> {
         val openAiKey = (appContext.getCurrentProviderSettings() as OpenAiSettings).apiKey
-        val modelName = System.getenv("OPENAI_EMBED_MODEL") ?: DEFAULT_OPENAI_EMBED_MODEL
+        val modelName = AppConfig.embeddingModels.openai
 
         val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
             "${AppConfig.proxy.url}/openai"
@@ -52,128 +52,193 @@ fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext
             .build()
     }
 
-    ANTHROPIC, GEMINI, XAI, LOCALAI, LMSTUDIO -> {
-        noteOllamaRequired(appContext.getActiveProvider())
-        buildOllamaEmbeddingModel()
+    GEMINI -> {
+        val settings = appContext.getCurrentProviderSettings() as GeminiSettings
+        buildGeminiEmbeddingModel(settings)
     }
 
-    OLLAMA -> buildOllamaEmbeddingModel()
+    DOCKER -> {
+        val settings = appContext.getCurrentProviderSettings() as DockerAiSettings
+        buildDockerEmbeddingModel(settings)
+    }
+
+    LOCALAI -> {
+        val settings = appContext.getCurrentProviderSettings() as LocalAiSettings
+        buildLocalAiEmbeddingModel(settings)
+    }
+
+    LMSTUDIO -> {
+        val settings = appContext.getCurrentProviderSettings() as LmStudioSettings
+        buildLmStudioEmbeddingModel(settings)
+    }
+
+    ANTHROPIC -> {
+        throw UnsupportedOperationException(
+            "Anthropic does not provide embedding models. " +
+                "RAG features are not available with Anthropic. " +
+                "Please switch to a provider that supports embeddings (OpenAI, Gemini, Ollama, etc.) to use project-based RAG.",
+        )
+    }
+
+    XAI -> {
+        throw UnsupportedOperationException(
+            "xAI does not provide embedding models. " +
+                "RAG features are not available with xAI. " +
+                "Please switch to a provider that supports embeddings (OpenAI, Gemini, Ollama, etc.) to use project-based RAG.",
+        )
+    }
+
+    OLLAMA -> {
+        val settings = appContext.getCurrentProviderSettings() as OllamaSettings
+        buildOllamaEmbeddingModel(settings)
+    }
 
     UNKNOWN -> error("Unsupported embedding provider: ${appContext.getActiveProvider()}")
 }
 
-private fun buildOllamaEmbeddingModel(): EmbeddingModel {
-    val url = System.getProperty("OLLAMA_URL") ?: System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-    val model = System.getProperty("OLLAMA_EMBED_MODEL") ?: System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
+private fun buildOllamaEmbeddingModel(settings: OllamaSettings): EmbeddingModel {
+    val baseUrl = settings.baseUrl.removeSuffix("/")
+    val modelName = AppConfig.embeddingModels.ollama
 
-    ensureOllamaAvailable(url, model)
+    ensureModelAvailable(ModelProvider.OLLAMA, baseUrl, modelName)
 
     return OllamaEmbeddingModelBuilder()
-        .baseUrl(url)
-        .modelName(model)
+        .baseUrl(baseUrl)
+        .modelName(modelName)
+        .build()
+}
+
+private fun buildGeminiEmbeddingModel(settings: GeminiSettings): EmbeddingModel {
+    val apiKey = settings.apiKey
+    val modelName = AppConfig.embeddingModels.gemini
+
+    log.display(
+        """
+        ℹ️  Using Gemini for embeddings
+           • Embedding model: $modelName
+           • Configure in askimo.yml: embedding_models.gemini
+        """.trimIndent(),
+    )
+
+    return GoogleAiEmbeddingModel.builder()
+        .apiKey(safeApiKey(apiKey))
+        .modelName(modelName)
+        .build()
+}
+
+private fun buildDockerEmbeddingModel(settings: DockerAiSettings): EmbeddingModel {
+    val baseUrl = settings.baseUrl.removeSuffix("/")
+    val modelName = AppConfig.embeddingModels.docker
+
+    log.display(
+        """
+        ℹ️  Using Docker AI for embeddings
+           • Docker AI URL: $baseUrl
+           • Embedding model: $modelName
+           • Configure in askimo.yml: embedding_models.docker
+        """.trimIndent(),
+    )
+
+    return OpenAiEmbeddingModelBuilder()
+        .apiKey("not-needed")
+        .baseUrl("$baseUrl/v1")
+        .modelName(modelName)
+        .build()
+}
+
+private fun buildLocalAiEmbeddingModel(settings: LocalAiSettings): EmbeddingModel {
+    val baseUrl = settings.baseUrl.removeSuffix("/")
+    val modelName = AppConfig.embeddingModels.localai
+
+    log.display(
+        """
+        ℹ️  Using LocalAI for embeddings
+           • LocalAI URL: $baseUrl
+           • Embedding model: $modelName
+           • Configure in askimo.yml: embedding_models.localai
+        """.trimIndent(),
+    )
+
+    return OpenAiEmbeddingModelBuilder()
+        .apiKey("not-needed")
+        .baseUrl(baseUrl)
+        .modelName(modelName)
+        .build()
+}
+
+private fun buildLmStudioEmbeddingModel(settings: LmStudioSettings): EmbeddingModel {
+    val baseUrl = settings.baseUrl.removeSuffix("/")
+    val modelName = AppConfig.embeddingModels.lmstudio
+
+    log.display(
+        """
+        ℹ️  Using LMStudio for embeddings
+           • LMStudio URL: $baseUrl
+           • Embedding model: $modelName
+           • Configure in askimo.yml: embedding_models.lmstudio
+        """.trimIndent(),
+    )
+
+    return OpenAiEmbeddingModelBuilder()
+        .apiKey("not-needed")
+        .baseUrl("$baseUrl/v1")
+        .modelName(modelName)
         .build()
 }
 
 /**
- * Notes to the user (printed once) that Anthropic/Gemini/xAI require a local Ollama
- * installation and an embedding model pulled.
+ * Ensures that a model is available on a local provider.
+ * Attempts to pull the model if it's not available (for providers that support auto-pull like Ollama).
  */
-private fun noteOllamaRequired(provider: ModelProvider) {
-    if (warnedOllamaOnce.compareAndSet(false, true)) {
-        val model = System.getenv("OLLAMA_EMBED_MODEL") ?: DEFAULT_OLLAMA_EMBED_MODEL
-        val url = System.getenv("OLLAMA_URL") ?: DEFAULT_OLLAMA_URL
-        log.display(
-            """
-            ℹ️  ${provider.name} does not provide embeddings. Askimo uses local Ollama for RAG embeddings.
-               • Ollama URL: $url
-               • Embedding model: $model
-               • If not installed: https://ollama.com/download
-               • Start server:    ollama serve
-               • Pull model:      ollama pull $model
-            """.trimIndent(),
-        )
-    }
-}
-
-/**
- * Checks that Ollama is reachable and the model exists.
- * Throws an actionable error if not.
- */
-private fun ensureOllamaAvailable(
+private fun ensureModelAvailable(
+    provider: ModelProvider,
     baseUrl: String,
-    model: String,
+    modelName: String,
 ) {
-    val tags = getTags(baseUrl, readMs = 8_000) ?: error(notReachable(baseUrl, model))
-    if (hasModel(tags, model)) return
+    val result = LocalModelValidator.checkModelExists(provider, baseUrl, modelName)
 
-    // ⛓️ Pull synchronously; returns only when the model is ready
-    if (!pullSync(baseUrl, model)) {
-        log.display("❌ Failed to pull Ollama model '$model'. Try: ollama pull $model")
-    }
-
-    // One re-check (no polling needed since pullSync blocks)
-    val after = getTags(baseUrl, readMs = 8_000) ?: error(notReachable(baseUrl, model))
-    if (!hasModel(after, model)) {
-        log.display("❌ Ollama model '$model' still not listed after synchronous pull.")
-    }
-}
-
-private fun pullSync(
-    baseUrl: String,
-    model: String,
-): Boolean = try {
-    val url = URI("${baseUrl.removeSuffix("/")}/api/pull").toURL()
-    val conn =
-        (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 15_000
-            readTimeout = 600_000
-            requestMethod = "POST"
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
+    when (result) {
+        is ModelAvailabilityResult.Available -> {
+            log.display("✅ ${provider.name} model '$modelName' is ready")
         }
-    val payload = """{"name":"$model","stream":false}"""
-    conn.outputStream.use { it.write(payload.toByteArray()) }
-    val code = conn.responseCode
-    (if (code in 200..299) conn.inputStream else conn.errorStream)
-        ?.bufferedReader()
-        ?.use { it.readText() }
-    code in 200..299
-} catch (e: Exception) {
-    log.displayError("Failed to pull model $baseUrl / $model", e)
-    false
-}
 
-private fun getTags(
-    baseUrl: String,
-    readMs: Int,
-): String? = try {
-    val url = URI("${baseUrl.removeSuffix("/")}/api/tags").toURL()
-    val conn =
-        (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 2_000
-            readTimeout = readMs
-            requestMethod = "GET"
-            doInput = true
+        is ModelAvailabilityResult.ProviderUnreachable -> {
+            log.displayError(
+                """
+                ❌ ${result.error}
+
+                Please ensure ${provider.name} is running and accessible at: $baseUrl
+                """.trimIndent(),
+            )
+            error("${provider.name} not reachable at $baseUrl")
         }
-    conn.inputStream.bufferedReader().use { it.readText() }
-} catch (e: Exception) {
-    log.error("Failed to connect to Ollama at $baseUrl", e)
-    null
+
+        is ModelAvailabilityResult.NotAvailable -> {
+            if (result.canAutoPull && provider == ModelProvider.OLLAMA) {
+                log.display("⏳ Model '$modelName' not found. Attempting to download...")
+                if (LocalModelValidator.pullOllamaModel(baseUrl, modelName)) {
+                    log.display("✅ Successfully downloaded model '$modelName'")
+                } else {
+                    log.displayError(
+                        """
+                        ❌ Failed to download model '$modelName'
+
+                        Please download it manually:
+                          ollama pull $modelName
+                        """.trimIndent(),
+                    )
+                    error("Failed to pull ${provider.name} model '$modelName'")
+                }
+            } else {
+                log.displayError(
+                    """
+                    ❌ ${result.reason}
+
+                    Please ensure the model is available in ${provider.name} at: $baseUrl
+                    """.trimIndent(),
+                )
+                error("Model '$modelName' not available in ${provider.name}")
+            }
+        }
+    }
 }
-
-private fun hasModel(
-    tagsJson: String,
-    model: String,
-): Boolean = tagsJson.contains("\"name\":\"$model\"") || tagsJson.contains("\"name\":\"$model:")
-
-private fun notReachable(
-    baseUrl: String,
-    model: String,
-) = """
-    ❌ Ollama not reachable at $baseUrl
-
-    To enable embeddings for ${model.ifBlank { DEFAULT_OLLAMA_EMBED_MODEL }}:
-      • Install: https://ollama.com/download
-      • Start:   ollama serve
-      • Pull:    ollama pull $model
-""".trimIndent()

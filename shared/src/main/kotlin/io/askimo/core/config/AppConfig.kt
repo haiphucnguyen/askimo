@@ -38,6 +38,15 @@ data class EmbeddingConfig(
     val preferredDim: Int? = null,
 )
 
+data class EmbeddingModelsConfig(
+    val openai: String = "text-embedding-3-small",
+    val docker: String = "text-embedding-3-small",
+    val ollama: String = "nomic-embed-text:latest",
+    val localai: String = "text-embedding-3-small",
+    val lmstudio: String = "text-embedding-3-small",
+    val gemini: String = "text-embedding-004",
+)
+
 data class RetryConfig(
     val attempts: Int = 4,
     val baseDelayMs: Long = 150,
@@ -218,6 +227,7 @@ data class ProxyConfig(
 data class AppConfigData(
     val pgvector: PgVectorConfig = PgVectorConfig(),
     val embedding: EmbeddingConfig = EmbeddingConfig(),
+    val embeddingModels: EmbeddingModelsConfig = EmbeddingModelsConfig(),
     val retry: RetryConfig = RetryConfig(),
     val throttle: ThrottleConfig = ThrottleConfig(),
     val indexing: IndexingConfig = IndexingConfig(),
@@ -228,6 +238,7 @@ data class AppConfigData(
 object AppConfig {
     val pgVector: PgVectorConfig get() = delegate.pgvector
     val embedding: EmbeddingConfig get() = delegate.embedding
+    val embeddingModels: EmbeddingModelsConfig get() = delegate.embeddingModels
     val retry: RetryConfig get() = delegate.retry
     val throttle: ThrottleConfig get() = delegate.throttle
     val indexing: IndexingConfig get() = delegate.indexing
@@ -260,6 +271,13 @@ object AppConfig {
           max_chars_per_chunk: ${'$'}{ASKIMO_EMBED_MAX_CHARS_PER_CHUNK:4000}
           chunk_overlap:       ${'$'}{ASKIMO_EMBED_CHUNK_OVERLAP:200}
           preferred_dim:       ${'$'}{ASKIMO_EMBED_DIM:}
+
+        embedding_models:
+          openai:    ${'$'}{ASKIMO_EMBED_MODEL_OPENAI:text-embedding-3-small}
+          docker:    ${'$'}{ASKIMO_EMBED_MODEL_DOCKER:text-embedding-3-small}
+          ollama:    ${'$'}{ASKIMO_EMBED_MODEL_OLLAMA:nomic-embed-text:latest}
+          localai:   ${'$'}{ASKIMO_EMBED_MODEL_LOCALAI:text-embedding-3-small}
+          lmstudio:  ${'$'}{ASKIMO_EMBED_MODEL_LMSTUDIO:text-embedding-3-small}
 
         retry:
           attempts:      ${'$'}{ASKIMO_EMBED_RETRY_ATTEMPTS:4}
@@ -419,6 +437,14 @@ object AppConfig {
                 chunkOverlap = envInt("ASKIMO_EMBED_CHUNK_OVERLAP", 200),
                 preferredDim = envNullableInt("ASKIMO_EMBED_DIM"),
             )
+        val embModels =
+            EmbeddingModelsConfig(
+                openai = env("ASKIMO_EMBED_MODEL_OPENAI", "text-embedding-3-small"),
+                docker = env("ASKIMO_EMBED_MODEL_DOCKER", "text-embedding-3-small"),
+                ollama = env("ASKIMO_EMBED_MODEL_OLLAMA", "nomic-embed-text:latest"),
+                localai = env("ASKIMO_EMBED_MODEL_LOCALAI", "text-embedding-3-small"),
+                lmstudio = env("ASKIMO_EMBED_MODEL_LMSTUDIO", "text-embedding-3-small"),
+            )
         val r =
             RetryConfig(
                 attempts = envInt("ASKIMO_EMBED_RETRY_ATTEMPTS", 4),
@@ -449,7 +475,7 @@ object AppConfig {
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
             )
 
-        return AppConfigData(pg, emb, r, t, idx, dev, chat)
+        return AppConfigData(pg, emb, embModels, r, t, idx, dev, chat)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */

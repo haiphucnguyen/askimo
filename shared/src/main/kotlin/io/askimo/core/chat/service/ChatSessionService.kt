@@ -26,6 +26,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
+import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
@@ -619,16 +620,25 @@ class ChatSessionService(
         )
         sessionRepository.touchSession(sessionId)
 
-        // Generate title from first user message
-        val messages = messageRepository.getMessages(sessionId)
-        if (messages.count { it.role == MessageRole.USER } == 1) {
+        // Generate title only if session doesn't have one yet
+        val session = sessionRepository.getSession(sessionId)
+        if (session?.title.isNullOrBlank()) {
             val titlePrompt = if (attachments.isNotEmpty()) {
                 val fileNames = attachments.joinToString(", ") { it.fileName }
                 "$userMessage [Attached: $fileNames]"
             } else {
                 userMessage
             }
-            sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
+            val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
+
+            eventScope.launch {
+                EventBus.emit(
+                    SessionTitleUpdatedEvent(
+                        sessionId = sessionId,
+                        newTitle = generatedTitle,
+                    ),
+                )
+            }
         }
 
         val directivePrompt = buildDirectivePrompt(sessionId)

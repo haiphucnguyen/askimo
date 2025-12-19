@@ -143,13 +143,14 @@ class ChatSessionRepository internal constructor(
         }
     }
 
-    fun generateAndUpdateTitle(sessionId: String, firstMessage: String) {
+    fun generateAndUpdateTitle(sessionId: String, firstMessage: String): String {
         val title = generateTitle(firstMessage)
         transaction(database) {
             ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
                 it[ChatSessionsTable.title] = title
             }
         }
+        return title
     }
 
     /**
