@@ -44,6 +44,13 @@ class LuceneKeywordRetriever(
     private val analyzer = StandardAnalyzer()
     private val directory: Directory
 
+    // Reuse single IndexWriter instance (thread-safe for concurrent writes)
+    private val indexWriter: IndexWriter by lazy {
+        val config = IndexWriterConfig(analyzer)
+            .setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
+        IndexWriter(directory, config)
+    }
+
     companion object {
         private val FIELD_CONTENT = "content"
         private val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
@@ -62,25 +69,23 @@ class LuceneKeywordRetriever(
 
     /**
      * Index multiple text segments in batch.
+     * Thread-safe: IndexWriter handles concurrent addDocument calls.
      */
     fun indexSegments(textSegments: List<TextSegment>) {
-        val config = IndexWriterConfig(analyzer)
-        IndexWriter(directory, config).use { writer ->
-            for (textSegment in textSegments) {
-                val doc = Document().apply {
-                    // Store + index content for BM25
-                    add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
+        for (textSegment in textSegments) {
+            val doc = Document().apply {
+                // Store + index content for BM25
+                add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
 
-                    // Store metadata (stored-only fields). Prefix keys to avoid conflicts.
-                    textSegment.metadata().toMap().forEach { (key, value) ->
-                        val safeKey = FIELD_META_PREFIX + key
-                        add(StoredField(safeKey, value.toString()))
-                    }
+                // Store metadata (stored-only fields). Prefix keys to avoid conflicts.
+                textSegment.metadata().toMap().forEach { (key, value) ->
+                    val safeKey = FIELD_META_PREFIX + key
+                    add(StoredField(safeKey, value.toString()))
                 }
-                writer.addDocument(doc)
             }
-            writer.commit()
+            indexWriter.addDocument(doc)
         }
+        indexWriter.commit()
         log.debug("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
     }
 
@@ -88,12 +93,25 @@ class LuceneKeywordRetriever(
      * Clear the keyword index.
      */
     fun clearIndex() {
-        val config = IndexWriterConfig(analyzer)
-        IndexWriter(directory, config).use { writer ->
-            writer.deleteAll()
-            writer.commit()
-        }
+        indexWriter.deleteAll()
+        indexWriter.commit()
         log.debug("Cleared keyword index at $indexPath")
+    }
+
+    /**
+     * Remove all documents for a specific file from the index.
+     * @param filePath The absolute path of the file to remove
+     */
+    fun removeFile(filePath: String) {
+        try {
+            val queryParser = QueryParser(FIELD_META_PREFIX + "file_path", analyzer)
+            val query = queryParser.parse(QueryParser.escape(filePath))
+            indexWriter.deleteDocuments(query)
+            indexWriter.commit()
+            log.debug("Removed file from keyword index: $filePath")
+        } catch (e: Exception) {
+            log.debug("Failed to remove file from keyword index: $filePath", e)
+        }
     }
 
     override fun retrieve(query: Query): List<Content> {
@@ -102,41 +120,70 @@ class LuceneKeywordRetriever(
             return emptyList()
         }
 
-        DirectoryReader.open(directory).use { reader ->
-            val searcher = IndexSearcher(reader)
+        return try {
+            // Ensure latest changes are visible to readers
+            indexWriter.commit()
 
-            val queryParser = QueryParser(FIELD_CONTENT, analyzer)
-            val luceneQuery = try {
-                queryParser.parse(query.text())
-            } catch (e: Exception) {
-                log.warn("Failed to parse query: ${query.text()} - falling back to escaped query", e)
-                queryParser.parse(QueryParser.escape(query.text()))
-            }
+            DirectoryReader.open(directory).use { reader ->
+                val searcher = IndexSearcher(reader)
 
-            val topDocs = searcher.search(luceneQuery, maxResults)
-            log.debug("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
-
-            return topDocs.scoreDocs.mapNotNull { scoreDoc ->
-                val doc = searcher.storedFields().document(scoreDoc.doc)
-                val content = doc.get(FIELD_CONTENT) ?: return@mapNotNull null
-
-                // Reconstruct metadata from stored fields
-                val metadataMap = mutableMapOf<String, Any>()
-                for (field in doc.fields) {
-                    val name = field.name()
-                    if (name.startsWith(FIELD_META_PREFIX)) {
-                        val key = name.removePrefix(FIELD_META_PREFIX)
-                        metadataMap[key] = field.stringValue()
+                val queryParser = QueryParser(FIELD_CONTENT, analyzer)
+                val luceneQuery = try {
+                    queryParser.parse(query.text())
+                } catch (e: Exception) {
+                    log.debug("Failed to parse query: '${query.text()}' - attempting with escaped query")
+                    try {
+                        // First try: escape special characters
+                        queryParser.parse(QueryParser.escape(query.text()))
+                    } catch (e2: Exception) {
+                        log.debug("Escaped query also failed - attempting phrase query as final fallback")
+                        try {
+                            // Second try: wrap in quotes for phrase query (most robust)
+                            // This treats the entire query as a literal phrase
+                            val escapedText = query.text().replace("\"", "\\\"")
+                            queryParser.parse("\"$escapedText\"")
+                        } catch (e3: Exception) {
+                            // If even phrase query fails, log and skip keyword search
+                            log.warn("All query parsing attempts failed for: '${query.text()}' - skipping keyword search", e3)
+                            return emptyList()
+                        }
                     }
                 }
 
-                val textSegment = TextSegment.from(content, Metadata.from(metadataMap))
-                Content.from(textSegment)
+                val topDocs = searcher.search(luceneQuery, maxResults)
+                log.debug("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
+
+                topDocs.scoreDocs.mapNotNull { scoreDoc ->
+                    val doc = searcher.storedFields().document(scoreDoc.doc)
+                    val content = doc.get(FIELD_CONTENT) ?: return@mapNotNull null
+
+                    // Reconstruct metadata from stored fields
+                    val metadataMap = mutableMapOf<String, Any>()
+                    for (field in doc.fields) {
+                        val name = field.name()
+                        if (name.startsWith(FIELD_META_PREFIX)) {
+                            val key = name.removePrefix(FIELD_META_PREFIX)
+                            metadataMap[key] = field.stringValue()
+                        }
+                    }
+
+                    val textSegment = TextSegment.from(content, Metadata.from(metadataMap))
+                    Content.from(textSegment)
+                }
             }
+        } catch (e: Exception) {
+            log.error("Unexpected error during keyword retrieval for query: '${query.text()}'", e)
+            emptyList()
         }
     }
 
     fun close() {
-        directory.close()
+        try {
+            indexWriter.commit()
+            indexWriter.close()
+            directory.close()
+        } catch (e: Exception) {
+            log.error("Failed to close Lucene resources", e)
+        }
     }
 }

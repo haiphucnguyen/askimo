@@ -35,6 +35,96 @@ import io.askimo.core.util.ApiKeyUtils.safeApiKey
 
 private val log = logger("EmbeddingModelFactory")
 
+/**
+ * Get the maximum token limit for the current embedding model.
+ * Returns a safe default if unable to detect.
+ *
+ * @param appContext The application context containing provider information
+ * @return Maximum number of tokens the model can handle
+ */
+fun getModelTokenLimit(appContext: AppContext): Int = try {
+    val provider = appContext.getActiveProvider()
+
+    when (provider) {
+        OPENAI -> {
+            val modelName = AppConfig.embeddingModels.openai.lowercase()
+            when {
+                modelName.contains("text-embedding-3") -> 8191
+                modelName.contains("ada-002") -> 8191
+                else -> 8191 // Default for OpenAI models
+            }
+        }
+
+        GEMINI -> {
+            val modelName = AppConfig.embeddingModels.gemini.lowercase()
+            when {
+                modelName.contains("embedding-001") -> 2048
+                modelName.contains("text-embedding-004") -> 2048
+                else -> 2048 // Default for Gemini models
+            }
+        }
+
+        // Local AI providers (Ollama, Docker AI, LocalAI, LMStudio)
+        // They often use the same model names with different prefixes
+        OLLAMA, DOCKER, LOCALAI, LMSTUDIO -> {
+            val modelName = when (provider) {
+                OLLAMA -> AppConfig.embeddingModels.ollama
+                DOCKER -> AppConfig.embeddingModels.docker
+                LOCALAI -> AppConfig.embeddingModels.localai
+                LMSTUDIO -> AppConfig.embeddingModels.lmstudio
+                else -> ""
+            }.lowercase()
+
+            // Common model patterns across local providers
+            when {
+                // Popular models with known limits
+                modelName.contains("nomic-embed") ||
+                    modelName.contains("nomic_embed") -> 8192
+
+                modelName.contains("mxbai-embed") ||
+                    modelName.contains("mxbai_embed") -> 512
+
+                modelName.contains("bge-") ||
+                    modelName.contains("bge_") -> when {
+                    modelName.contains("large") -> 512
+                    modelName.contains("base") -> 512
+                    modelName.contains("small") -> 512
+                    else -> 512
+                }
+
+                modelName.contains("gte-") ||
+                    modelName.contains("gte_") -> 8192
+
+                modelName.contains("e5-") ||
+                    modelName.contains("e5_") -> 512
+
+                modelName.contains("all-minilm") ||
+                    modelName.contains("all_minilm") -> 512
+
+                modelName.contains("sentence-transformers") -> 512
+
+                // OpenAI-compatible models (text-embedding-3, etc.)
+                modelName.contains("text-embedding-3") -> 8191
+                modelName.contains("text-embedding") -> 8191
+
+                // Qwen embedding models
+                modelName.contains("qwen") && modelName.contains("embed") -> 8192
+
+                else -> 2048
+            }
+        }
+
+        ANTHROPIC, XAI -> {
+            throw UnsupportedOperationException("${provider.name} does not provide embedding models")
+        }
+
+        UNKNOWN -> 2048
+    }
+} catch (e: Exception) {
+    log.warn("Failed to detect model token limit, using conservative default: ${e.message}")
+    2048
+}
+
 fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext.getActiveProvider()) {
     OPENAI -> {
         val openAiKey = (appContext.getCurrentProviderSettings() as OpenAiSettings).apiKey

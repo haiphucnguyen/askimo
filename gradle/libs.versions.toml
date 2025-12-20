@@ -80,6 +80,7 @@ tika-parser-microsoft = { group = "org.apache.tika", name = "tika-parser-microso
 # Apache Lucene
 lucene-core = { group = "org.apache.lucene", name = "lucene-core", version.ref = "lucene" }
 lucene-queryparser = { group = "org.apache.lucene", name = "lucene-queryparser", version.ref = "lucene" }
+lucene-backward-codecs = { group = "org.apache.lucene", name = "lucene-backward-codecs", version.ref = "lucene" }
 
 # LangChain4j JVector
 langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "jvector" }

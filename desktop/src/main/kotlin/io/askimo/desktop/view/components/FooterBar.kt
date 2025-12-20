@@ -62,6 +62,10 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.EventSource
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.event.system.UpdateAvailableEvent
+import io.askimo.core.event.user.IndexingCompletedEvent
+import io.askimo.core.event.user.IndexingFailedEvent
+import io.askimo.core.event.user.IndexingInProgressEvent
+import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.monitoring.SystemResourceMonitor
@@ -235,7 +239,23 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
 
     LaunchedEffect(Unit) {
         EventBus.userEvents.collect { event ->
-            events.add(0, event)
+            // Special handling for IndexingInProgressEvent: replace old progress event for same project
+            if (event is IndexingInProgressEvent) {
+                // Find and remove any existing progress event for the same project
+                val existingIndex = events.indexOfFirst {
+                    it is IndexingInProgressEvent && it.projectId == event.projectId
+                }
+                if (existingIndex >= 0) {
+                    events[existingIndex] = event // Replace with newer progress
+                } else {
+                    events.add(0, event) // First progress event for this project
+                }
+            } else {
+                // Normal event handling: add to top of list
+                events.add(0, event)
+            }
+
+            // Keep list size manageable
             if (events.size > 100) {
                 events.removeAt(100)
             }
@@ -395,9 +415,17 @@ private fun eventItem(
 ) {
     val isSystemEvent = event.source == EventSource.SYSTEM
     val isUpdateEvent = event is UpdateAvailableEvent
+    val isIndexingStarted = event is IndexingStartedEvent
+    val isIndexingInProgress = event is IndexingInProgressEvent
+    val isIndexingSuccess = event is IndexingCompletedEvent
+    val isIndexingFailure = event is IndexingFailedEvent
 
     val eventName = when (event) {
         is UpdateAvailableEvent -> stringResource("event.update.available")
+        is IndexingStartedEvent -> stringResource("event.indexing.started")
+        is IndexingInProgressEvent -> stringResource("event.indexing.inprogress")
+        is IndexingCompletedEvent -> stringResource("event.indexing.completed")
+        is IndexingFailedEvent -> stringResource("event.indexing.failed")
         else -> event::class.simpleName ?: "Unknown"
     }
 
@@ -420,7 +448,14 @@ private fun eventItem(
                     text = eventName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSystemEvent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = when {
+                        isIndexingFailure -> MaterialTheme.colorScheme.error
+                        isIndexingSuccess -> MaterialTheme.colorScheme.primary
+                        isIndexingInProgress -> MaterialTheme.colorScheme.tertiary
+                        isIndexingStarted -> MaterialTheme.colorScheme.onSurfaceVariant
+                        isSystemEvent -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
                 Text(
                     text = event.source.name,
@@ -438,7 +473,11 @@ private fun eventItem(
             Text(
                 text = event.getDetails(),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isIndexingFailure) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
 
             if (isUpdateEvent) {

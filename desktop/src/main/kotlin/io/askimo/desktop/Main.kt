@@ -66,6 +66,8 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.IndexingErrorEvent
+import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.logger
@@ -82,6 +84,7 @@ import io.askimo.desktop.theme.ThemeMode
 import io.askimo.desktop.theme.createCustomTypography
 import io.askimo.desktop.theme.getDarkColorScheme
 import io.askimo.desktop.theme.getLightColorScheme
+import io.askimo.desktop.ui.dialog.errorDialog
 import io.askimo.desktop.ui.dialog.updateCheckDialog
 import io.askimo.desktop.view.View
 import io.askimo.desktop.view.about.aboutDialog
@@ -257,6 +260,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var editingProjectId by remember { mutableStateOf<String?>(null) }
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorDialogTitle by remember { mutableStateOf("") }
+    var errorDialogMessage by remember { mutableStateOf("") }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -270,6 +276,34 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
             }
         }
     }
+
+    // Listen for indexing errors
+    LaunchedEffect(Unit) {
+        EventBus.internalEvents.collect { event ->
+            if (event is IndexingErrorEvent) {
+                when (event.errorType) {
+                    IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND -> {
+                        val modelName = event.details["modelName"] ?: "unknown"
+                        val provider = event.details["provider"] ?: "AI provider"
+                        errorDialogTitle = "Embedding Model Not Found"
+                        errorDialogMessage = "The embedding model '$modelName' was not found. Please pull or enable this embedding model from $provider before indexing."
+                        showErrorDialog = true
+                    }
+                    IndexingErrorType.IO_ERROR -> {
+                        errorDialogTitle = "IO Error"
+                        errorDialogMessage = event.details["message"] ?: "An IO error occurred during indexing"
+                        showErrorDialog = true
+                    }
+                    IndexingErrorType.UNKNOWN_ERROR -> {
+                        errorDialogTitle = "Indexing Error"
+                        errorDialogMessage = event.details["message"] ?: "An unknown error occurred during indexing"
+                        showErrorDialog = true
+                    }
+                }
+            }
+        }
+    }
+
     val scope = rememberCoroutineScope()
 
     val koin = get()
@@ -995,6 +1029,17 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
+                    },
+                )
+            }
+
+            // Error Dialog (for indexing errors, etc.)
+            if (showErrorDialog) {
+                errorDialog(
+                    title = errorDialogTitle,
+                    message = errorDialogMessage,
+                    onDismiss = {
+                        showErrorDialog = false
                     },
                 )
             }

@@ -7,6 +7,7 @@ package io.askimo.core.rag
 import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
+import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.filter.Filter
@@ -14,16 +15,37 @@ import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.IndexingErrorEvent
+import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.event.internal.ProjectDeletedEvent
+import io.askimo.core.event.user.IndexingCompletedEvent
+import io.askimo.core.event.user.IndexingFailedEvent
+import io.askimo.core.event.user.IndexingInProgressEvent
+import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
+import io.askimo.core.project.getModelTokenLimit
+import io.askimo.core.rag.filter.BinaryFileFilter
+import io.askimo.core.rag.filter.CustomPatternFilter
+import io.askimo.core.rag.filter.FileSizeFilter
+import io.askimo.core.rag.filter.FilterChain
+import io.askimo.core.rag.filter.FilterContext
+import io.askimo.core.rag.filter.GitignoreFilter
+import io.askimo.core.rag.filter.IndexingFilter
+import io.askimo.core.rag.filter.ProjectTypeFilter
 import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.sax.BodyContentHandler
@@ -37,7 +59,9 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchService
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
@@ -165,27 +189,78 @@ class ProjectIndexer private constructor(
          */
         private fun shutdownAll() {
             log.debug("Shutting down all ProjectIndexer instances")
-            instances.values.forEach { it.stopWatching() }
+            instances.values.forEach { indexer ->
+                indexer.stopWatching()
+                try {
+                    indexer.stateRepository.close()
+                } catch (e: Exception) {
+                    log.error("Failed to close state repository", e)
+                }
+                try {
+                    // Close Lucene IndexWriter to release file locks
+                    indexer.keywordRetriever.close()
+                } catch (e: Exception) {
+                    log.error("Failed to close keyword retriever", e)
+                }
+            }
             instances.clear()
         }
     }
 
-    private fun slug(s: String): String = s.lowercase().replace("""[^a-z0-9]+""".toRegex(), "_").trim('_')
-
     private val indexPath: Path = AskimoHome.base().resolve("projects").resolve(projectId).resolve("jvector-indexes")
 
-    private val maxCharsPerChunk = AppConfig.embedding.maxCharsPerChunk
-    private val chunkOverlap = AppConfig.embedding.chunkOverlap
+    private val maxCharsPerChunk: Int by lazy {
+        calculateSafeMaxChars()
+    }
+
+    // Dynamic overlap based on chunk size (5% of chunk size, capped at configured max)
+    private val chunkOverlap: Int by lazy {
+        val calculatedOverlap = (maxCharsPerChunk * 0.05).toInt()
+        val configuredMax = AppConfig.embedding.chunkOverlap
+        val minOverlap = 50
+
+        calculatedOverlap.coerceIn(minOverlap, configuredMax).also {
+            log.info("Calculated chunk overlap: $it chars (${(it.toFloat() / maxCharsPerChunk * 100).toInt()}% of chunk size)")
+        }
+    }
+
     private val maxFileBytes = AppConfig.indexing.maxFileBytes
+    private val concurrentIndexingThreads = AppConfig.indexing.concurrentIndexingThreads
+
+    // Segment batching configuration for efficient embedding
+    private val maxSegmentsPerBatch = 100 // Batch up to 100 segments per API call
+    private val segmentBatchQueue = ConcurrentLinkedQueue<TextSegment>()
+    private val batchLock = Any()
 
     private val defaultCharset: Charset = Charsets.UTF_8
+
+    // Cached project repository and name
+    private val projectRepository by lazy {
+        DatabaseManager.getInstance().getProjectRepository()
+    }
+
+    private val projectName: String by lazy {
+        projectRepository.getProject(projectId)?.name ?: projectId
+    }
+
+    // Persistent state repository (SQLite database per project)
+    private val stateRepository: IndexStateRepository by lazy {
+        IndexStateRepository(indexPath)
+    }
 
     // Track indexing status
     @Volatile
     private var indexProgress = IndexProgress(IndexStatus.NOT_STARTED)
 
-    // Track indexed files with their modification times
+    // Track indexed files with their modification times (absolute paths)
     private val indexedFiles = ConcurrentHashMap<String, IndexedFileEntry>()
+
+    // Cache filter chains per root path
+    private val filterChains = ConcurrentHashMap<Path, FilterChain>()
+
+    // Track if state has been loaded from database
+    @Volatile
+    private var stateLoaded = false
 
     // File watcher for detecting changes
     private var watchService: WatchService? = null
@@ -197,8 +272,225 @@ class ProjectIndexer private constructor(
     fun getIndexProgress(): IndexProgress = indexProgress
 
     /**
+     * Load persisted state from SQLite database.
+     */
+    private fun loadPersistedState() {
+        try {
+            val persistedFiles = stateRepository.getAllIndexedFiles()
+
+            // Restore indexed files (absolute paths)
+            indexedFiles.clear()
+            persistedFiles.forEach { (absolutePath, info) ->
+                indexedFiles[absolutePath] = IndexedFileEntry(
+                    path = info.path,
+                    lastModified = info.lastModified,
+                    indexed = info.indexedAt,
+                )
+            }
+
+            // Restore progress from metadata
+            val status = stateRepository.getMetadata("status")?.let { statusStr ->
+                IndexStatus.entries.find { it.name == statusStr } ?: IndexStatus.NOT_STARTED
+            } ?: IndexStatus.NOT_STARTED
+
+            if (indexedFiles.isNotEmpty() && status != IndexStatus.FAILED) {
+                indexProgress = IndexProgress(
+                    status = if (status == IndexStatus.INDEXING) IndexStatus.READY else status,
+                    filesIndexed = indexedFiles.size,
+                    filesTotal = indexedFiles.size,
+                    lastUpdated = LocalDateTime.now(),
+                )
+            }
+
+            log.debug("Loaded persisted state for project $projectId: ${indexedFiles.size} files, status: ${indexProgress.status}")
+        } catch (e: Exception) {
+            log.warn("Failed to load persisted state for project $projectId: ${e.message}")
+        }
+    }
+
+    /**
+     * Save current state to SQLite database.
+     */
+    private fun saveState() {
+        try {
+            // Save metadata
+            stateRepository.setMetadata("status", indexProgress.status.name)
+            stateRepository.setMetadata("last_updated", indexProgress.lastUpdated.toString())
+            stateRepository.setMetadata("files_indexed", indexedFiles.size.toString())
+
+            log.debug("Saved state for project $projectId: ${indexedFiles.size} files, status: ${indexProgress.status}")
+        } catch (e: Exception) {
+            log.error("Failed to save state for project $projectId", e)
+        }
+    }
+
+    /**
+     * Detect changes in the file system compared to persisted state.
+     * Returns files that need to be added, updated, or removed from the index.
+     */
+    private fun detectFileSystemChanges(paths: List<Path>): FileChanges {
+        val currentFiles = mutableMapOf<String, IndexedFileInfo>()
+
+        paths.forEach { path ->
+            if (!Files.exists(path)) return@forEach
+
+            if (Files.isDirectory(path)) {
+                val detectedTypes = detectProjectTypes(path)
+                Files.walk(path)
+                    .asSequence()
+                    .filter { it.isRegularFile() }
+                    .filter { isIndexableFile(it, path, detectedTypes) }
+                    .filter { !tooLargeToIndex(it) }
+                    .forEach { filePath ->
+                        val absolutePath = filePath.toAbsolutePath().toString()
+                        val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+                        val size = Files.size(filePath)
+
+                        currentFiles[absolutePath] = IndexedFileInfo(
+                            path = absolutePath,
+                            lastModified = lastModified,
+                            indexedAt = LocalDateTime.now(),
+                            size = size,
+                        )
+                    }
+            } else if (Files.isRegularFile(path) && !tooLargeToIndex(path)) {
+                val absolutePath = path.toAbsolutePath().toString()
+                currentFiles[absolutePath] = IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = Files.getLastModifiedTime(path).toMillis(),
+                    indexedAt = LocalDateTime.now(),
+                    size = Files.size(path),
+                )
+            }
+        }
+
+        return stateRepository.detectChanges(currentFiles)
+    }
+
+    /**
+     * Apply incremental changes to the index.
+     * This is called when changes are detected on app restart.
+     */
+    private fun applyIncrementalChanges(
+        changes: FileChanges,
+        rootPaths: List<Path>,
+        watchForChanges: Boolean,
+    ) {
+        Thread {
+            try {
+                val totalChanges = changes.totalChanges
+
+                indexProgress = IndexProgress(
+                    status = IndexStatus.INDEXING,
+                    filesTotal = totalChanges,
+                )
+
+                log.info("Applying incremental changes for project $projectId: $changes")
+
+                var processed = 0
+
+                // Remove deleted files
+                changes.toRemove.forEach { absolutePath ->
+                    try {
+                        removeFileFromIndex(absolutePath)
+                        indexedFiles.remove(absolutePath)
+                        stateRepository.removeFile(absolutePath)
+                        log.debug("Removed deleted file: $absolutePath")
+
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    } catch (e: Exception) {
+                        log.error("Failed to remove file from index: $absolutePath", e)
+                    }
+                }
+
+                // Index new and modified files
+                (changes.toAdd + changes.toUpdate).forEach { fileInfo ->
+                    try {
+                        val filePath = Path.of(fileInfo.path)
+
+                        if (!Files.exists(filePath)) {
+                            log.warn("File no longer exists, skipping: $filePath")
+                            processed++
+                            indexProgress = indexProgress.copy(filesIndexed = processed)
+                            return@forEach
+                        }
+
+                        // Find which root this file belongs to
+                        val root = rootPaths.firstOrNull { filePath.startsWith(it) }
+                        if (root == null) {
+                            log.warn("File doesn't belong to any indexed root, skipping: $filePath")
+                            processed++
+                            indexProgress = indexProgress.copy(filesIndexed = processed)
+                            return@forEach
+                        }
+
+                        // Remove old version if exists
+                        removeFileFromIndex(fileInfo.path)
+
+                        // Index new version
+                        indexSingleFileWithTracking(filePath, root)
+
+                        // Update in-memory tracking
+                        indexedFiles[fileInfo.path] = IndexedFileEntry(
+                            path = fileInfo.path,
+                            lastModified = fileInfo.lastModified,
+                            indexed = LocalDateTime.now(),
+                        )
+
+                        // Update database
+                        stateRepository.upsertFile(fileInfo.copy(indexedAt = LocalDateTime.now()))
+
+                        log.debug("Indexed changed file: ${fileInfo.path}")
+
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    } catch (e: Exception) {
+                        log.error("Failed to index file: ${fileInfo.path}", e)
+                        processed++
+                        indexProgress = indexProgress.copy(filesIndexed = processed)
+                    }
+                }
+
+                // Save final state
+                saveState()
+
+                if (watchForChanges) {
+                    startWatching(rootPaths)
+                    indexProgress = IndexProgress(
+                        status = IndexStatus.WATCHING,
+                        filesIndexed = indexedFiles.size,
+                        filesTotal = indexedFiles.size,
+                        isWatching = true,
+                    )
+                    log.info("Incremental indexing completed and watching for changes: project $projectId")
+                } else {
+                    indexProgress = IndexProgress(
+                        status = IndexStatus.READY,
+                        filesIndexed = indexedFiles.size,
+                        filesTotal = indexedFiles.size,
+                    )
+                    log.info("Incremental indexing completed for project $projectId: ${indexedFiles.size} files")
+                }
+            } catch (e: Exception) {
+                log.error("Incremental indexing failed for project $projectId", e)
+                indexProgress = IndexProgress(
+                    status = IndexStatus.FAILED,
+                    error = e.message ?: "Unknown error",
+                )
+            }
+        }.apply {
+            name = "ProjectIndexer-Incremental-$projectId"
+            isDaemon = true
+        }.start()
+    }
+
+    /**
      * Ensure the index is ready by starting indexing if needed.
-     * This method encapsulates the indexing decision logic.
+     * This method implements smart change detection:
+     * - If index exists and is up-to-date, just start watching
+     * - If files have changed, perform incremental indexing
+     * - If no index exists, perform full indexing
      *
      * @param paths List of paths to index
      * @param watchForChanges If true, monitor paths for new/modified files
@@ -212,8 +504,36 @@ class ProjectIndexer private constructor(
 
         return when (progress.status) {
             IndexStatus.NOT_STARTED -> {
-                log.debug("Starting indexing for project $projectId")
-                indexPathsAsync(paths, watchForChanges)
+                // Check if we have persisted state
+                if (indexedFiles.isNotEmpty()) {
+                    log.info("Found existing index for project $projectId with ${indexedFiles.size} files")
+
+                    // Detect changes since last indexing
+                    val changes = detectFileSystemChanges(paths)
+
+                    if (changes.hasChanges) {
+                        log.info("Detected changes for project $projectId: $changes")
+                        applyIncrementalChanges(changes, paths, watchForChanges)
+                    } else {
+                        log.info("Index up-to-date for project $projectId")
+                        indexProgress = IndexProgress(
+                            status = IndexStatus.READY,
+                            filesIndexed = indexedFiles.size,
+                            filesTotal = indexedFiles.size,
+                        )
+
+                        if (watchForChanges) {
+                            startWatching(paths)
+                            indexProgress = indexProgress.copy(
+                                status = IndexStatus.WATCHING,
+                                isWatching = true,
+                            )
+                        }
+                    }
+                } else {
+                    log.info("No existing index found, performing full indexing for project $projectId")
+                    indexPathsAsync(paths, watchForChanges)
+                }
                 true
             }
             IndexStatus.INDEXING -> {
@@ -305,8 +625,45 @@ class ProjectIndexer private constructor(
             return
         }
 
+        // Check embedding model availability before starting thread
+        try {
+            checkEmbeddingModelAvailable()
+        } catch (e: Exception) {
+            val cause = e.cause ?: e
+            if (cause is ModelNotFoundException || cause.message?.contains("model not found", ignoreCase = true) == true) {
+                val modelName = Regex("model: get model '([^']+)'[:]").find(cause.message ?: "")?.groupValues?.getOrNull(1) ?: "(unknown)"
+
+                // Set failed status
+                indexProgress = IndexProgress(
+                    status = IndexStatus.FAILED,
+                    error = cause.message ?: "Embedding model not found",
+                )
+
+                // Publish event for UI/CLI to handle
+                EventBus.post(
+                    IndexingErrorEvent(
+                        projectId = projectId,
+                        errorType = IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND,
+                        details = mapOf(
+                            "modelName" to modelName,
+                            "provider" to "your AI provider (e.g., OpenAI, Ollama, Docker AI)",
+                        ),
+                    ),
+                )
+                return
+            } else {
+                throw e
+            }
+        }
+
         Thread {
             try {
+                // Load persisted state first if not already loaded
+                if (!stateLoaded) {
+                    loadPersistedState()
+                    stateLoaded = true
+                }
+
                 val estimatedTotal = countIndexableFiles(paths)
                 indexProgress = IndexProgress(
                     status = IndexStatus.INDEXING,
@@ -315,10 +672,22 @@ class ProjectIndexer private constructor(
 
                 log.debug("Starting async indexing for project $projectId: ${paths.size} paths, ~$estimatedTotal files")
 
+                // Publish user event for indexing start
+                try {
+                    EventBus.post(
+                        IndexingStartedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            estimatedFiles = estimatedTotal,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing started event", e)
+                }
+
                 val indexed = indexPathsSync(paths)
 
                 if (watchForChanges) {
-                    // Start watching for changes
                     startWatching(paths)
                     indexProgress = IndexProgress(
                         status = IndexStatus.WATCHING,
@@ -335,12 +704,39 @@ class ProjectIndexer private constructor(
                     )
                     log.debug("Indexing completed for project $projectId: $indexed files")
                 }
+
+                // Publish user event for successful indexing
+                try {
+                    EventBus.post(
+                        IndexingCompletedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = indexed,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing completed event", e)
+                }
             } catch (e: Exception) {
                 log.error("Indexing failed for project $projectId", e)
+                val errorMessage = e.message ?: "Unknown error"
                 indexProgress = IndexProgress(
                     status = IndexStatus.FAILED,
-                    error = e.message ?: "Unknown error",
+                    error = errorMessage,
                 )
+
+                // Publish user event for failed indexing
+                try {
+                    EventBus.post(
+                        IndexingFailedEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            errorMessage = errorMessage,
+                        ),
+                    )
+                } catch (eventError: Exception) {
+                    log.error("Failed to publish indexing failed event", eventError)
+                }
             }
         }.apply {
             name = "ProjectIndexer-$projectId"
@@ -385,9 +781,7 @@ class ProjectIndexer private constructor(
                 count += Files.walk(path)
                     .asSequence()
                     .filter { it.isRegularFile() }
-                    .filter { isIndexableFile(it, path, detectedTypes) }
-                    .filter { !tooLargeToIndex(it) }
-                    .count()
+                    .filter { isIndexableFile(it, path, detectedTypes) }.count { !tooLargeToIndex(it) }
             } else if (Files.isRegularFile(path) && !tooLargeToIndex(path)) {
                 count++
             }
@@ -438,6 +832,14 @@ class ProjectIndexer private constructor(
             }
         }
 
+        // Clear database state
+        try {
+            stateRepository.clearAll()
+            log.debug("Cleared database state")
+        } catch (e: Exception) {
+            log.error("Failed to clear database state", e)
+        }
+
         // Clear tracked files
         indexedFiles.clear()
 
@@ -450,7 +852,72 @@ class ProjectIndexer private constructor(
         log.info("Re-index initiated for project: $projectId")
     }
 
-    // ---------- Internals ----------
+    private fun calculateSafeMaxChars(): Int {
+        val tokenLimit = try {
+            getModelTokenLimit(appContext)
+        } catch (e: Exception) {
+            log.warn("Failed to get model token limit, using default from config: ${e.message}")
+            return AppConfig.embedding.maxCharsPerChunk
+        }
+
+        val safeTokenLimit = (tokenLimit * 0.8).toInt()
+
+        val safeChars = safeTokenLimit * 4
+
+        val configuredMax = AppConfig.embedding.maxCharsPerChunk
+        val minChars = 500
+
+        val calculated = safeChars.coerceIn(minChars, configuredMax)
+
+        log.info(
+            "Calculated chunk size: $calculated chars " +
+                "(model limit: $tokenLimit tokens, safe limit: $safeTokenLimit tokens, configured max: $configuredMax)",
+        )
+
+        return calculated
+    }
+
+    /**
+     * Build a filter chain based on project root and configuration.
+     * Filters are created according to enabled flags in AppConfig.
+     */
+    private fun buildFilterChain(rootPath: Path, projectTypes: List<ProjectType>): FilterChain {
+        val filters = mutableListOf<IndexingFilter>()
+
+        // Add binary filter (always enabled for sanity)
+        if (AppConfig.indexing.filters.binary) {
+            filters.add(BinaryFileFilter())
+        }
+
+        // Add file size filter
+        if (AppConfig.indexing.filters.filesize) {
+            filters.add(FileSizeFilter())
+        }
+
+        // Add .gitignore filter if enabled
+        if (AppConfig.indexing.filters.gitignore) {
+            filters.add(GitignoreFilter(rootPath))
+        }
+
+        // Add project type filter if enabled
+        if (AppConfig.indexing.filters.projecttype && projectTypes.isNotEmpty()) {
+            filters.add(ProjectTypeFilter())
+        }
+
+        // Add custom patterns if configured
+        if (AppConfig.indexing.filters.custom && AppConfig.indexing.customExcludes.isNotEmpty()) {
+            try {
+                val patterns = AppConfig.indexing.customExcludes.map { it.toRegex() }
+                filters.add(CustomPatternFilter(patterns))
+            } catch (e: Exception) {
+                log.warn("Failed to parse custom exclusion patterns: ${e.message}")
+            }
+        }
+
+        log.info("Built filter chain with ${filters.size} filters: ${filters.joinToString { it.name }}")
+        return FilterChain(filters)
+    }
+
     private fun detectProjectTypes(root: Path): List<ProjectType> {
         val detected = mutableListOf<ProjectType>()
 
@@ -473,7 +940,7 @@ class ProjectIndexer private constructor(
     }
 
     /**
-     * Determine if a file should be indexed based on extension, name, and exclude patterns.
+     * Determine if a file should be indexed using the filter chain architecture.
      * This method supports both code projects and generic user-provided paths.
      */
     private fun isIndexableFile(
@@ -483,38 +950,29 @@ class ProjectIndexer private constructor(
     ): Boolean {
         val fileName = path.fileName.toString()
         val extension = path.extension.lowercase()
-        val relativePath = root.relativize(path).toString().replace('\\', '/')
-
-        // Skip hidden files (starting with .)
-        if (fileName.startsWith(".")) {
-            log.debug("Skipping hidden file: $fileName")
-            return false
+        val relativePath = try {
+            root.relativize(path).toString().replace('\\', '/')
+        } catch (e: Exception) {
+            path.toString().replace('\\', '/')
         }
 
-        // Skip binary/media files (images, videos, archives, etc.)
-        if (extension in AppConfig.indexing.binaryExtensions) {
-            log.debug("Skipping binary file: $fileName (extension: $extension)")
-            return false
+        // Build filter context
+        val context = FilterContext(
+            rootPath = root,
+            relativePath = relativePath,
+            fileName = fileName,
+            extension = extension,
+            projectTypes = detectedTypes,
+        )
+
+        // Get or build filter chain for this root
+        val filterChain = filterChains.getOrPut(root) {
+            buildFilterChain(root, detectedTypes)
         }
 
-        // Skip system and lock files
-        if (fileName in AppConfig.indexing.excludeFileNames) {
-            log.debug("Skipping excluded file: $fileName")
+        // Check if excluded by any filter
+        if (filterChain.shouldExclude(path, Files.isDirectory(path), context)) {
             return false
-        }
-
-        // Check common exclude patterns
-        if (shouldExclude(relativePath, fileName, commonExcludes)) {
-            log.debug("Skipping file matching common excludes: $relativePath")
-            return false
-        }
-
-        // Check project-specific exclude patterns
-        for (projectType in detectedTypes) {
-            if (shouldExclude(relativePath, fileName, projectType.excludePaths)) {
-                log.debug("Skipping file matching ${projectType.name} excludes: $relativePath")
-                return false
-            }
         }
 
         // Finally, check if extension is in supported list
@@ -526,56 +984,29 @@ class ProjectIndexer private constructor(
         return true
     }
 
-    private fun shouldExclude(
-        relativePath: String,
-        fileName: String,
-        excludePatterns: Set<String>,
-    ): Boolean {
-        for (pattern in excludePatterns) {
-            when {
-                pattern.endsWith("/") -> {
-                    val dirPattern = pattern.removeSuffix("/")
-                    if (relativePath.contains("/$dirPattern/") || relativePath.startsWith("$dirPattern/")) {
-                        return true
-                    }
-                }
-                pattern.contains("*") -> {
-                    val regex = pattern.replace(".", "\\.").replace("*", ".*").toRegex()
-                    if (regex.matches(fileName) || regex.matches(relativePath)) return true
-                }
-                else -> {
-                    if (fileName == pattern ||
-                        relativePath.contains("/$pattern/") ||
-                        relativePath.endsWith("/$pattern")
-                    ) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
-
     /**
-     * Check if a directory path should be excluded from indexing.
+     * Check if a directory path should be excluded from indexing using filter chain.
      */
-    private fun shouldExcludeDirectory(relativePath: String): Boolean {
-        val normalized = relativePath.replace('\\', '/')
-
-        // Check common excludes
-        for (pattern in commonExcludes) {
-            if (pattern.endsWith("/")) {
-                val dirPattern = pattern.removeSuffix("/")
-                if (normalized.contains("/$dirPattern/") ||
-                    normalized.startsWith("$dirPattern/") ||
-                    normalized == dirPattern
-                ) {
-                    return true
-                }
-            }
+    private fun shouldExcludeDirectory(path: Path, root: Path, detectedTypes: List<ProjectType>): Boolean {
+        val relativePath = try {
+            root.relativize(path).toString().replace('\\', '/')
+        } catch (e: Exception) {
+            path.toString().replace('\\', '/')
         }
 
-        return false
+        val context = FilterContext(
+            rootPath = root,
+            relativePath = relativePath,
+            fileName = path.fileName.toString(),
+            extension = "",
+            projectTypes = detectedTypes,
+        )
+
+        val filterChain = filterChains.getOrPut(root) {
+            buildFilterChain(root, detectedTypes)
+        }
+
+        return filterChain.shouldExclude(path, isDirectory = true, context)
     }
 
     private fun buildFileHeader(
@@ -590,17 +1021,18 @@ class ProjectIndexer private constructor(
 
     /**
      * Create a TextSegment with standardized metadata for indexing.
+     * Uses absolute path for file_path to support multiple project roots.
      */
     private fun createTextSegment(
         chunk: String,
         filePath: Path,
-        relativePath: String,
+        absolutePath: String,
         chunkIndex: Int,
     ): TextSegment = TextSegment.from(
         chunk,
         Metadata(
             mapOf(
-                "file_path" to relativePath,
+                "file_path" to absolutePath,
                 "file_name" to filePath.fileName.toString(),
                 "extension" to filePath.extension,
                 "chunk_index" to chunkIndex.toString(),
@@ -732,10 +1164,12 @@ class ProjectIndexer private constructor(
      * Register a directory and all its subdirectories for watching.
      */
     private fun registerDirectoryTree(root: Path) {
+        val detectedTypes = detectProjectTypes(root)
+
         Files.walk(root)
             .asSequence()
             .filter { Files.isDirectory(it) }
-            .filter { !shouldExcludeDirectory(root.relativize(it).toString()) }
+            .filter { !shouldExcludeDirectory(it, root, detectedTypes) }
             .forEach { dir ->
                 try {
                     val ws = watchService ?: return@forEach
@@ -806,29 +1240,39 @@ class ProjectIndexer private constructor(
         val detectedTypes = detectProjectTypes(root)
         if (!isIndexableFile(path, root, detectedTypes)) return
 
-        val relativePath = root.relativize(path).toString()
+        val absolutePath = path.toAbsolutePath().toString()
         val lastModified = Files.getLastModifiedTime(path).toMillis()
 
         // Check if file needs reindexing
-        val existing = indexedFiles[relativePath]
+        val existing = indexedFiles[absolutePath]
         if (existing != null && existing.lastModified == lastModified) {
             return // No change
         }
 
-        log.debug("Indexing changed file: $relativePath")
+        log.debug("Indexing changed file: $absolutePath")
 
         try {
             // Remove old segments for this file
-            removeFileFromIndex(relativePath)
+            removeFileFromIndex(absolutePath)
 
             // Index the new/modified file
             indexSingleFileWithTracking(path, root)
 
             // Update tracked files
-            indexedFiles[relativePath] = IndexedFileEntry(
-                path = relativePath,
+            indexedFiles[absolutePath] = IndexedFileEntry(
+                path = absolutePath,
                 lastModified = lastModified,
                 indexed = LocalDateTime.now(),
+            )
+
+            // Save to database
+            stateRepository.upsertFile(
+                IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = lastModified,
+                    indexedAt = LocalDateTime.now(),
+                    size = Files.size(path),
+                ),
             )
 
             // Update progress
@@ -837,7 +1281,7 @@ class ProjectIndexer private constructor(
                 filesTotal = max(indexedFiles.size, indexProgress.filesTotal),
             )
         } catch (e: Exception) {
-            log.error("Failed to index changed file: $relativePath", e)
+            log.error("Failed to index changed file: $absolutePath", e)
         }
     }
 
@@ -845,9 +1289,11 @@ class ProjectIndexer private constructor(
      * Handle file deletion.
      */
     private fun handleFileDelete(path: Path) {
-        val fileName = path.fileName.toString()
-        indexedFiles.remove(fileName)?.let {
+        val absolutePath = path.toAbsolutePath().toString()
+
+        indexedFiles.remove(absolutePath)?.let {
             removeFileFromIndex(it.path)
+            stateRepository.removeFile(absolutePath)
             log.debug("Removed deleted file from index: ${it.path}")
 
             // Update progress
@@ -860,35 +1306,58 @@ class ProjectIndexer private constructor(
 
     /**
      * Remove all segments for a file from the index.
+     *
+     * @param absolutePath The absolute path of the file to remove
      */
-    private fun removeFileFromIndex(relativePath: String) {
+    private fun removeFileFromIndex(absolutePath: String) {
         try {
-            val filter = IsEqualTo("file_path", relativePath)
-            embeddingStore.removeAll(filter as Filter)
+            // Remove from keyword index (this is the primary filter for file-based retrieval)
+            keywordRetriever.removeFile(absolutePath)
+            log.debug("Removed file from keyword index: $absolutePath")
+
+            // Try to remove from vector store if supported
+            try {
+                val filter = IsEqualTo("file_path", absolutePath)
+                embeddingStore.removeAll(filter as Filter)
+                log.debug("Removed file from vector index: $absolutePath")
+            } catch (e: Exception) {
+                when (e) {
+                    is UnsupportedOperationException,
+                    is dev.langchain4j.exception.UnsupportedFeatureException,
+                    -> {
+                        log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
+                    }
+                    else -> throw e
+                }
+            }
         } catch (e: Exception) {
-            log.debug("Failed to remove file from index: $relativePath", e)
+            log.warn("Failed to remove file from index: $absolutePath", e)
         }
     }
 
     /**
      * Index a single file with tracking and root context.
+     * Extracts segments and adds them to batch queue for efficient processing.
      */
     private fun indexSingleFileWithTracking(
         filePath: Path,
         root: Path,
-    ) {
+    ): List<TextSegment> {
         try {
             if (tooLargeToIndex(filePath)) {
                 println("  ⚠️  Skipped ${filePath.fileName}: file too large")
-                return
+                return emptyList()
             }
 
             val content = extractTextFromFile(filePath)
             if (content.isBlank()) {
-                return
+                return emptyList()
             }
 
+            log.debug("Start indexing file: {}", filePath.fileName)
+
             val relativePath = root.relativize(filePath).toString()
+            val absolutePath = filePath.toAbsolutePath().toString()
             val header = buildFileHeader(relativePath, filePath)
             val body = header + content
 
@@ -898,24 +1367,70 @@ class ProjectIndexer private constructor(
                 createTextSegment(
                     chunk = chunk,
                     filePath = filePath,
-                    relativePath = relativePath,
+                    absolutePath = absolutePath,
                     chunkIndex = idx,
                 )
             }
 
-            // Use HybridIndexer to index in both JVector and Lucene
-            if (textSegments.isNotEmpty()) {
-                hybridIndexer.indexSegments(textSegments)
-            }
-
-            log.debug("  ✅ Indexed: $relativePath (${chunks.size} chunks)")
+            log.debug("  📦 Prepared: $relativePath (${chunks.size} chunks)")
+            return textSegments
         } catch (e: Exception) {
             log.error("  ❌ Failed to index ${filePath.fileName}: ${e.message}", e)
+            return emptyList()
+        }
+    }
+
+    /**
+     * Add segments to batch queue and flush if batch is full.
+     * Thread-safe method for concurrent file processing.
+     */
+    private fun addSegmentsToBatch(segments: List<TextSegment>) {
+        if (segments.isEmpty()) return
+
+        synchronized(batchLock) {
+            segmentBatchQueue.addAll(segments)
+
+            // Flush if batch is full
+            if (segmentBatchQueue.size >= maxSegmentsPerBatch) {
+                flushSegmentBatch()
+            }
+        }
+    }
+
+    /**
+     * Flush accumulated segments to embedding API in a single batch call.
+     */
+    private fun flushSegmentBatch() {
+        if (segmentBatchQueue.isEmpty()) return
+
+        val batch = mutableListOf<TextSegment>()
+        while (segmentBatchQueue.isNotEmpty() && batch.size < maxSegmentsPerBatch) {
+            segmentBatchQueue.poll()?.let { batch.add(it) }
+        }
+
+        if (batch.isNotEmpty()) {
+            try {
+                hybridIndexer.indexSegments(batch)
+                log.debug("✅ Flushed batch of ${batch.size} segments to embedding API")
+            } catch (e: Exception) {
+                log.error("Failed to flush segment batch", e)
+            }
+        }
+    }
+
+    /**
+     * Flush any remaining segments in the queue.
+     * Should be called after all files are processed.
+     */
+    private fun flushRemainingSegments() {
+        synchronized(batchLock) {
+            flushSegmentBatch()
         }
     }
 
     /**
      * Index project with progress updates.
+     * Returns the number of files indexed.
      */
     private fun indexProjectWithProgress(root: Path): Int {
         require(Files.exists(root)) { "Path does not exist: $root" }
@@ -923,33 +1438,145 @@ class ProjectIndexer private constructor(
         val detectedTypes = detectProjectTypes(root)
         log.debug("📦 Detected project types: ${detectedTypes.joinToString(", ") { it.name }}")
 
-        var indexedFilesCount = 0
+        // Detect changes compared to persisted state
+        val changes = detectFileSystemChanges(listOf(root))
 
-        Files.walk(root)
-            .asSequence()
-            .filter { it.isRegularFile() }
-            .filter { isIndexableFile(it, root, detectedTypes) }
-            .forEach { filePath ->
-                indexSingleFileWithTracking(filePath, root)
+        if (!changes.hasChanges) {
+            log.debug("✅ No changes detected for project at $root - skipping indexing")
+            return 0
+        }
 
-                val relativePath = root.relativize(filePath).toString()
-                val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+        log.debug("📝 Detected changes: ${changes.totalChanges} files (add: ${changes.toAdd.size}, update: ${changes.toUpdate.size}, remove: ${changes.toRemove.size})")
 
-                // Track indexed file
-                indexedFiles[relativePath] = IndexedFileEntry(
-                    path = relativePath,
-                    lastModified = lastModified,
-                    indexed = LocalDateTime.now(),
-                )
+        val indexedFilesCount = AtomicInteger(0)
+        val filesToSave = ConcurrentLinkedQueue<IndexedFileInfo>()
 
-                indexedFilesCount++
+        // Remove deleted files from indexes
+        if (changes.toRemove.isNotEmpty()) {
+            changes.toRemove.forEach { absolutePath ->
+                try {
+                    removeFileFromIndex(absolutePath)
+                    indexedFiles.remove(absolutePath)
 
-                // Update progress every 10 files
-                if (indexedFilesCount % 10 == 0) {
-                    indexProgress = indexProgress.copy(filesIndexed = indexedFilesCount)
+                    log.debug("🗑️  Removed deleted file from indexes: $absolutePath")
+                } catch (e: Exception) {
+                    log.error("Failed to remove file from indexes: $absolutePath", e)
                 }
             }
+            // Remove from database
+            stateRepository.removeFiles(changes.toRemove)
+        }
 
-        return indexedFilesCount
+        val filesToIndex = (changes.toAdd + changes.toUpdate).map { Path.of(it.path) }
+
+        runBlocking {
+            val semaphore = Semaphore(concurrentIndexingThreads)
+
+            filesToIndex.map { filePath ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        processFileForIndexing(filePath, root, indexedFilesCount, filesToSave, filesToIndex.size)
+                    }
+                }
+            }.awaitAll()
+        }
+
+        // Flush any remaining segments in the batch queue
+        flushRemainingSegments()
+
+        if (filesToSave.isNotEmpty()) {
+            stateRepository.upsertFiles(filesToSave.toList())
+        }
+
+        saveState()
+
+        log.debug("✅ Indexing completed: ${indexedFilesCount.get()} files processed")
+        return indexedFilesCount.get()
+    }
+
+    /**
+     * Process a single file for indexing (used in parallel processing).
+     * This method is thread-safe and designed to be called concurrently.
+     * Segments are batched for efficient embedding API usage.
+     */
+    private fun processFileForIndexing(
+        filePath: Path,
+        root: Path,
+        indexedFilesCount: AtomicInteger,
+        filesToSave: ConcurrentLinkedQueue<IndexedFileInfo>,
+        totalFiles: Int,
+    ) {
+        try {
+            if (!Files.exists(filePath)) {
+                log.debug("⚠️  File no longer exists, skipping: $filePath")
+                return
+            }
+
+            // Extract segments from file
+            val segments = indexSingleFileWithTracking(filePath, root)
+
+            // Add segments to batch queue (will flush when full)
+            if (segments.isNotEmpty()) {
+                addSegmentsToBatch(segments)
+            }
+
+            val absolutePath = filePath.toAbsolutePath().toString()
+            val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+            val size = Files.size(filePath)
+
+            indexedFiles[absolutePath] = IndexedFileEntry(
+                path = absolutePath,
+                lastModified = lastModified,
+                indexed = LocalDateTime.now(),
+            )
+
+            filesToSave.add(
+                IndexedFileInfo(
+                    path = absolutePath,
+                    lastModified = lastModified,
+                    indexedAt = LocalDateTime.now(),
+                    size = size,
+                ),
+            )
+
+            val count = indexedFilesCount.incrementAndGet()
+
+            // Update progress every 10 files
+            if (count % 10 == 0) {
+                indexProgress = indexProgress.copy(filesIndexed = count)
+
+                try {
+                    EventBus.post(
+                        IndexingInProgressEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = count,
+                            totalFiles = totalFiles,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    log.error("Failed to publish indexing progress event", e)
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Failed to process file $filePath: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Checks if the embedding model is available by attempting a dry-run embed.
+     * Throws ModelNotFoundException if the model is not available.
+     */
+    private fun checkEmbeddingModelAvailable() {
+        try {
+            embeddingModel.embed(TextSegment.from("ping"))
+        } catch (e: Exception) {
+            if (e is ModelNotFoundException || e.message?.contains("model not found", ignoreCase = true) == true) {
+                log.error("Embedding model not found: ${e.message}")
+                throw ModelNotFoundException("Embedding model not found: ${e.message}")
+            } else {
+                throw e
+            }
+        }
     }
 }

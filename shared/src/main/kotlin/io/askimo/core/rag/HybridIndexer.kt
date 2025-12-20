@@ -39,16 +39,18 @@ class HybridIndexer(
         }
 
         try {
-            // 1. Index in JVector (vector embeddings for semantic search)
-            textSegments.forEach { textSegment ->
-                val embedding = embeddingModel.embed(textSegment).content()
-                embeddingStore.add(embedding, textSegment)
+            // 1. Batch embed all segments in a single API call
+            val embeddings = embeddingModel.embedAll(textSegments).content()
+
+            // 2. Store embeddings in JVector (vector store)
+            embeddings.forEachIndexed { index, embedding ->
+                embeddingStore.add(embedding, textSegments[index])
             }
 
-            // 2. Index in Lucene (keywords for BM25 search)
+            // 3. Index in Lucene (keywords for BM25 search)
             keywordRetriever.indexSegments(textSegments)
 
-            log.debug("Hybrid indexed ${textSegments.size} segments (vector + keyword)")
+            log.debug("Hybrid indexed ${textSegments.size} segments (vector + keyword) in batch")
         } catch (e: Exception) {
             log.error("Failed to hybrid index ${textSegments.size} segments", e)
             throw e

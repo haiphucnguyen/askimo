@@ -34,16 +34,16 @@ data class PgVectorConfig(
 
 data class EmbeddingConfig(
     val maxCharsPerChunk: Int = 1500,
-    val chunkOverlap: Int = 150,
+    val chunkOverlap: Int = 100,
     val preferredDim: Int? = null,
 )
 
 data class EmbeddingModelsConfig(
     val openai: String = "text-embedding-3-small",
-    val docker: String = "text-embedding-3-small",
+    val docker: String = "ai/qwen3-embedding:0.6B-F16",
     val ollama: String = "nomic-embed-text:latest",
-    val localai: String = "text-embedding-3-small",
-    val lmstudio: String = "text-embedding-3-small",
+    val localai: String = "nomic-embed-text:latest",
+    val lmstudio: String = "nomic-embed-text:latest",
     val gemini: String = "text-embedding-004",
 )
 
@@ -62,8 +62,20 @@ data class ProjectType(
     val excludePaths: Set<String>,
 )
 
+data class FilterConfig(
+    val gitignore: Boolean = true,
+    val dockerignore: Boolean = false,
+    val projecttype: Boolean = true,
+    val binary: Boolean = true,
+    val filesize: Boolean = true,
+    val custom: Boolean = true,
+)
+
 data class IndexingConfig(
     val maxFileBytes: Long = 5_000_000,
+    val concurrentIndexingThreads: Int = 10,
+    val filters: FilterConfig = FilterConfig(),
+    val customExcludes: Set<String> = emptySet(),
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
