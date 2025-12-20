@@ -78,6 +78,24 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
+      # Install Apple intermediate certificates (macOS only)
+      - name: Install Apple Intermediate Certificates
+        if: runner.os == 'macOS'
+        run: |
+          echo "Installing Apple intermediate certificates..."
+          
+          # Download Apple intermediate certificates
+          curl -s -o /tmp/DeveloperIDG2.cer "https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer"
+          curl -s -o /tmp/AppleRootCA-G3.cer "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer"
+          curl -s -o /tmp/AppleWWDRCAG3.cer "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer"
+          
+          # Install to system keychain as trusted
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/DeveloperIDG2.cer
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/AppleRootCA-G3.cer
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/AppleWWDRCAG3.cer
+          
+          echo "✅ Apple intermediate certificates installed"
+
       # Import Apple Developer ID certificate for code signing (macOS only)
       - name: Import Code Signing Certificate
         if: runner.os == 'macOS'
@@ -85,6 +103,8 @@ jobs:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
+          echo "Setting up code signing certificate..."
+          
           # Decode certificate from base64
           echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
           
@@ -96,15 +116,23 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           
-          # Import certificate to keychain
+          # Import certificate to keychain with proper ACLs
           security import certificate.p12 \
             -P "$MACOS_CERTIFICATE_PASSWORD" \
             -k "$KEYCHAIN_PATH" \
             -T /usr/bin/codesign \
-            -T /usr/bin/productsign
+            -T /usr/bin/productbuild \
+            -A
+          
+          # Import Apple intermediate certificates to build keychain too
+          security import /tmp/DeveloperIDG2.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -A
+          security import /tmp/AppleRootCA-G3.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -A
           
           # Set keychain to be used by codesign
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          
+          # Set partition list to allow codesign access without prompts
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           
@@ -112,12 +140,29 @@ jobs:
           IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | \
             grep "Developer ID Application" | \
             head -1 | \
-            awk '{print $2}')
+            sed 's/.*"\(.*\)".*/\1/')
+          
+          if [ -z "$IDENTITY" ]; then
+            echo "❌ Error: Could not find Developer ID Application certificate"
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+            exit 1
+          fi
           
           echo "MACOS_IDENTITY=$IDENTITY" >> $GITHUB_ENV
+          echo "✅ Code signing certificate configured: $IDENTITY"
           
-          # Clean up certificate file
-          rm -f certificate.p12
+          # Verify the setup
+          echo "Testing code signing..."
+          echo "test" > /tmp/test-sign.txt
+          if codesign --sign "$IDENTITY" /tmp/test-sign.txt 2>&1; then
+            echo "✅ Code signing test successful"
+          else
+            echo "❌ Code signing test failed"
+            exit 1
+          fi
+          
+          # Clean up
+          rm -f certificate.p12 /tmp/test-sign.txt /tmp/*.cer
 
       - name: Build desktop application (Linux/macOS)
         if: runner.os != 'Windows'
@@ -140,6 +185,119 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:${{ matrix.task }}
+
+      # Notarize the DMG (macOS only)
+      - name: Notarize DMG
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "Starting notarization process..."
+          
+          # Find the DMG
+          DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
+          
+          if [ -z "$DMG_PATH" ]; then
+            echo "❌ Error: DMG not found"
+            exit 1
+          fi
+          
+          echo "Found DMG: $DMG_PATH"
+          
+          # Submit for notarization
+          echo "Submitting to Apple for notarization (this may take 5-60 minutes)..."
+          SUBMIT_OUTPUT=$(xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_PASSWORD" \
+            --wait 2>&1)
+          
+          echo "$SUBMIT_OUTPUT"
+          
+          # Check if notarization succeeded
+          if echo "$SUBMIT_OUTPUT" | grep -q "status: Accepted"; then
+            echo "✅ Notarization successful!"
+            
+            # Staple the notarization ticket
+            echo "Stapling notarization ticket..."
+            if xcrun stapler staple "$DMG_PATH" 2>&1; then
+              echo "✅ Notarization ticket stapled"
+            else
+              echo "⚠️  Failed to staple (DMG is still notarized)"
+            fi
+            
+            # Verify
+            echo "Verifying notarization..."
+            xcrun stapler validate "$DMG_PATH" 2>&1 || echo "⚠️  Validation warning (DMG is still notarized)"
+            
+          elif echo "$SUBMIT_OUTPUT" | grep -q "status: Invalid"; then
+            echo "❌ Notarization failed - Apple rejected the submission"
+            
+            # Get detailed error log
+            SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
+            if [ -n "$SUBMISSION_ID" ]; then
+              echo "Fetching detailed error log..."
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$APPLE_ID" \
+                --team-id "$APPLE_TEAM_ID" \
+                --password "$APPLE_PASSWORD" 2>&1 || true
+            fi
+            
+            echo "⚠️  DMG is signed but not notarized. Users will see a warning on first launch."
+            echo "⚠️  Build will continue, but notarization should be fixed for production releases."
+            
+          else
+            echo "⚠️  Notarization status unknown"
+            echo "⚠️  Build will continue, but DMG may not be notarized"
+          fi
+
+      # Verify code signing (macOS only)
+      - name: Verify Code Signing
+        if: runner.os == 'macOS'
+        run: |
+          echo "Verifying code signature..."
+          
+          DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
+          
+          # Mount DMG
+          MOUNT_POINT=$(hdiutil attach "$DMG_PATH" -nobrowse | grep Volumes | sed 's/.*\(\/Volumes\/.*\)/\1/')
+          
+          if [ -z "$MOUNT_POINT" ]; then
+            echo "❌ Failed to mount DMG"
+            exit 1
+          fi
+          
+          # Find the app
+          APP_PATH=$(find "$MOUNT_POINT" -name "*.app" -type d -maxdepth 1 | head -n1)
+          
+          if [ -z "$APP_PATH" ]; then
+            hdiutil detach "$MOUNT_POINT"
+            echo "❌ No .app found in DMG"
+            exit 1
+          fi
+          
+          echo "Verifying: $APP_PATH"
+          
+          # Verify signature
+          if codesign -vvv --deep --strict "$APP_PATH" 2>&1; then
+            echo "✅ Code signature is valid"
+          else
+            echo "❌ Code signature verification failed"
+            hdiutil detach "$MOUNT_POINT"
+            exit 1
+          fi
+          
+          # Check signature details
+          echo ""
+          echo "Signature details:"
+          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -E "Authority|Identifier|TeamIdentifier"
+          
+          # Unmount
+          hdiutil detach "$MOUNT_POINT"
+          
+          echo "✅ Code signing verification complete"
 
       - name: Build uber JAR (Linux/macOS)
         if: runner.os != 'Windows'

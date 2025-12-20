@@ -1,636 +1,662 @@
-# macOS Code Signing Setup Guide
+# macOS Code Signing and Notarization - Complete Guide
 
-Complete guide for signing and notarizing the Askimo macOS application with an Apple Developer ID certificate.
-
-**⚠️ Test locally first!** Use the [automated test script](#step-6-test-locally-before-using-github-actions) before setting up GitHub Actions.
-
-## Prerequisites
-
-- Apple Developer Account ($99/year)
-- Developer ID Application certificate
-- macOS machine with Xcode Command Line Tools
-
-## Quick Start
-
-
-### 1. Export Certificate
-
-```bash
-# Open Keychain Access on your Mac
-# Find: "Developer ID Application: Your Name (Team ID)"
-# Right-click → Export as certificate.p12
-# Set a password (save it!)
-```
-
-### 2. Convert to Base64
-
-```bash
-base64 -i certificate.p12 -o certificate-base64.txt
-```
-
-### 3. Add GitHub Secrets
-
-Go to: **Repository → Settings → Secrets and variables → Actions → New secret**
-
-**Required:**
-- `MACOS_CERTIFICATE_BASE64` → Content of `certificate-base64.txt`
-- `MACOS_CERTIFICATE_PASSWORD` → Your .p12 password
-- `APPLE_TEAM_ID` → Your 10-character Team ID
-
-**Optional (for notarization):**
-- `APPLE_ID` → Your Apple ID email
-- `APPLE_PASSWORD` → App-specific password from appleid.apple.com
-
-### 4. Test Release
-
-```bash
-git tag v0.3.1-test
-git push origin v0.3.1-test
-```
-
-Watch in GitHub Actions tab!
-
-### What Was Changed
-
-✅ **`desktop/build.gradle.kts`** - Added signing and notarization configuration for macOS
-
-✅ **`.github/workflows/desktop-release.yml`** - Added certificate import step that:
-- Decodes your certificate
-- Creates temporary keychain
-- Imports certificate
-- Signs the app during build
-
-### Result
-
-When you push a version tag:
-1. GitHub Actions imports your certificate
-2. Gradle signs the macOS app
-3. (Optional) Apple notarizes it
-4. Signed DMG uploaded to release
-
-Users can install without security warnings! 🎉
+**Complete guide for code signing and notarizing Askimo Desktop for macOS distribution.**
 
 ---
 
-## Detailed Setup Instructions
+## 📋 Table of Contents
 
-### Prerequisites
+1. [Quick Start](#quick-start)
+2. [Prerequisites](#prerequisites)
+3. [Initial Setup](#initial-setup)
+4. [Local Code Signing](#local-code-signing)
+5. [Building Signed Apps](#building-signed-apps)
+6. [Notarization](#notarization)
+7. [Gradle Integration](#gradle-integration)
+8. [GitHub Actions](#github-actions)
+9. [Troubleshooting](#troubleshooting)
+10. [Reference](#reference)
 
-- Apple Developer Account with a paid membership
-- Developer ID Application certificate
-- Access to the Mac where the certificate was created
+---
 
-## Step 1: Export Certificate as .p12
+## 🚀 Quick Start
 
-1. Open **Keychain Access** on your Mac
-2. Select the **login** keychain (left sidebar)
-3. Select **My Certificates** category (left sidebar)
-4. Find your certificate named **"Developer ID Application: Your Name (Team ID)"**
-5. Right-click the certificate → **Export "Developer ID Application..."**
-6. Choose a location and save as `.p12` format
-7. Enter a **strong password** when prompted (you'll need this for GitHub Secrets)
-8. Save the password securely
-
-## Step 2: Convert Certificate to Base64
-
-Open Terminal and run:
+**For impatient developers:**
 
 ```bash
-base64 -i /path/to/your/certificate.p12 -o certificate-base64.txt
+# 1. Setup (one-time)
+cp .env.example .env
+# Edit .env with your Apple credentials
+./tools/macos/test-signing-local.sh
+
+# 2. Daily development (fast)
+./gradlew :desktop:createDistributable
+
+# 3. Release build (complete)
+./gradlew :desktop:packageNotarizedDmg
 ```
 
-This creates a text file with the base64-encoded certificate.
+**Done!** Read on for details.
 
-## Step 3: Find Your Apple Team ID
+---
 
-1. Go to [Apple Developer Account](https://developer.apple.com/account)
-2. Click on **Membership** in the sidebar
-3. Your **Team ID** is a 10-character alphanumeric code (e.g., `ABCDE12345`)
-4. Copy this ID
+## ✅ Prerequisites
 
-## Step 4: Create App-Specific Password (for Notarization)
+### Required Accounts
 
-Notarization is optional but highly recommended for better user experience.
+- **Apple Developer Account** ($99/year) - https://developer.apple.com/programs/
+- **Developer ID Application Certificate** - Created in Apple Developer portal
+- **App-Specific Password** - Generated at https://appleid.apple.com
 
-1. Go to [Apple ID Account Page](https://appleid.apple.com)
-2. Sign in with your Apple Developer ID
-3. Navigate to **Security** → **App-Specific Passwords**
-4. Click **Generate an app-specific password**
-5. Enter a label like "Askimo Notarization"
-6. Copy the generated password (format: `xxxx-xxxx-xxxx-xxxx`)
+### Required Tools
 
-## Step 5: Add GitHub Secrets
+- macOS (for code signing)
+- Xcode Command Line Tools: `xcode-select --install`
+- Java 21+
 
-Go to your GitHub repository:
+---
 
-1. Click **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Add the following secrets:
+## 🔧 Initial Setup
+
+### Step 1: Configure Environment
+
+Create `.env` file from template:
+
+```bash
+cp .env.example .env
+```
+
+Add your credentials:
+
+```bash
+# macOS Code Signing
+MACOS_IDENTITY=Developer ID Application: Your Name (TEAM_ID)
+APPLE_TEAM_ID=YOUR_TEAM_ID
+APPLE_ID=your@email.com
+APPLE_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App-specific password
+```
+
+**Finding your values:**
+
+| Variable | How to Find |
+|----------|-------------|
+| `MACOS_IDENTITY` | `security find-identity -v -p codesigning` |
+| `APPLE_TEAM_ID` | https://developer.apple.com/account → Membership |
+| `APPLE_ID` | Your Apple ID email |
+| `APPLE_PASSWORD` | Generate at https://appleid.apple.com → Security → App-Specific Passwords |
+
+### Step 2: Generate App-Specific Password
+
+**Important:** Use app-specific password, NOT your regular Apple ID password!
+
+1. Go to https://appleid.apple.com
+2. Sign in → Security → App-Specific Passwords
+3. Click "Generate Password"
+4. Label: "Askimo Notarization"
+5. Copy password (format: xxxx-xxxx-xxxx-xxxx)
+6. Add to `.env` as `APPLE_PASSWORD`
+
+### Step 3: Install Developer ID Certificate
+
+**Option A - Download existing:**
+1. https://developer.apple.com/account/resources/certificates
+2. Download "Developer ID Application"
+3. Double-click to install
+
+**Option B - Create new:**
+1. Keychain Access → Certificate Assistant → Request Certificate
+2. Upload CSR at developer.apple.com
+3. Select "Developer ID Application"
+4. Download and install
+
+### Step 4: Run Automated Setup
+
+```bash
+./tools/macos/test-signing-local.sh
+```
+
+This comprehensive script:
+- ✅ Installs Apple intermediate certificates
+- ✅ Verifies your Developer ID certificate
+- ✅ Configures keychain access
+- ✅ Tests code signing
+- ✅ Builds and signs the app
+- ✅ Verifies everything works
+
+**Expected time:** 5-10 minutes (first run)
+
+---
+
+## 🔐 Local Code Signing
+
+### Understanding Code Signing
+
+**What it does:**
+- Proves the app came from you
+- Ensures it hasn't been tampered with
+- Allows macOS to trust it
+
+**Certificate chain:**
+```
+Your App
+  └─ Developer ID Application: Your Name (TEAM_ID)
+      └─ Developer ID Certification Authority (G2)
+          └─ Apple Root CA
+```
+
+All three must be installed and trusted.
+
+### Manual Setup (if automated fails)
+
+#### Install Apple Certificates
+
+```bash
+# Automated
+./tools/macos/install-apple-certificates.sh
+
+# Or manual
+curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+security import DeveloperIDG2CA.cer -k ~/Library/Keychains/login.keychain-db -T /usr/bin/codesign -A
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain DeveloperIDG2CA.cer
+```
+
+#### Configure Keychain Access
+
+```bash
+security set-key-partition-list -S apple-tool:,apple:,codesign: ~/Library/Keychains/login.keychain-db
+```
+
+Enter your macOS login password when prompted.
+
+#### Verify Setup
+
+```bash
+echo "test" > /tmp/test.txt
+codesign --sign "Developer ID Application: Your Name (TEAM_ID)" /tmp/test.txt
+# Should succeed with exit code 0
+```
+
+### Common Setup Issues
+
+**Error: "unable to build chain to self-signed root"**
+```bash
+# Fix: Install Apple intermediate certificates
+./tools/macos/install-apple-certificates.sh
+```
+
+**Error: "errSecInternalComponent"**
+```bash
+# Fix: Configure keychain partition list
+security unlock-keychain ~/Library/Keychains/login.keychain-db
+security set-key-partition-list -S apple-tool:,apple:,codesign: ~/Library/Keychains/login.keychain-db
+```
+
+---
+
+## 🏗️ Building Signed Apps
+
+### Build Commands Comparison
+
+| Command | Time | Signed | Notarized | Use Case |
+|---------|------|--------|-----------|----------|
+| `createDistributable` | 2-5 min | ✅ | ❌ | Daily development |
+| `packageDmg` | 2-5 min | ✅ | ❌ | Signed DMG |
+| `notarizeAndStapleDmg` | 5-60 min | ✅ | ✅ | Notarize existing |
+| `packageNotarizedDmg` | 10-70 min | ✅ | ✅ | **Release builds** ⭐ |
+
+### Development Build (Fast)
+
+```bash
+./gradlew :desktop:createDistributable
+```
+
+**Output:** `desktop/build/compose/binaries/main/app/Askimo.app`
+- ✅ Code signed
+- ❌ No DMG
+- ❌ Not notarized
+- ⏱️ 2-5 minutes
+
+### Signed DMG
+
+```bash
+./gradlew :desktop:packageDmg
+```
+
+**Output:** `desktop/build/compose/binaries/main/dmg/Askimo-<version>.dmg`
+- ✅ Code signed
+- ✅ DMG created
+- ❌ Not notarized
+- ⚠️ Users see warning on first launch
+
+### Complete Release Build (Recommended)
+
+```bash
+./gradlew :desktop:packageNotarizedDmg
+```
+
+**Output:** Fully signed and notarized DMG
+- ✅ Code signed
+- ✅ DMG created
+- ✅ Notarized
+- ✅ Ticket stapled
+- ✅ No warnings for users!
+- ⏱️ 10-70 minutes
+
+---
+
+## 📱 Notarization
+
+### What is Notarization?
+
+**Apple's automated malware scan** that:
+- Checks for malicious code
+- Validates signatures
+- Allows Gatekeeper to trust the app
+
+### Code Signing vs Notarization
+
+| Feature | Code Signing | Notarization |
+|---------|-------------|--------------|
+| Purpose | Prove app from you | Apple malware scan |
+| Required | Yes (for distribution) | Recommended |
+| User impact | App is trusted | No warnings |
+| Time | During build | 5-60 min post-build |
+
+### User Experience
+
+**Without notarization:**
+1. User opens app
+2. "Cannot be opened..." warning
+3. Right-click → Open → Confirm
+4. Works fine after
+
+**With notarization:**
+1. User opens app
+2. Opens immediately
+3. No warnings! ✅
+
+### Automatic Notarization (Integrated)
+
+```bash
+./gradlew :desktop:packageNotarizedDmg
+```
+
+**What happens:**
+1. Builds and signs DMG
+2. Uploads to Apple
+3. Waits for approval (shows progress)
+4. Staples ticket
+5. Verifies
+
+**Progress display:**
+```
+📤 Uploading to Apple...
+⏳ Status: In Progress | Elapsed: 5:30
+⏳ Status: In Progress | Elapsed: 15:45
+✅ Notarization accepted!
+📎 Stapling ticket...
+✅ Complete!
+```
+
+### Manual Notarization
+
+```bash
+# Build first
+./gradlew :desktop:packageDmg
+
+# Then notarize
+./tools/macos/notarize-dmg.sh
+
+# Or notarize any DMG
+./tools/macos/notarize-dmg.sh path/to/app.dmg
+```
+
+### Checking Status
+
+```bash
+# View all submissions
+./tools/macos/check-notarization.sh
+
+# Check specific submission
+./tools/macos/check-notarization.sh <submission-id>
+
+# Or web interface
+# https://appstoreconnect.apple.com → Notary
+```
+
+### Do You Need Notarization?
+
+| Scenario | Recommended? |
+|----------|-------------|
+| Local testing | ❌ No |
+| Team testing (< 10) | ⚠️ Optional |
+| Public distribution | ✅ **Yes** |
+| Mac App Store | ✅ **Required** |
+
+### About App Store Connect
+
+**Important:** You do NOT need App Store Connect for notarization!
+
+- ✅ **Notarization** - For direct distribution (what you're doing)
+- ❌ **App Store Connect** - Only for Mac App Store sales
+
+Notarization works for:
+- Website downloads
+- GitHub releases
+- Email distribution
+- Any direct download
+
+---
+
+## 🎯 Gradle Integration
+
+### Available Tasks
+
+#### Daily Development
+```bash
+./gradlew :desktop:createDistributable
+```
+- Fast: 2-5 minutes
+- Signed app (no DMG)
+- Not notarized
+
+#### Build DMG
+```bash
+./gradlew :desktop:packageDmg
+```
+- Fast: 2-5 minutes
+- Signed DMG
+- Not notarized
+
+#### Notarize Existing DMG
+```bash
+./gradlew :desktop:notarizeAndStapleDmg
+```
+- Must run after `packageDmg`
+- Waits 5-60 minutes
+- Staples ticket
+
+#### Complete Release ⭐
+```bash
+./gradlew :desktop:packageNotarizedDmg
+```
+- Everything in one command
+- Builds, signs, notarizes, staples
+- 10-70 minutes total
+- **Use for production releases**
+
+### Configuration
+
+Tasks automatically read from `.env`:
+- `MACOS_IDENTITY`
+- `APPLE_TEAM_ID`
+- `APPLE_ID`
+- `APPLE_PASSWORD`
+
+If credentials missing, notarization is skipped.
+
+### Typical Workflow
+
+```bash
+# Monday-Friday: Fast builds
+./gradlew :desktop:createDistributable
+
+# Release day
+git tag v1.2.0
+./gradlew :desktop:packageNotarizedDmg
+git push origin v1.2.0
+```
+
+---
+
+## 🤖 GitHub Actions
 
 ### Required Secrets
 
-| Secret Name | Value | Description |
-|-------------|-------|-------------|
-| `MACOS_CERTIFICATE_BASE64` | Content of `certificate-base64.txt` | Your certificate in base64 format |
-| `MACOS_CERTIFICATE_PASSWORD` | Your .p12 password | Password you set when exporting |
-| `APPLE_TEAM_ID` | Your 10-character Team ID | Found in Apple Developer portal |
+Add 6 secrets to GitHub (Settings → Secrets → Actions):
 
-### Optional Secrets (for Notarization)
+| Secret | Description |
+|--------|-------------|
+| `MACOS_CERTIFICATE_BASE64` | .p12 certificate in base64 |
+| `MACOS_CERTIFICATE_PASSWORD` | Password for .p12 |
+| `MACOS_IDENTITY` | Certificate identity string |
+| `APPLE_TEAM_ID` | Your Apple Team ID |
+| `APPLE_ID` | Your Apple ID email |
+| `APPLE_PASSWORD` | App-specific password |
 
-| Secret Name | Value | Description |
-|-------------|-------|-------------|
-| `APPLE_ID` | Your Apple ID email | Email used for Apple Developer account |
-| `APPLE_PASSWORD` | App-specific password | Generated in Step 4 |
-
-**Important**: The `APPLE_PASSWORD` should be the app-specific password, NOT your regular Apple ID password.
-
-## Step 6: Test Locally Before Using GitHub Actions
-
-**⚠️ IMPORTANT**: Test signing and notarization locally BEFORE setting up GitHub Actions to avoid wasting time debugging in CI.
-
-### Testing Workflow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Local Testing Workflow                    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │ 1. Get Developer │
-                    │ ID Certificate   │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ 2. Export as .p12│
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ 3. Set up env    │
-                    │ variables        │
-                    └────────┬─────────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-                ▼                         ▼
-     ┌──────────────────┐      ┌──────────────────┐
-     │ Automated Test   │      │ Manual Testing   │
-     │ (Recommended)    │      │ (Step by step)   │
-     └────────┬─────────┘      └────────┬─────────┘
-              │                         │
-              └────────────┬────────────┘
-                           │
-                           ▼
-                  ┌────────────────┐
-                  │ All tests pass?│
-                  └────────┬───────┘
-                           │
-                 ┌─────────┴──────────┐
-                 │                    │
-              YES│                    │NO
-                 │                    │
-                 ▼                    ▼
-        ┌────────────────┐   ┌────────────────┐
-        │ Set up GitHub  │   │ Fix issues &   │
-        │ Actions        │   │ retry          │
-        └────────────────┘   └────────┬───────┘
-                                      │
-                                      └──────┐
-                                             │
-                                             ▼
-                                  (Back to testing)
-```
-
-### Quick Automated Test (Recommended)
-
-**First, install Apple's intermediate certificates (required for signing):**
+### Generate MACOS_CERTIFICATE_BASE64
 
 ```bash
-# Install Developer ID Certification Authority (G1 - older certificates)
-curl -O https://www.apple.com/certificateauthority/DeveloperIDCA.cer
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain DeveloperIDCA.cer
-rm DeveloperIDCA.cer
+# 1. Export from Keychain
+# Keychain Access → Find certificate → Right-click → Export
+# Save as Certificates.p12 with password
 
-# Install Developer ID Certification Authority (G2 - newer certificates)
-curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain DeveloperIDG2CA.cer
-rm DeveloperIDG2CA.cer
+# 2. Convert to base64
+base64 -i Certificates.p12 | pbcopy
 
-# Install Apple Root CA
-curl -O https://www.apple.com/appleca/AppleIncRootCertificate.cer
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain AppleIncRootCertificate.cer
-rm AppleIncRootCertificate.cer
-
-echo "✅ Apple certificates installed"
+# 3. Paste into GitHub secret
 ```
 
-**Note:** Apple now issues both G1 and G2 certificates. Install both to ensure compatibility.
+### Workflow Behavior
 
-**Next, ensure your keychain is properly set up:**
+**On tag push (v*):**
+1. Installs certificates
+2. Configures signing
+3. Builds app
+4. Creates signed DMG
+5. Submits for notarization
+6. Waits (5-60 min)
+7. Staples ticket
+8. Verifies
+9. Uploads to release
+
+**Total time:** 10-70 minutes
+
+### Trigger Release
 
 ```bash
-# Unlock your keychain
+git tag v1.2.0
+git push origin v1.2.0
+
+# Watch at: https://github.com/your-repo/actions
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Code Signing Errors
+
+#### "unable to build chain to self-signed root"
+```bash
+./tools/macos/install-apple-certificates.sh
+```
+
+#### "errSecInternalComponent"
+```bash
 security unlock-keychain ~/Library/Keychains/login.keychain-db
-# (Enter your macOS password when prompted)
-
-# Allow codesign to access the signing key without prompting
-# IMPORTANT: Replace YOUR_ACTUAL_PASSWORD with your real macOS login password
-security set-key-partition-list -S apple-tool:,apple: -s \
-  -k YOUR_ACTUAL_PASSWORD \
-  ~/Library/Keychains/login.keychain-db
+security set-key-partition-list -S apple-tool:,apple:,codesign: ~/Library/Keychains/login.keychain-db
 ```
 
-**Then, verify your Developer ID certificate is installed:**
+#### "No identity found"
+1. Download certificate from developer.apple.com
+2. Install in Keychain Access
+3. Verify: `security find-identity -v -p codesigning`
 
-```bash
-# List all Developer ID certificates
-security find-identity -v -p codesigning
+### Notarization Errors
 
-# Expected output should include:
-# 1) ABCDEF1234567890... "Developer ID Application: Your Name (TEAM_ID)"
-```
-
-If you don't see your certificate, import the .p12 file:
-
-```bash
-# Import certificate to login keychain
-security import certificate.p12 -k ~/Library/Keychains/login.keychain-db
-
-# You'll be prompted for:
-# 1. The .p12 password
-# 2. Your macOS login password
-```
-
-### 6.2 Find Your Certificate Identity
-
-Find the exact identity string for signing:
-
-```bash
-# This shows your certificate's full name
-security find-identity -v -p codesigning | grep "Developer ID Application"
-
-# Example output:
-# 1) ABCD1234... "Developer ID Application: John Doe (XYZ123456)"
-```
-
-Copy the full name including quotes (e.g., `Developer ID Application: John Doe (XYZ123456)`).
-
-### 6.3 Set Up Environment Variables
-
-Set up your signing configuration in the `.env` file:
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Edit the macOS Code Signing section in .env
-nano .env  # or use your preferred editor
-
-# Fill in these values in the macOS Code Signing section:
-#   MACOS_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
-#   APPLE_TEAM_ID="XYZ123456"
-#   APPLE_ID="your@email.com"
-#   APPLE_PASSWORD="xxxx-xxxx-xxxx-xxxx"
-```
-
-### 6.4 Test DMG Creation with Signing
-
-Test the full DMG creation with signing (this will also build the app):
-
-```bash
-# Build and sign the DMG
-./gradlew desktop:packageDmg
-
-# This will:
-# 1. Build the app
-# 2. Sign the app bundle
-# 3. Create and sign the DMG
-```
-
-**Watch for errors** like:
-- `No identity found` → Check your `MACOS_IDENTITY` value in .env
-- `User interaction is not allowed` → You may need to unlock your keychain
-- `The specified item could not be found` → Certificate not in keychain
-
-### 6.5 Verify the Signature
-
-After successful build, verify the signature:
-
-```bash
-# Find the DMG file
-DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
-echo "Testing DMG: $DMG_PATH"
-
-# Mount the DMG
-hdiutil attach "$DMG_PATH"
-
-# Verify app signature (detailed)
-codesign -dv --verbose=4 "/Volumes/Askimo/Askimo.app"
-
-# Check if properly signed and notarized
-spctl -a -vv -t install "/Volumes/Askimo/Askimo.app"
-
-# Unmount when done
-hdiutil detach "/Volumes/Askimo"
-```
-
-### Expected Output for Properly Signed App
-
-```
-Executable=/Volumes/Askimo/Askimo.app/Contents/MacOS/Askimo
-Identifier=io.askimo.desktop
-Format=app bundle with Mach-O universal (x86_64 arm64)
-CodeDirectory v=20500 size=...
-Authority=Developer ID Application: Your Name (TEAM_ID)
-Authority=Developer ID Certification Authority
-Authority=Apple Root CA
-Timestamp=Jan 15, 2025 at 10:30:45 AM
-```
-
-✅ **Good signs**:
-- Shows your Developer ID Application certificate
-- Shows Apple Root CA in chain
-- Has a timestamp
-
-❌ **Bad signs**:
-- Shows "adhoc" signature → Not properly signed
-- No timestamp → Signing failed
-- Missing certificate chain → Certificate not trusted
-
-### 6.6 Test Notarization (Optional but Recommended)
-
-Notarization requires uploading to Apple and waiting for approval:
-
-```bash
-# Ensure notarization variables are set in .env
-# (APPLE_ID and APPLE_PASSWORD)
-
-# Build with notarization
-./gradlew desktop:packageDmg
-
-# The Gradle task will:
-# 1. Sign the app
-# 2. Create DMG
-# 3. Submit to Apple for notarization
-# 4. Wait for approval (can take 5-30 minutes)
-# 5. Staple the notarization ticket to DMG
-```
-
-**Notarization Output**: Look for these messages in the Gradle output:
-
-```
-> Notarizing application...
-> Uploading to Apple...
-> Waiting for notarization...
-> Notarization successful
-> Stapling ticket to DMG...
-```
-
-**Verify notarization**:
-
-```bash
-# Check if notarization ticket is stapled
-stapler validate desktop/build/compose/binaries/main/dmg/Askimo-*.dmg
-
-# Expected output:
-# The validate action worked!
-```
-
-If notarization fails, check:
-- ✅ `APPLE_ID` is correct
-- ✅ `APPLE_PASSWORD` is an **app-specific password** (not your regular password)
-- ✅ `APPLE_TEAM_ID` matches your developer account
-- ✅ Your Apple Developer membership is active
-
-### 6.7 Test User Experience
-
-Simulate what a user would experience:
-
-```bash
-# Find your DMG
-DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
-
-# Copy to Desktop to simulate download
-cp "$DMG_PATH" ~/Desktop/
-
-# Open from Desktop (like a user would)
-open ~/Desktop/$(basename "$DMG_PATH")
-
-# Mount and try to open the app
-# macOS should either:
-# 1. Open immediately (if notarized)
-# 2. Show "verifying..." briefly then open (if notarized)
-# 3. Show security warning (if only signed, not notarized)
-# 4. Block completely (if unsigned)
-```
-
-**What you should see**:
-- ✅ **Notarized**: Brief "verifying" message, then app opens
-- ⚠️ **Signed only**: Security warning, but can open via System Preferences
-- ❌ **Unsigned**: App is blocked, harder for users to open
-
-### 6.8 Clean Up Test Files
-
-After testing:
-
-```bash
-# Remove test DMG from Desktop
-rm ~/Desktop/Askimo-*.dmg
-
-# Clean build directory
-./gradlew clean
-
-# Note: Keep your .env file for future builds
-# It's already in .gitignore and won't be committed
-```
-
-### 6.9 Troubleshooting Local Testing
-
-#### Keychain Access Denied
-
-```
-Error: User interaction is not allowed.
-```
-
-**Solution**: Unlock your keychain
-
-```bash
-# Unlock login keychain
-security unlock-keychain ~/Library/Keychains/login.keychain-db
-
-# Or allow codesign to access the key without prompting
-security set-key-partition-list -S apple-tool:,apple: -s \
-  -k YOUR_KEYCHAIN_PASSWORD \
-  ~/Library/Keychains/login.keychain-db
-```
-
-#### Certificate Not Found
-
-```
-Error: No identity found for signing
-```
-
-**Solution**: Verify certificate identity
-
-```bash
-# List all signing identities
-security find-identity -v -p codesigning
-
-# Make sure MACOS_IDENTITY matches exactly
-echo $MACOS_IDENTITY
-```
-
-#### Notarization Timeout
-
-```
-Error: Notarization request timed out
-```
-
-**Solution**: Apple's servers can be slow. Try:
-- Wait and retry (can take up to 30 minutes)
-- Check Apple Developer account status
-- Verify credentials are correct
-
-### 6.10 Local Testing Checklist
-
-Before setting up GitHub Actions, verify locally:
-
-- [ ] Certificate is installed in keychain
-- [ ] `.env` file is configured with your credentials
-- [ ] Can create DMG with signing (`./gradlew desktop:packageDmg`)
-- [ ] DMG signature verifies (`codesign -dv`)
-- [ ] App passes Gatekeeper check (`spctl -a -vv`)
-- [ ] (Optional) Notarization succeeds
-- [ ] (Optional) Notarization ticket stapled (`stapler validate`)
-- [ ] Can open app without security warnings
-
-✅ **Once all checks pass**, you're ready to set up GitHub Actions with confidence!
-
-## Step 7: Trigger Release
-
-Push a version tag to trigger the release workflow:
-
-```bash
-# Create and push a tag
-git tag v0.3.1
-git push origin v0.3.1
-```
-
-## Step 8: Monitor the Build
-
-1. Go to **Actions** tab in your GitHub repository
-2. Watch the **Desktop** workflow run
-3. Check the **desktop-package-macos** job
-4. Look for the "Import Code Signing Certificate" step
-
-### What Happens During Build
-
-1. ✅ Certificate is decoded from base64
-2. ✅ Temporary keychain is created
-3. ✅ Certificate is imported to keychain
-4. ✅ App is built and signed during `packageDmg`
-5. ✅ (Optional) App is notarized with Apple
-6. ✅ DMG is uploaded to GitHub Release
-
-## Verification
-
-After the release is published:
-
-1. Download the `Askimo-Desktop-macos.dmg` from the release
-2. Mount the DMG and try to open the app
-3. If properly signed:
-   - ✅ No "unidentified developer" warning
-   - ✅ App opens without security prompts
-4. If notarized:
-   - ✅ macOS shows a brief "verifying" dialog
-   - ✅ App opens smoothly
-
-## Troubleshooting
-
-### "No identity found" error
-
-**Problem**: The certificate identity cannot be found in the keychain.
-
-**Solution**:
-- Verify `MACOS_CERTIFICATE_BASE64` is correct (no extra spaces/newlines)
-- Verify `MACOS_CERTIFICATE_PASSWORD` is correct
-- Check GitHub Actions logs for certificate import errors
-
-### "Code signing failed" error
-
-**Problem**: The signing process fails during build.
-
-**Solution**:
-- Ensure the certificate is not expired (check in Apple Developer portal)
-- Verify the certificate type is "Developer ID Application" (not "Mac App Distribution")
-- Check that `MACOS_IDENTITY` environment variable is set correctly
-
-### Notarization fails
-
-**Problem**: App is signed but notarization times out or fails.
-
-**Solution**:
+#### "Authentication failed"
 - Verify `APPLE_ID` is correct
-- Verify `APPLE_PASSWORD` is an app-specific password (not your regular password)
-- Verify `APPLE_TEAM_ID` matches your Apple Developer account
-- Check if your Apple Developer account has active paid membership
+- Generate new app-specific password
+- Update `APPLE_PASSWORD` in `.env`
+- Don't use regular Apple ID password!
 
-### Users still see security warnings
+#### "Notarization failed - Invalid"
+```bash
+# Check detailed log
+./tools/macos/check-notarization.sh <submission-id>
+```
 
-**Problem**: Downloaded app shows "unidentified developer" warning.
+Common issues:
+- Hardened runtime not enabled
+- Unsigned nested components
+- Restricted APIs used
 
-**Solutions**:
-- Signing is working, but notarization might be missing
-- Add notarization secrets (`APPLE_ID`, `APPLE_PASSWORD`)
-- Wait 5-10 minutes after release for Apple's servers to update
-- Clear macOS's security cache: `sudo spctl --master-disable` then `sudo spctl --master-enable`
+#### Notarization Hangs
+- Wait up to 90 minutes
+- Check separately: `./tools/macos/check-notarization.sh`
+- Updated script shows progress every 30s
 
-## Certificate Renewal
+### Build Errors
 
-Apple Developer ID certificates are valid for **5 years**. When your certificate expires:
+#### "DMG not found"
+```bash
+./gradlew clean :desktop:packageDmg --info
+# Fix compilation errors, then retry
+```
 
-1. Generate a new certificate in Apple Developer portal
-2. Export the new certificate as .p12
-3. Convert to base64
-4. Update `MACOS_CERTIFICATE_BASE64` and `MACOS_CERTIFICATE_PASSWORD` secrets in GitHub
-5. No code changes needed - just update the secrets
+#### GitHub Actions fails
+1. Verify all 6 secrets are set
+2. Re-export certificate
+3. Test locally first
+4. Check workflow logs for details
 
-## Security Best Practices
+---
 
-- ✅ **Never commit** .p12 files to the repository
-- ✅ **Never commit** base64-encoded certificates to the repository
-- ✅ Use GitHub Secrets for all sensitive data
-- ✅ Rotate app-specific passwords periodically
-- ✅ Limit repository access to trusted collaborators
-- ✅ Use app-specific passwords, never your main Apple ID password
-- ✅ Keep your .p12 file backed up securely (you'll need it if you change machines)
+## 📚 Reference
 
-## What Gets Signed
+### Helper Scripts
 
-The signing process signs:
-- ✅ The main application bundle (`Askimo.app`)
-- ✅ All embedded frameworks and libraries
-- ✅ Native binaries and JVM runtime
-- ✅ The DMG installer itself
+All in `tools/macos/`:
 
-## Cost
+| Script | Purpose |
+|--------|---------|
+| `test-signing-local.sh` | Complete end-to-end test |
+| `install-apple-certificates.sh` | Install certificates |
+| `notarize-dmg.sh` | Notarize a DMG |
+| `check-notarization.sh` | Check status |
+| `verify-dmg.sh` | Verify signatures |
+| `diagnose-codesigning.sh` | Diagnostic report |
 
-- Apple Developer Program: **$99/year** (required for code signing)
-- Notarization: **Free** (included with Developer Program)
+### Verification Commands
 
-## References
+```bash
+# Check certificates
+security find-certificate -c "Developer ID Certification Authority" ~/Library/Keychains/login.keychain-db
 
-- [Apple Developer Documentation](https://developer.apple.com/documentation/xcode/notarizing_macos_software_before_distribution)
-- [Compose Multiplatform Signing Docs](https://github.com/JetBrains/compose-multiplatform/tree/master/tutorials/Signing_and_notarization_on_macOS)
-- [GitHub Actions Security Best Practices](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
+# List identities
+security find-identity -v -p codesigning
 
-## Support
+# Verify signature
+codesign -vvv --deep --strict /path/to/Askimo.app
 
-If you encounter issues:
-1. Check the GitHub Actions workflow logs
-2. Verify all secrets are set correctly
-3. Test signing locally first
-4. Check Apple Developer account status
+# Check notarization
+xcrun stapler validate /path/to/Askimo.dmg
+spctl -a -vv -t install /path/to/Askimo.dmg
+
+# View submissions
+xcrun notarytool history --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_PASSWORD"
+```
+
+### Quick Command Reference
+
+```bash
+# Setup
+./tools/macos/test-signing-local.sh
+./tools/macos/diagnose-codesigning.sh
+
+# Build
+./gradlew :desktop:createDistributable
+./gradlew :desktop:packageDmg
+./gradlew :desktop:packageNotarizedDmg
+
+# Notarize
+./tools/macos/notarize-dmg.sh
+./tools/macos/check-notarization.sh
+
+# Verify
+./tools/macos/verify-dmg.sh
+codesign -vvv --deep /path/to/app
+```
+
+### Useful Links
+
+- **Apple Developer:** https://developer.apple.com/account
+- **Certificates:** https://developer.apple.com/account/resources/certificates
+- **App Passwords:** https://appleid.apple.com
+- **Notary:** https://appstoreconnect.apple.com
+- **Docs:** https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution
+
+### Security Best Practices
+
+1. ✅ Never commit `.env` file
+2. ✅ Never share .p12 or passwords
+3. ✅ Use app-specific passwords
+4. ✅ Rotate passwords periodically
+5. ✅ Backup certificates securely
+6. ✅ Use GitHub Secrets for CI/CD
+7. ✅ Enable 2FA on Apple ID
+
+---
+
+## ✅ Success Checklist
+
+### Initial Setup
+- [ ] Apple Developer account active
+- [ ] Developer ID certificate installed
+- [ ] App-specific password generated
+- [ ] `.env` file configured
+- [ ] Apple certificates installed
+
+### Local Signing
+- [ ] `security find-identity -v` shows certificate
+- [ ] Keychain partition list configured
+- [ ] Test signing succeeds
+- [ ] `createDistributable` works
+
+### Notarization
+- [ ] All credentials in `.env`
+- [ ] Test notarization succeeds
+- [ ] Status shows "Accepted"
+- [ ] Stapling works
+
+### GitHub Actions (Optional)
+- [ ] All 6 secrets configured
+- [ ] Workflow runs successfully
+- [ ] DMG uploaded to release
+- [ ] Opens without warnings
+
+### Ready to Ship
+- [ ] DMG signed (verified)
+- [ ] DMG notarized (verified)
+- [ ] Opens on other Mac without warnings
+- [ ] Version tagged and released
+
+---
+
+## 🎉 You're Done!
+
+**Congratulations!** You now have:
+
+✅ Working code signing  
+✅ Automatic notarization  
+✅ GitHub Actions configured  
+✅ Professional macOS distribution  
+
+### Next Steps
+
+1. Build release: `./gradlew :desktop:packageNotarizedDmg`
+2. Test on another Mac
+3. Create GitHub release
+4. Distribute to users!
+
+**Happy shipping!** 🚀
+
+---
+
+*Last updated: December 20, 2025*  
+*For detailed documentation, see:*
+- `docs/GRADLE_NOTARIZATION_TASKS.md`
+- `docs/GITHUB_ACTIONS_SETUP.md`
+- `docs/NOTARIZATION_SUCCESS.md`
 

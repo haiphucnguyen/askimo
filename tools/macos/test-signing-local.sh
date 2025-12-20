@@ -230,12 +230,46 @@ print_header "Step 3: Loading Environment Variables"
 if [[ -f ".env" ]]; then
     print_info "Loading environment variables from .env file..."
 
-    # Export variables from .env file (handle both formats: KEY=value and export KEY=value)
-    set -a
-    source <(grep -v '^#' .env | grep -v '^$' | sed 's/^export //')
-    set +a
+    # Load and export variables from .env file
+    # This method is more reliable across different bash versions
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+        # Skip comments and empty lines
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+
+        # Remove 'export ' prefix if present
+        key="${key#export }"
+
+        # Trim whitespace from key
+        key="${key// /}"
+
+        # Trim whitespace from value
+        value="${value#"${value%%[![:space:]]*}"}" # trim leading whitespace
+        value="${value%"${value##*[![:space:]]}"}" # trim trailing whitespace
+
+        # Remove quotes from value if present
+        if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+            value="${BASH_REMATCH[1]}"
+        elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+            value="${BASH_REMATCH[1]}"
+        fi
+
+        # Skip if value is empty or placeholder
+        [[ -z "$value" ]] && continue
+        [[ "$value" =~ ^(your_|xxxx-) ]] && continue
+
+        # Export the variable
+        export "$key=$value"
+    done < .env
 
     print_success ".env file loaded"
+
+    # Debug: Show which macOS-related variables were loaded (without showing sensitive values)
+    print_info "Loaded variables from .env:"
+    [[ -n "${MACOS_IDENTITY:-}" ]] && echo "  ✓ MACOS_IDENTITY" || echo "  ✗ MACOS_IDENTITY (not found)"
+    [[ -n "${APPLE_TEAM_ID:-}" ]] && echo "  ✓ APPLE_TEAM_ID" || echo "  ✗ APPLE_TEAM_ID (not found)"
+    [[ -n "${APPLE_ID:-}" ]] && echo "  ✓ APPLE_ID" || echo "  ✗ APPLE_ID (not found)"
+    [[ -n "${APPLE_PASSWORD:-}" ]] && echo "  ✓ APPLE_PASSWORD" || echo "  ✗ APPLE_PASSWORD (not found)"
 elif [[ -n "${MACOS_IDENTITY:-}" ]] && [[ -n "${APPLE_TEAM_ID:-}" ]]; then
     print_info "Environment variables already set"
 else
@@ -268,6 +302,11 @@ if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
     for var in "${MISSING_VARS[@]}"; do
         echo "  $var=your_value_here"
     done
+    echo ""
+    print_info "Note: Make sure to replace placeholder values (those starting with 'your_' or 'xxxx-')"
+    print_info "Example .env content:"
+    echo "  MACOS_IDENTITY=Developer ID Application: John Doe (ABC123XYZ)"
+    echo "  APPLE_TEAM_ID=ABC123XYZ"
     exit 1
 fi
 
@@ -321,6 +360,15 @@ print_success "DMG created: $DMG_PATH"
 # ============================================================================
 print_header "Step 7: Verifying Signature"
 
+# First check if DMG itself is signed (optional but good to know)
+print_info "Checking DMG signature..."
+if codesign -dv "$DMG_PATH" 2>&1 | grep -q "Signature"; then
+    print_success "DMG is signed"
+else
+    print_info "DMG is not signed (this is OK, the app inside should be signed)"
+fi
+echo ""
+
 # Mount the DMG
 MOUNT_POINT=$(hdiutil attach "$DMG_PATH" | grep Volumes | sed 's/.*\(\/Volumes\/.*\)/\1/')
 if [[ -z "$MOUNT_POINT" ]]; then
@@ -341,13 +389,32 @@ fi
 print_info "Verifying signature of: $MOUNTED_APP"
 echo ""
 
-# Verify the signature
-if codesign -dv --verbose=4 "$MOUNTED_APP" 2>&1 | grep -q "Developer ID Application"; then
+# Verify the signature with full output
+VERIFY_OUTPUT=$(codesign -dv --verbose=4 "$MOUNTED_APP" 2>&1)
+VERIFY_EXIT=$?
+
+echo "$VERIFY_OUTPUT"
+echo ""
+
+if [[ $VERIFY_EXIT -eq 0 ]] && echo "$VERIFY_OUTPUT" | grep -q "Developer ID Application"; then
     print_success "App is properly signed with Developer ID"
     echo ""
-    codesign -dv --verbose=4 "$MOUNTED_APP" 2>&1 | grep -E "Authority|Identifier|Timestamp"
+    echo "Signature Details:"
+    echo "$VERIFY_OUTPUT" | grep -E "Authority|Identifier|Timestamp"
 else
-    print_error "App is not properly signed"
+    print_error "App signature verification failed"
+    echo ""
+    echo "Full verification output:"
+    echo "$VERIFY_OUTPUT"
+    echo ""
+
+    # Check if app is signed at all
+    if codesign -v "$MOUNTED_APP" 2>&1; then
+        print_warning "App is signed but may have issues"
+    else
+        print_error "App is not signed"
+    fi
+
     hdiutil detach "$MOUNT_POINT"
     exit 1
 fi
