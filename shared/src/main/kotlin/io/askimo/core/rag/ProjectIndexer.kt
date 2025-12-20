@@ -227,6 +227,11 @@ class ProjectIndexer private constructor(
     private val maxFileBytes = AppConfig.indexing.maxFileBytes
     private val concurrentIndexingThreads = AppConfig.indexing.concurrentIndexingThreads
 
+    // Segment batching configuration for efficient embedding
+    private val maxSegmentsPerBatch = 100 // Batch up to 100 segments per API call
+    private val segmentBatchQueue = ConcurrentLinkedQueue<TextSegment>()
+    private val batchLock = Any()
+
     private val defaultCharset: Charset = Charsets.UTF_8
 
     // Cached project repository and name
@@ -1301,10 +1306,6 @@ class ProjectIndexer private constructor(
 
     /**
      * Remove all segments for a file from the index.
-     * Note: JVectorEmbeddingStore doesn't support removeAll(Filter) yet,
-     * so we only remove from Lucene keyword index. The orphaned embeddings
-     * in JVector won't affect search results since we rely on Lucene for
-     * file filtering.
      *
      * @param absolutePath The absolute path of the file to remove
      */
@@ -1315,15 +1316,19 @@ class ProjectIndexer private constructor(
             log.debug("Removed file from keyword index: $absolutePath")
 
             // Try to remove from vector store if supported
-            // JVectorEmbeddingStore doesn't support this yet, so we catch and log
             try {
                 val filter = IsEqualTo("file_path", absolutePath)
                 embeddingStore.removeAll(filter as Filter)
                 log.debug("Removed file from vector index: $absolutePath")
-            } catch (e: UnsupportedOperationException) {
-                log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
-            } catch (e: dev.langchain4j.exception.UnsupportedFeatureException) {
-                log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
+            } catch (e: Exception) {
+                when (e) {
+                    is UnsupportedOperationException,
+                    is dev.langchain4j.exception.UnsupportedFeatureException,
+                    -> {
+                        log.debug("Vector store doesn't support removeAll - embeddings for $absolutePath will remain (harmless)")
+                    }
+                    else -> throw e
+                }
             }
         } catch (e: Exception) {
             log.warn("Failed to remove file from index: $absolutePath", e)
@@ -1332,20 +1337,21 @@ class ProjectIndexer private constructor(
 
     /**
      * Index a single file with tracking and root context.
+     * Extracts segments and adds them to batch queue for efficient processing.
      */
     private fun indexSingleFileWithTracking(
         filePath: Path,
         root: Path,
-    ) {
+    ): List<TextSegment> {
         try {
             if (tooLargeToIndex(filePath)) {
                 println("  ⚠️  Skipped ${filePath.fileName}: file too large")
-                return
+                return emptyList()
             }
 
             val content = extractTextFromFile(filePath)
             if (content.isBlank()) {
-                return
+                return emptyList()
             }
 
             log.debug("Start indexing file: {}", filePath.fileName)
@@ -1366,14 +1372,59 @@ class ProjectIndexer private constructor(
                 )
             }
 
-            // Use HybridIndexer to index in both JVector and Lucene
-            if (textSegments.isNotEmpty()) {
-                hybridIndexer.indexSegments(textSegments)
-            }
-
-            log.debug("  ✅ Indexed: $relativePath (${chunks.size} chunks)")
+            log.debug("  📦 Prepared: $relativePath (${chunks.size} chunks)")
+            return textSegments
         } catch (e: Exception) {
             log.error("  ❌ Failed to index ${filePath.fileName}: ${e.message}", e)
+            return emptyList()
+        }
+    }
+
+    /**
+     * Add segments to batch queue and flush if batch is full.
+     * Thread-safe method for concurrent file processing.
+     */
+    private fun addSegmentsToBatch(segments: List<TextSegment>) {
+        if (segments.isEmpty()) return
+
+        synchronized(batchLock) {
+            segmentBatchQueue.addAll(segments)
+
+            // Flush if batch is full
+            if (segmentBatchQueue.size >= maxSegmentsPerBatch) {
+                flushSegmentBatch()
+            }
+        }
+    }
+
+    /**
+     * Flush accumulated segments to embedding API in a single batch call.
+     */
+    private fun flushSegmentBatch() {
+        if (segmentBatchQueue.isEmpty()) return
+
+        val batch = mutableListOf<TextSegment>()
+        while (segmentBatchQueue.isNotEmpty() && batch.size < maxSegmentsPerBatch) {
+            segmentBatchQueue.poll()?.let { batch.add(it) }
+        }
+
+        if (batch.isNotEmpty()) {
+            try {
+                hybridIndexer.indexSegments(batch)
+                log.debug("✅ Flushed batch of ${batch.size} segments to embedding API")
+            } catch (e: Exception) {
+                log.error("Failed to flush segment batch", e)
+            }
+        }
+    }
+
+    /**
+     * Flush any remaining segments in the queue.
+     * Should be called after all files are processed.
+     */
+    private fun flushRemainingSegments() {
+        synchronized(batchLock) {
+            flushSegmentBatch()
         }
     }
 
@@ -1430,6 +1481,9 @@ class ProjectIndexer private constructor(
             }.awaitAll()
         }
 
+        // Flush any remaining segments in the batch queue
+        flushRemainingSegments()
+
         if (filesToSave.isNotEmpty()) {
             stateRepository.upsertFiles(filesToSave.toList())
         }
@@ -1443,6 +1497,7 @@ class ProjectIndexer private constructor(
     /**
      * Process a single file for indexing (used in parallel processing).
      * This method is thread-safe and designed to be called concurrently.
+     * Segments are batched for efficient embedding API usage.
      */
     private fun processFileForIndexing(
         filePath: Path,
@@ -1457,7 +1512,13 @@ class ProjectIndexer private constructor(
                 return
             }
 
-            indexSingleFileWithTracking(filePath, root)
+            // Extract segments from file
+            val segments = indexSingleFileWithTracking(filePath, root)
+
+            // Add segments to batch queue (will flush when full)
+            if (segments.isNotEmpty()) {
+                addSegmentsToBatch(segments)
+            }
 
             val absolutePath = filePath.toAbsolutePath().toString()
             val lastModified = Files.getLastModifiedTime(filePath).toMillis()
