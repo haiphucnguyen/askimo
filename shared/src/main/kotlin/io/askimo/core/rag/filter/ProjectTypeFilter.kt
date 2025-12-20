@@ -33,7 +33,7 @@ class ProjectTypeFilter : IndexingFilter {
         relativePath: String,
         fileName: String,
         patterns: Set<String>,
-        isDirectory: Boolean
+        isDirectory: Boolean,
     ): Boolean {
         for (pattern in patterns) {
             // Directory patterns (ending with /)
@@ -68,4 +68,3 @@ class ProjectTypeFilter : IndexingFilter {
         return false
     }
 }
-

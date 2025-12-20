@@ -26,4 +26,3 @@ class FileSizeFilter(private val maxBytes: Long = AppConfig.indexing.maxFileByte
         }
     }
 }
-

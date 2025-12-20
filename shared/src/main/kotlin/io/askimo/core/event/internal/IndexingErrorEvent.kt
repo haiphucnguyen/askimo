@@ -22,9 +22,7 @@ data class IndexingErrorEvent(
 ) : Event {
     override val type = EventType.INTERNAL
 
-    override fun getDetails(): String {
-        return "Indexing error for project $projectId: ${errorType.name} - ${details}"
-    }
+    override fun getDetails(): String = "Indexing error for project $projectId: ${errorType.name} - $details"
 }
 
 /**
@@ -33,6 +31,5 @@ data class IndexingErrorEvent(
 enum class IndexingErrorType {
     EMBEDDING_MODEL_NOT_FOUND,
     IO_ERROR,
-    UNKNOWN_ERROR
+    UNKNOWN_ERROR,
 }
-

@@ -45,4 +45,3 @@ data class FilterContext(
     val projectTypes: List<ProjectType> = emptyList(),
     val metadata: Map<String, Any> = emptyMap(),
 )
-

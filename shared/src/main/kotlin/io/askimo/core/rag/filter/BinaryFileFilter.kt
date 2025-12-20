@@ -36,4 +36,3 @@ class BinaryFileFilter : IndexingFilter {
         return false
     }
 }
-

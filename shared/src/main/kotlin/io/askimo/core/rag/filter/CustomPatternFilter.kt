@@ -26,4 +26,3 @@ class CustomPatternFilter(private val patterns: List<Regex>) : IndexingFilter {
         }
     }
 }
-

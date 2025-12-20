@@ -127,7 +127,7 @@ class GitignoreParser(private val rootPath: Path) {
 
             // Check if pattern matches
             val matches = pattern.regex.matches(relativePath) ||
-                         pattern.regex.matches("/$relativePath")
+                pattern.regex.matches("/$relativePath")
 
             if (matches) {
                 // Directory-only patterns only match directories
@@ -166,8 +166,5 @@ class GitignoreFilter(private val rootPath: Path) : IndexingFilter {
         }
     }
 
-    override fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean {
-        return gitignoreParser?.shouldIgnore(path, isDirectory) ?: false
-    }
+    override fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean = gitignoreParser?.shouldIgnore(path, isDirectory) ?: false
 }
-

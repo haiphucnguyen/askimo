@@ -22,9 +22,7 @@ data class IndexingStartedEvent(
 ) : Event {
     override val type = EventType.USER
 
-    override fun getDetails(): String {
-        return "Indexing project '$projectName' (~$estimatedFiles file(s))..."
-    }
+    override fun getDetails(): String = "Indexing project '$projectName' (~$estimatedFiles file(s))..."
 }
 
 /**
@@ -60,9 +58,7 @@ data class IndexingCompletedEvent(
 ) : Event {
     override val type = EventType.USER
 
-    override fun getDetails(): String {
-        return "Successfully indexed $filesIndexed file(s) for project '$projectName'"
-    }
+    override fun getDetails(): String = "Successfully indexed $filesIndexed file(s) for project '$projectName'"
 }
 
 /**
@@ -78,8 +74,5 @@ data class IndexingFailedEvent(
 ) : Event {
     override val type = EventType.USER
 
-    override fun getDetails(): String {
-        return "Failed to index project '$projectName': $errorMessage"
-    }
+    override fun getDetails(): String = "Failed to index project '$projectName': $errorMessage"
 }
-

@@ -7,6 +7,7 @@ package io.askimo.core.rag
 import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
+import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import dev.langchain4j.store.embedding.filter.Filter
@@ -14,6 +15,7 @@ import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProjectType
 import io.askimo.core.context.AppContext
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.IndexingErrorEvent
 import io.askimo.core.event.internal.IndexingErrorType
@@ -27,9 +29,9 @@ import io.askimo.core.project.getEmbeddingModel
 import io.askimo.core.project.getModelTokenLimit
 import io.askimo.core.rag.filter.BinaryFileFilter
 import io.askimo.core.rag.filter.CustomPatternFilter
+import io.askimo.core.rag.filter.FileSizeFilter
 import io.askimo.core.rag.filter.FilterChain
 import io.askimo.core.rag.filter.FilterContext
-import io.askimo.core.rag.filter.FileSizeFilter
 import io.askimo.core.rag.filter.GitignoreFilter
 import io.askimo.core.rag.filter.IndexingFilter
 import io.askimo.core.rag.filter.ProjectTypeFilter
@@ -44,8 +46,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentLinkedQueue
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.sax.BodyContentHandler
@@ -59,7 +59,9 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchService
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
@@ -68,8 +70,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.streams.asSequence
 import org.apache.tika.metadata.Metadata as TikaMetadata
-import dev.langchain4j.exception.ModelNotFoundException
-import io.askimo.core.db.DatabaseManager
 
 /**
  * Status of the indexing process for a project.
@@ -641,9 +641,9 @@ class ProjectIndexer private constructor(
                         errorType = IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND,
                         details = mapOf(
                             "modelName" to modelName,
-                            "provider" to "your AI provider (e.g., OpenAI, Ollama, Docker AI)"
-                        )
-                    )
+                            "provider" to "your AI provider (e.g., OpenAI, Ollama, Docker AI)",
+                        ),
+                    ),
                 )
                 return
             } else {
@@ -669,13 +669,12 @@ class ProjectIndexer private constructor(
 
                 // Publish user event for indexing start
                 try {
-
                     EventBus.post(
                         IndexingStartedEvent(
                             projectId = projectId,
                             projectName = projectName,
-                            estimatedFiles = estimatedTotal
-                        )
+                            estimatedFiles = estimatedTotal,
+                        ),
                     )
                 } catch (e: Exception) {
                     log.error("Failed to publish indexing started event", e)
@@ -703,13 +702,12 @@ class ProjectIndexer private constructor(
 
                 // Publish user event for successful indexing
                 try {
-
                     EventBus.post(
                         IndexingCompletedEvent(
                             projectId = projectId,
                             projectName = projectName,
-                            filesIndexed = indexed
-                        )
+                            filesIndexed = indexed,
+                        ),
                     )
                 } catch (e: Exception) {
                     log.error("Failed to publish indexing completed event", e)
@@ -724,13 +722,12 @@ class ProjectIndexer private constructor(
 
                 // Publish user event for failed indexing
                 try {
-
                     EventBus.post(
                         IndexingFailedEvent(
                             projectId = projectId,
                             projectName = projectName,
-                            errorMessage = errorMessage
-                        )
+                            errorMessage = errorMessage,
+                        ),
                     )
                 } catch (eventError: Exception) {
                     log.error("Failed to publish indexing failed event", eventError)
@@ -869,7 +866,7 @@ class ProjectIndexer private constructor(
 
         log.info(
             "Calculated chunk size: $calculated chars " +
-            "(model limit: $tokenLimit tokens, safe limit: $safeTokenLimit tokens, configured max: $configuredMax)"
+                "(model limit: $tokenLimit tokens, safe limit: $safeTokenLimit tokens, configured max: $configuredMax)",
         )
 
         return calculated
@@ -960,7 +957,7 @@ class ProjectIndexer private constructor(
             relativePath = relativePath,
             fileName = fileName,
             extension = extension,
-            projectTypes = detectedTypes
+            projectTypes = detectedTypes,
         )
 
         // Get or build filter chain for this root
@@ -997,7 +994,7 @@ class ProjectIndexer private constructor(
             relativePath = relativePath,
             fileName = path.fileName.toString(),
             extension = "",
-            projectTypes = detectedTypes
+            projectTypes = detectedTypes,
         )
 
         val filterChain = filterChains.getOrPut(root) {
@@ -1452,7 +1449,7 @@ class ProjectIndexer private constructor(
         root: Path,
         indexedFilesCount: AtomicInteger,
         filesToSave: ConcurrentLinkedQueue<IndexedFileInfo>,
-        totalFiles: Int
+        totalFiles: Int,
     ) {
         try {
             if (!Files.exists(filePath)) {
@@ -1493,15 +1490,15 @@ class ProjectIndexer private constructor(
                             projectId = projectId,
                             projectName = projectName,
                             filesIndexed = count,
-                            totalFiles = totalFiles
-                        )
+                            totalFiles = totalFiles,
+                        ),
                     )
                 } catch (e: Exception) {
                     log.error("Failed to publish indexing progress event", e)
                 }
             }
         } catch (e: Exception) {
-            log.error("Failed to process file ${filePath}: ${e.message}", e)
+            log.error("Failed to process file $filePath: ${e.message}", e)
         }
     }
 

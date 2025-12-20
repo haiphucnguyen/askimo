@@ -45,4 +45,3 @@ class FilterChain(filters: List<IndexingFilter>) {
         private val log = logger<FilterChain>()
     }
 }
-
