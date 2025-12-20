@@ -62,9 +62,20 @@ data class ProjectType(
     val excludePaths: Set<String>,
 )
 
+data class FilterConfig(
+    val gitignore: Boolean = true,
+    val dockerignore: Boolean = false,
+    val projecttype: Boolean = true,
+    val binary: Boolean = true,
+    val filesize: Boolean = true,
+    val custom: Boolean = true,
+)
+
 data class IndexingConfig(
     val maxFileBytes: Long = 5_000_000,
-    val concurrentIndexingThreads: Int = 20,
+    val concurrentIndexingThreads: Int = 10,
+    val filters: FilterConfig = FilterConfig(),
+    val customExcludes: Set<String> = emptySet(),
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",

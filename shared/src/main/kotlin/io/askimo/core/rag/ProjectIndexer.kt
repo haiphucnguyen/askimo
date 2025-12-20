@@ -25,6 +25,14 @@ import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
 import io.askimo.core.project.getModelTokenLimit
+import io.askimo.core.rag.filter.BinaryFileFilter
+import io.askimo.core.rag.filter.CustomPatternFilter
+import io.askimo.core.rag.filter.FilterChain
+import io.askimo.core.rag.filter.FilterContext
+import io.askimo.core.rag.filter.FileSizeFilter
+import io.askimo.core.rag.filter.GitignoreFilter
+import io.askimo.core.rag.filter.IndexingFilter
+import io.askimo.core.rag.filter.ProjectTypeFilter
 import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -241,6 +249,9 @@ class ProjectIndexer private constructor(
 
     // Track indexed files with their modification times (absolute paths)
     private val indexedFiles = ConcurrentHashMap<String, IndexedFileEntry>()
+
+    // Cache filter chains per root path
+    private val filterChains = ConcurrentHashMap<Path, FilterChain>()
 
     // Track if state has been loaded from database
     @Volatile
@@ -864,6 +875,47 @@ class ProjectIndexer private constructor(
         return calculated
     }
 
+    /**
+     * Build a filter chain based on project root and configuration.
+     * Filters are created according to enabled flags in AppConfig.
+     */
+    private fun buildFilterChain(rootPath: Path, projectTypes: List<ProjectType>): FilterChain {
+        val filters = mutableListOf<IndexingFilter>()
+
+        // Add binary filter (always enabled for sanity)
+        if (AppConfig.indexing.filters.binary) {
+            filters.add(BinaryFileFilter())
+        }
+
+        // Add file size filter
+        if (AppConfig.indexing.filters.filesize) {
+            filters.add(FileSizeFilter())
+        }
+
+        // Add .gitignore filter if enabled
+        if (AppConfig.indexing.filters.gitignore) {
+            filters.add(GitignoreFilter(rootPath))
+        }
+
+        // Add project type filter if enabled
+        if (AppConfig.indexing.filters.projecttype && projectTypes.isNotEmpty()) {
+            filters.add(ProjectTypeFilter())
+        }
+
+        // Add custom patterns if configured
+        if (AppConfig.indexing.filters.custom && AppConfig.indexing.customExcludes.isNotEmpty()) {
+            try {
+                val patterns = AppConfig.indexing.customExcludes.map { it.toRegex() }
+                filters.add(CustomPatternFilter(patterns))
+            } catch (e: Exception) {
+                log.warn("Failed to parse custom exclusion patterns: ${e.message}")
+            }
+        }
+
+        log.info("Built filter chain with ${filters.size} filters: ${filters.joinToString { it.name }}")
+        return FilterChain(filters)
+    }
+
     private fun detectProjectTypes(root: Path): List<ProjectType> {
         val detected = mutableListOf<ProjectType>()
 
@@ -886,7 +938,7 @@ class ProjectIndexer private constructor(
     }
 
     /**
-     * Determine if a file should be indexed based on extension, name, and exclude patterns.
+     * Determine if a file should be indexed using the filter chain architecture.
      * This method supports both code projects and generic user-provided paths.
      */
     private fun isIndexableFile(
@@ -896,38 +948,29 @@ class ProjectIndexer private constructor(
     ): Boolean {
         val fileName = path.fileName.toString()
         val extension = path.extension.lowercase()
-        val relativePath = root.relativize(path).toString().replace('\\', '/')
-
-        // Skip hidden files (starting with .)
-        if (fileName.startsWith(".")) {
-            log.debug("Skipping hidden file: $fileName")
-            return false
+        val relativePath = try {
+            root.relativize(path).toString().replace('\\', '/')
+        } catch (e: Exception) {
+            path.toString().replace('\\', '/')
         }
 
-        // Skip binary/media files (images, videos, archives, etc.)
-        if (extension in AppConfig.indexing.binaryExtensions) {
-            log.debug("Skipping binary file: $fileName (extension: $extension)")
-            return false
+        // Build filter context
+        val context = FilterContext(
+            rootPath = root,
+            relativePath = relativePath,
+            fileName = fileName,
+            extension = extension,
+            projectTypes = detectedTypes
+        )
+
+        // Get or build filter chain for this root
+        val filterChain = filterChains.getOrPut(root) {
+            buildFilterChain(root, detectedTypes)
         }
 
-        // Skip system and lock files
-        if (fileName in AppConfig.indexing.excludeFileNames) {
-            log.debug("Skipping excluded file: $fileName")
+        // Check if excluded by any filter
+        if (filterChain.shouldExclude(path, Files.isDirectory(path), context)) {
             return false
-        }
-
-        // Check common exclude patterns
-        if (shouldExclude(relativePath, fileName, commonExcludes)) {
-            log.debug("Skipping file matching common excludes: $relativePath")
-            return false
-        }
-
-        // Check project-specific exclude patterns
-        for (projectType in detectedTypes) {
-            if (shouldExclude(relativePath, fileName, projectType.excludePaths)) {
-                log.debug("Skipping file matching ${projectType.name} excludes: $relativePath")
-                return false
-            }
         }
 
         // Finally, check if extension is in supported list
@@ -939,56 +982,29 @@ class ProjectIndexer private constructor(
         return true
     }
 
-    private fun shouldExclude(
-        relativePath: String,
-        fileName: String,
-        excludePatterns: Set<String>,
-    ): Boolean {
-        for (pattern in excludePatterns) {
-            when {
-                pattern.endsWith("/") -> {
-                    val dirPattern = pattern.removeSuffix("/")
-                    if (relativePath.contains("/$dirPattern/") || relativePath.startsWith("$dirPattern/")) {
-                        return true
-                    }
-                }
-                pattern.contains("*") -> {
-                    val regex = pattern.replace(".", "\\.").replace("*", ".*").toRegex()
-                    if (regex.matches(fileName) || regex.matches(relativePath)) return true
-                }
-                else -> {
-                    if (fileName == pattern ||
-                        relativePath.contains("/$pattern/") ||
-                        relativePath.endsWith("/$pattern")
-                    ) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
-
     /**
-     * Check if a directory path should be excluded from indexing.
+     * Check if a directory path should be excluded from indexing using filter chain.
      */
-    private fun shouldExcludeDirectory(relativePath: String): Boolean {
-        val normalized = relativePath.replace('\\', '/')
-
-        // Check common excludes
-        for (pattern in commonExcludes) {
-            if (pattern.endsWith("/")) {
-                val dirPattern = pattern.removeSuffix("/")
-                if (normalized.contains("/$dirPattern/") ||
-                    normalized.startsWith("$dirPattern/") ||
-                    normalized == dirPattern
-                ) {
-                    return true
-                }
-            }
+    private fun shouldExcludeDirectory(path: Path, root: Path, detectedTypes: List<ProjectType>): Boolean {
+        val relativePath = try {
+            root.relativize(path).toString().replace('\\', '/')
+        } catch (e: Exception) {
+            path.toString().replace('\\', '/')
         }
 
-        return false
+        val context = FilterContext(
+            rootPath = root,
+            relativePath = relativePath,
+            fileName = path.fileName.toString(),
+            extension = "",
+            projectTypes = detectedTypes
+        )
+
+        val filterChain = filterChains.getOrPut(root) {
+            buildFilterChain(root, detectedTypes)
+        }
+
+        return filterChain.shouldExclude(path, isDirectory = true, context)
     }
 
     private fun buildFileHeader(
@@ -1146,10 +1162,12 @@ class ProjectIndexer private constructor(
      * Register a directory and all its subdirectories for watching.
      */
     private fun registerDirectoryTree(root: Path) {
+        val detectedTypes = detectProjectTypes(root)
+
         Files.walk(root)
             .asSequence()
             .filter { Files.isDirectory(it) }
-            .filter { !shouldExcludeDirectory(root.relativize(it).toString()) }
+            .filter { !shouldExcludeDirectory(it, root, detectedTypes) }
             .forEach { dir ->
                 try {
                     val ws = watchService ?: return@forEach
