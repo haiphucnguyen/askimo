@@ -134,6 +134,7 @@ class IndexingCoordinator(
         filePath: Path,
         fileHashes: MutableMap<String, String>,
     ): Boolean {
+        val startTime = System.currentTimeMillis()
         log.debug("Indexing file {}", filePath.fileName)
 
         try {
@@ -162,10 +163,12 @@ class IndexingCoordinator(
                 }
             }
 
-            log.trace("Indexed {} ({} chunks)", filePath.fileName, chunks.size)
+            val elapsedTime = System.currentTimeMillis() - startTime
+            log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
             return true
         } catch (e: Exception) {
-            log.error("Failed to index file {}: {}", filePath.fileName, e.message, e)
+            val elapsedTime = System.currentTimeMillis() - startTime
+            log.error("Failed to index file {} after {}ms: {}", filePath.fileName, elapsedTime, e.message, e)
             return false
         }
     }

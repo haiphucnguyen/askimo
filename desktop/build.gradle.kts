@@ -103,6 +103,9 @@ compose.desktop {
     application {
         mainClass = "io.askimo.desktop.MainKt"
 
+        // Enable Vector API for better JVector performance
+        jvmArgs("--add-modules", "jdk.incubator.vector")
+
         nativeDistributions {
             targetFormats(
                 TargetFormat.Dmg,
@@ -155,6 +158,9 @@ tasks.withType<Zip> {
 
 tasks.test {
     useJUnitPlatform()
+
+    // Enable Vector API for better JVector performance
+    jvmArgs("--add-modules", "jdk.incubator.vector")
 
     // Configure SQLite temp directory for tests
     val sqliteTmpDir =

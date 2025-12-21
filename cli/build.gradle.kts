@@ -82,7 +82,12 @@ tasks.test {
     systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
     systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 
-    jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
+    jvmArgs =
+        listOf(
+            "-XX:+EnableDynamicAgentLoading",
+            "--add-modules",
+            "jdk.incubator.vector",
+        )
 
     if (traceAgent) {
         val mergeDir = "$projectDir/src/main/resources/META-INF/native-image"
@@ -119,6 +124,7 @@ kotlin {
 
 application {
     mainClass.set("io.askimo.cli.ChatCliKt")
+    applicationDefaultJvmArgs = listOf("--add-modules", "jdk.incubator.vector")
 }
 
 tasks.jar {

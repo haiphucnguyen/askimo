@@ -56,6 +56,9 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 
+    // Enable Vector API for better JVector performance
+    jvmArgs("--add-modules", "jdk.incubator.vector")
+
     // Configure SQLite temp directory for tests
     val sqliteTmpDir =
         layout.buildDirectory
