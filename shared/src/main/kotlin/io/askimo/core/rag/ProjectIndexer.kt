@@ -108,6 +108,7 @@ class ProjectIndexer(
     ) {
         val coordinator = IndexingCoordinator(
             projectId = projectId,
+            projectName = projectName,
             embeddingStore = embeddingStore,
             embeddingModel = embeddingModel,
             appContext = appContext,

@@ -8,6 +8,8 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.filter.FilterChain
 import io.askimo.core.rag.state.IndexProgress
@@ -25,6 +27,7 @@ import kotlin.io.path.listDirectoryEntries
  */
 class IndexingCoordinator(
     private val projectId: String,
+    private val projectName: String,
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
@@ -63,6 +66,7 @@ class IndexingCoordinator(
 
             val fileHashes = mutableMapOf<String, String>()
             var processedFiles = 0
+            var lastReportedFiles = 0
 
             for (path in paths) {
                 if (!indexPath(path, fileHashes)) {
@@ -75,6 +79,19 @@ class IndexingCoordinator(
 
                 processedFiles = fileHashes.size
                 _progress.value = _progress.value.copy(processedFiles = processedFiles)
+
+                // Emit progress event every 10 files or at the end
+                if (processedFiles - lastReportedFiles >= 10 || processedFiles == totalFiles) {
+                    EventBus.emit(
+                        IndexingInProgressEvent(
+                            projectId = projectId,
+                            projectName = projectName,
+                            filesIndexed = processedFiles,
+                            totalFiles = totalFiles,
+                        ),
+                    )
+                    lastReportedFiles = processedFiles
+                }
             }
 
             // Flush any remaining segments

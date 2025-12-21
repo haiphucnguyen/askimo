@@ -236,6 +236,7 @@ fun footerBar(
 private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
     var showEventPopup by remember { mutableStateOf(false) }
     val events = remember { mutableStateListOf<Event>() }
+    var unreadCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         EventBus.userEvents.collect { event ->
@@ -249,10 +250,12 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                     events[existingIndex] = event // Replace with newer progress
                 } else {
                     events.add(0, event) // First progress event for this project
+                    unreadCount++ // Increment unread count for new event
                 }
             } else {
                 // Normal event handling: add to top of list
                 events.add(0, event)
+                unreadCount++ // Increment unread count for new event
             }
 
             // Keep list size manageable
@@ -264,21 +267,27 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
 
     Box {
         IconButton(
-            onClick = { showEventPopup = !showEventPopup },
+            onClick = {
+                showEventPopup = !showEventPopup
+                // Mark all as read when opening the popup
+                if (showEventPopup) {
+                    unreadCount = 0
+                }
+            },
             modifier = Modifier
                 .size(32.dp)
                 .pointerHoverIcon(PointerIcon.Hand),
         ) {
             BadgedBox(
                 badge = {
-                    if (events.isNotEmpty()) {
+                    if (unreadCount > 0) {
                         Badge(
                             modifier = Modifier
                                 .widthIn(min = 20.dp)
                                 .padding(horizontal = 4.dp),
                         ) {
                             Text(
-                                text = events.size.toString(),
+                                text = unreadCount.toString(),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                             )
