@@ -52,7 +52,7 @@ class LuceneKeywordRetriever(
     }
 
     private val indexPath: Path
-        get() = RagUtils.getProjectIndexDir(projectId).resolve("lucene-keywords")
+        get() = RagUtils.getProjectLuceneIndexDir(projectId)
 
     companion object {
         private val FIELD_CONTENT = "content"

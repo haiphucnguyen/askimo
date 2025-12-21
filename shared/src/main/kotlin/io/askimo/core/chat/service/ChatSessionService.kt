@@ -4,7 +4,6 @@
  */
 package io.askimo.core.chat.service
 
-import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
 import io.askimo.core.chat.domain.ChatMessage
@@ -32,10 +31,10 @@ import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.project.getEmbeddingModel
+import io.askimo.core.project.getEmbeddingdtore
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.rag.RagUtils
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -192,12 +191,7 @@ class ChatSessionService(
 
             val embeddingModel = getEmbeddingModel(appContext)
 
-            val indexDir = RagUtils.getProjectIndexDir(project.id)
-
-            val embeddingStore = JVectorEmbeddingStore.builder()
-                .dimension(RagUtils.getDimensionForModel(embeddingModel))
-                .persistencePath(indexDir.toString())
-                .build()
+            val embeddingStore = getEmbeddingdtore(project.id, embeddingModel)
 
             val vectorRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)

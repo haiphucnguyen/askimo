@@ -4,10 +4,13 @@
  */
 package io.askimo.core.project
 
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
+import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
+import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
@@ -31,6 +34,7 @@ import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.localai.LocalAiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.rag.RagUtils
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 
 private val log = logger("EmbeddingModelFactory")
@@ -329,4 +333,14 @@ private fun ensureModelAvailable(
             }
         }
     }
+}
+
+fun getEmbeddingdtore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> {
+    val indexDir = RagUtils.getProjectJVectorIndexDir(projectId)
+
+    val embeddingStore = JVectorEmbeddingStore.builder()
+        .dimension(RagUtils.getDimensionForModel(embeddingModel))
+        .persistencePath(indexDir.toString())
+        .build()
+    return embeddingStore
 }

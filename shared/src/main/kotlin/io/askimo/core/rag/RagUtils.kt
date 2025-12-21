@@ -34,6 +34,10 @@ object RagUtils {
         return indexDir
     }
 
+    fun getProjectJVectorIndexDir(projectId: String): Path = getProjectIndexDir(projectId, false).resolve("jvector")
+
+    fun getProjectLuceneIndexDir(projectId: String): Path = getProjectIndexDir(projectId, false).resolve("lucene")
+
     /**
      * Get embedding dimension for the model by testing it with a sample text.
      * Falls back to 384 (common dimension for many models) if detection fails.

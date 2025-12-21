@@ -4,7 +4,6 @@
  */
 package io.askimo.core.rag
 
-import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
@@ -20,6 +19,7 @@ import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.project.getEmbeddingModel
+import io.askimo.core.project.getEmbeddingdtore
 import io.askimo.core.rag.indexing.IndexingCoordinator
 import io.askimo.core.rag.state.IndexStatus
 import io.askimo.core.rag.watching.FileChangeHandler
@@ -215,11 +215,7 @@ class ProjectIndexer(
             val embeddingModel = getEmbeddingModel(appContext)
             checkEmbeddingModelAvailable(embeddingModel)
 
-            val indexDir = RagUtils.getProjectIndexDir(projectId)
-            val embeddingStore = JVectorEmbeddingStore.builder()
-                .dimension(RagUtils.getDimensionForModel(embeddingModel))
-                .persistencePath(indexDir.toString())
-                .build()
+            val embeddingStore = getEmbeddingdtore(projectId, embeddingModel)
 
             performIndexing(
                 projectId = projectId,
@@ -275,11 +271,7 @@ class ProjectIndexer(
             }
 
             val embeddingStore = event.embeddingStore ?: run {
-                val indexDir = RagUtils.getProjectIndexDir(projectId)
-                JVectorEmbeddingStore.builder()
-                    .dimension(RagUtils.getDimensionForModel(embeddingModel))
-                    .persistencePath(indexDir.toString())
-                    .build()
+                getEmbeddingdtore(projectId, embeddingModel)
             }
 
             performIndexing(
