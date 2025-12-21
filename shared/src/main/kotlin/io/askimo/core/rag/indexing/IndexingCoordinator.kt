@@ -149,7 +149,6 @@ class IndexingCoordinator(
             val chunks = fileProcessor.chunkText(text)
 
             log.trace("Start indexing {} ({} chunks)", filePath.fileName, chunks.size)
-            // Create segments and add to batch
             for ((idx, chunk) in chunks.withIndex()) {
                 val segment = fileProcessor.createTextSegment(
                     chunk = chunk,

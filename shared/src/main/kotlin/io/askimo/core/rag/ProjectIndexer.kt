@@ -35,8 +35,6 @@ import java.io.Closeable
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.text.get
-import kotlin.toString
 
 /**
  * Manager for project indexing with RAG (Retrieval-Augmented Generation).
@@ -55,7 +53,7 @@ class ProjectIndexer(
                 .filterIsInstance<ProjectDeletedEvent>()
                 .collect { event ->
                     log.info("Project deleted, cleaning up indexer: ${event.projectId}")
-                    removeIndexer(event.projectId)
+                    removeIndexer(event.projectId, deleteIndexFiles = true)
                 }
         }
 
@@ -80,9 +78,23 @@ class ProjectIndexer(
 
     /**
      * Remove indexer and cleanup resources
+     * @param projectId The project ID
+     * @param deleteIndexFiles If true, also delete the index files from disk
      */
-    fun removeIndexer(projectId: String) {
+    fun removeIndexer(projectId: String, deleteIndexFiles: Boolean = false) {
         indexers.remove(projectId)?.close()
+
+        if (deleteIndexFiles) {
+            try {
+                val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)
+                if (indexDir.toFile().exists()) {
+                    indexDir.toFile().deleteRecursively()
+                    log.info("Deleted index files for project $projectId at $indexDir")
+                }
+            } catch (e: Exception) {
+                log.error("Failed to delete index files for project $projectId", e)
+            }
+        }
     }
 
     /**
@@ -156,6 +168,19 @@ class ProjectIndexer(
         try {
             val projectId = event.projectId
 
+            val existingInstance = indexers[projectId]
+
+            if (existingInstance != null && existingInstance.coordinator.progress.value.isComplete) {
+                log.debug("Project $projectId already indexed, removing and re-indexing")
+                removeIndexer(projectId, deleteIndexFiles = true)
+            }
+
+            if (existingInstance != null && existingInstance.coordinator.progress.value.status == IndexStatus.INDEXING) {
+                log.debug("Project $projectId is currently being indexed, skipping duplicate re-index request")
+                return
+            }
+
+            // Get project to retrieve indexed paths
             val project = try {
                 projectRepository.getProject(projectId)
             } catch (e: Exception) {
@@ -168,6 +193,7 @@ class ProjectIndexer(
                 return
             }
 
+            // Parse indexed paths from project configuration
             val indexedPaths = try {
                 json.decodeFromString<List<String>>(project.indexedPaths)
                     .map { Paths.get(it) }
@@ -181,9 +207,11 @@ class ProjectIndexer(
                 return
             }
 
-            removeIndexer(projectId)
-            log.info("Removed existing indexer for project $projectId")
+            // Remove existing indexer and delete all index files for a clean re-index
+            removeIndexer(projectId, deleteIndexFiles = true)
+            log.info("Removed existing indexer and deleted index files for project $projectId")
 
+            // Create new embedding components for re-indexing
             val embeddingModel = getEmbeddingModel(appContext)
             checkEmbeddingModelAvailable(embeddingModel)
 
@@ -212,29 +240,34 @@ class ProjectIndexer(
      * Handle project indexing request event.
      * This method receives embedding components from the requester (e.g., ChatSessionService)
      * and uses them directly to create the indexer instance, avoiding duplicate initialization.
-     * Uses the same duplicate prevention logic as ensureIndexed to prevent race conditions.
+     * Uses the same duplicate prevention logic as handleReIndexRequest to prevent race conditions.
      */
     private suspend fun handleIndexingRequest(event: ProjectIndexingRequestedEvent) {
         try {
-            val existingInstance = indexers[event.projectId]
+            val projectId = event.projectId
+
+            // Check for duplicate/in-progress indexing (same as handleReIndexRequest)
+            val existingInstance = indexers[projectId]
 
             if (existingInstance != null && existingInstance.coordinator.progress.value.isComplete) {
-                log.debug("Project ${event.projectId} already indexed, skipping duplicate request")
+                log.debug("Project $projectId already indexed, skipping duplicate request")
                 return
             }
 
             if (existingInstance != null && existingInstance.coordinator.progress.value.status == IndexStatus.INDEXING) {
-                log.debug("Project ${event.projectId} is currently being indexed, skipping duplicate request")
+                log.debug("Project $projectId is currently being indexed, skipping duplicate request")
                 return
             }
 
+            // Get project name
             val projectName = try {
-                projectRepository.getProject(event.projectId)?.name ?: event.projectId
+                projectRepository.getProject(projectId)?.name ?: projectId
             } catch (e: Exception) {
-                log.warn("Failed to get project name for ${event.projectId}, using ID as fallback", e)
-                event.projectId
+                log.warn("Failed to get project name for $projectId, using ID as fallback", e)
+                projectId
             }
 
+            // Create embedding model and store if not provided
             val embeddingModel = event.embeddingModel ?: run {
                 val model = getEmbeddingModel(appContext)
                 checkEmbeddingModelAvailable(model)
@@ -242,7 +275,7 @@ class ProjectIndexer(
             }
 
             val embeddingStore = event.embeddingStore ?: run {
-                val indexDir = RagUtils.getProjectIndexDir(event.projectId)
+                val indexDir = RagUtils.getProjectIndexDir(projectId)
                 JVectorEmbeddingStore.builder()
                     .dimension(RagUtils.getDimensionForModel(embeddingModel))
                     .persistencePath(indexDir.toString())
@@ -250,7 +283,7 @@ class ProjectIndexer(
             }
 
             performIndexing(
-                projectId = event.projectId,
+                projectId = projectId,
                 projectName = projectName,
                 paths = event.paths,
                 embeddingStore = embeddingStore,
