@@ -63,11 +63,12 @@ class LuceneIndexer(
 
     /**
      * Index multiple text segments in batch.
-     * Thread-safe: IndexWriter handles concurrent addDocument calls.
+     * Uses addDocuments() for better performance than individual addDocument() calls.
+     * Thread-safe: IndexWriter handles concurrent operations.
      */
     fun indexSegments(textSegments: List<TextSegment>) {
-        for (textSegment in textSegments) {
-            val doc = Document().apply {
+        val documents = textSegments.map { textSegment ->
+            Document().apply {
                 // Store + index content for BM25
                 add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
 
@@ -77,8 +78,9 @@ class LuceneIndexer(
                     add(StoredField(safeKey, value.toString()))
                 }
             }
-            indexWriter.addDocument(doc)
         }
+
+        indexWriter.addDocuments(documents)
         indexWriter.commit()
         log.debug("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
     }
@@ -106,14 +108,6 @@ class LuceneIndexer(
         } catch (e: Exception) {
             log.debug("Failed to remove file from keyword index: $filePath", e)
         }
-    }
-
-    /**
-     * Commit any pending changes to the index.
-     * This makes recent writes visible to readers.
-     */
-    fun commit() {
-        indexWriter.commit()
     }
 
     /**
