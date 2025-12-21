@@ -12,8 +12,8 @@ import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
-import io.askimo.core.util.AskimoHome
 import io.askimo.core.rag.FileSegmentRepository
+import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
 
