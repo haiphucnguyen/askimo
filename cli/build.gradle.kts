@@ -56,9 +56,6 @@ tasks.test {
         excludeTags("native")
     }
 
-    forkEvery = 1
-    maxParallelForks = 1
-
     // Load environment variables from .env file if it exists
     val envVars = loadEnvFile()
     envVars.forEach { (key, value) ->

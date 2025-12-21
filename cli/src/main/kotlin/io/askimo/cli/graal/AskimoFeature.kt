@@ -6,6 +6,9 @@ package io.askimo.cli.graal
 
 import ch.qos.logback.classic.AsyncAppender
 import ch.qos.logback.classic.filter.LevelFilter
+import ch.qos.logback.core.rolling.RollingFileAppender
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy
+import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 import io.askimo.core.config.AppConfigData
 import io.askimo.core.config.EmbeddingConfig
 import io.askimo.core.config.IndexingConfig
@@ -55,6 +58,13 @@ class AskimoFeature : Feature {
         RuntimeClassInitialization.initializeAtRunTime("ch.qos.logback")
         registerHierarchy(AsyncAppender::class.java)
         registerAllDeclared(LevelFilter::class.java)
+
+        // Register Logback rolling policies for reflection (needed for logback.xml configuration)
+        registerAllDeclared(
+            RollingFileAppender::class.java,
+            TimeBasedRollingPolicy::class.java,
+            SizeAndTimeBasedRollingPolicy::class.java,
+        )
     }
 
     /** Register class + all declared constructors & methods for reflection. */

@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "interfaces": ["io.askimo.core.providers.ChatClient"]
+  },
+  {
+    "interfaces": ["java.sql.Connection"]
+  }
+]
