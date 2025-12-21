@@ -56,31 +56,14 @@ tasks.test {
         excludeTags("native")
     }
 
+    forkEvery = 1
+    maxParallelForks = 1
+
     // Load environment variables from .env file if it exists
     val envVars = loadEnvFile()
     envVars.forEach { (key, value) ->
         environment(key, value)
     }
-
-    // Configure SQLite temp directory for tests
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 
     jvmArgs =
         listOf(
@@ -124,7 +107,6 @@ kotlin {
 
 application {
     mainClass.set("io.askimo.cli.ChatCliKt")
-    applicationDefaultJvmArgs = listOf("--add-modules", "jdk.incubator.vector")
 }
 
 tasks.jar {
