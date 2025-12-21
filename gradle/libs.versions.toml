@@ -42,6 +42,7 @@ langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-
 langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
 langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
 langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai", version.ref = "langchain4j-extra" }
+langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
@@ -79,9 +80,6 @@ lucene-core = { group = "org.apache.lucene", name = "lucene-core", version.ref =
 lucene-queryparser = { group = "org.apache.lucene", name = "lucene-queryparser", version.ref = "lucene" }
 lucene-backward-codecs = { group = "org.apache.lucene", name = "lucene-backward-codecs", version.ref = "lucene" }
 
-# LangChain4j JVector
-langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
-
 # Database and MCP SDK
 sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
 hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
@@ -99,6 +97,7 @@ koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", versio
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
+
 # Ollama Testcontainers
 testcontainers-ollama = { group = "org.testcontainers", name = "ollama", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }
