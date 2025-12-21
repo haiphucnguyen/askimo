@@ -10,7 +10,7 @@ import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
-import io.askimo.core.project.getModelTokenLimit
+import io.askimo.core.rag.getModelTokenLimit
 import java.nio.file.Path
 import kotlin.io.path.extension
 

@@ -18,8 +18,6 @@ import io.askimo.core.event.user.IndexingCompletedEvent
 import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
-import io.askimo.core.project.getEmbeddingModel
-import io.askimo.core.project.getEmbeddingdtore
 import io.askimo.core.rag.indexing.IndexingCoordinator
 import io.askimo.core.rag.state.IndexStatus
 import io.askimo.core.rag.watching.FileChangeHandler

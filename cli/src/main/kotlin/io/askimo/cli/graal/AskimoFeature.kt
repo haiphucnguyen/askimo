@@ -54,14 +54,6 @@ class AskimoFeature : Feature {
         RuntimeClassInitialization.initializeAtRunTime("kotlinx.coroutines")
         RuntimeClassInitialization.initializeAtRunTime("kotlin.coroutines")
 
-        // Register ProjectFileWatcher and related classes for reflection
-        val projectFileWatcherClass = access.findClassByName("io.askimo.core.project.ProjectFileWatcher")
-        if (projectFileWatcherClass != null) {
-            RuntimeReflection.register(projectFileWatcherClass)
-            projectFileWatcherClass.declaredMethods.forEach { RuntimeReflection.register(it) }
-            projectFileWatcherClass.declaredConstructors.forEach { RuntimeReflection.register(it) }
-        }
-
         RuntimeClassInitialization.initializeAtRunTime("ch.qos.logback")
         registerHierarchy(AsyncAppender::class.java)
         registerAllDeclared(LevelFilter::class.java)

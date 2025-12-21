@@ -8,9 +8,7 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
-import io.askimo.core.util.AskimoHome
 import org.jline.reader.ParsedLine
-import java.nio.file.Files
 
 /**
  * Handles the command to display the current configuration.
@@ -36,23 +34,6 @@ class ConfigCommandHandler(
 
         configInfo.settingsDescription.forEach {
             log.display("    $it")
-        }
-
-        val scope = appContext.scope
-        if (scope == null) {
-            log.display("  Active project: (none)")
-        } else {
-            val exists =
-                try {
-                    Files.isDirectory(scope.projectDir)
-                } catch (_: Exception) {
-                    false
-                }
-            val home = AskimoHome.userHome().toString()
-            val rootDisp = scope.projectDir.toString().replaceFirst(home, "~")
-            log.display("  Active project:")
-            log.display("    Name:       ${scope.projectName}")
-            log.display("    Root:       $rootDisp${if (exists) "" else "  (missing)"}")
         }
     }
 }

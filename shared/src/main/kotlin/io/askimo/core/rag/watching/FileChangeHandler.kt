@@ -10,8 +10,8 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.filter.FilterChain
-import io.askimo.core.rag.indexing.BatchIndexer
 import io.askimo.core.rag.indexing.FileProcessor
+import io.askimo.core.rag.indexing.HybridIndexer
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
@@ -29,7 +29,7 @@ class FileChangeHandler(
 ) {
     private val log = logger<FileChangeHandler>()
     private val fileProcessor = FileProcessor(appContext)
-    private val batchIndexer = BatchIndexer(embeddingStore, embeddingModel, projectId)
+    private val batchIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val filterChain: FilterChain = FilterChain.DEFAULT
 

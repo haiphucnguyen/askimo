@@ -30,11 +30,11 @@ import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
-import io.askimo.core.project.getEmbeddingModel
-import io.askimo.core.project.getEmbeddingdtore
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.rag.getEmbeddingModel
+import io.askimo.core.rag.getEmbeddingdtore
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

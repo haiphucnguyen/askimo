@@ -33,7 +33,7 @@ class IndexingCoordinator(
 
     private val fileProcessor = FileProcessor(appContext)
     private val stateManager = IndexStateManager(projectId)
-    private val batchIndexer = BatchIndexer(embeddingStore, embeddingModel, projectId)
+    private val batchIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val _progress = MutableStateFlow(IndexProgress())
     val progress: StateFlow<IndexProgress> = _progress

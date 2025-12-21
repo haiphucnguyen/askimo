@@ -28,10 +28,10 @@ import java.util.UUID
 class HybridIndexer(
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
-    private val luceneIndexer: LuceneIndexer,
     private val projectId: String,
 ) {
     private val log = logger<HybridIndexer>()
+    private val luceneIndexer = LuceneIndexer(projectId)
     private val segmentRepository: FileSegmentRepository by lazy {
         DatabaseManager.getInstance().getFileSegmentRepository()
     }
