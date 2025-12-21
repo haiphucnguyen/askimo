@@ -27,7 +27,7 @@ class HybridContentRetriever(
     private val vectorRetriever: ContentRetriever,
     private val keywordRetriever: ContentRetriever,
     private val maxResults: Int = 5,
-    private val k: Int = 60, // RRF constant
+    private val k: Int = 60,
 ) : ContentRetriever {
 
     private val log = logger<HybridContentRetriever>()
@@ -105,7 +105,6 @@ class HybridContentRetriever(
             scoreMap[key] = scoreMap.getOrDefault(key, 0.0) + score
         }
 
-        // Process keyword results
         keywordResults.forEachIndexed { index, content ->
             val key = content.textSegment().text()
             val rank = index + 1

@@ -61,7 +61,6 @@ fun sessionsView(
             .fillMaxSize()
             .padding(24.dp),
     ) {
-        // Header with title and refresh button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -244,13 +243,13 @@ private fun sessionCard(
                         text = session.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource("sessions.id", session.id),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -263,12 +262,12 @@ private fun sessionCard(
                     Text(
                         text = stringResource("sessions.created", TimeUtil.formatDisplay(session.createdAt)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = stringResource("sessions.updated", TimeUtil.formatDisplay(session.updatedAt)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -282,7 +281,7 @@ private fun sessionCard(
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 

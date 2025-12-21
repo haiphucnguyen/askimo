@@ -90,9 +90,6 @@
     "name": "[Lsun.security.pkcs.SignerInfo;"
   },
   {
-    "name": "android.os.Build"
-  },
-  {
     "name": "apple.security.AppleProvider",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -347,23 +344,6 @@
     "name": "com.github.dockerjava.api.model.AccessMode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.AuthConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "getAuth", "parameterTypes": [] },
-      { "name": "getEmail", "parameterTypes": [] },
-      { "name": "getIdentitytoken", "parameterTypes": [] },
-      { "name": "getPassword", "parameterTypes": [] },
-      { "name": "getRegistryAddress", "parameterTypes": [] },
-      { "name": "getRegistrytoken", "parameterTypes": [] },
-      { "name": "getStackOrchestrator", "parameterTypes": [] },
-      { "name": "getUsername", "parameterTypes": [] }
-    ]
   },
   {
     "name": "com.github.dockerjava.api.model.Bind",
@@ -680,7 +660,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -858,10 +839,6 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "com.pgvector.PGvector",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "com.sun.crypto.provider.AESCipher$General",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -894,31 +871,7 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "com.sun.crypto.provider.HmacCore$HmacSHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "com.sun.crypto.provider.HmacCore$HmacSHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA1",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA224",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA384",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "com.sun.crypto.provider.PBKDF2Core$HmacSHA512",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -1580,28 +1533,6 @@
       { "name": "keyword returns correct value", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] }
     ]
-  },
-  {
-    "name": "io.askimo.cli.commands.CreateProjectCommandHandlerTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "should start postgres container and be connectable",
-        "parameterTypes": []
-      },
-      { "name": "tearDownAll", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.cli.commands.CreateProjectCommandHandlerTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.cli.commands.CreateRecipeCommandHandlerTest",
@@ -2443,8 +2374,8 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "io.askimo.core.config.PgVectorConfig",
           "io.askimo.core.config.EmbeddingConfig",
+          "io.askimo.core.config.EmbeddingModelsConfig",
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
@@ -2455,8 +2386,8 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "io.askimo.core.config.PgVectorConfig",
           "io.askimo.core.config.EmbeddingConfig",
+          "io.askimo.core.config.EmbeddingModelsConfig",
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
@@ -2528,6 +2459,44 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.EmbeddingModelsConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.FilterConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.IndexingConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2537,6 +2506,9 @@
         "name": "<init>",
         "parameterTypes": [
           "long",
+          "int",
+          "io.askimo.core.config.FilterConfig",
+          "java.util.Set",
           "java.util.Set",
           "java.util.Set",
           "java.util.Set",
@@ -2548,6 +2520,9 @@
         "name": "<init>",
         "parameterTypes": [
           "long",
+          "int",
+          "io.askimo.core.config.FilterConfig",
+          "java.util.Set",
           "java.util.Set",
           "java.util.Set",
           "java.util.Set",
@@ -2560,38 +2535,13 @@
       { "name": "getAllExcludes", "parameterTypes": [] },
       { "name": "getBinaryExtensions", "parameterTypes": [] },
       { "name": "getCommonExcludes", "parameterTypes": [] },
+      { "name": "getConcurrentIndexingThreads", "parameterTypes": [] },
+      { "name": "getCustomExcludes", "parameterTypes": [] },
       { "name": "getExcludeFileNames", "parameterTypes": [] },
+      { "name": "getFilters", "parameterTypes": [] },
       { "name": "getMaxFileBytes", "parameterTypes": [] },
       { "name": "getProjectTypes", "parameterTypes": [] },
       { "name": "getSkipDirectoryNames", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.PgVectorConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      }
     ]
   },
   {
@@ -2655,12 +2605,7 @@
           "io.askimo.core.context.ExecutionMode"
         ]
       },
-      { "name": "getActiveProvider", "parameterTypes": [] },
-      { "name": "getParams", "parameterTypes": [] },
-      {
-        "name": "setScope",
-        "parameterTypes": ["io.askimo.core.project.ProjectMeta"]
-      }
+      { "name": "getParams", "parameterTypes": [] }
     ]
   },
   {
@@ -2694,161 +2639,6 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       { "name": "autoPullsMissingModelAndEmbeds", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.project.PgVectorIndexer",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "io.askimo.core.context.AppContext"
-        ]
-      },
-      {
-        "name": "indexSingleFile",
-        "parameterTypes": ["java.nio.file.Path", "java.lang.String"]
-      },
-      { "name": "removeFileFromIndex", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.project.PgVectorIndexerOllamaTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "indexAndSearch", "parameterTypes": ["java.nio.file.Path"] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.project.PgVectorIndexerOllamaTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.project.PgVectorIndexerOllamaTest$Companion$PgVectorPostgres",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "methods": [
-      { "name": "containerIsCreated", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.project.PostgresContainerManagerTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "should start PostgresContainerManager and be running",
-        "parameterTypes": []
-      },
-      { "name": "tearDownAll", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.project.PostgresContainerManagerTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher",
-    "fields": [{ "name": "isWatching" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher$getNextWatchKey$1",
-    "fields": [{ "name": "label" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher$handleFileChange$1",
-    "fields": [{ "name": "label" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher$processWatchKeyEvents$1",
-    "fields": [{ "name": "label" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher$startWatching$1",
-    "fields": [{ "name": "label" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcher$watchForChanges$1",
-    "fields": [{ "name": "label" }]
-  },
-  {
-    "name": "io.askimo.core.project.ProjectFileWatcherTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "can start and stop file watcher", "parameterTypes": [] },
-      {
-        "name": "error during indexing does not stop watcher",
-        "parameterTypes": []
-      },
-      {
-        "name": "file creation in subdirectory triggers indexing with correct path",
-        "parameterTypes": []
-      },
-      { "name": "file creation triggers indexing", "parameterTypes": [] },
-      {
-        "name": "file modification triggers re-indexing",
-        "parameterTypes": []
-      },
-      { "name": "hidden files are ignored", "parameterTypes": [] },
-      {
-        "name": "multiple file creation events are handled",
-        "parameterTypes": []
-      },
-      {
-        "name": "nested directory structure is handled correctly",
-        "parameterTypes": []
-      },
-      {
-        "name": "new directories created after watcher starts are registered",
-        "parameterTypes": []
-      },
-      {
-        "name": "only supported file extensions are processed",
-        "parameterTypes": []
-      },
-      { "name": "setUp", "parameterTypes": [] },
-      {
-        "name": "skipped directories include common build and IDE directories",
-        "parameterTypes": []
-      },
-      {
-        "name": "startWatching does nothing if already watching",
-        "parameterTypes": []
-      },
-      {
-        "name": "stopWatching does nothing if not watching",
-        "parameterTypes": []
-      },
-      {
-        "name": "supported extensions include common programming languages",
-        "parameterTypes": []
-      },
-      { "name": "tearDown", "parameterTypes": [] },
-      { "name": "watchedPath returns the project root", "parameterTypes": [] }
     ]
   },
   {
@@ -3538,9 +3328,7 @@
   },
   {
     "name": "java.lang.AutoCloseable",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.Boolean",
@@ -3602,15 +3390,7 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "java.lang.Exception",
-    "allDeclaredFields": true
-  },
-  {
     "name": "java.lang.FunctionalInterface"
-  },
-  {
-    "name": "java.lang.IllegalStateException",
-    "allDeclaredFields": true
   },
   {
     "name": "java.lang.Integer",
@@ -3644,7 +3424,6 @@
       { "name": "addReads", "parameterTypes": ["java.lang.Module"] },
       { "name": "canRead", "parameterTypes": ["java.lang.Module"] },
       { "name": "getClassLoader", "parameterTypes": [] },
-      { "name": "getDescriptor", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] },
       { "name": "getPackages", "parameterTypes": [] },
       { "name": "getResourceAsStream", "parameterTypes": ["java.lang.String"] },
@@ -3699,26 +3478,6 @@
     "methods": [{ "name": "feature", "parameterTypes": [] }]
   },
   {
-    "name": "java.lang.RuntimeException",
-    "allDeclaredFields": true,
-    "queryAllPublicConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.String", "java.lang.Throwable"]
-      }
-    ]
-  },
-  {
-    "name": "java.lang.SecurityManager",
-    "methods": [
-      {
-        "name": "checkPermission",
-        "parameterTypes": ["java.security.Permission"]
-      }
-    ]
-  },
-  {
     "name": "java.lang.StackWalker",
     "methods": [
       {
@@ -3745,10 +3504,6 @@
   {
     "name": "java.lang.Thread",
     "fields": [{ "name": "threadLocalRandomProbe" }]
-  },
-  {
-    "name": "java.lang.Throwable",
-    "allDeclaredFields": true
   },
   {
     "name": "java.lang.WeakPairMap"
@@ -3926,10 +3681,6 @@
     "methods": [{ "name": "getInputArguments", "parameterTypes": [] }]
   },
   {
-    "name": "java.lang.module.ModuleDescriptor",
-    "methods": [{ "name": "name", "parameterTypes": [] }]
-  },
-  {
     "name": "java.lang.reflect.AccessibleObject",
     "methods": [{ "name": "setAccessible", "parameterTypes": ["boolean"] }]
   },
@@ -3987,21 +3738,8 @@
     ]
   },
   {
-    "name": "java.lang.reflect.TypeVariable",
-    "methods": [{ "name": "getAnnotatedBounds", "parameterTypes": [] }]
-  },
-  {
     "name": "java.net.UnixDomainSocketAddress",
     "methods": [{ "name": "of", "parameterTypes": ["java.lang.String"] }]
-  },
-  {
-    "name": "java.nio.file.ClosedWatchServiceException",
-    "allDeclaredFields": true,
-    "queryAllPublicConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "java.nio.file.Path"
   },
   {
     "name": "java.security.AccessController",
@@ -4403,9 +4141,6 @@
     "name": "kotlin.collections.Set"
   },
   {
-    "name": "kotlin.coroutines.jvm.internal.BaseContinuationImpl"
-  },
-  {
     "name": "kotlin.internal.PlatformDependent"
   },
   {
@@ -4438,14 +4173,6 @@
     ]
   },
   {
-    "name": "kotlinx.coroutines.CancelledContinuation",
-    "fields": [{ "name": "_resumed$volatile" }]
-  },
-  {
-    "name": "kotlinx.coroutines.CompletedExceptionally",
-    "fields": [{ "name": "_handled$volatile" }]
-  },
-  {
     "name": "kotlinx.coroutines.EventLoopImplBase",
     "fields": [
       { "name": "_delayed$volatile" },
@@ -4458,14 +4185,6 @@
     "fields": [
       { "name": "_parentHandle$volatile" },
       { "name": "_state$volatile" }
-    ]
-  },
-  {
-    "name": "kotlinx.coroutines.JobSupport$Finishing",
-    "fields": [
-      { "name": "_exceptionsHolder$volatile" },
-      { "name": "_isCompleting$volatile" },
-      { "name": "_rootCause$volatile" }
     ]
   },
   {
@@ -4491,13 +4210,6 @@
   {
     "name": "kotlinx.coroutines.internal.LockFreeTaskQueueCore",
     "fields": [{ "name": "_next$volatile" }, { "name": "_state$volatile" }]
-  },
-  {
-    "name": "kotlinx.coroutines.internal.StackTraceRecoveryKt"
-  },
-  {
-    "name": "kotlinx.coroutines.internal.ThreadSafeHeap",
-    "fields": [{ "name": "_size$volatile" }]
   },
   {
     "name": "kotlinx.coroutines.scheduling.CoroutineScheduler",
@@ -4557,24 +4269,9 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$pBUl4r9u",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$tKuMtOgv",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "org.postgresql.Driver"
-  },
-  {
-    "name": "org.postgresql.core.QueryExecutorCloseAction",
-    "fields": [{ "name": "pgStream" }]
-  },
-  {
-    "name": "org.postgresql.jdbc.PgStatement",
-    "fields": [
-      { "name": "cancelTimerTask" },
-      { "name": "isClosed" },
-      { "name": "statementState" }
-    ]
   },
   {
     "name": "org.slf4j.Logger"
@@ -4582,9 +4279,6 @@
   {
     "name": "org.sqlite.JDBC",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.misc.SharedSecrets"
   },
   {
     "name": "sun.security.pkcs12.PKCS12KeyStore",

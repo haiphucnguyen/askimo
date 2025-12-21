@@ -151,20 +151,49 @@ class GitignoreParser(private val rootPath: Path) {
 
 /**
  * Filter based on .gitignore patterns.
- * Automatically discovers and applies .gitignore rules from the project.
+ * Automatically discovers and applies .gitignore rules from Git repositories.
+ * Detects Git repository for each path dynamically - supports multiple unrelated paths.
  */
-class GitignoreFilter(private val rootPath: Path) : IndexingFilter {
+class GitignoreFilter : IndexingFilter {
     override val name = "gitignore"
     override val priority = 10 // High priority - respect user's ignore rules first
 
-    private val gitignoreParser: GitignoreParser? by lazy {
-        val gitDir = rootPath.resolve(".git")
-        if (Files.exists(gitDir) && Files.isDirectory(gitDir)) {
-            GitignoreParser(rootPath).takeIf { it.hasPatterns() }
-        } else {
+    private val log = logger<GitignoreFilter>()
+
+    // Cache of git root -> parser to avoid re-parsing .gitignore files
+    private val parserCache = mutableMapOf<Path, GitignoreParser?>()
+
+    /**
+     * Find the Git repository root for a given path by walking up the directory tree
+     */
+    private fun findGitRoot(path: Path): Path? = generateSequence(path.toAbsolutePath()) { it.parent }
+        .firstOrNull { candidate ->
+            val gitDir = candidate.resolve(".git")
+            Files.exists(gitDir) && Files.isDirectory(gitDir)
+        }
+
+    /**
+     * Get or create a GitignoreParser for the given Git repository root
+     */
+    private fun getParserForGitRoot(gitRoot: Path): GitignoreParser? = parserCache.getOrPut(gitRoot) {
+        try {
+            GitignoreParser(gitRoot).takeIf { it.hasPatterns() }
+        } catch (e: Exception) {
+            log.warn("Failed to parse .gitignore for $gitRoot: ${e.message}")
             null
         }
     }
 
-    override fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean = gitignoreParser?.shouldIgnore(path, isDirectory) ?: false
+    override fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean {
+        // Try to find Git repository root for this path
+        val gitRoot = findGitRoot(if (isDirectory) path else path.parent ?: path)
+            ?: return false // Not in a Git repository, don't exclude
+
+        // Get parser for this Git repository
+        val parser = getParserForGitRoot(gitRoot)
+            ?: return false // No .gitignore patterns found
+
+        // Check if path should be ignored
+        return parser.shouldIgnore(path, isDirectory)
+    }
 }

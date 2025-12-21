@@ -58,6 +58,7 @@ data class FileChanges(
  * Repository for managing RAG index state in SQLite.
  * Each project has its own database file stored alongside the index files.
  *
+ *
  * This provides:
  * - Persistent tracking of indexed files
  * - Efficient change detection on app restart
@@ -93,7 +94,7 @@ class IndexStateRepository(
             synchronized(this) {
                 if (!tablesInitialized) {
                     transaction(database) {
-                        SchemaUtils.create(IndexedFilesTable, IndexMetadataTable)
+                        SchemaUtils.create(IndexedFilesTable, IndexMetadataTable, FileSegmentsTable)
                     }
                     log.debug("Initialized index state database at: $dbFile")
                     tablesInitialized = true

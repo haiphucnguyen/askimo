@@ -11,21 +11,13 @@ import dev.langchain4j.rag.content.injector.DefaultContentInjector
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
-import io.askimo.core.project.ProjectMeta
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Locale
-
-data class Scope(
-    val projectName: String,
-    val projectDir: Path,
-)
 
 /**
  * Manages a chat session with language models, handling model creation, provider settings, and conversation memory.
@@ -61,24 +53,6 @@ class AppContext(
      * Gets the currently active model provider for this session.
      */
     fun getActiveProvider(): ModelProvider = params.currentProvider
-
-    /**
-     * Current project scope for this session, if any.
-     *
-     * When set via setScope(ProjectEntry), it records the human-readable project name
-     * and the normalized absolute path to the project's root directory. A null value
-     * means the session is not bound to any project (and project-specific RAG features
-     * may be disabled).
-     *
-     * This property is read-only to callers; use setScope(...) to activate a project
-     * and clearScope() to remove the association.
-     */
-    var scope: Scope? = null
-        private set
-
-    fun setScope(project: ProjectMeta) {
-        scope = Scope(project.name, Paths.get(project.root).toAbsolutePath().normalize())
-    }
 
     /**
      * Gets the current provider's settings.

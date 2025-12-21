@@ -23,21 +23,12 @@
         <appender-ref ref="FILE" />
     </appender>
 
-    <!-- Suppress third-party library logs except errors -->
-    <logger name="org.eclipse.jetty" level="ERROR"/>
-    <logger name="org.testcontainers" level="ERROR"/>
-    <logger name="com.zaxxer.hikari" level="ERROR"/>
-    <logger name="org.jetbrains.exposed" level="ERROR"/>
-    <logger name="org.jetbrains" level="ERROR"/>
-    <logger name="io.netty" level="ERROR"/>
-    <logger name="org.apache.http" level="ERROR"/>
-    <logger name="kotlinx.coroutines" level="ERROR"/>
 
-    <!-- Askimo application logging -->
-    <logger name="io.askimo" level="DEBUG"/>
+    <!-- Askimo application logging - controlled by LOGBACK_LEVEL env var -->
+    <logger name="io.askimo" level="${LOGBACK_LEVEL:-INFO}"/>
 
-    <!-- Root logger configuration -->
-    <root level="INFO">
+    <!-- Root logger configuration - default to ERROR for all packages -->
+    <root level="ERROR">
         <appender-ref ref="ASYNC" />
     </root>
 </configuration>

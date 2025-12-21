@@ -6,10 +6,12 @@ package io.askimo.cli.graal
 
 import ch.qos.logback.classic.AsyncAppender
 import ch.qos.logback.classic.filter.LevelFilter
+import ch.qos.logback.core.rolling.RollingFileAppender
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy
+import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 import io.askimo.core.config.AppConfigData
 import io.askimo.core.config.EmbeddingConfig
 import io.askimo.core.config.IndexingConfig
-import io.askimo.core.config.PgVectorConfig
 import io.askimo.core.config.RetryConfig
 import io.askimo.core.config.ThrottleConfig
 import io.askimo.tools.fs.LocalFsTools
@@ -30,7 +32,6 @@ class AskimoFeature : Feature {
         // Register configuration classes for reflection
         registerAllDeclared(
             AppConfigData::class.java,
-            PgVectorConfig::class.java,
             EmbeddingConfig::class.java,
             RetryConfig::class.java,
             ThrottleConfig::class.java,
@@ -54,17 +55,16 @@ class AskimoFeature : Feature {
         RuntimeClassInitialization.initializeAtRunTime("kotlinx.coroutines")
         RuntimeClassInitialization.initializeAtRunTime("kotlin.coroutines")
 
-        // Register ProjectFileWatcher and related classes for reflection
-        val projectFileWatcherClass = access.findClassByName("io.askimo.core.project.ProjectFileWatcher")
-        if (projectFileWatcherClass != null) {
-            RuntimeReflection.register(projectFileWatcherClass)
-            projectFileWatcherClass.declaredMethods.forEach { RuntimeReflection.register(it) }
-            projectFileWatcherClass.declaredConstructors.forEach { RuntimeReflection.register(it) }
-        }
-
         RuntimeClassInitialization.initializeAtRunTime("ch.qos.logback")
         registerHierarchy(AsyncAppender::class.java)
         registerAllDeclared(LevelFilter::class.java)
+
+        // Register Logback rolling policies for reflection (needed for logback.xml configuration)
+        registerAllDeclared(
+            RollingFileAppender::class.java,
+            TimeBasedRollingPolicy::class.java,
+            SizeAndTimeBasedRollingPolicy::class.java,
+        )
     }
 
     /** Register class + all declared constructors & methods for reflection. */

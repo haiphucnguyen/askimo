@@ -2,12 +2,16 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.project
+package io.askimo.core.rag
 
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
+import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
@@ -43,9 +47,7 @@ private val log = logger("EmbeddingModelFactory")
  * @return Maximum number of tokens the model can handle
  */
 fun getModelTokenLimit(appContext: AppContext): Int = try {
-    val provider = appContext.getActiveProvider()
-
-    when (provider) {
+    when (val provider = appContext.getActiveProvider()) {
         OPENAI -> {
             val modelName = AppConfig.embeddingModels.openai.lowercase()
             when {
@@ -304,7 +306,7 @@ private fun ensureModelAvailable(
         }
 
         is ModelAvailabilityResult.NotAvailable -> {
-            if (result.canAutoPull && provider == ModelProvider.OLLAMA) {
+            if (result.canAutoPull && provider == OLLAMA) {
                 log.display("⏳ Model '$modelName' not found. Attempting to download...")
                 if (LocalModelValidator.pullOllamaModel(baseUrl, modelName)) {
                     log.display("✅ Successfully downloaded model '$modelName'")
@@ -332,3 +334,15 @@ private fun ensureModelAvailable(
         }
     }
 }
+
+fun getEmbeddingdtore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> {
+    val indexDir = RagUtils.getProjectJVectorIndexDir(projectId)
+
+    val embeddingStore = JVectorEmbeddingStore.builder()
+        .dimension(RagUtils.getDimensionForModel(embeddingModel))
+        .persistencePath(indexDir.toString())
+        .build()
+    return embeddingStore
+}
+
+fun enrichContentRetrieverWithLucene(projectId: String, retriever: ContentRetriever): ContentRetriever = HybridContentRetriever(retriever, LuceneKeywordRetriever(projectId))

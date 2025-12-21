@@ -44,16 +44,14 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
     implementation(project(":shared"))
-    implementation(libs.commonmark)
-    implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.bundles.commonmark)
     implementation(libs.commonmark.ext.autolink)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.jlatexmath)
 
     testImplementation(kotlin("test"))
-    testImplementation(libs.koin.test)
-    testImplementation(libs.koin.test.junit5)
+    testImplementation(libs.bundles.koin.test)
 }
 
 tasks.withType<JavaCompile> {
@@ -104,6 +102,9 @@ tasks.named<ProcessResources>("processResources") {
 compose.desktop {
     application {
         mainClass = "io.askimo.desktop.MainKt"
+
+        // Enable Vector API for better JVector performance
+        jvmArgs("--add-modules", "jdk.incubator.vector")
 
         nativeDistributions {
             targetFormats(
@@ -157,6 +158,9 @@ tasks.withType<Zip> {
 
 tasks.test {
     useJUnitPlatform()
+
+    // Enable Vector API for better JVector performance
+    jvmArgs("--add-modules", "jdk.incubator.vector")
 
     // Configure SQLite temp directory for tests
     val sqliteTmpDir =

@@ -11,52 +11,53 @@ repositories {
 }
 
 dependencies {
-    api(libs.langchain4j)
-    api(libs.langchain4j.open.ai)
-    api(libs.langchain4j.ollama)
-    api(libs.langchain4j.google.ai.gemini)
-    api(libs.langchain4j.anthropic)
-    api(libs.langchain4j.http.client)
-    api(libs.langchain4j.localai)
+    // LangChain4j libraries
+    api(libs.bundles.langchain4j)
+
+    // Kotlin libraries
     api(libs.kotlinx.serialization.json.jvm)
     api(libs.kotlinx.coroutines.core)
-    api(libs.postgresql)
-    api(libs.langchain4j.pgvector)
-    api(libs.testcontainers.postgresql)
-    api(libs.lucene.core)
-    api(libs.lucene.queryparser)
-    api(libs.lucene.backward.codecs)
-    api(libs.langchain4j.jvector)
-    api(libs.jackson.module.kotlin)
-    api(libs.jackson.dataformat.yaml)
+    api(kotlin("stdlib"))
+
+    // Lucene for keyword search
+    api(libs.bundles.lucene)
+
+    // Jackson for YAML/JSON
+    api(libs.bundles.jackson)
+
+    // Database
     api(libs.sqlite.jdbc)
     api(libs.hikaricp)
-    api(libs.exposed.core)
-    api(libs.exposed.jdbc)
-    api(libs.exposed.java.time)
-    api(libs.koin.core)
-    api(kotlin("stdlib"))
-    api(libs.slf4j.api)
-    api(libs.logback.classic)
-    implementation(libs.tika.core)
-    implementation(libs.tika.parser.pdf) {
+    api(libs.bundles.exposed)
+
+    // Dependency Injection
+    api(libs.bundles.koin)
+
+    // Logging
+    api(libs.bundles.logging)
+
+    // Tika for file parsing
+    implementation(libs.bundles.tika) {
         exclude(group = "org.eclipse.angus", module = "angus-activation")
     }
-    implementation(libs.tika.parser.microsoft)
-    implementation(libs.commonmark)
-    implementation(libs.commonmark.ext.gfm.tables)
+
+    // Markdown
+    implementation(libs.bundles.commonmark)
+
+    // Testing
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.testcontainers.ollama)
-    testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.koin.test)
-    testImplementation(libs.koin.test.junit5)
+    testImplementation(libs.bundles.testcontainers)
+    testImplementation(libs.bundles.koin.test)
 }
 
 tasks.test {
     useJUnitPlatform()
+
+    // Enable Vector API for better JVector performance
+    jvmArgs("--add-modules", "jdk.incubator.vector")
 
     // Configure SQLite temp directory for tests
     val sqliteTmpDir =

@@ -47,10 +47,10 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.ProjectsRefreshRequested
 import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.ProjectIndexer
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -59,12 +59,8 @@ import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.deleteProjectDialog
 import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.themedTooltip
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import java.nio.file.Paths
 
 private val log = logger("ProjectView")
 
@@ -159,30 +155,12 @@ fun projectView(
                         },
                         onReindexProject = if (AppConfig.developer.enabled && AppConfig.developer.active) {
                             {
-                                // Clear existing index and trigger fresh re-index
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    try {
-                                        // Parse indexed paths from project configuration
-                                        val json = Json { ignoreUnknownKeys = true }
-                                        val indexedPaths = try {
-                                            json.decodeFromString<List<String>>(project.indexedPaths)
-                                                .map { Paths.get(it) }
-                                        } catch (_: Exception) {
-                                            emptyList()
-                                        }
-
-                                        if (indexedPaths.isNotEmpty()) {
-                                            // Get indexer instance and trigger clear + re-index
-                                            val indexer = ProjectIndexer.getInstance(
-                                                projectId = project.id,
-                                                appContext = appContext,
-                                            )
-                                            indexer.clearAndReindex(indexedPaths, watchForChanges = true)
-                                        }
-                                    } catch (e: Exception) {
-                                        log.error("Failed to re-index project ${project.id}: ${e.message}", e)
-                                    }
-                                }
+                                EventBus.post(
+                                    ProjectReIndexEvent(
+                                        projectId = project.id,
+                                        reason = "Manual re-index requested by user from project menu",
+                                    ),
+                                )
                                 showProjectMenu = false
                             }
                         } else {

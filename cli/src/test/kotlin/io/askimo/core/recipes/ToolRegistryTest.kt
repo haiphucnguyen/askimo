@@ -6,8 +6,8 @@ package io.askimo.core.recipes
 
 import dev.langchain4j.agent.tool.Tool
 import io.askimo.cli.recipes.ToolRegistry
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.tools.fs.LocalFsTools
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
@@ -22,9 +22,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
-
-// Helper to parse JSON tool responses
-private val json = Json { ignoreUnknownKeys = true }
 
 private fun parseToolResponse(jsonString: String): Map<String, Any?> {
     val element = json.parseToJsonElement(jsonString).jsonObject

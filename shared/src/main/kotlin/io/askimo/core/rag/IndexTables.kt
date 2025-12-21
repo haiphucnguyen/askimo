@@ -31,3 +31,22 @@ object IndexMetadataTable : Table("index_metadata") {
 
     override val primaryKey = PrimaryKey(key)
 }
+
+/**
+ * Table schema for file-to-segment mappings.
+ * Tracks which embedding segment IDs belong to which files.
+ * This allows us to remove all segments when a file is deleted.
+ */
+object FileSegmentsTable : Table("file_segments") {
+    val projectId = varchar("project_id", 256) // Project ID this segment belongs to
+    val filePath = varchar("file_path", 2048) // Absolute path to the file
+    val segmentId = varchar("segment_id", 256) // Unique ID of the segment in the embedding store
+    val chunkIndex = integer("chunk_index") // Index of this chunk within the file (for ordering)
+    val createdAt = datetime("created_at") // When this segment was created
+
+    override val primaryKey = PrimaryKey(projectId, filePath, segmentId)
+
+    init {
+        index(isUnique = false, projectId, filePath)
+    }
+}

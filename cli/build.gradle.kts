@@ -38,17 +38,15 @@ fun loadEnvFile(): Map<String, String> {
 
 dependencies {
     compileOnly(libs.graalvm.nativeimage.svm)
-    implementation(libs.jline)
-    implementation(libs.jline.terminal.jansi)
-    implementation(libs.commonmark)
+    implementation(libs.bundles.jline)
+    implementation(libs.bundles.commonmark)
     implementation(kotlin("stdlib"))
     implementation(project(":shared"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.testcontainers.ollama)
-    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.bundles.testcontainers)
 }
 
 val traceAgent = (findProperty("traceAgent") as String?) == "true"
@@ -64,27 +62,12 @@ tasks.test {
         environment(key, value)
     }
 
-    // Configure SQLite temp directory for tests
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
-
-    jvmArgs = listOf("-XX:+EnableDynamicAgentLoading")
+    jvmArgs =
+        listOf(
+            "-XX:+EnableDynamicAgentLoading",
+            "--add-modules",
+            "jdk.incubator.vector",
+        )
 
     if (traceAgent) {
         val mergeDir = "$projectDir/src/main/resources/META-INF/native-image"

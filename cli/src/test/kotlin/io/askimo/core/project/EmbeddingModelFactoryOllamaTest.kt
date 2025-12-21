@@ -11,6 +11,7 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName

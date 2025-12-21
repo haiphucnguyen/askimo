@@ -80,9 +80,6 @@
         "pattern": "\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/java.util.spi.ResourceBundleControlProvider\\E"
-      },
-      {
         "pattern": "\\QMETA-INF/services/javax.xml.parsers.SAXParserFactory\\E"
       },
       {
@@ -227,9 +224,6 @@
         "pattern": "\\Qorg/mockito/internal/creation/bytebuddy/inject-MockMethodDispatcher.raw\\E"
       },
       {
-        "pattern": "\\Qorg/postgresql/driverconfig.properties\\E"
-      },
-      {
         "pattern": "\\Qorg/slf4j/impl/StaticLoggerBinder.class\\E"
       },
       {
@@ -261,9 +255,5 @@
       }
     ]
   },
-  "bundles": [
-    {
-      "name": "org.postgresql.translation.messages"
-    }
-  ]
+  "bundles": []
 }

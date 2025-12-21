@@ -25,6 +25,7 @@ import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
+import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
@@ -32,14 +33,15 @@ import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.rag.HybridContentRetriever
-import io.askimo.core.rag.ProjectIndexer
+import io.askimo.core.rag.enrichContentRetrieverWithLucene
+import io.askimo.core.rag.getEmbeddingModel
+import io.askimo.core.rag.getEmbeddingdtore
+import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
@@ -91,7 +93,6 @@ class ChatSessionService(
 ) {
     private val log = logger<ChatSessionService>()
 
-    // Coroutine scope for event subscriptions
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -134,7 +135,7 @@ class ChatSessionService(
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    public fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
+    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
@@ -189,38 +190,32 @@ class ChatSessionService(
 
             log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
 
-            // Get cached indexer instance for this project (singleton per project)
-            val indexer = ProjectIndexer.getInstance(
-                projectId = project.id,
-                appContext = appContext,
+            val embeddingModel = getEmbeddingModel(appContext)
+
+            val embeddingStore = getEmbeddingdtore(project.id, embeddingModel)
+
+            val vectorRetriever = enrichContentRetrieverWithLucene(
+                project.id,
+                EmbeddingStoreContentRetriever.builder()
+                    .embeddingStore(embeddingStore)
+                    .embeddingModel(embeddingModel)
+                    .maxResults(10)
+                    .minScore(0.5)
+                    .build(),
             )
 
-            if (!indexer.ensureIndexed(indexedPaths, watchForChanges = true)) {
-                log.error("Failed to ensure index for project ${project.id}")
-                return null
-            }
-
-            // Vector-based retriever (semantic search via JVector)
-            val vectorRetriever = EmbeddingStoreContentRetriever.builder()
-                .embeddingStore(indexer.embeddingStore)
-                .embeddingModel(indexer.embeddingModel)
-                .maxResults(10) // Get more candidates for fusion
-                .minScore(0.5) // Lower threshold to catch more semantic matches
-                .build()
-
-            // Keyword-based retriever (BM25 search via Lucene)
-            val keywordRetriever = indexer.keywordRetriever
-
-            // Combine with hybrid retriever using Reciprocal Rank Fusion
-            val hybridRetriever = HybridContentRetriever(
-                vectorRetriever = vectorRetriever,
-                keywordRetriever = keywordRetriever,
-                maxResults = 5, // Final number of results to return
-                k = 60, // RRF constant
+            EventBus.post(
+                ProjectIndexingRequestedEvent(
+                    projectId = project.id,
+                    paths = indexedPaths,
+                    embeddingStore = embeddingStore,
+                    embeddingModel = embeddingModel,
+                    watchForChanges = true,
+                ),
             )
 
-            log.info("✓ Hybrid RAG retriever created successfully for project ${project.id} (vector + keyword fusion)")
-            return hybridRetriever
+            log.info("✓ RAG retriever created, indexing started in background for project ${project.id}")
+            return vectorRetriever
         } catch (e: Exception) {
             log.error("Failed to create content retriever for project ${project.id}", e)
             return null
@@ -228,13 +223,11 @@ class ChatSessionService(
     }
 
     /**
-     * Parse indexed paths from JSON array string.
-     *
+     * Parse indexed paths from JSON string.
      * @param indexedPathsJson JSON array string of paths, e.g., "['/path1', '/path2']"
      * @return List of Path objects
      */
     private fun parseIndexedPaths(indexedPathsJson: String): List<Path> = try {
-        val json = Json { ignoreUnknownKeys = true }
         val paths = json.decodeFromString<List<String>>(indexedPathsJson)
         paths.map { Paths.get(it) }
     } catch (e: Exception) {
@@ -274,7 +267,6 @@ class ChatSessionService(
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
     fun getSessionsPaged(page: Int, pageSize: Int): PagedSessions {
-        // Query only sessions without projects at database level
         val allSessions = sessionRepository.getSessionsWithoutProject()
 
         if (allSessions.isEmpty()) {
@@ -339,7 +331,6 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
-        // Remove from client cache and clean up
         clientCache.remove(sessionId)
 
         messageRepository.deleteMessagesBySession(sessionId)
@@ -644,8 +635,6 @@ class ChatSessionService(
         val directivePrompt = buildDirectivePrompt(sessionId)
 
         val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)
-
-        // Build the final prompt with directive acting as system-level instructions
         return if (directivePrompt != null) {
             buildString {
                 append(directivePrompt)

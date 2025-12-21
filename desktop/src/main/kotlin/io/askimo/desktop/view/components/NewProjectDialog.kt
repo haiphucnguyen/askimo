@@ -44,12 +44,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.logging.logger
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -65,6 +65,9 @@ sealed class FolderValidationResult {
     data object NotAFolder : FolderValidationResult()
     data object NotReadable : FolderValidationResult()
 }
+
+private object NewProjectDialog
+private val log = logger<NewProjectDialog>()
 
 /**
  * Dialog for creating a new project with name, description, and optional folder path.
@@ -182,9 +185,9 @@ fun newProjectDialog(
 
                 // Convert folder path to JSON array
                 val indexedPathsJson = if (selectedFolder != null) {
-                    Json.encodeToString(listOf(selectedFolder))
+                    json.encodeToString(listOf(selectedFolder))
                 } else {
-                    Json.encodeToString(emptyList<String>())
+                    json.encodeToString(emptyList<String>())
                 }
 
                 // Create project
@@ -210,8 +213,7 @@ fun newProjectDialog(
                     selectedFolder,
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
-                // On error, just close
+                log.error("Failed to create project", e)
                 onDismiss()
             }
         }
@@ -224,7 +226,6 @@ fun newProjectDialog(
             tonalElevation = 8.dp,
         ) {
             if (showSuccess) {
-                // Success message
                 Column(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -238,19 +239,23 @@ fun newProjectDialog(
                     )
 
                     Text(
-                        text = "Project created successfully!",
+                        text = stringResource("project.new.dialog.success.title"),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Text(
-                        text = "Project '$createdProjectName' has been created.",
+                        text = stringResource("project.new.dialog.success.message", createdProjectName),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     Text(
-                        text = "Closing in $countdown second${if (countdown != 1) "s" else ""}...",
+                        text = stringResource(
+                            "project.new.dialog.success.countdown",
+                            countdown,
+                            if (countdown != 1) "s" else "",
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -264,11 +269,10 @@ fun newProjectDialog(
                         ),
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Text("Close Now")
+                        Text(stringResource("project.new.dialog.success.close"))
                     }
                 }
             } else {
-                // Create project form
                 Column(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -397,8 +401,8 @@ fun newProjectDialog(
                             Text(stringResource("project.new.dialog.button.create"))
                         }
                     }
-                } // end of else block (form)
-            } // end of if/else
+                }
+            }
         }
     }
 }

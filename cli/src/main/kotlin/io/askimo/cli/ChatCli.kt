@@ -8,13 +8,10 @@ import io.askimo.cli.autocompleter.CliCommandCompleter
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
 import io.askimo.cli.commands.CopyCommandHandler
-import io.askimo.cli.commands.CreateProjectCommandHandler
 import io.askimo.cli.commands.CreateRecipeCommandHandler
-import io.askimo.cli.commands.DeleteProjectCommandHandler
 import io.askimo.cli.commands.DeleteRecipeCommandHandler
 import io.askimo.cli.commands.DeleteSessionCommandHandler
 import io.askimo.cli.commands.HelpCommandHandler
-import io.askimo.cli.commands.ListProjectsCommandHandler
 import io.askimo.cli.commands.ListProvidersCommandHandler
 import io.askimo.cli.commands.ListRecipesCommandHandler
 import io.askimo.cli.commands.ListSessionsCommandHandler
@@ -25,7 +22,6 @@ import io.askimo.cli.commands.ParamsCommandHandler
 import io.askimo.cli.commands.ResumeSessionCommandHandler
 import io.askimo.cli.commands.SetParamCommandHandler
 import io.askimo.cli.commands.SetProviderCommandHandler
-import io.askimo.cli.commands.UseProjectCommandHandler
 import io.askimo.cli.commands.VersionDisplayCommandHandler
 import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.cli.recipes.DefaultRecipeInitializer
@@ -257,10 +253,6 @@ fun main(args: Array<String>) {
         // Create command handlers for interactive mode (shared + interactive-only commands)
         val interactiveCommandHandlers: List<CommandHandler> = sharedCommandHandlers + listOf(
             CopyCommandHandler(),
-            ListProjectsCommandHandler(),
-            CreateProjectCommandHandler(appContext),
-            UseProjectCommandHandler(appContext),
-            DeleteProjectCommandHandler(),
             ListSessionsCommandHandler(appContext),
             NewSessionCommandHandler(chatSessionService),
             ResumeSessionCommandHandler(chatSessionService),

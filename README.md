@@ -135,7 +135,6 @@ A flexible AI automation tool built for terminal workflows, scripting, and devel
 - Provider-agnostic commands
 - Pipe logs, files, or command outputs directly into AI
 - Reusable Recipes for automation
-- Project workspaces with RAG indexing using PostgreSQL and pgvector
 - Non-interactive mode for CI and automation
 - Extensible provider and command architecture
 

@@ -12,6 +12,7 @@ import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.rag.FileSegmentRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
@@ -97,6 +98,7 @@ class DatabaseManager private constructor(
         createSummariesTable(connection)
         createDirectivesTable(connection)
         createSessionMemoryTable(connection)
+        createFileSegmentsTable(connection)
     }
 
     private fun createProjectsTable(conn: Connection) {
@@ -276,6 +278,32 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createFileSegmentsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS file_segments (
+                    project_id TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    segment_id TEXT NOT NULL,
+                    chunk_index INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (project_id, file_path, segment_id),
+                    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+                )
+                """,
+            )
+
+            // Create index for fast lookups by project and file
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_file_segments_project_file
+                ON file_segments (project_id, file_path)
+                """,
+            )
+        }
+    }
+
     private val _chatSessionRepository: ChatSessionRepository by lazy {
         ChatSessionRepository(this)
     }
@@ -298,6 +326,10 @@ class DatabaseManager private constructor(
 
     private val _projectRepository: ProjectRepository by lazy {
         ProjectRepository(this)
+    }
+
+    private val _fileSegmentRepository: FileSegmentRepository by lazy {
+        FileSegmentRepository(this)
     }
 
     /**
@@ -335,6 +367,12 @@ class DatabaseManager private constructor(
      * All access to projects should go through this repository.
      */
     fun getProjectRepository(): ProjectRepository = _projectRepository
+
+    /**
+     * Get the singleton FileSegmentRepository instance.
+     * All access to file-segment mappings should go through this repository.
+     */
+    fun getFileSegmentRepository(): FileSegmentRepository = _fileSegmentRepository
 
     /**
      * Closes the HikariCP connection pool and releases all database resources.
