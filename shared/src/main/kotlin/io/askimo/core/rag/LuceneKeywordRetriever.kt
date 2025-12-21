@@ -36,7 +36,7 @@ import java.nio.file.Path
  * - Use NIOFSDirectory to avoid mmap/MemorySegment-related paths.
  */
 class LuceneKeywordRetriever(
-    private val indexPath: Path,
+    private val projectId: String,
     private val maxResults: Int = 10,
 ) : ContentRetriever {
 
@@ -50,6 +50,9 @@ class LuceneKeywordRetriever(
             .setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
         IndexWriter(directory, config)
     }
+
+    private val indexPath: Path
+        get() = RagUtils.getProjectIndexDir(projectId).resolve("lucene-keywords")
 
     companion object {
         private val FIELD_CONTENT = "content"
