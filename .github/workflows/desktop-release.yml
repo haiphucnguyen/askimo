@@ -220,17 +220,42 @@ jobs:
           if echo "$SUBMIT_OUTPUT" | grep -q "status: Accepted"; then
             echo "✅ Notarization successful!"
             
-            # Staple the notarization ticket
+            # Staple the notarization ticket with retry logic
+            # Apple's CDN needs time to propagate the ticket (known macOS bug)
             echo "Stapling notarization ticket..."
-            if xcrun stapler staple "$DMG_PATH" 2>&1; then
-              echo "✅ Notarization ticket stapled"
-            else
-              echo "⚠️  Failed to staple (DMG is still notarized)"
-            fi
+            echo "Waiting 60 seconds for Apple's CDN to propagate..."
+            sleep 60
             
-            # Verify
-            echo "Verifying notarization..."
-            xcrun stapler validate "$DMG_PATH" 2>&1 || echo "⚠️  Validation warning (DMG is still notarized)"
+            STAPLE_SUCCESS=false
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if xcrun stapler staple "$DMG_PATH" 2>&1; then
+                echo "✅ Notarization ticket stapled successfully"
+                STAPLE_SUCCESS=true
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "⚠️  Stapling attempt $RETRY_COUNT failed, waiting 2 minutes before retry..."
+                  sleep 120
+                else
+                  echo "⚠️  All stapling attempts failed after $MAX_RETRIES tries"
+                  echo "ℹ️  DMG is notarized but ticket not stapled - users need internet on first launch"
+                fi
+              fi
+            done
+            
+            # Verify stapling
+            if [ "$STAPLE_SUCCESS" = true ]; then
+              echo "Verifying stapled ticket..."
+              if xcrun stapler validate "$DMG_PATH" 2>&1; then
+                echo "✅ Stapled ticket validated successfully"
+              else
+                echo "⚠️  Validation had warnings but stapling succeeded"
+              fi
+            fi
             
           elif echo "$SUBMIT_OUTPUT" | grep -q "status: Invalid"; then
             echo "❌ Notarization failed - Apple rejected the submission"
