@@ -21,8 +21,8 @@ import java.time.Instant
 data class ProjectIndexingRequestedEvent(
     val projectId: String,
     val paths: List<Path>,
-    val embeddingStore: EmbeddingStore<TextSegment>,
-    val embeddingModel: EmbeddingModel,
+    val embeddingStore: EmbeddingStore<TextSegment>? = null,
+    val embeddingModel: EmbeddingModel? = null,
     val watchForChanges: Boolean = true,
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,

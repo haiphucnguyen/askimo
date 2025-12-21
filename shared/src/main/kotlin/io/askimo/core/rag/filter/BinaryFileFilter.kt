@@ -13,7 +13,7 @@ import java.nio.file.Path
  */
 class BinaryFileFilter : IndexingFilter {
     override val name = "binary"
-    override val priority = 5 // Highest priority - no point processing binaries
+    override val priority = 5
 
     override fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean {
         if (isDirectory) return false

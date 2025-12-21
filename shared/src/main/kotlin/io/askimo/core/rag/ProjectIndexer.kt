@@ -35,6 +35,8 @@ import java.io.Closeable
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.text.get
+import kotlin.toString
 
 /**
  * Manager for project indexing with RAG (Retrieval-Augmented Generation).
@@ -233,12 +235,26 @@ class ProjectIndexer(
                 event.projectId
             }
 
+            val embeddingModel = event.embeddingModel ?: run {
+                val model = getEmbeddingModel(appContext)
+                checkEmbeddingModelAvailable(model)
+                model
+            }
+
+            val embeddingStore = event.embeddingStore ?: run {
+                val indexDir = RagUtils.getProjectIndexDir(event.projectId)
+                JVectorEmbeddingStore.builder()
+                    .dimension(RagUtils.getDimensionForModel(embeddingModel))
+                    .persistencePath(indexDir.toString())
+                    .build()
+            }
+
             performIndexing(
                 projectId = event.projectId,
                 projectName = projectName,
                 paths = event.paths,
-                embeddingStore = event.embeddingStore,
-                embeddingModel = event.embeddingModel,
+                embeddingStore = embeddingStore,
+                embeddingModel = embeddingModel,
                 watchForChanges = event.watchForChanges,
             )
         } catch (e: Exception) {

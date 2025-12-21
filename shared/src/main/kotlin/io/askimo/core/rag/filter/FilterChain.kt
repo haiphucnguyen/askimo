@@ -15,7 +15,6 @@ import kotlin.io.path.name
  */
 class FilterChain(filters: List<IndexingFilter>) {
 
-    // Sort filters by priority (lower number = higher priority)
     private val sortedFilters = filters.sortedBy { it.priority }
 
     /**
@@ -30,18 +29,6 @@ class FilterChain(filters: List<IndexingFilter>) {
             }
         }
         return false
-    }
-
-    /**
-     * Get details about why a path was excluded (for debugging).
-     */
-    fun getExclusionReason(path: Path, isDirectory: Boolean, context: FilterContext): String? {
-        for (filter in sortedFilters) {
-            if (filter.shouldExclude(path, isDirectory, context)) {
-                return "${filter.name}: ${context.relativePath}"
-            }
-        }
-        return null
     }
 
     /**
