@@ -1,5 +1,4 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import java.net.URI
 import java.time.Instant
 import java.time.Year
 import java.time.ZoneOffset
@@ -105,24 +104,6 @@ tasks.named<ProcessResources>("processResources") {
 compose.desktop {
     application {
         mainClass = "io.askimo.desktop.MainKt"
-
-        // Configure JVM args for SQLite temp directory
-        val sqliteTmpDir =
-            layout.buildDirectory
-                .dir("sqlite-tmp")
-                .get()
-                .asFile
-        val javaTmpDir =
-            layout.buildDirectory
-                .dir("tmp")
-                .get()
-                .asFile
-
-        jvmArgs +=
-            listOf(
-                "-Dorg.sqlite.tmpdir=${sqliteTmpDir.absolutePath}",
-                "-Djava.io.tmpdir=${javaTmpDir.absolutePath}",
-            )
 
         nativeDistributions {
             targetFormats(

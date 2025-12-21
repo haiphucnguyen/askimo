@@ -4,6 +4,7 @@
  */
 package io.askimo.core.db
 
+import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
@@ -11,6 +12,7 @@ import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
 
@@ -26,40 +28,52 @@ class DatabaseManager private constructor(
     useInMemory: Boolean = false,
 ) : AutoCloseable {
 
-    private val hikariDataSource: HikariDataSource = createDataSource(
+    private val hikariDataSource: HikariDataSource = createSQLiteDataSource(
         databaseFileName = databaseFileName,
         useInMemory = useInMemory,
     )
 
     /**
-     * Creates a HikariDataSource for the main application database.
-     * Uses the centralized SQLiteDataSourceFactory for consistent configuration.
+     * Creates a HikariDataSource for a SQLite database file in the Askimo home directory.
      *
      * @param databaseFileName The name of the database file (e.g., "askimo.db")
      * @param useInMemory If true, creates an in-memory database (useful for testing)
      * @return A configured HikariDataSource
      */
-    private fun createDataSource(
+    private fun createSQLiteDataSource(
         databaseFileName: String,
         useInMemory: Boolean,
     ): HikariDataSource {
-        val dataSource = if (useInMemory) {
-            SQLiteDataSourceFactory.createInMemory(this)
+        val jdbcUrl = if (useInMemory) {
+            "jdbc:sqlite:file:memdb_${System.nanoTime()}?mode=memory&cache=shared"
         } else {
-            SQLiteDataSourceFactory.createInHome(
-                databaseFileName = databaseFileName,
-                maxPoolSize = 10,
-                minIdle = 2,
-                enableForeignKeys = true,
-            )
+            val askimoHome = AskimoHome.base()
+            if (!askimoHome.toFile().exists()) {
+                askimoHome.toFile().mkdirs()
+            }
+            val dbPath = askimoHome.resolve(databaseFileName).toString()
+            "jdbc:sqlite:$dbPath"
         }
 
-        // Initialize tables after creating the data source
-        dataSource.connection.use { conn ->
-            initializeTables(conn)
+        val config = HikariConfig().apply {
+            this.jdbcUrl = jdbcUrl
+            driverClassName = "org.sqlite.JDBC"
+            maximumPoolSize = if (useInMemory) 1 else 10 // Single connection for in-memory
+            minimumIdle = if (useInMemory) 1 else 2
+            connectionTimeout = 30000
+            idleTimeout = 600000
+            maxLifetime = 1800000
+            connectionInitSql = "PRAGMA foreign_keys = ON;"
+            addDataSourceProperty("cachePrepStmts", "true")
+            addDataSourceProperty("prepStmtCacheSize", "250")
+            addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
         }
 
-        return dataSource
+        return HikariDataSource(config).also { ds ->
+            ds.connection.use { conn ->
+                initializeTables(conn)
+            }
+        }
     }
 
     /**
