@@ -10,6 +10,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
+import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
@@ -343,3 +344,5 @@ fun getEmbeddingdtore(projectId: String, embeddingModel: EmbeddingModel): Embedd
         .build()
     return embeddingStore
 }
+
+fun enrichContentRetrieverWithLucene(projectId: String, retriever: ContentRetriever): ContentRetriever = HybridContentRetriever(retriever, LuceneKeywordRetriever(projectId))

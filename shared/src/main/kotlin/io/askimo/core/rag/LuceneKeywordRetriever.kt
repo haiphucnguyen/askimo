@@ -66,12 +66,12 @@ class LuceneKeywordRetriever(
                 val luceneQuery = try {
                     queryParser.parse(query.text())
                 } catch (e: Exception) {
-                    log.debug("Failed to parse query: '${query.text()}' - attempting with escaped query")
+                    log.debug("Failed to parse query: '${query.text()}' - attempting with escaped query", e)
                     try {
                         // First try: escape special characters
                         queryParser.parse(QueryParser.escape(query.text()))
                     } catch (e2: Exception) {
-                        log.debug("Escaped query also failed - attempting phrase query as final fallback")
+                        log.debug("Escaped query also failed - attempting phrase query as final fallback", e2)
                         try {
                             // Second try: wrap in quotes for phrase query (most robust)
                             // This treats the entire query as a literal phrase

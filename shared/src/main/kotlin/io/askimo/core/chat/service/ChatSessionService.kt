@@ -33,6 +33,7 @@ import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.core.rag.getEmbeddingdtore
 import io.askimo.core.util.JsonUtils.json
@@ -193,12 +194,15 @@ class ChatSessionService(
 
             val embeddingStore = getEmbeddingdtore(project.id, embeddingModel)
 
-            val vectorRetriever = EmbeddingStoreContentRetriever.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .maxResults(10)
-                .minScore(0.5)
-                .build()
+            val vectorRetriever = enrichContentRetrieverWithLucene(
+                project.id,
+                EmbeddingStoreContentRetriever.builder()
+                    .embeddingStore(embeddingStore)
+                    .embeddingModel(embeddingModel)
+                    .maxResults(10)
+                    .minScore(0.5)
+                    .build(),
+            )
 
             EventBus.post(
                 ProjectIndexingRequestedEvent(
