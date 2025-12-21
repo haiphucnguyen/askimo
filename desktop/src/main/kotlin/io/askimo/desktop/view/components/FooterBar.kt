@@ -247,15 +247,15 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                     it is IndexingInProgressEvent && it.projectId == event.projectId
                 }
                 if (existingIndex >= 0) {
-                    events[existingIndex] = event // Replace with newer progress
+                    events[existingIndex] = event
                 } else {
-                    events.add(0, event) // First progress event for this project
-                    unreadCount++ // Increment unread count for new event
+                    events.add(0, event)
+                    unreadCount++
                 }
             } else {
-                // Normal event handling: add to top of list
+                // New event - add and increment unread
                 events.add(0, event)
-                unreadCount++ // Increment unread count for new event
+                unreadCount++
             }
 
             // Keep list size manageable
@@ -269,10 +269,6 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
         IconButton(
             onClick = {
                 showEventPopup = !showEventPopup
-                // Mark all as read when opening the popup
-                if (showEventPopup) {
-                    unreadCount = 0
-                }
             },
             modifier = Modifier
                 .size(32.dp)
@@ -322,7 +318,16 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                         events = events,
                         onShowUpdateDetails = onShowUpdateDetails,
                         onDismissPopup = { showEventPopup = false },
-                        onRemoveEvent = { event -> events.removeAt(events.indexOf(event)) },
+                        onRemoveEvent = { event ->
+                            events.remove(event)
+                            if (unreadCount > 0) {
+                                unreadCount--
+                            }
+                        },
+                        onClearAll = {
+                            events.clear()
+                            unreadCount = 0
+                        },
                     )
                 }
             }
@@ -341,6 +346,7 @@ private fun eventPopupContent(
     onShowUpdateDetails: () -> Unit,
     onDismissPopup: () -> Unit,
     onRemoveEvent: (Event) -> Unit,
+    onClearAll: () -> Unit,
 ) {
     val estimatedItemHeight = 128.dp
     val maxHeight = 500.dp
@@ -360,12 +366,33 @@ private fun eventPopupContent(
             .width(400.dp)
             .padding(8.dp),
     ) {
-        Text(
-            text = "User Events (${events.size})",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Notifications (${events.size})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            if (events.isNotEmpty()) {
+                TextButton(
+                    onClick = onClearAll,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource("event.notification.clear.all"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
 
         HorizontalDivider()
 
@@ -466,11 +493,18 @@ private fun eventItem(
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
-                Text(
-                    text = event.source.name,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+
+                TextButton(
+                    onClick = onRemoveEvent,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = stringResource("event.notification.clear"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
 
             Text(

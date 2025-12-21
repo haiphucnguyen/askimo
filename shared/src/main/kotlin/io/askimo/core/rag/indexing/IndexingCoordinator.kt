@@ -65,8 +65,6 @@ class IndexingCoordinator(
             log.info("Starting indexing for project $projectId: $totalFiles files")
 
             val fileHashes = mutableMapOf<String, String>()
-            var processedFiles = 0
-            var lastReportedFiles = 0
 
             for (path in paths) {
                 if (!indexPath(path, fileHashes)) {
@@ -75,22 +73,6 @@ class IndexingCoordinator(
                         error = "Failed to index path: $path",
                     )
                     return false
-                }
-
-                processedFiles = fileHashes.size
-                _progress.value = _progress.value.copy(processedFiles = processedFiles)
-
-                // Emit progress event every 10 files or at the end
-                if (processedFiles - lastReportedFiles >= 10 || processedFiles == totalFiles) {
-                    EventBus.emit(
-                        IndexingInProgressEvent(
-                            projectId = projectId,
-                            projectName = projectName,
-                            filesIndexed = processedFiles,
-                            totalFiles = totalFiles,
-                        ),
-                    )
-                    lastReportedFiles = processedFiles
                 }
             }
 
@@ -104,6 +86,7 @@ class IndexingCoordinator(
             }
 
             // Save state
+            val processedFiles = fileHashes.size
             stateManager.saveState(processedFiles, fileHashes)
 
             _progress.value = _progress.value.copy(
@@ -181,7 +164,25 @@ class IndexingCoordinator(
             }
 
             val elapsedTime = System.currentTimeMillis() - startTime
-            log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+            log.trace("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+
+            // Update progress after successfully indexing a file
+            val processedFiles = fileHashes.size
+            val totalFiles = _progress.value.totalFiles
+            _progress.value = _progress.value.copy(processedFiles = processedFiles)
+
+            // Emit progress event every 10 files or at the end
+            if (processedFiles % 10 == 0 || processedFiles == totalFiles) {
+                EventBus.emit(
+                    IndexingInProgressEvent(
+                        projectId = projectId,
+                        projectName = projectName,
+                        filesIndexed = processedFiles,
+                        totalFiles = totalFiles,
+                    ),
+                )
+            }
+
             return true
         } catch (e: Exception) {
             val elapsedTime = System.currentTimeMillis() - startTime
