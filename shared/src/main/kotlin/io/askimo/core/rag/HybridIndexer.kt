@@ -8,7 +8,6 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.LuceneKeywordRetriever
 
 /**
  * Coordinates indexing of text segments into both:
