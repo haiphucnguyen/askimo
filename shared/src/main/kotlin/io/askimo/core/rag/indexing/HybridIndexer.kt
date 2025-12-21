@@ -11,7 +11,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.FileSegmentRepository
-import io.askimo.core.rag.LuceneKeywordRetriever
+import io.askimo.core.rag.LuceneIndexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
@@ -28,7 +28,7 @@ import java.util.UUID
 class HybridIndexer(
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
-    private val keywordRetriever: LuceneKeywordRetriever,
+    private val luceneIndexer: LuceneIndexer,
     private val projectId: String,
 ) {
     private val log = logger<HybridIndexer>()
@@ -66,7 +66,7 @@ class HybridIndexer(
             }
 
             // 3. Index in Lucene (keywords for BM25 search)
-            keywordRetriever.indexSegments(textSegments)
+            luceneIndexer.indexSegments(textSegments)
 
             log.debug("Hybrid indexed ${textSegments.size} segments (vector + keyword) in batch")
         } catch (e: Exception) {
@@ -127,7 +127,7 @@ class HybridIndexer(
                 embeddingStore.addAll(embeddings, segments)
 
                 // Index in Lucene (keywords for BM25 search)
-                keywordRetriever.indexSegments(segments)
+                luceneIndexer.indexSegments(segments)
 
                 // Track segment IDs in database for future removal
                 for (i in segments.indices) {
@@ -202,7 +202,7 @@ class HybridIndexer(
                 log.debug("Removed {} embeddings from vector store", segmentIds.size)
 
                 // Remove from keyword index
-                keywordRetriever.removeFile(filePath.toString())
+                luceneIndexer.removeFile(filePath.toString())
                 log.debug("Removed segments from keyword index for file {}", filePath.fileName)
 
                 // Remove from database

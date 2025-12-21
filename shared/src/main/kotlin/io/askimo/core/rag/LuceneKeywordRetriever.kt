@@ -11,13 +11,7 @@ import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.query.Query
 import io.askimo.core.logging.logger
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.document.StoredField
-import org.apache.lucene.document.TextField
 import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.Directory
@@ -29,7 +23,7 @@ import java.nio.file.Path
  * Lucene-based keyword search retriever using BM25 ranking.
  * Complements vector similarity search by catching exact keyword matches.
  *
- * NOTE: This retriever indexes *text + metadata only*. Vector embeddings are stored elsewhere (e.g., JVector).
+ * NOTE: This retriever reads from the index only. Use LuceneIndexer for indexing operations.
  *
  * GraalVM native-image notes:
  * - Disable Lucene MemorySegments (prevents native-image link errors on some setups).
@@ -44,20 +38,8 @@ class LuceneKeywordRetriever(
     private val analyzer = StandardAnalyzer()
     private val directory: Directory
 
-    // Reuse single IndexWriter instance (thread-safe for concurrent writes)
-    private val indexWriter: IndexWriter by lazy {
-        val config = IndexWriterConfig(analyzer)
-            .setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
-        IndexWriter(directory, config)
-    }
-
     private val indexPath: Path
         get() = RagUtils.getProjectLuceneIndexDir(projectId)
-
-    companion object {
-        private val FIELD_CONTENT = "content"
-        private val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
-    }
 
     init {
         // 1) Disable Lucene's MemorySegment-backed mmap optimizations (native-image linker friendly)
@@ -70,53 +52,6 @@ class LuceneKeywordRetriever(
         directory = NIOFSDirectory(indexPath)
     }
 
-    /**
-     * Index multiple text segments in batch.
-     * Thread-safe: IndexWriter handles concurrent addDocument calls.
-     */
-    fun indexSegments(textSegments: List<TextSegment>) {
-        for (textSegment in textSegments) {
-            val doc = Document().apply {
-                // Store + index content for BM25
-                add(TextField(FIELD_CONTENT, textSegment.text(), Field.Store.YES))
-
-                // Store metadata (stored-only fields). Prefix keys to avoid conflicts.
-                textSegment.metadata().toMap().forEach { (key, value) ->
-                    val safeKey = FIELD_META_PREFIX + key
-                    add(StoredField(safeKey, value.toString()))
-                }
-            }
-            indexWriter.addDocument(doc)
-        }
-        indexWriter.commit()
-        log.debug("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
-    }
-
-    /**
-     * Clear the keyword index.
-     */
-    fun clearIndex() {
-        indexWriter.deleteAll()
-        indexWriter.commit()
-        log.debug("Cleared keyword index at $indexPath")
-    }
-
-    /**
-     * Remove all documents for a specific file from the index.
-     * @param filePath The absolute path of the file to remove
-     */
-    fun removeFile(filePath: String) {
-        try {
-            val queryParser = QueryParser(FIELD_META_PREFIX + "file_path", analyzer)
-            val query = queryParser.parse(QueryParser.escape(filePath))
-            indexWriter.deleteDocuments(query)
-            indexWriter.commit()
-            log.debug("Removed file from keyword index: $filePath")
-        } catch (e: Exception) {
-            log.debug("Failed to remove file from keyword index: $filePath", e)
-        }
-    }
-
     override fun retrieve(query: Query): List<Content> {
         if (!DirectoryReader.indexExists(directory)) {
             log.debug("Keyword index does not exist yet at $indexPath")
@@ -124,13 +59,10 @@ class LuceneKeywordRetriever(
         }
 
         return try {
-            // Ensure latest changes are visible to readers
-            indexWriter.commit()
-
             DirectoryReader.open(directory).use { reader ->
                 val searcher = IndexSearcher(reader)
 
-                val queryParser = QueryParser(FIELD_CONTENT, analyzer)
+                val queryParser = QueryParser(LuceneIndexer.FIELD_CONTENT, analyzer)
                 val luceneQuery = try {
                     queryParser.parse(query.text())
                 } catch (e: Exception) {
@@ -158,14 +90,14 @@ class LuceneKeywordRetriever(
 
                 topDocs.scoreDocs.mapNotNull { scoreDoc ->
                     val doc = searcher.storedFields().document(scoreDoc.doc)
-                    val content = doc.get(FIELD_CONTENT) ?: return@mapNotNull null
+                    val content = doc.get(LuceneIndexer.FIELD_CONTENT) ?: return@mapNotNull null
 
                     // Reconstruct metadata from stored fields
                     val metadataMap = mutableMapOf<String, Any>()
                     for (field in doc.fields) {
                         val name = field.name()
-                        if (name.startsWith(FIELD_META_PREFIX)) {
-                            val key = name.removePrefix(FIELD_META_PREFIX)
+                        if (name.startsWith(LuceneIndexer.FIELD_META_PREFIX)) {
+                            val key = name.removePrefix(LuceneIndexer.FIELD_META_PREFIX)
                             metadataMap[key] = field.stringValue()
                         }
                     }
@@ -177,16 +109,6 @@ class LuceneKeywordRetriever(
         } catch (e: Exception) {
             log.error("Unexpected error during keyword retrieval for query: '${query.text()}'", e)
             emptyList()
-        }
-    }
-
-    fun close() {
-        try {
-            indexWriter.commit()
-            indexWriter.close()
-            directory.close()
-        } catch (e: Exception) {
-            log.error("Failed to close Lucene resources", e)
         }
     }
 }
