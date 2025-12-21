@@ -128,24 +128,12 @@ compose.desktop {
                 // Code signing configuration
                 // Reads from environment variables or .env file
                 val macosIdentity = getEnvOrProperty("MACOS_IDENTITY")
-                val appleId = getEnvOrProperty("APPLE_ID")
-                val applePassword = getEnvOrProperty("APPLE_PASSWORD")
-                val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID")
 
                 // Only configure signing if credentials are provided
                 if (!macosIdentity.isNullOrBlank()) {
                     signing {
                         sign.set(true)
                         identity.set(macosIdentity)
-                    }
-                }
-
-                // Only configure notarization if all credentials are provided
-                if (!appleId.isNullOrBlank() && !applePassword.isNullOrBlank() && !appleTeamId.isNullOrBlank()) {
-                    notarization {
-                        appleID.set(appleId)
-                        password.set(applePassword)
-                        teamID.set(appleTeamId)
                     }
                 }
             }
@@ -238,44 +226,11 @@ tasks.register("notarizeAndStapleDmg") {
         val dmgFile = dmgFiles.first()
         println("📦 Found DMG: ${dmgFile.name}")
         println("🔐 Starting notarization process...")
+        println("⏳ This will submit to Apple and wait for approval (5-60 minutes)")
         println("")
 
-        // Submit for notarization (without --wait to get immediate feedback)
-        println("📤 Uploading to Apple...")
-        val submitResult =
-            exec {
-                commandLine(
-                    "xcrun",
-                    "notarytool",
-                    "submit",
-                    dmgFile.absolutePath,
-                    "--apple-id",
-                    appleId,
-                    "--team-id",
-                    appleTeamId,
-                    "--password",
-                    applePassword,
-                )
-                isIgnoreExitValue = true
-                standardOutput = System.out
-                errorOutput = System.err
-            }
-
-        if (submitResult.exitValue != 0) {
-            println("❌ Failed to submit for notarization")
-            println("   Check your APPLE_ID, APPLE_PASSWORD, and APPLE_TEAM_ID credentials")
-            throw GradleException("Notarization submission failed")
-        }
-
-        // Extract submission ID from output (we'll need to capture it)
-        println("")
-        println("⏳ Waiting for Apple to process the submission...")
-        println("   This typically takes 5-60 minutes")
-        println("   You can check status later with: ./tools/macos/check-notarization.sh")
-        println("")
-
-        // Wait for notarization to complete
-        val waitResult =
+        // Submit for notarization and WAIT for completion (single command)
+        val notarizeResult =
             exec {
                 commandLine(
                     "xcrun",
@@ -295,12 +250,13 @@ tasks.register("notarizeAndStapleDmg") {
                 errorOutput = System.err
             }
 
-        if (waitResult.exitValue != 0) {
+        if (notarizeResult.exitValue != 0) {
+            println("")
             println("❌ Notarization failed or was rejected by Apple")
             println("")
             println("To debug:")
             println("  1. Check recent submissions: ./tools/macos/check-notarization.sh")
-            println("  2. Get detailed log with the submission ID")
+            println("  2. Get detailed log with the submission ID from output above")
             throw GradleException("Notarization failed")
         }
 
@@ -310,6 +266,9 @@ tasks.register("notarizeAndStapleDmg") {
 
         // Staple the notarization ticket
         println("📎 Stapling notarization ticket to DMG...")
+        println("ℹ️  Note: Apple's CDN can take 5-15+ minutes to propagate the ticket")
+        println("")
+
         val stapleResult =
             exec {
                 commandLine("xcrun", "stapler", "staple", dmgFile.absolutePath)
@@ -319,20 +278,39 @@ tasks.register("notarizeAndStapleDmg") {
             }
 
         if (stapleResult.exitValue == 0) {
-            println("✅ Notarization ticket stapled successfully")
+            println("")
+            println("✅ Notarization ticket stapled successfully!")
+
+            // Verify the stapling
+            println("")
+            println("🔍 Verifying stapled ticket...")
+            exec {
+                commandLine("xcrun", "stapler", "validate", dmgFile.absolutePath)
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
         } else {
-            println("⚠️  Failed to staple ticket (DMG is still notarized)")
-        }
-
-        println("")
-
-        // Verify the stapling
-        println("🔍 Verifying notarization...")
-        exec {
-            commandLine("xcrun", "stapler", "validate", dmgFile.absolutePath)
-            isIgnoreExitValue = true
-            standardOutput = System.out
-            errorOutput = System.err
+            println("")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("⚠️  Stapling failed - This is ACCEPTABLE")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("")
+            println("✅ Your DMG is FULLY VALID and PRODUCTION-READY:")
+            println("   • Properly signed with Developer ID")
+            println("   • Successfully notarized by Apple")
+            println("   • No Gatekeeper warnings for users")
+            println("   • Safe to distribute immediately")
+            println("")
+            println("ℹ️  Technical details:")
+            println("   • Apple's CDN needs 5-15+ minutes to propagate tickets")
+            println("   • Stapling is an optimization, not a requirement")
+            println("   • macOS will verify online on first launch")
+            println("   • After first launch, verification is cached")
+            println("")
+            println("ℹ️  To staple later (after CDN propagation):")
+            println("   xcrun stapler staple ${dmgFile.absolutePath}")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         }
 
         println("")

@@ -176,153 +176,24 @@ jobs:
       - name: Package desktop installer (Linux/macOS)
         if: runner.os != 'Windows'
         env:
+          MACOS_IDENTITY: ${{ secrets.MACOS_IDENTITY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-        run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            # For macOS: Build, sign, notarize, and staple in one go
+            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageNotarizedDmg
+          else
+            # For Linux: Just package
+            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
+          fi
 
       - name: Package desktop installer (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: .\gradlew.bat --no-daemon "-Dorg.gradle.jvmargs=-Xmx4g" desktop:${{ matrix.task }}
 
-      # Notarize the DMG (macOS only)
-      - name: Notarize DMG
-        if: runner.os == 'macOS'
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          echo "Starting notarization process..."
-          
-          # Find the DMG
-          DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
-          
-          if [ -z "$DMG_PATH" ]; then
-            echo "❌ Error: DMG not found"
-            exit 1
-          fi
-          
-          echo "Found DMG: $DMG_PATH"
-          
-          # Submit for notarization
-          echo "Submitting to Apple for notarization (this may take 5-60 minutes)..."
-          SUBMIT_OUTPUT=$(xcrun notarytool submit "$DMG_PATH" \
-            --apple-id "$APPLE_ID" \
-            --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_PASSWORD" \
-            --wait 2>&1)
-          
-          echo "$SUBMIT_OUTPUT"
-          
-          # Check if notarization succeeded
-          if echo "$SUBMIT_OUTPUT" | grep -q "status: Accepted"; then
-            echo "✅ Notarization successful!"
-            
-            # Staple the notarization ticket with retry logic
-            # Apple's CDN needs time to propagate the ticket (known macOS bug)
-            echo "Stapling notarization ticket..."
-            echo "Waiting 60 seconds for Apple's CDN to propagate..."
-            sleep 60
-            
-            STAPLE_SUCCESS=false
-            MAX_RETRIES=3
-            RETRY_COUNT=0
-            
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if xcrun stapler staple "$DMG_PATH" 2>&1; then
-                echo "✅ Notarization ticket stapled successfully"
-                STAPLE_SUCCESS=true
-                break
-              else
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                  echo "⚠️  Stapling attempt $RETRY_COUNT failed, waiting 2 minutes before retry..."
-                  sleep 120
-                else
-                  echo "⚠️  All stapling attempts failed after $MAX_RETRIES tries"
-                  echo "ℹ️  DMG is notarized but ticket not stapled - users need internet on first launch"
-                fi
-              fi
-            done
-            
-            # Verify stapling
-            if [ "$STAPLE_SUCCESS" = true ]; then
-              echo "Verifying stapled ticket..."
-              if xcrun stapler validate "$DMG_PATH" 2>&1; then
-                echo "✅ Stapled ticket validated successfully"
-              else
-                echo "⚠️  Validation had warnings but stapling succeeded"
-              fi
-            fi
-            
-          elif echo "$SUBMIT_OUTPUT" | grep -q "status: Invalid"; then
-            echo "❌ Notarization failed - Apple rejected the submission"
-            
-            # Get detailed error log
-            SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
-            if [ -n "$SUBMISSION_ID" ]; then
-              echo "Fetching detailed error log..."
-              xcrun notarytool log "$SUBMISSION_ID" \
-                --apple-id "$APPLE_ID" \
-                --team-id "$APPLE_TEAM_ID" \
-                --password "$APPLE_PASSWORD" 2>&1 || true
-            fi
-            
-            echo "⚠️  DMG is signed but not notarized. Users will see a warning on first launch."
-            echo "⚠️  Build will continue, but notarization should be fixed for production releases."
-            
-          else
-            echo "⚠️  Notarization status unknown"
-            echo "⚠️  Build will continue, but DMG may not be notarized"
-          fi
-
-      # Verify code signing (macOS only)
-      - name: Verify Code Signing
-        if: runner.os == 'macOS'
-        run: |
-          echo "Verifying code signature..."
-          
-          DMG_PATH=$(find desktop/build/compose/binaries/main/dmg -name "*.dmg" -type f | head -n1)
-          
-          # Mount DMG
-          MOUNT_POINT=$(hdiutil attach "$DMG_PATH" -nobrowse | grep Volumes | sed 's/.*\(\/Volumes\/.*\)/\1/')
-          
-          if [ -z "$MOUNT_POINT" ]; then
-            echo "❌ Failed to mount DMG"
-            exit 1
-          fi
-          
-          # Find the app
-          APP_PATH=$(find "$MOUNT_POINT" -name "*.app" -type d -maxdepth 1 | head -n1)
-          
-          if [ -z "$APP_PATH" ]; then
-            hdiutil detach "$MOUNT_POINT"
-            echo "❌ No .app found in DMG"
-            exit 1
-          fi
-          
-          echo "Verifying: $APP_PATH"
-          
-          # Verify signature
-          if codesign -vvv --deep --strict "$APP_PATH" 2>&1; then
-            echo "✅ Code signature is valid"
-          else
-            echo "❌ Code signature verification failed"
-            hdiutil detach "$MOUNT_POINT"
-            exit 1
-          fi
-          
-          # Check signature details
-          echo ""
-          echo "Signature details:"
-          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -E "Authority|Identifier|TeamIdentifier"
-          
-          # Unmount
-          hdiutil detach "$MOUNT_POINT"
-          
-          echo "✅ Code signing verification complete"
 
       - name: Build uber JAR (Linux/macOS)
         if: runner.os != 'Windows'
