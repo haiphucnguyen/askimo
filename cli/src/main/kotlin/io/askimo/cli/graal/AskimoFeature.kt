@@ -9,7 +9,6 @@ import ch.qos.logback.classic.filter.LevelFilter
 import io.askimo.core.config.AppConfigData
 import io.askimo.core.config.EmbeddingConfig
 import io.askimo.core.config.IndexingConfig
-import io.askimo.core.config.PgVectorConfig
 import io.askimo.core.config.RetryConfig
 import io.askimo.core.config.ThrottleConfig
 import io.askimo.tools.fs.LocalFsTools
@@ -30,7 +29,6 @@ class AskimoFeature : Feature {
         // Register configuration classes for reflection
         registerAllDeclared(
             AppConfigData::class.java,
-            PgVectorConfig::class.java,
             EmbeddingConfig::class.java,
             RetryConfig::class.java,
             ThrottleConfig::class.java,

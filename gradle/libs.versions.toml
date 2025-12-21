@@ -8,8 +8,6 @@ kotlinxCoroutines = "1.9.0"
 slf4j = "2.0.17"
 logback = "1.5.21"
 junitBom = "5.14.0"
-postgresql = "42.7.7"
-langchain4jPgvector = "1.9.1-beta17"
 testcontainers = "1.21.3"
 mockitoKotlin = "6.1.0"
 kotlin = "2.2.20"
@@ -26,7 +24,7 @@ koin = "4.1.1"
 jlatexmath = "1.0.7"
 tika = "3.2.3"
 lucene = "10.3.2"
-jvector = "1.9.1-beta17"
+langchain4j-extra = "1.9.1-beta17"
 
 [libraries]
 # JLine
@@ -43,8 +41,7 @@ langchain4j-ollama = { group = "dev.langchain4j", name = "langchain4j-ollama", v
 langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
 langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
-langchain4j-pgvector = { group = "dev.langchain4j", name = "langchain4j-pgvector", version.ref = "langchain4jPgvector" }
-langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai", version.ref = "langchain4jPgvector" }
+langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai", version.ref = "langchain4j-extra" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
@@ -83,10 +80,9 @@ lucene-queryparser = { group = "org.apache.lucene", name = "lucene-queryparser",
 lucene-backward-codecs = { group = "org.apache.lucene", name = "lucene-backward-codecs", version.ref = "lucene" }
 
 # LangChain4j JVector
-langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "jvector" }
+langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
 
 # Database and MCP SDK
-postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
 hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
 
@@ -103,7 +99,6 @@ koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", versio
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
-testcontainers-postgresql = { group = "org.testcontainers", name = "postgresql", version.ref = "testcontainers" }
 # Ollama Testcontainers
 testcontainers-ollama = { group = "org.testcontainers", name = "ollama", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }

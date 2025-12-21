@@ -25,13 +25,6 @@ import kotlin.io.path.isRegularFile
 private object AppConfigObject
 private val log = logger<AppConfigObject>()
 
-data class PgVectorConfig(
-    val url: String = "",
-    val user: String = "askimo",
-    val password: String = "askimo",
-    val table: String = "askimo_embeddings",
-)
-
 data class EmbeddingConfig(
     val maxCharsPerChunk: Int = 1500,
     val chunkOverlap: Int = 100,
@@ -237,7 +230,6 @@ data class ProxyConfig(
 )
 
 data class AppConfigData(
-    val pgvector: PgVectorConfig = PgVectorConfig(),
     val embedding: EmbeddingConfig = EmbeddingConfig(),
     val embeddingModels: EmbeddingModelsConfig = EmbeddingModelsConfig(),
     val retry: RetryConfig = RetryConfig(),
@@ -248,7 +240,6 @@ data class AppConfigData(
 )
 
 object AppConfig {
-    val pgVector: PgVectorConfig get() = delegate.pgvector
     val embedding: EmbeddingConfig get() = delegate.embedding
     val embeddingModels: EmbeddingModelsConfig get() = delegate.embeddingModels
     val retry: RetryConfig get() = delegate.retry
@@ -273,11 +264,6 @@ object AppConfig {
         # This file was auto-generated because none was found.
         # You can override any value via environment variables using ${'$'}{ENV:default} placeholders.
 
-        pgvector:
-          url:  ${'$'}{ASKIMO_PG_URL:jdbc:postgresql://localhost:5432/askimo}
-          user: ${'$'}{ASKIMO_PG_USER:askimo}
-          password: ${'$'}{ASKIMO_PG_PASS:askimo}
-          table: ${'$'}{ASKIMO_EMBED_TABLE:askimo_embeddings}
 
         embedding:
           max_chars_per_chunk: ${'$'}{ASKIMO_EMBED_MAX_CHARS_PER_CHUNK:4000}
@@ -436,13 +422,6 @@ object AppConfig {
 
         fun envNullableInt(k: String) = System.getenv(k)?.toIntOrNull()
 
-        val pg =
-            PgVectorConfig(
-                url = env("ASKIMO_PG_URL", "jdbc:postgresql://localhost:5432/askimo"),
-                user = env("ASKIMO_PG_USER", "askimo"),
-                password = env("ASKIMO_PG_PASS", "askimo"),
-                table = env("ASKIMO_EMBED_TABLE", "askimo_embeddings"),
-            )
         val emb =
             EmbeddingConfig(
                 maxCharsPerChunk = envInt("ASKIMO_EMBED_MAX_CHARS_PER_CHUNK", 4000),
@@ -487,7 +466,7 @@ object AppConfig {
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
             )
 
-        return AppConfigData(pg, emb, embModels, r, t, idx, dev, chat)
+        return AppConfigData(emb, embModels, r, t, idx, dev, chat)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */
@@ -523,7 +502,6 @@ object AppConfig {
                 "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
-                "pgvector" -> current.copy(pgvector = updatePgVectorField(current.pgvector, field, value))
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
@@ -567,14 +545,6 @@ object AppConfig {
         "maxCharsPerChunk" -> config.copy(maxCharsPerChunk = value as Int)
         "chunkOverlap" -> config.copy(chunkOverlap = value as Int)
         "preferredDim" -> config.copy(preferredDim = value as? Int)
-        else -> config
-    }
-
-    private fun updatePgVectorField(config: PgVectorConfig, field: String, value: Any): PgVectorConfig = when (field) {
-        "url" -> config.copy(url = value as String)
-        "user" -> config.copy(user = value as String)
-        "password" -> config.copy(password = value as String)
-        "table" -> config.copy(table = value as String)
         else -> config
     }
 
