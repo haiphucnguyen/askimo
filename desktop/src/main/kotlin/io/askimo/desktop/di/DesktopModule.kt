@@ -24,7 +24,6 @@ import org.koin.dsl.module
 
 /**
  * Koin module for desktop application dependencies.
- * This module provides both core and desktop-specific dependencies.
  */
 val desktopModule = module {
     single<AppContext> { AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP) }
@@ -34,6 +33,7 @@ val desktopModule = module {
     single { get<DatabaseManager>().getChatSessionRepository() }
     single { get<DatabaseManager>().getChatMessageRepository() }
     single { get<DatabaseManager>().getChatDirectiveRepository() }
+    single { get<DatabaseManager>().getProjectRepository() }
 
     single {
         ChatSessionService(
@@ -89,4 +89,7 @@ val desktopModule = module {
 /**
  * All modules for the desktop application.
  */
-val allDesktopModules = listOf(desktopModule)
+val allDesktopModules = listOf(
+    desktopRagModule,
+    desktopModule,
+)

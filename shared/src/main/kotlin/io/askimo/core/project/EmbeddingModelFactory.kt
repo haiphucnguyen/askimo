@@ -43,9 +43,7 @@ private val log = logger("EmbeddingModelFactory")
  * @return Maximum number of tokens the model can handle
  */
 fun getModelTokenLimit(appContext: AppContext): Int = try {
-    val provider = appContext.getActiveProvider()
-
-    when (provider) {
+    when (val provider = appContext.getActiveProvider()) {
         OPENAI -> {
             val modelName = AppConfig.embeddingModels.openai.lowercase()
             when {
@@ -304,7 +302,7 @@ private fun ensureModelAvailable(
         }
 
         is ModelAvailabilityResult.NotAvailable -> {
-            if (result.canAutoPull && provider == ModelProvider.OLLAMA) {
+            if (result.canAutoPull && provider == OLLAMA) {
                 log.display("⏳ Model '$modelName' not found. Attempting to download...")
                 if (LocalModelValidator.pullOllamaModel(baseUrl, modelName)) {
                     log.display("✅ Successfully downloaded model '$modelName'")

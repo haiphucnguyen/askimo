@@ -12,9 +12,9 @@ import dev.langchain4j.memory.ChatMemory
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.logging.logger
+import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
 import java.time.LocalDateTime
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
@@ -437,7 +437,7 @@ class TokenAwareSummarizingMemory(
         state: MemoryState,
     ): SessionMemory {
         val summaryJson = state.summary?.let {
-            Json.encodeToString(
+            json.encodeToString(
                 ConversationSummary.serializer(),
                 it,
             )
@@ -456,7 +456,7 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        val messagesJson = Json.encodeToString(
+        val messagesJson = json.encodeToString(
             ListSerializer(SerializableMessage.serializer()),
             serializableMessages,
         )
@@ -476,13 +476,13 @@ class TokenAwareSummarizingMemory(
         sessionMemory: SessionMemory,
     ): MemoryState {
         val summary = sessionMemory.memorySummary?.let {
-            Json.decodeFromString(
+            json.decodeFromString(
                 ConversationSummary.serializer(),
                 it,
             )
         }
 
-        val serializableMessages = Json.decodeFromString(
+        val serializableMessages = json.decodeFromString(
             ListSerializer(SerializableMessage.serializer()),
             sessionMemory.memoryMessages,
         )

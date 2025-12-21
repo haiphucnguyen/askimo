@@ -6,6 +6,9 @@ package io.askimo.core.rag.filter
 
 import io.askimo.core.logging.logger
 import java.nio.file.Path
+import kotlin.io.path.extension
+import kotlin.io.path.isDirectory
+import kotlin.io.path.name
 
 /**
  * Manages and applies multiple indexing filters in priority order.
@@ -41,7 +44,41 @@ class FilterChain(filters: List<IndexingFilter>) {
         return null
     }
 
+    /**
+     * Convenience method to check if a path should be excluded.
+     * Automatically creates the FilterContext from the path.
+     */
+    fun shouldExcludePath(path: Path): Boolean {
+        val isDirectory = path.isDirectory()
+        val absolutePath = path.toAbsolutePath()
+        val rootPath = if (isDirectory) absolutePath else absolutePath.parent ?: absolutePath
+
+        val context = FilterContext(
+            rootPath = rootPath,
+            relativePath = path.fileName.toString(),
+            fileName = path.name,
+            extension = if (!isDirectory) path.extension.lowercase() else "",
+        )
+
+        return shouldExclude(path, isDirectory, context)
+    }
+
     companion object {
         private val log = logger<FilterChain>()
+
+        /**
+         * Default filter chain with all standard filters.
+         * No project root needed - filters detect their context per-path.
+         */
+        val DEFAULT: FilterChain by lazy {
+            val filters = listOf(
+                GitignoreFilter(),
+                ProjectTypeFilter(),
+                BinaryFileFilter(),
+                FileSizeFilter(),
+                CustomPatternFilter(emptyList()),
+            )
+            FilterChain(filters)
+        }
     }
 }

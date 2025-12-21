@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
+package io.askimo.core.rag.state
+
+/**
+ * Enumeration of indexing status states
+ */
+enum class IndexStatus {
+    NOT_STARTED,
+    INDEXING,
+    READY,
+    WATCHING,
+    FAILED,
+}
+
+/**
+ * Progress information for indexing operations
+ */
+data class IndexProgress(
+    val status: IndexStatus = IndexStatus.NOT_STARTED,
+    val totalFiles: Int = 0,
+    val processedFiles: Int = 0,
+    val error: String? = null,
+) {
+    val progressPercent: Int
+        get() = if (totalFiles > 0) (processedFiles * 100) / totalFiles else 0
+
+    val isComplete: Boolean
+        get() = status == IndexStatus.READY || status == IndexStatus.WATCHING
+
+    val hasFailed: Boolean
+        get() = status == IndexStatus.FAILED
+}
+
+/**
+ * Persisted state of an index
+ */
+data class IndexPersistedState(
+    val totalFilesIndexed: Int,
+    val lastIndexedTimestamp: Long,
+    val fileHashes: Map<String, String>,
+)

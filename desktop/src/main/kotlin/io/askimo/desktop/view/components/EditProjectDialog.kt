@@ -43,9 +43,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
-import kotlinx.serialization.json.Json
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -65,7 +65,7 @@ fun editProjectDialog(
     // Parse existing indexed paths from JSON
     val existingPaths = remember {
         try {
-            Json.decodeFromString<List<String>>(project.indexedPaths).firstOrNull()
+            json.decodeFromString<List<String>>(project.indexedPaths).firstOrNull()
         } catch (e: Exception) {
             null
         }
@@ -155,9 +155,9 @@ fun editProjectDialog(
 
         // Convert folder path to JSON array
         val indexedPathsJson = if (selectedFolder != null) {
-            Json.encodeToString(listOf(selectedFolder))
+            json.encodeToString(listOf(selectedFolder))
         } else {
-            Json.encodeToString(emptyList<String>())
+            json.encodeToString(emptyList<String>())
         }
 
         onSave(

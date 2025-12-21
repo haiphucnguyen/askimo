@@ -4,7 +4,7 @@
  */
 package io.askimo.tools.fs
 
-import kotlinx.serialization.json.Json
+import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -29,8 +29,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LocalFsToolsTest {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     // Helper to parse JSON tool responses
     private fun parseToolResponse(jsonString: String): Map<String, Any?> {

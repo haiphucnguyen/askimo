@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
+package io.askimo.core.rag.watching
+
+import dev.langchain4j.data.segment.TextSegment
+import dev.langchain4j.model.embedding.EmbeddingModel
+import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.context.AppContext
+import io.askimo.core.logging.logger
+import io.askimo.core.rag.filter.FilterChain
+import io.askimo.core.rag.indexing.BatchIndexer
+import io.askimo.core.rag.indexing.FileProcessor
+import java.nio.file.Path
+import java.nio.file.StandardWatchEventKinds
+import java.nio.file.WatchEvent
+import kotlin.io.path.exists
+import kotlin.io.path.isRegularFile
+
+/**
+ * Handles file change events from the file watcher
+ */
+class FileChangeHandler(
+    private val projectId: String,
+    private val embeddingStore: EmbeddingStore<TextSegment>,
+    private val embeddingModel: EmbeddingModel,
+    private val appContext: AppContext,
+) {
+    private val log = logger<FileChangeHandler>()
+    private val fileProcessor = FileProcessor(appContext)
+    private val batchIndexer = BatchIndexer(embeddingStore, embeddingModel, projectId)
+
+    private val filterChain: FilterChain = FilterChain.DEFAULT
+
+    /**
+     * Check if a path should be excluded from indexing
+     */
+    private fun shouldExcludePath(path: Path): Boolean = filterChain.shouldExcludePath(path)
+
+    /**
+     * Handle a file change event
+     */
+    suspend fun handleFileChange(filePath: Path, kind: WatchEvent.Kind<*>) {
+        if (!filePath.isRegularFile() || shouldExcludePath(filePath)) {
+            return
+        }
+
+        when (kind) {
+            StandardWatchEventKinds.ENTRY_CREATE,
+            StandardWatchEventKinds.ENTRY_MODIFY,
+            -> {
+                log.debug("File changed: {}, re-indexing...", filePath.fileName)
+                reindexFile(filePath)
+            }
+            StandardWatchEventKinds.ENTRY_DELETE -> {
+                log.debug("File deleted: {}, removing from index...", filePath.fileName)
+                batchIndexer.removeFileFromIndex(filePath)
+            }
+        }
+    }
+
+    /**
+     * Re-index a file
+     */
+    private suspend fun reindexFile(filePath: Path) {
+        if (!filePath.exists()) {
+            log.warn("Cannot re-index non-existent file: ${filePath.fileName}")
+            return
+        }
+
+        try {
+            batchIndexer.removeFileFromIndex(filePath)
+
+            val text = fileProcessor.extractTextFromFile(filePath) ?: return
+            val chunks = fileProcessor.chunkText(text)
+
+            for ((idx, chunk) in chunks.withIndex()) {
+                val segment = fileProcessor.createTextSegment(
+                    chunk = chunk,
+                    filePath = filePath,
+                    chunkIndex = idx,
+                    totalChunks = chunks.size,
+                )
+
+                batchIndexer.addSegmentToBatch(segment, filePath)
+            }
+
+            batchIndexer.flushRemainingSegments()
+
+            log.debug("Re-indexed {} ({} chunks)", filePath.fileName, chunks.size)
+        } catch (e: Exception) {
+            log.error("Failed to re-index file {}", filePath.fileName, e)
+        }
+    }
+}

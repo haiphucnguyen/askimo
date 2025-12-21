@@ -25,7 +25,6 @@ class ProjectTypeFilter : IndexingFilter {
             }
         }
 
-        // Check common excludes as fallback
         return matchesPattern(relativePath, context.fileName, AppConfig.indexing.commonExcludes, isDirectory)
     }
 
@@ -48,7 +47,6 @@ class ProjectTypeFilter : IndexingFilter {
                     return true
                 }
             } else {
-                // File or wildcard patterns
                 if (pattern.contains("*")) {
                     val regex = pattern.replace("*", ".*").toRegex()
                     if (regex.matches(relativePath) || regex.matches(fileName)) {

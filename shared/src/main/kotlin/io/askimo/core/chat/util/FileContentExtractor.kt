@@ -27,7 +27,7 @@ object FileContentExtractor {
 
     /**
      * Extract text content from a file.
-     * Supports text files, PDF, DOCX, and other formats supported by Tika.
+     * Supports text files, PDF, DOCX, XLSX, PPTX, OpenDocument, emails, and other formats supported by Tika.
      *
      * @param file The file to extract content from
      * @return The extracted text content
@@ -37,16 +37,28 @@ object FileContentExtractor {
         val mimeType = detectMimeType(file)
 
         return when {
+            // Documents
             mimeType.startsWith("application/pdf") ||
                 mimeType.contains("word") ||
                 mimeType.contains("wordprocessingml") ||
                 mimeType.contains("msword") ||
                 mimeType.contains("spreadsheet") ||
                 mimeType.contains("excel") ||
-                mimeType.contains("ms-excel") -> {
+                mimeType.contains("ms-excel") ||
+                // Presentations
+                mimeType.contains("presentation") ||
+                mimeType.contains("powerpoint") ||
+                mimeType.contains("ms-powerpoint") ||
+                // OpenDocument formats
+                mimeType.startsWith("application/vnd.oasis.opendocument") ||
+                // Email formats
+                mimeType.contains("message/rfc822") ||
+                mimeType.contains("application/vnd.ms-outlook") ||
+                // RTF
+                mimeType.contains("rtf") -> {
                 extractUsingTika(file)
             }
-            // Plain text files - read directly for better performance
+            // Plain text files (includes CSV, TSV, etc.)
             mimeType.startsWith("text/") ||
                 mimeType in SUPPORTED_APPLICATION_TYPES -> {
                 file.readText()
@@ -116,6 +128,10 @@ object FileContentExtractor {
         mimeType.startsWith("application/pdf") -> true
         mimeType.contains("word") || mimeType.contains("wordprocessingml") || mimeType.contains("msword") -> true
         mimeType.contains("spreadsheet") || mimeType.contains("excel") || mimeType.contains("ms-excel") -> true
+        mimeType.contains("presentation") || mimeType.contains("powerpoint") || mimeType.contains("ms-powerpoint") -> true
+        mimeType.startsWith("application/vnd.oasis.opendocument") -> true
+        mimeType.contains("message/rfc822") || mimeType.contains("application/vnd.ms-outlook") -> true
+        mimeType.contains("rtf") -> true
         else -> false
     }
 
@@ -126,7 +142,8 @@ object FileContentExtractor {
         val mimeType = detectMimeType(file)
         return when {
             mimeType.startsWith("image/") -> "Image OCR support coming soon"
-            mimeType.contains("presentation") || mimeType.contains("powerpoint") -> "PowerPoint support coming soon"
+            mimeType.startsWith("video/") -> "Video files are not supported"
+            mimeType.startsWith("audio/") -> "Audio files are not supported"
             else -> "Unsupported file type: $mimeType"
         }
     }
@@ -164,16 +181,23 @@ object FileContentExtractor {
         // Shell scripts
         "sh", "bash", "zsh", "fish", "bat", "ps1",
         // Documentation
-        "rst", "adoc", "tex", "rtf",
+        "rst", "adoc", "tex",
         // Other
         "sql", "log", "properties", "env",
     )
 
     private val SUPPORTED_BINARY_EXTENSIONS = setOf(
+        // PDF
         "pdf",
-        "docx",
-        "doc",
-        "xlsx",
-        "xls",
+        // Microsoft Office
+        "docx", "doc",
+        "xlsx", "xls",
+        "pptx", "ppt",
+        // OpenDocument
+        "odt", "ods", "odp",
+        // Email
+        "eml", "msg",
+        // Rich Text
+        "rtf",
     )
 }
