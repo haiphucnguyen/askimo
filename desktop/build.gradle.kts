@@ -44,16 +44,14 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
     implementation(project(":shared"))
-    implementation(libs.commonmark)
-    implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.bundles.commonmark)
     implementation(libs.commonmark.ext.autolink)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.jlatexmath)
 
     testImplementation(kotlin("test"))
-    testImplementation(libs.koin.test)
-    testImplementation(libs.koin.test.junit5)
+    testImplementation(libs.bundles.koin.test)
 }
 
 tasks.withType<JavaCompile> {

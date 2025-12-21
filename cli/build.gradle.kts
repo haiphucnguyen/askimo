@@ -38,17 +38,15 @@ fun loadEnvFile(): Map<String, String> {
 
 dependencies {
     compileOnly(libs.graalvm.nativeimage.svm)
-    implementation(libs.jline)
-    implementation(libs.jline.terminal.jansi)
-    implementation(libs.commonmark)
+    implementation(libs.bundles.jline)
+    implementation(libs.bundles.commonmark)
     implementation(kotlin("stdlib"))
     implementation(project(":shared"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.testcontainers.ollama)
-    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.bundles.testcontainers)
 }
 
 val traceAgent = (findProperty("traceAgent") as String?) == "true"
