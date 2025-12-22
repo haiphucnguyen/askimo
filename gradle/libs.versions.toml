@@ -25,6 +25,7 @@ jlatexmath = "1.0.7"
 tika = "3.2.3"
 lucene = "10.3.2"
 langchain4j-extra = "1.9.1-beta17"
+caffeine = "3.2.3"
 
 [libraries]
 # JLine
@@ -65,6 +66,8 @@ kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotl
 # Kotlinx Coroutines
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
+# Caffeine Cache
+caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
 
 # Logging
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }

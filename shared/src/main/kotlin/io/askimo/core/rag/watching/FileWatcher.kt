@@ -9,7 +9,6 @@ import io.askimo.core.rag.filter.BinaryFileFilter
 import io.askimo.core.rag.filter.CustomPatternFilter
 import io.askimo.core.rag.filter.FileSizeFilter
 import io.askimo.core.rag.filter.FilterChain
-import io.askimo.core.rag.filter.FilterContext
 import io.askimo.core.rag.filter.GitignoreFilter
 import io.askimo.core.rag.filter.IndexingFilter
 import io.askimo.core.rag.filter.ProjectTypeFilter
@@ -23,10 +22,8 @@ import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
-import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.name
 
 /**
  * Watches file system for changes
@@ -75,18 +72,7 @@ class FileWatcher(
     /**
      * Check if a directory should be excluded from watching
      */
-    private fun shouldExcludeDirectory(dir: Path): Boolean {
-        val absolutePath = dir.toAbsolutePath()
-
-        val context = FilterContext(
-            rootPath = absolutePath,
-            relativePath = dir.fileName.toString(),
-            fileName = dir.name,
-            extension = "",
-        )
-
-        return filterChain.shouldExclude(dir, isDirectory = true, context)
-    }
+    private fun shouldExcludeDirectory(dir: Path): Boolean = filterChain.shouldExcludePath(dir)
 
     /**
      * Start watching for file changes

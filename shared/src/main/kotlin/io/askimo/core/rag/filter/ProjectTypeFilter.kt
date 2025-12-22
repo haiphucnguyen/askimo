@@ -40,9 +40,16 @@ class ProjectTypeFilter : IndexingFilter {
                 if (!isDirectory) continue
 
                 val dirPattern = pattern.removeSuffix("/")
+                // Match directory at any level:
+                // - /node_modules/ (in middle)
+                // - node_modules/ (at start)
+                // - node_modules (exact match)
+                // - src/node_modules (ends with directory name)
                 if (relativePath.contains("/$dirPattern/") ||
                     relativePath.startsWith("$dirPattern/") ||
-                    relativePath == dirPattern
+                    relativePath == dirPattern ||
+                    relativePath.endsWith("/$dirPattern") ||
+                    (relativePath.contains("/") && relativePath.substringAfterLast("/") == dirPattern)
                 ) {
                     return true
                 }

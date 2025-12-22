@@ -4,6 +4,8 @@
  */
 package io.askimo.core.chat.service
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
 import io.askimo.core.chat.domain.ChatMessage
@@ -45,7 +47,8 @@ import kotlinx.coroutines.launch
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 /**
  * Result of resuming a chat session.
@@ -99,7 +102,16 @@ class ChatSessionService(
      * Cache of session-specific ChatClient instances.
      * Each session gets its own client with integrated memory.
      */
-    private val clientCache = ConcurrentHashMap<String, ChatClient>()
+    private val clientCache: Cache<String, ChatClient> = Caffeine.newBuilder()
+        .maximumSize(10)
+        .expireAfterAccess(30.minutes.toJavaDuration())
+        .removalListener<String, ChatClient> { sessionId, client, cause ->
+            if (client != null && sessionId != null) {
+                log.debug("Evicting ChatClient for session {} (cause: {})", sessionId, cause)
+                client.clearMemory()
+            }
+        }
+        .build()
 
     init {
         subscribeToInternalEvents()
@@ -123,7 +135,7 @@ class ChatSessionService(
      */
     private fun handleModelChanged(event: ModelChangedEvent) {
         log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached clients")
-        clientCache.clear()
+        clientCache.invalidateAll()
     }
 
     /**
@@ -135,7 +147,7 @@ class ChatSessionService(
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.getOrPut(sessionId) {
+    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
@@ -152,8 +164,6 @@ class ChatSessionService(
         val memory = TokenAwareSummarizingMemory(
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
-            maxTokens = 4000,
-            summarizationThreshold = 0.75,
             summarizer = summarizer,
             asyncSummarization = true,
         )
@@ -247,7 +257,7 @@ class ChatSessionService(
      * @param sessionId The ID of the session to clear memory for
      */
     fun clearSessionMemory(sessionId: String) {
-        clientCache[sessionId]?.clearMemory()
+        clientCache.getIfPresent(sessionId)?.clearMemory()
         log.debug("Cleared memory for session: $sessionId")
     }
 
@@ -331,7 +341,7 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
-        clientCache.remove(sessionId)
+        clientCache.invalidate(sessionId)
 
         messageRepository.deleteMessagesBySession(sessionId)
         sessionMemoryRepository.deleteBySessionId(sessionId)

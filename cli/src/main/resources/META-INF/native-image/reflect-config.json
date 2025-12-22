@@ -194,6 +194,50 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "com.github.benmanes.caffeine.cache.BLCHeader$DrainStatusRef",
+    "fields": [{ "name": "drainStatus" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueueColdProducerFields",
+    "fields": [{ "name": "producerLimit" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueueConsumerFields",
+    "fields": [{ "name": "consumerIndex" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueueProducerFields",
+    "fields": [{ "name": "producerIndex" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.BoundedLocalCache",
+    "fields": [{ "name": "refreshes" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.PS",
+    "fields": [{ "name": "key" }, { "name": "value" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.PSA",
+    "fields": [{ "name": "accessTime" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.PSAMS",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSLMS",
+    "fields": [{ "name": "maximum" }, { "name": "weightedSize" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSLMSA",
+    "fields": [{ "name": "FACTORY" }, { "name": "expiresAfterAccessNanos" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.StripedBuffer",
+    "fields": [{ "name": "tableBusy" }]
+  },
+  {
     "name": "com.github.dockerjava.api.command.AsyncDockerCmd",
     "queryAllDeclaredMethods": true
   },
@@ -660,8 +704,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -685,10 +728,41 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "com.github.dockerjava.api.model.PullResponseItem",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "com.github.dockerjava.api.model.ResourceVersion",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.dockerjava.api.model.ResponseItem",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "com.github.dockerjava.api.model.ResponseItem$AuxDetail",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.dockerjava.api.model.ResponseItem$ErrorDetail",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "com.github.dockerjava.api.model.ResponseItem$ProgressDetail",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.RestartPolicy",
@@ -4269,7 +4343,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$tKuMtOgv",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$SzKrlkBm",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

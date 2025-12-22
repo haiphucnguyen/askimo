@@ -56,7 +56,7 @@ class TokenAwareSummarizingMemory(
     private val sessionMemoryRepository: SessionMemoryRepository,
     private val maxTokens: Int = 4000,
     private val tokenEstimator: (ChatMessage) -> Int = defaultTokenEstimator(),
-    private val summarizationThreshold: Double = 0.75,
+    private val summarizationThreshold: Double = 0.6,
     private val summarizer: ((String) -> ConversationSummary)? = null,
     asyncSummarization: Boolean = true,
     private val summarizationTimeoutSeconds: Long = 30,
