@@ -97,8 +97,13 @@ class FileProcessor(
 
     /**
      * Chunk text into segments using dynamically calculated chunk size and overlap.
+     * Filters out blank chunks to avoid validation errors.
      */
     fun chunkText(text: String): List<String> {
+        if (text.isBlank()) {
+            return emptyList()
+        }
+
         val maxChars = maxCharsPerChunk
         val overlap = chunkOverlap
 
@@ -112,7 +117,10 @@ class FileProcessor(
         while (start < text.length) {
             val end = minOf(start + maxChars, text.length)
             val chunk = text.substring(start, end)
-            chunks.add(chunk)
+
+            if (chunk.isNotBlank()) {
+                chunks.add(chunk)
+            }
 
             start += (maxChars - overlap)
 
@@ -126,7 +134,8 @@ class FileProcessor(
     }
 
     /**
-     * Create a TextSegment with metadata
+     * Create a TextSegment with metadata.
+     * Note: Caller must ensure chunk is not blank.
      */
     fun createTextSegment(
         chunk: String,
