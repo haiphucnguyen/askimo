@@ -42,6 +42,13 @@ class FileChangeHandler(
      * Handle a file change event
      */
     suspend fun handleFileChange(filePath: Path, kind: WatchEvent.Kind<*>) {
+        if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+            log.debug("File deleted: {}, removing from index...", filePath.fileName)
+            batchIndexer.removeFileFromIndex(filePath)
+            return
+        }
+
+        // For CREATE/MODIFY events, check if file exists and is not excluded
         if (!filePath.isRegularFile() || shouldExcludePath(filePath)) {
             return
         }
@@ -52,10 +59,6 @@ class FileChangeHandler(
             -> {
                 log.debug("File changed: {}, re-indexing...", filePath.fileName)
                 reindexFile(filePath)
-            }
-            StandardWatchEventKinds.ENTRY_DELETE -> {
-                log.debug("File deleted: {}, removing from index...", filePath.fileName)
-                batchIndexer.removeFileFromIndex(filePath)
             }
         }
     }
@@ -73,7 +76,18 @@ class FileChangeHandler(
             batchIndexer.removeFileFromIndex(filePath)
 
             val text = fileProcessor.extractTextFromFile(filePath) ?: return
+
+            if (text.isBlank()) {
+                log.debug("Skipping re-index of file with blank content: ${filePath.fileName}")
+                return
+            }
+
             val chunks = fileProcessor.chunkText(text)
+
+            if (chunks.isEmpty()) {
+                log.debug("No valid chunks created for file: ${filePath.fileName}")
+                return
+            }
 
             for ((idx, chunk) in chunks.withIndex()) {
                 val segment = fileProcessor.createTextSegment(

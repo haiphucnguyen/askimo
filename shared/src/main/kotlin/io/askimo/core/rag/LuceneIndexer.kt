@@ -26,8 +26,11 @@ import java.nio.file.Path
  * GraalVM native-image notes:
  * - Disable Lucene MemorySegments (prevents native-image link errors on some setups).
  * - Use NIOFSDirectory to avoid mmap/MemorySegment-related paths.
+ *
+ * Thread-safety: This class uses a singleton pattern per project to ensure only one
+ * IndexWriter exists per Lucene index directory, preventing lock conflicts.
  */
-class LuceneIndexer(
+class LuceneIndexer private constructor(
     private val projectId: String,
 ) {
 
@@ -48,6 +51,26 @@ class LuceneIndexer(
     companion object {
         const val FIELD_CONTENT = "content"
         const val FIELD_META_PREFIX = "m_" // prevent collisions with Lucene internal/your own fields
+
+        private val instances = mutableMapOf<String, LuceneIndexer>()
+
+        /**
+         * Get or create a LuceneIndexer instance for a project.
+         * Thread-safe singleton pattern ensures only one IndexWriter per project.
+         */
+        @Synchronized
+        fun getInstance(projectId: String): LuceneIndexer = instances.getOrPut(projectId) {
+            LuceneIndexer(projectId)
+        }
+
+        /**
+         * Remove and close the LuceneIndexer instance for a project.
+         * Should be called when a project is deleted or indexer is no longer needed.
+         */
+        @Synchronized
+        fun removeInstance(projectId: String) {
+            instances.remove(projectId)?.close()
+        }
     }
 
     init {

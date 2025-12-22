@@ -82,6 +82,8 @@ class ProjectIndexer(
     fun removeIndexer(projectId: String, deleteIndexFiles: Boolean = false) {
         indexers.remove(projectId)?.close()
 
+        LuceneIndexer.removeInstance(projectId)
+
         if (deleteIndexFiles) {
             try {
                 val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)

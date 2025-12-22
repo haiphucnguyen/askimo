@@ -165,7 +165,7 @@ class SessionManager(
                     chatSessionService.createSession(
                         ChatSession(
                             id = sessionId,
-                            title = "New Chat",
+                            title = userMessage,
                             createdAt = LocalDateTime.now(),
                             updatedAt = LocalDateTime.now(),
                         ),
@@ -211,13 +211,15 @@ class SessionManager(
         // Start streaming in background
         streamingScope.launch(thread.job) {
             try {
-                val fullResponse = chatSessionService.getOrCreateClientForSession(sessionId).sendStreamingMessageWithCallback(promptWithContext) { token ->
-                    streamingScope.launch {
-                        thread.appendChunk(token)
-                        val currentContent = thread.getCurrentContent()
-                        onChunkReceived(currentContent)
+                val fullResponse = chatSessionService
+                    .getOrCreateClientForSession(sessionId)
+                    .sendStreamingMessageWithCallback(promptWithContext) { token ->
+                        streamingScope.launch {
+                            thread.appendChunk(token)
+                            val currentContent = thread.getCurrentContent()
+                            onChunkReceived(currentContent)
+                        }
                     }
-                }
 
                 val savedMessage = chatSessionService.saveAiResponse(sessionId, fullResponse)
                 thread.setSavedMessage(savedMessage)
@@ -359,7 +361,7 @@ class SessionManager(
                 val newSession = chatSessionService.createSession(
                     ChatSession(
                         id = "",
-                        title = "Chat in $projectName",
+                        title = message,
                         directiveId = null,
                         projectId = projectId,
                     ),

@@ -61,32 +61,14 @@ class LuceneKeywordRetriever(
         return try {
             DirectoryReader.open(directory).use { reader ->
                 val searcher = IndexSearcher(reader)
-
                 val queryParser = QueryParser(LuceneIndexer.FIELD_CONTENT, analyzer)
-                val luceneQuery = try {
-                    queryParser.parse(query.text())
-                } catch (e: Exception) {
-                    log.debug("Failed to parse query: '${query.text()}' - attempting with escaped query", e)
-                    try {
-                        // First try: escape special characters
-                        queryParser.parse(QueryParser.escape(query.text()))
-                    } catch (e2: Exception) {
-                        log.debug("Escaped query also failed - attempting phrase query as final fallback", e2)
-                        try {
-                            // Second try: wrap in quotes for phrase query (most robust)
-                            // This treats the entire query as a literal phrase
-                            val escapedText = query.text().replace("\"", "\\\"")
-                            queryParser.parse("\"$escapedText\"")
-                        } catch (e3: Exception) {
-                            // If even phrase query fails, log and skip keyword search
-                            log.warn("All query parsing attempts failed for: '${query.text()}' - skipping keyword search", e3)
-                            return emptyList()
-                        }
-                    }
-                }
+
+                // Normalize query to avoid parsing exceptions - escape all special Lucene characters
+                val normalizedQuery = QueryParser.escape(query.text())
+                val luceneQuery = queryParser.parse(normalizedQuery)
 
                 val topDocs = searcher.search(luceneQuery, maxResults)
-                log.debug("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
+                log.trace("Keyword search found ${topDocs.scoreDocs.size} results for query: ${query.text()}")
 
                 topDocs.scoreDocs.mapNotNull { scoreDoc ->
                     val doc = searcher.storedFields().document(scoreDoc.doc)

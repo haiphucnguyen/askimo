@@ -4,7 +4,6 @@
  */
 package io.askimo.core.rag.indexing
 
-import dev.langchain4j.data.embedding.Embedding
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
@@ -31,7 +30,7 @@ class HybridIndexer(
     private val projectId: String,
 ) {
     private val log = logger<HybridIndexer>()
-    private val luceneIndexer = LuceneIndexer(projectId)
+    private val luceneIndexer = LuceneIndexer.getInstance(projectId)
     private val segmentRepository: FileSegmentRepository by lazy {
         DatabaseManager.getInstance().getFileSegmentRepository()
     }
@@ -42,38 +41,6 @@ class HybridIndexer(
 
     private val segmentBatch = mutableListOf<Pair<TextSegment, Path>>() // Track file path with segment
     private val pendingMappings = mutableListOf<Triple<Path, String, Int>>() // (filePath, segmentId, chunkIndex)
-
-    /**
-     * Index a batch of text segments into both stores (legacy method for compatibility):
-     * 1. Generate embeddings and store in JVector (semantic search)
-     * 2. Index text content in Lucene (keyword search)
-     *
-     * @param textSegments List of text segments to index
-     */
-    fun indexSegments(textSegments: List<TextSegment>) {
-        if (textSegments.isEmpty()) {
-            log.debug("No segments to index")
-            return
-        }
-
-        try {
-            // 1. Batch embed all segments in a single API call
-            val embeddings = embeddingModel.embedAll(textSegments).content()
-
-            // 2. Store embeddings in JVector (vector store)
-            embeddings.forEachIndexed { index, embedding ->
-                embeddingStore.add(embedding, textSegments[index])
-            }
-
-            // 3. Index in Lucene (keywords for BM25 search)
-            luceneIndexer.indexSegments(textSegments)
-
-            log.debug("Hybrid indexed ${textSegments.size} segments (vector + keyword) in batch")
-        } catch (e: Exception) {
-            log.error("Failed to hybrid index ${textSegments.size} segments", e)
-            throw e
-        }
-    }
 
     /**
      * Add segment to batch and flush if batch is full
@@ -105,28 +72,12 @@ class HybridIndexer(
             segmentBatch.clear()
 
             withContext(Dispatchers.IO) {
-                val embeddings = mutableListOf<Embedding>()
-                val segmentIds = mutableListOf<String>()
+                val embeddings = embeddingModel.embedAll(segments).content()
 
-                // Generate embeddings for all segments
-                for (segment in segments) {
-                    try {
-                        val embedding = embeddingModel.embed(segment).content()
-                        embeddings.add(embedding)
+                val segmentIds = segments.map { generateSegmentId(it) }
 
-                        // Generate unique segment ID
-                        val segmentId = generateSegmentId(segment)
-                        segmentIds.add(segmentId)
-                    } catch (e: Exception) {
-                        log.error("Failed to generate embedding for segment: ${e.message}", e)
-                        throw e
-                    }
-                }
-
-                // Add to embedding store with IDs
                 embeddingStore.addAll(embeddings, segments)
 
-                // Index in Lucene (keywords for BM25 search)
                 luceneIndexer.indexSegments(segments)
 
                 // Track segment IDs in database for future removal

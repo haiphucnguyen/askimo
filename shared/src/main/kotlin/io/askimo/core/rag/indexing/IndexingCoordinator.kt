@@ -36,7 +36,7 @@ class IndexingCoordinator(
 
     private val fileProcessor = FileProcessor(appContext)
     private val stateManager = IndexStateManager(projectId)
-    private val batchIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
+    private val hybridIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val _progress = MutableStateFlow(IndexProgress())
     val progress: StateFlow<IndexProgress> = _progress
@@ -52,6 +52,8 @@ class IndexingCoordinator(
     /**
      * Index paths with progress tracking.
      * Supports multiple unrelated paths - each is evaluated independently.
+     * Uses incremental indexing - only indexes new or modified files.
+     * Detects and removes deleted files from the index.
      */
     suspend fun indexPathsWithProgress(
         paths: List<Path>,
@@ -59,6 +61,10 @@ class IndexingCoordinator(
         _progress.value = IndexProgress(status = IndexStatus.INDEXING)
 
         try {
+            // Load previous state for incremental indexing
+            val previousState = stateManager.loadPersistedState()
+            val previousHashes: Map<String, String> = previousState?.fileHashes ?: emptyMap()
+
             val totalFiles = countIndexableFiles(paths)
             _progress.value = _progress.value.copy(totalFiles = totalFiles)
 
@@ -66,8 +72,9 @@ class IndexingCoordinator(
 
             val fileHashes = mutableMapOf<String, String>()
 
+            // Index all current files
             for (path in paths) {
-                if (!indexPath(path, fileHashes)) {
+                if (!indexPath(path, fileHashes, previousHashes, ::trackSkippedFile)) {
                     _progress.value = _progress.value.copy(
                         status = IndexStatus.FAILED,
                         error = "Failed to index path: $path",
@@ -76,8 +83,19 @@ class IndexingCoordinator(
                 }
             }
 
+            // Detect and remove deleted files
+            val deletedFiles = detectDeletedFiles(previousHashes, fileHashes)
+            if (deletedFiles.isNotEmpty()) {
+                log.info("Detected ${deletedFiles.size} deleted files, removing from index...")
+                removeDeletedFilesFromIndex(deletedFiles)
+            }
+
+            val skippedFiles = previousHashes.keys.intersect(fileHashes.keys).count { key ->
+                previousHashes[key] == fileHashes[key]
+            }
+
             // Flush any remaining segments
-            if (!batchIndexer.flushRemainingSegments()) {
+            if (!hybridIndexer.flushRemainingSegments()) {
                 _progress.value = _progress.value.copy(
                     status = IndexStatus.FAILED,
                     error = "Failed to flush remaining segments",
@@ -85,7 +103,7 @@ class IndexingCoordinator(
                 return false
             }
 
-            // Save state
+            // Save state (only includes current files, deleted files are removed)
             val processedFiles = fileHashes.size
             stateManager.saveState(processedFiles, fileHashes)
 
@@ -94,7 +112,12 @@ class IndexingCoordinator(
                 processedFiles = processedFiles,
             )
 
-            log.info("Completed indexing for project $projectId: $processedFiles files indexed")
+            log.info(
+                "Completed indexing for project $projectId: " +
+                    "${processedFiles - skippedFiles} files indexed, " +
+                    "$skippedFiles files skipped (unchanged), " +
+                    "${deletedFiles.size} files removed",
+            )
             return true
         } catch (e: Exception) {
             log.error("Indexing failed for project $projectId", e)
@@ -107,19 +130,64 @@ class IndexingCoordinator(
     }
 
     /**
-     * Index a single path (file or directory)
+     * Detect files that were previously indexed but are now deleted.
+     * Returns list of absolute file paths that no longer exist.
+     */
+    private fun detectDeletedFiles(
+        previousHashes: Map<String, String>,
+        currentHashes: Map<String, String>,
+    ): List<String> {
+        // Files in previous state but not in current state = deleted
+        val deletedFiles = previousHashes.keys - currentHashes.keys
+
+        if (deletedFiles.isNotEmpty()) {
+            log.debug("Detected ${deletedFiles.size} deleted files:")
+            deletedFiles.take(5).forEach { log.debug("  - $it") }
+            if (deletedFiles.size > 5) {
+                log.debug("  ... and ${deletedFiles.size - 5} more")
+            }
+        }
+
+        return deletedFiles.toList()
+    }
+
+    /**
+     * Remove deleted files from the hybrid index (vector store + keyword index).
+     */
+    private fun removeDeletedFilesFromIndex(deletedFiles: List<String>) {
+        try {
+            for (absoluteFilePath in deletedFiles) {
+                val filePath = Path.of(absoluteFilePath)
+                hybridIndexer.removeFileFromIndex(filePath)
+                log.debug("Removed deleted file from index: $absoluteFilePath")
+            }
+        } catch (e: Exception) {
+            log.error("Failed to remove deleted files from index", e)
+            throw e
+        }
+    }
+
+    private fun trackSkippedFile() {
+        // Placeholder for tracking, actual counting done by comparing hashes
+    }
+
+    /**
+     * Index a single path (file or directory).
+     * Returns true if successful, false if an error occurred.
      */
     private suspend fun indexPath(
         path: Path,
         fileHashes: MutableMap<String, String>,
+        previousHashes: Map<String, String>,
+        onSkip: () -> Unit,
     ): Boolean {
         if (shouldExcludePath(path)) {
             return true
         }
 
         return when {
-            path.isRegularFile() -> indexFile(path, fileHashes)
-            path.isDirectory() -> indexDirectory(path, fileHashes)
+            path.isRegularFile() -> indexFile(path, fileHashes, previousHashes)
+            path.isDirectory() -> indexDirectory(path, fileHashes, previousHashes, onSkip)
             else -> {
                 log.warn("Skipping non-file, non-directory: $path")
                 true
@@ -128,28 +196,51 @@ class IndexingCoordinator(
     }
 
     /**
-     * Index a single file
+     * Index a single file.
+     * Returns true if file was processed successfully (indexed or skipped), false on error.
      */
     private suspend fun indexFile(
         filePath: Path,
         fileHashes: MutableMap<String, String>,
+        previousHashes: Map<String, String>,
     ): Boolean {
         val startTime = System.currentTimeMillis()
         log.debug("Indexing file {}", filePath.fileName)
 
         try {
-            // Extract text
-            val text = fileProcessor.extractTextFromFile(filePath) ?: return true
-
-            // Calculate file hash
+            // Calculate file hash first to check if file has changed
             val hash = stateManager.calculateFileHash(filePath)
             val absolutePath = filePath.toAbsolutePath().toString()
+
+            // Store hash regardless of whether we index or skip
             fileHashes[absolutePath] = hash
+
+            // Skip if file hasn't changed (incremental indexing)
+            if (previousHashes[absolutePath] == hash) {
+                log.debug("Skipping unchanged file: {}", filePath.fileName)
+                updateProgress()
+                return true
+            }
+
+            // Extract text
+            val text = fileProcessor.extractTextFromFile(filePath)
+
+            // Skip files that can't be read or have blank content
+            if (text.isNullOrBlank()) {
+                log.debug("Skipping file with no extractable content: {}", filePath.fileName)
+                return true
+            }
 
             // Chunk text
             val chunks = fileProcessor.chunkText(text)
 
-            log.trace("Start indexing {} ({} chunks)", filePath.fileName, chunks.size)
+            // Skip if no valid chunks were created
+            if (chunks.isEmpty()) {
+                log.debug("No valid chunks created for file: {}", filePath.fileName)
+                return true
+            }
+
+            log.debug("Start indexing {} ({} chunks)", filePath.fileName, chunks.size)
             for ((idx, chunk) in chunks.withIndex()) {
                 val segment = fileProcessor.createTextSegment(
                     chunk = chunk,
@@ -158,31 +249,15 @@ class IndexingCoordinator(
                     totalChunks = chunks.size,
                 )
 
-                if (!batchIndexer.addSegmentToBatch(segment, filePath)) {
+                if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
                     return false
                 }
             }
 
             val elapsedTime = System.currentTimeMillis() - startTime
-            log.trace("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+            log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
 
-            // Update progress after successfully indexing a file
-            val processedFiles = fileHashes.size
-            val totalFiles = _progress.value.totalFiles
-            _progress.value = _progress.value.copy(processedFiles = processedFiles)
-
-            // Emit progress event every 10 files or at the end
-            if (processedFiles % 10 == 0 || processedFiles == totalFiles) {
-                EventBus.emit(
-                    IndexingInProgressEvent(
-                        projectId = projectId,
-                        projectName = projectName,
-                        filesIndexed = processedFiles,
-                        totalFiles = totalFiles,
-                    ),
-                )
-            }
-
+            updateProgress()
             return true
         } catch (e: Exception) {
             val elapsedTime = System.currentTimeMillis() - startTime
@@ -192,17 +267,41 @@ class IndexingCoordinator(
     }
 
     /**
-     * Index a directory recursively
+     * Update progress and emit events
+     */
+    private suspend fun updateProgress() {
+        val processedFiles = _progress.value.processedFiles + 1
+        val totalFiles = _progress.value.totalFiles
+        _progress.value = _progress.value.copy(processedFiles = processedFiles)
+
+        // Emit progress event every 10 files or at the end
+        if (processedFiles % 10 == 0 || processedFiles == totalFiles) {
+            EventBus.emit(
+                IndexingInProgressEvent(
+                    projectId = projectId,
+                    projectName = projectName,
+                    filesIndexed = processedFiles,
+                    totalFiles = totalFiles,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Index a directory recursively.
+     * Returns true if successful, false if an error occurred.
      */
     private suspend fun indexDirectory(
         dir: Path,
         fileHashes: MutableMap<String, String>,
+        previousHashes: Map<String, String>,
+        onSkip: () -> Unit,
     ): Boolean {
         try {
             val entries = dir.listDirectoryEntries()
 
             for (entry in entries) {
-                if (!indexPath(entry, fileHashes)) {
+                if (!indexPath(entry, fileHashes, previousHashes, onSkip)) {
                     return false
                 }
             }
