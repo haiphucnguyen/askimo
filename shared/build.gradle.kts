@@ -58,26 +58,6 @@ tasks.test {
 
     // Enable Vector API for better JVector performance
     jvmArgs("--add-modules", "jdk.incubator.vector")
-
-    // Configure SQLite temp directory for tests
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 kotlin {
     jvmToolchain(21)

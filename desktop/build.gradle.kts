@@ -137,20 +137,6 @@ compose.desktop {
                         identity.set(macosIdentity)
                     }
                 }
-
-                // Built-in notarization configuration
-                // This will notarize both the app bundle and the DMG automatically
-                val appleId = getEnvOrProperty("APPLE_ID")
-                val applePassword = getEnvOrProperty("APPLE_PASSWORD")
-                val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID")
-
-                if (!appleId.isNullOrBlank() && !applePassword.isNullOrBlank() && !appleTeamId.isNullOrBlank()) {
-                    notarization {
-                        appleID.set(appleId)
-                        password.set(applePassword)
-                        teamID.set(appleTeamId)
-                    }
-                }
             }
             windows {
                 iconFile.set(project.file("src/main/resources/images/askimo.ico"))
@@ -175,30 +161,169 @@ tasks.test {
 
     // Enable Vector API for better JVector performance
     jvmArgs("--add-modules", "jdk.incubator.vector")
-
-    // Configure SQLite temp directory for tests
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 
 kotlin {
     jvmToolchain(21)
+}
+
+abstract class ExecSupport
+    @Inject
+    constructor(
+        val execOps: ExecOperations,
+    )
+val execSupport = objects.newInstance(ExecSupport::class)
+
+// Task to notarize both app bundle and DMG
+tasks.register("packageNotarizedDmg") {
+    group = "distribution"
+    description = "Build app, notarize+staple app, create DMG from stapled app, notarize+staple DMG"
+
+    // Build the app bundle first. If you don't have a dedicated task, keep packageDmg,
+    // but we will RECREATE the DMG ourselves from the stapled app.
+    dependsOn("packageDmg")
+
+    doLast {
+        val os = System.getProperty("os.name").lowercase()
+        if (!os.contains("mac")) return@doLast
+
+        val appleId = getEnvOrProperty("APPLE_ID") ?: error("Missing APPLE_ID")
+        val applePassword = getEnvOrProperty("APPLE_PASSWORD") ?: error("Missing APPLE_PASSWORD")
+        val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID") ?: error("Missing APPLE_TEAM_ID")
+
+        // ---- Locate APP (produced by compose) ----
+        val appDir = file("build/compose/binaries/main/app")
+        val appFile =
+            appDir.listFiles()?.firstOrNull { it.name.endsWith(".app") }
+                ?: error("No .app found in ${appDir.absolutePath}")
+
+        println("🔐 Step 1: Notarize APP: ${appFile.name}")
+
+        // Apple accepts .app directly too, but ZIP is fine.
+        val zipFile = file("build/compose/binaries/main/${appFile.nameWithoutExtension}.zip")
+        if (zipFile.exists()) zipFile.delete()
+
+        execSupport.execOps.exec {
+            commandLine("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
+        }
+
+        val appNotarize =
+            execSupport.execOps.exec {
+                commandLine(
+                    "xcrun",
+                    "notarytool",
+                    "submit",
+                    zipFile.absolutePath,
+                    "--apple-id",
+                    appleId,
+                    "--team-id",
+                    appleTeamId,
+                    "--password",
+                    applePassword,
+                    "--wait",
+                )
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        zipFile.delete()
+
+        if (appNotarize.exitValue != 0) error("❌ App notarization failed")
+
+        // Staple APP (retry once if CDN delay)
+        fun stapleApp(): Int =
+            execSupport.execOps
+                .exec {
+                    commandLine("xcrun", "stapler", "staple", appFile.absolutePath)
+                    isIgnoreExitValue = true
+                    standardOutput = System.out
+                    errorOutput = System.err
+                }.exitValue
+
+        println("📎 Stapling APP ticket...")
+        var stapleExit = stapleApp()
+        if (stapleExit != 0) {
+            println("⚠️  APP stapling failed (CDN delay). Retrying once...")
+            stapleExit = stapleApp()
+        }
+        if (stapleExit != 0) {
+            // For a release, I'd rather fail than ship something that won't work offline.
+            error("❌ APP stapling still failed. Try again in ~10 minutes.")
+        }
+
+        // Verify APP is now notarized
+        println("🔍 Verifying APP with spctl...")
+        val appSpctl =
+            execSupport.execOps.exec {
+                commandLine("spctl", "-a", "-vv", appFile.absolutePath)
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        if (appSpctl.exitValue != 0) error("❌ APP is not accepted by Gatekeeper")
+
+        // ---- Create a NEW DMG from the stapled APP ----
+        println("📀 Step 2: Create DMG from stapled APP")
+
+        val outDir = file("build/compose/notarized").apply { mkdirs() }
+        val dmgOut = outDir.resolve("Askimo-${project.version}.dmg")
+        if (dmgOut.exists()) dmgOut.delete()
+
+        execSupport.execOps.exec {
+            commandLine(
+                "hdiutil",
+                "create",
+                "-volname",
+                "Askimo",
+                "-srcfolder",
+                appFile.absolutePath,
+                "-ov",
+                "-format",
+                "UDZO",
+                dmgOut.absolutePath,
+            )
+            isIgnoreExitValue = false
+            standardOutput = System.out
+            errorOutput = System.err
+        }
+
+        println("🔐 Step 3: Notarize DMG: ${dmgOut.name}")
+        val dmgNotarize =
+            execSupport.execOps.exec {
+                commandLine(
+                    "xcrun",
+                    "notarytool",
+                    "submit",
+                    dmgOut.absolutePath,
+                    "--apple-id",
+                    appleId,
+                    "--team-id",
+                    appleTeamId,
+                    "--password",
+                    applePassword,
+                    "--wait",
+                )
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        if (dmgNotarize.exitValue != 0) error("❌ DMG notarization failed")
+
+        println("📎 Stapling DMG ticket...")
+        val dmgStaple =
+            execSupport.execOps.exec {
+                commandLine("xcrun", "stapler", "staple", dmgOut.absolutePath)
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        if (dmgStaple.exitValue != 0) error("❌ DMG stapling failed. Try again in ~10 minutes.")
+
+        println("✅ Done. Verify:")
+        println("  spctl -a -t open -vv \"${dmgOut.absolutePath}\"")
+        println("  hdiutil attach \"${dmgOut.absolutePath}\"")
+        println("  spctl -a -vv \"/Volumes/Askimo/Askimo.app\"")
+    }
 }
 
 // Task to detect unused localization keys

@@ -167,30 +167,6 @@ tasks.named<ProcessResources>("processResources") {
     from(aboutDir)
 }
 
-tasks.named<JavaExec>("run") {
-    standardInput = System.`in`
-
-    // Configure SQLite temp directory for development runs
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
-}
-
 tasks.register<Sync>("syncGraalMetadata") {
     from(layout.buildDirectory.dir("graal-agent"))
     include("**/*-config.json")
