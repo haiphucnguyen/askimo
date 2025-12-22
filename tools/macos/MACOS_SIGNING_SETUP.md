@@ -298,31 +298,6 @@ security set-key-partition-list -S apple-tool:,apple:,codesign: ~/Library/Keycha
 ✅ Complete!
 ```
 
-### Manual Notarization
-
-```bash
-# Build first
-./gradlew :desktop:packageDmg
-
-# Then notarize
-./tools/macos/notarize-dmg.sh
-
-# Or notarize any DMG
-./tools/macos/notarize-dmg.sh path/to/app.dmg
-```
-
-### Checking Status
-
-```bash
-# View all submissions
-./tools/macos/check-notarization.sh
-
-# Check specific submission
-./tools/macos/check-notarization.sh <submission-id>
-
-# Or web interface
-# https://appstoreconnect.apple.com → Notary
-```
 
 ### Do You Need Notarization?
 
@@ -347,6 +322,14 @@ Notarization works for:
 - Any direct download
 
 ---
+
+## Create profile for local testing
+
+```bash
+xcrun notarytool store-credentials askimo-notary \                                              
+  --apple-id "user_id" \
+  --team-id "team_id"
+```
 
 ## 🎯 Gradle Integration
 
