@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.user.IndexingInProgressEvent
@@ -15,9 +16,17 @@ import io.askimo.core.rag.filter.FilterChain
 import io.askimo.core.rag.state.IndexProgress
 import io.askimo.core.rag.state.IndexStateManager
 import io.askimo.core.rag.state.IndexStatus
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
@@ -43,15 +52,45 @@ class IndexingCoordinator(
 
     private val filterChain: FilterChain = FilterChain.DEFAULT
 
+    private val projectRoots = mutableListOf<Path>()
+
+    private val maxConcurrentFiles = AppConfig.indexing.concurrentIndexingThreads
+    private val fileSemaphore = Semaphore(maxConcurrentFiles)
+
+    private val processedFilesCounter = AtomicInteger(0)
+    private val totalFilesCounter = AtomicInteger(0)
+
     /**
      * Check if a path should be excluded from indexing using the filter chain.
-     * Each path is evaluated independently - supports multiple unrelated paths.
+     * Uses the appropriate project root for context.
      */
-    private fun shouldExcludePath(path: Path): Boolean = filterChain.shouldExcludePath(path)
+    private fun shouldExcludePath(path: Path): Boolean {
+        val absolutePath = path.toAbsolutePath()
+
+        // Find the appropriate project root for this path
+        val rootPath = projectRoots.firstOrNull { root ->
+            try {
+                absolutePath.startsWith(root.toAbsolutePath())
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        // Never exclude the project root itself
+        if (rootPath != null && absolutePath == rootPath.toAbsolutePath()) {
+            return false
+        }
+
+        return if (rootPath != null) {
+            filterChain.shouldExclude(path, rootPath)
+        } else {
+            filterChain.shouldExcludePath(path)
+        }
+    }
 
     /**
      * Index paths with progress tracking.
-     * Supports multiple unrelated paths - each is evaluated independently.
+     * Uses parallel processing for better performance.
      * Uses incremental indexing - only indexes new or modified files.
      * Detects and removes deleted files from the index.
      */
@@ -60,27 +99,41 @@ class IndexingCoordinator(
     ): Boolean {
         _progress.value = IndexProgress(status = IndexStatus.INDEXING)
 
+        // Store project roots for filtering context
+        projectRoots.clear()
+        projectRoots.addAll(paths.map { it.toAbsolutePath() })
+
+        // Reset counters
+        processedFilesCounter.set(0)
+        totalFilesCounter.set(0)
+
         try {
-            // Load previous state for incremental indexing
             val previousState = stateManager.loadPersistedState()
             val previousHashes: Map<String, String> = previousState?.fileHashes ?: emptyMap()
 
-            val totalFiles = countIndexableFiles(paths)
-            _progress.value = _progress.value.copy(totalFiles = totalFiles)
+            log.info("Starting parallel indexing for project $projectId with $maxConcurrentFiles concurrent threads")
 
-            log.info("Starting indexing for project $projectId: $totalFiles files")
+            val fileHashes = ConcurrentHashMap<String, String>()
 
-            val fileHashes = mutableMapOf<String, String>()
-
-            // Index all current files
+            // Collect all files first
+            val allFiles = mutableListOf<Path>()
             for (path in paths) {
-                if (!indexPath(path, fileHashes, previousHashes, ::trackSkippedFile)) {
-                    _progress.value = _progress.value.copy(
-                        status = IndexStatus.FAILED,
-                        error = "Failed to index path: $path",
-                    )
-                    return false
-                }
+                collectIndexableFiles(path, allFiles)
+            }
+
+            totalFilesCounter.set(allFiles.size)
+            _progress.value = _progress.value.copy(totalFiles = allFiles.size)
+
+            log.info("Found ${allFiles.size} indexable files")
+
+            coroutineScope {
+                allFiles.map { filePath ->
+                    async(Dispatchers.IO) {
+                        fileSemaphore.withPermit {
+                            indexFile(filePath, fileHashes, previousHashes)
+                        }
+                    }
+                }.awaitAll()
             }
 
             // Detect and remove deleted files
@@ -105,7 +158,7 @@ class IndexingCoordinator(
 
             // Save state (only includes current files, deleted files are removed)
             val processedFiles = fileHashes.size
-            stateManager.saveState(processedFiles, fileHashes)
+            stateManager.saveState(processedFiles, fileHashes.toMap())
 
             _progress.value = _progress.value.copy(
                 status = IndexStatus.READY,
@@ -126,6 +179,29 @@ class IndexingCoordinator(
                 error = e.message ?: "Unknown error",
             )
             return false
+        }
+    }
+
+    /**
+     * Collect all indexable files without processing them (fast).
+     * This replaces the expensive countIndexableFiles that calculated hashes.
+     */
+    private fun collectIndexableFiles(path: Path, result: MutableList<Path>) {
+        if (shouldExcludePath(path)) {
+            return
+        }
+
+        when {
+            path.isRegularFile() -> result.add(path)
+            path.isDirectory() -> {
+                try {
+                    path.listDirectoryEntries().forEach { entry ->
+                        collectIndexableFiles(entry, result)
+                    }
+                } catch (e: Exception) {
+                    log.warn("Failed to list directory ${path.fileName}: ${e.message}")
+                }
+            }
         }
     }
 
@@ -167,48 +243,18 @@ class IndexingCoordinator(
         }
     }
 
-    private fun trackSkippedFile() {
-        // Placeholder for tracking, actual counting done by comparing hashes
-    }
-
     /**
-     * Index a single path (file or directory).
-     * Returns true if successful, false if an error occurred.
-     */
-    private suspend fun indexPath(
-        path: Path,
-        fileHashes: MutableMap<String, String>,
-        previousHashes: Map<String, String>,
-        onSkip: () -> Unit,
-    ): Boolean {
-        if (shouldExcludePath(path)) {
-            return true
-        }
-
-        return when {
-            path.isRegularFile() -> indexFile(path, fileHashes, previousHashes)
-            path.isDirectory() -> indexDirectory(path, fileHashes, previousHashes, onSkip)
-            else -> {
-                log.warn("Skipping non-file, non-directory: $path")
-                true
-            }
-        }
-    }
-
-    /**
-     * Index a single file.
+     * Index a single file (optimized for parallel processing).
      * Returns true if file was processed successfully (indexed or skipped), false on error.
      */
     private suspend fun indexFile(
         filePath: Path,
-        fileHashes: MutableMap<String, String>,
+        fileHashes: ConcurrentHashMap<String, String>,
         previousHashes: Map<String, String>,
     ): Boolean {
         val startTime = System.currentTimeMillis()
-        log.debug("Indexing file {}", filePath.fileName)
 
         try {
-            // Calculate file hash first to check if file has changed
             val hash = stateManager.calculateFileHash(filePath)
             val absolutePath = filePath.toAbsolutePath().toString()
 
@@ -218,25 +264,25 @@ class IndexingCoordinator(
             // Skip if file hasn't changed (incremental indexing)
             if (previousHashes[absolutePath] == hash) {
                 log.debug("Skipping unchanged file: {}", filePath.fileName)
-                updateProgress()
+                updateProgressAtomic()
                 return true
             }
 
-            // Extract text
             val text = fileProcessor.extractTextFromFile(filePath)
 
             // Skip files that can't be read or have blank content
             if (text.isNullOrBlank()) {
                 log.debug("Skipping file with no extractable content: {}", filePath.fileName)
+                updateProgressAtomic()
                 return true
             }
 
-            // Chunk text
             val chunks = fileProcessor.chunkText(text)
 
             // Skip if no valid chunks were created
             if (chunks.isEmpty()) {
                 log.debug("No valid chunks created for file: {}", filePath.fileName)
+                updateProgressAtomic()
                 return true
             }
 
@@ -257,7 +303,7 @@ class IndexingCoordinator(
             val elapsedTime = System.currentTimeMillis() - startTime
             log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
 
-            updateProgress()
+            updateProgressAtomic()
             return true
         } catch (e: Exception) {
             val elapsedTime = System.currentTimeMillis() - startTime
@@ -267,14 +313,13 @@ class IndexingCoordinator(
     }
 
     /**
-     * Update progress and emit events
+     * Update progress atomically
      */
-    private suspend fun updateProgress() {
-        val processedFiles = _progress.value.processedFiles + 1
-        val totalFiles = _progress.value.totalFiles
+    private suspend fun updateProgressAtomic() {
+        val processedFiles = processedFilesCounter.incrementAndGet()
+        val totalFiles = totalFilesCounter.get()
         _progress.value = _progress.value.copy(processedFiles = processedFiles)
 
-        // Emit progress event every 10 files or at the end
         if (processedFiles % 10 == 0 || processedFiles == totalFiles) {
             EventBus.emit(
                 IndexingInProgressEvent(
@@ -285,75 +330,5 @@ class IndexingCoordinator(
                 ),
             )
         }
-    }
-
-    /**
-     * Index a directory recursively.
-     * Returns true if successful, false if an error occurred.
-     */
-    private suspend fun indexDirectory(
-        dir: Path,
-        fileHashes: MutableMap<String, String>,
-        previousHashes: Map<String, String>,
-        onSkip: () -> Unit,
-    ): Boolean {
-        try {
-            val entries = dir.listDirectoryEntries()
-
-            for (entry in entries) {
-                if (!indexPath(entry, fileHashes, previousHashes, onSkip)) {
-                    return false
-                }
-            }
-
-            return true
-        } catch (e: Exception) {
-            log.error("Failed to index directory ${dir.fileName}: ${e.message}", e)
-            return false
-        }
-    }
-
-    /**
-     * Count total indexable files
-     */
-    private fun countIndexableFiles(paths: List<Path>): Int {
-        var count = 0
-
-        for (path in paths) {
-            count += when {
-                path.isRegularFile() -> if (!shouldExcludePath(path)) 1 else 0
-                path.isDirectory() -> countFilesInDirectory(path)
-                else -> 0
-            }
-        }
-
-        return count
-    }
-
-    /**
-     * Count files in a directory recursively
-     */
-    private fun countFilesInDirectory(dir: Path): Int {
-        if (shouldExcludePath(dir)) {
-            return 0
-        }
-
-        var count = 0
-
-        try {
-            val entries = dir.listDirectoryEntries()
-
-            for (entry in entries) {
-                count += when {
-                    entry.isRegularFile() -> if (!shouldExcludePath(entry)) 1 else 0
-                    entry.isDirectory() -> countFilesInDirectory(entry)
-                    else -> 0
-                }
-            }
-        } catch (e: Exception) {
-            log.warn("Failed to count files in ${dir.fileName}: ${e.message}")
-        }
-
-        return count
     }
 }

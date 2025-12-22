@@ -11,37 +11,30 @@ repositories {
 }
 
 dependencies {
-    // LangChain4j libraries
     api(libs.bundles.langchain4j)
 
-    // Kotlin libraries
     api(libs.kotlinx.serialization.json.jvm)
     api(libs.kotlinx.coroutines.core)
     api(kotlin("stdlib"))
 
-    // Lucene for keyword search
     api(libs.bundles.lucene)
 
-    // Jackson for YAML/JSON
     api(libs.bundles.jackson)
 
-    // Database
     api(libs.sqlite.jdbc)
     api(libs.hikaricp)
     api(libs.bundles.exposed)
 
-    // Dependency Injection
     api(libs.bundles.koin)
 
-    // Logging
+    implementation(libs.caffeine)
+
     api(libs.bundles.logging)
 
-    // Tika for file parsing
     implementation(libs.bundles.tika) {
         exclude(group = "org.eclipse.angus", module = "angus-activation")
     }
 
-    // Markdown
     implementation(libs.bundles.commonmark)
 
     // Testing

@@ -12,6 +12,8 @@ import io.askimo.core.logging.logger
 import io.askimo.core.rag.FileSegmentRepository
 import io.askimo.core.rag.LuceneIndexer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.util.UUID
@@ -36,32 +38,42 @@ class HybridIndexer(
     }
 
     companion object {
-        private const val BATCH_SIZE = 50
+        private const val BATCH_SIZE = 100
     }
+
+    // Mutex for thread-safe batch operations
+    private val batchMutex = Mutex()
 
     private val segmentBatch = mutableListOf<Pair<TextSegment, Path>>() // Track file path with segment
     private val pendingMappings = mutableListOf<Triple<Path, String, Int>>() // (filePath, segmentId, chunkIndex)
 
     /**
-     * Add segment to batch and flush if batch is full
+     * Add segment to batch and flush if batch is full (thread-safe)
      */
     suspend fun addSegmentToBatch(
         segment: TextSegment,
         filePath: Path,
-    ): Boolean {
+    ): Boolean = batchMutex.withLock {
         segmentBatch.add(segment to filePath)
 
         if (segmentBatch.size >= BATCH_SIZE) {
-            return flushSegmentBatch()
+            return flushSegmentBatchInternal()
         }
 
         return true
     }
 
     /**
-     * Flush the current batch of segments to both embedding store and keyword index
+     * Flush the current batch of segments to both embedding store and keyword index (thread-safe)
      */
-    suspend fun flushSegmentBatch(): Boolean {
+    suspend fun flushSegmentBatch(): Boolean = batchMutex.withLock {
+        flushSegmentBatchInternal()
+    }
+
+    /**
+     * Internal flush method (must be called with lock held)
+     */
+    private suspend fun flushSegmentBatchInternal(): Boolean {
         if (segmentBatch.isEmpty()) {
             return true
         }
@@ -104,14 +116,16 @@ class HybridIndexer(
     }
 
     /**
-     * Flush any remaining segments in the batch
+     * Flush any remaining segments in the batch (thread-safe)
      */
-    suspend fun flushRemainingSegments(): Boolean = if (segmentBatch.isNotEmpty()) {
-        log.debug("Flushing {} remaining segments", segmentBatch.size)
-        flushSegmentBatch()
-    } else {
-        savePendingMappings()
-        true
+    suspend fun flushRemainingSegments(): Boolean = batchMutex.withLock {
+        if (segmentBatch.isNotEmpty()) {
+            log.debug("Flushing {} remaining segments", segmentBatch.size)
+            flushSegmentBatchInternal()
+        } else {
+            savePendingMappings()
+            true
+        }
     }
 
     /**
