@@ -182,7 +182,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            # For macOS: Build, sign, notarize, and staple in one go
+            # For macOS: Build, sign, and notarize in one command
             ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageNotarizedDmg
           else
             # For Linux: Just package

@@ -114,7 +114,7 @@ compose.desktop {
             )
             packageName = "Askimo"
             packageVersion = project.version.toString()
-            description = "Askimo Desktop Application"
+            description = "AI-powered user assistant with local RAG and semantic search capabilities"
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"
 
@@ -161,195 +161,229 @@ tasks.test {
 
     // Enable Vector API for better JVector performance
     jvmArgs("--add-modules", "jdk.incubator.vector")
-
-    // Configure SQLite temp directory for tests
-    val sqliteTmpDir =
-        layout.buildDirectory
-            .dir("sqlite-tmp")
-            .get()
-            .asFile
-    val javaTmpDir =
-        layout.buildDirectory
-            .dir("tmp")
-            .get()
-            .asFile
-
-    doFirst {
-        sqliteTmpDir.mkdirs()
-        javaTmpDir.mkdirs()
-    }
-
-    systemProperty("org.sqlite.tmpdir", sqliteTmpDir.absolutePath)
-    systemProperty("java.io.tmpdir", javaTmpDir.absolutePath)
 }
 
 kotlin {
     jvmToolchain(21)
 }
 
-// Task to manually notarize and staple the macOS DMG
-// Note: Renamed to avoid conflicts with Compose Desktop plugin's built-in notarization
-tasks.register("notarizeAndStapleDmg") {
-    group = "distribution"
-    description = "Manually notarize and staple the macOS DMG with Apple (waits for completion)"
+abstract class ExecSupport
+    @Inject
+    constructor(
+        val execOps: ExecOperations,
+    )
+val execSupport = objects.newInstance(ExecSupport::class)
 
-    // This task should run after packageDmg
-    mustRunAfter("packageDmg")
+fun notarytoolAuthArgs(): List<String> {
+    // Priority 1: Explicit keychain profile (best for local dev)
+    val profile = getEnvOrProperty("NOTARY_KEYCHAIN_PROFILE") // e.g. "askimo-notary"
+    if (!profile.isNullOrBlank()) {
+        return listOf("--keychain-profile", profile)
+    }
+
+    // Priority 2: App Store Connect API key (portable for CI)
+    val ascKeyId = getEnvOrProperty("ASC_KEY_ID")
+    val ascIssuerId = getEnvOrProperty("ASC_ISSUER_ID")
+    val ascKeyPath = getEnvOrProperty("ASC_KEY_PATH") // path to .p8
+    if (!ascKeyId.isNullOrBlank() && !ascIssuerId.isNullOrBlank() && !ascKeyPath.isNullOrBlank()) {
+        return listOf("--key-id", ascKeyId, "--issuer", ascIssuerId, "--key", ascKeyPath)
+    }
+
+    // Priority 3: Apple ID + app-specific password
+    val appleId = getEnvOrProperty("APPLE_ID")
+    val applePassword = getEnvOrProperty("APPLE_PASSWORD")
+    val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID")
+    if (!appleId.isNullOrBlank() && !applePassword.isNullOrBlank() && !appleTeamId.isNullOrBlank()) {
+        return listOf("--apple-id", appleId, "--team-id", appleTeamId, "--password", applePassword)
+    }
+
+    error(
+        """
+        Notarization credentials are not configured.
+        Provide ONE of:
+          1) NOTARY_KEYCHAIN_PROFILE (e.g. askimo-notary)
+          2) ASC_KEY_ID + ASC_ISSUER_ID + ASC_KEY_PATH
+          3) APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID
+        """.trimIndent(),
+    )
+}
+
+// Task to notarize both app bundle and DMG
+tasks.register("packageNotarizedDmg") {
+    group = "distribution"
+    description = "Build app, notarize+staple app, create DMG from stapled app, notarize+staple DMG"
+
+    // Build the app bundle first. If you don't have a dedicated task, keep packageDmg,
+    // but we will RECREATE the DMG ourselves from the stapled app.
+    dependsOn("packageDmg")
 
     doLast {
         val os = System.getProperty("os.name").lowercase()
-        if (!os.contains("mac")) {
-            println("⏭️  Skipping notarization (not macOS)")
-            return@doLast
+        if (!os.contains("mac")) return@doLast
+
+        // ---- Locate APP (produced by compose) ----
+        val appDir = file("build/compose/binaries/main/app")
+        val appFile =
+            appDir.listFiles()?.firstOrNull { it.name.endsWith(".app") }
+                ?: error("No .app found in ${appDir.absolutePath}")
+
+        println("🔐 Step 1: Notarize APP: ${appFile.name}")
+
+        // Apple accepts .app directly too, but ZIP is fine.
+        val zipFile = file("build/compose/binaries/main/${appFile.nameWithoutExtension}.zip")
+        if (zipFile.exists()) zipFile.delete()
+
+        execSupport.execOps.exec {
+            commandLine("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
         }
 
-        // Get credentials from environment
-        val appleId = getEnvOrProperty("APPLE_ID")
-        val applePassword = getEnvOrProperty("APPLE_PASSWORD")
-        val appleTeamId = getEnvOrProperty("APPLE_TEAM_ID")
-
-        if (appleId.isNullOrBlank() || applePassword.isNullOrBlank() || appleTeamId.isNullOrBlank()) {
-            println("⚠️  Skipping notarization - credentials not configured")
-            println("   Set APPLE_ID, APPLE_PASSWORD, and APPLE_TEAM_ID in .env to enable notarization")
-            return@doLast
-        }
-
-        // Find the DMG file
-        val dmgDir = file("build/compose/binaries/main/dmg")
-        if (!dmgDir.exists()) {
-            println("❌ DMG directory not found: ${dmgDir.absolutePath}")
-            return@doLast
-        }
-
-        val dmgFiles = dmgDir.listFiles()?.filter { it.extension == "dmg" }
-        if (dmgFiles.isNullOrEmpty()) {
-            println("❌ No DMG file found in ${dmgDir.absolutePath}")
-            return@doLast
-        }
-
-        val dmgFile = dmgFiles.first()
-        println("📦 Found DMG: ${dmgFile.name}")
-        println("🔐 Starting notarization process...")
-        println("⏳ This will submit to Apple and wait for approval (5-60 minutes)")
-        println("")
-
-        // Submit for notarization and WAIT for completion (single command)
-        val notarizeResult =
-            exec {
+        val appNotarize =
+            execSupport.execOps.exec {
                 commandLine(
                     "xcrun",
                     "notarytool",
                     "submit",
-                    dmgFile.absolutePath,
-                    "--apple-id",
-                    appleId,
-                    "--team-id",
-                    appleTeamId,
-                    "--password",
-                    applePassword,
+                    zipFile.absolutePath,
+                    *notarytoolAuthArgs().toTypedArray(),
                     "--wait",
                 )
-                isIgnoreExitValue = true
+                isIgnoreExitValue = false
                 standardOutput = System.out
                 errorOutput = System.err
             }
+        zipFile.delete()
 
-        if (notarizeResult.exitValue != 0) {
-            println("")
-            println("❌ Notarization failed or was rejected by Apple")
-            println("")
-            println("To debug:")
-            println("  1. Check recent submissions: ./tools/macos/check-notarization.sh")
-            println("  2. Get detailed log with the submission ID from output above")
-            throw GradleException("Notarization failed")
+        if (appNotarize.exitValue != 0) error("❌ App notarization failed")
+
+        // Staple APP (retry once if CDN delay, but continue if it fails)
+        fun stapleApp(): Int =
+            execSupport.execOps
+                .exec {
+                    commandLine("xcrun", "stapler", "staple", appFile.absolutePath)
+                    isIgnoreExitValue = true
+                    standardOutput = System.out
+                    errorOutput = System.err
+                }.exitValue
+
+        println("📎 Stapling APP ticket...")
+        var appStapled = false
+        var stapleExit = stapleApp()
+        if (stapleExit != 0) {
+            println("⚠️  APP stapling failed (CDN delay). Retrying in 30 seconds...")
+            Thread.sleep(30000) // Wait 30 seconds for CDN
+            stapleExit = stapleApp()
         }
 
-        println("")
-        println("✅ Notarization successful!")
-        println("")
-
-        // Staple the notarization ticket
-        println("📎 Stapling notarization ticket to DMG...")
-        println("ℹ️  Note: Apple's CDN can take 5-15+ minutes to propagate the ticket")
-        println("")
-
-        val stapleResult =
-            exec {
-                commandLine("xcrun", "stapler", "staple", dmgFile.absolutePath)
-                isIgnoreExitValue = true
-                standardOutput = System.out
-                errorOutput = System.err
-            }
-
-        if (stapleResult.exitValue == 0) {
-            println("")
-            println("✅ Notarization ticket stapled successfully!")
-
-            // Verify the stapling
-            println("")
-            println("🔍 Verifying stapled ticket...")
-            exec {
-                commandLine("xcrun", "stapler", "validate", dmgFile.absolutePath)
-                isIgnoreExitValue = true
-                standardOutput = System.out
-                errorOutput = System.err
-            }
+        if (stapleExit == 0) {
+            println("✅ APP ticket stapled successfully!")
+            appStapled = true
         } else {
             println("")
             println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("⚠️  Stapling failed - This is ACCEPTABLE")
+            println("⚠️  APP stapling failed - This is ACCEPTABLE")
             println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             println("")
-            println("✅ Your DMG is FULLY VALID and PRODUCTION-READY:")
-            println("   • Properly signed with Developer ID")
-            println("   • Successfully notarized by Apple")
-            println("   • No Gatekeeper warnings for users")
-            println("   • Safe to distribute immediately")
+            println("✅ Your APP is FULLY NOTARIZED by Apple")
+            println("   • Status: Accepted (confirmed)")
+            println("   • Stapling: Failed (CDN propagation delay)")
+            println("   • User impact: Internet required on first launch")
             println("")
-            println("ℹ️  Technical details:")
-            println("   • Apple's CDN needs 5-15+ minutes to propagate tickets")
-            println("   • Stapling is an optimization, not a requirement")
-            println("   • macOS will verify online on first launch")
-            println("   • After first launch, verification is cached")
+            println("ℹ️  To staple later (after 15-30 min):")
+            println("   xcrun stapler staple \"${appFile.absolutePath}\"")
             println("")
-            println("ℹ️  To staple later (after CDN propagation):")
-            println("   xcrun stapler staple ${dmgFile.absolutePath}")
+            println("✅ Build will continue - APP is production-ready")
             println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("")
+        }
+
+        // ---- Create a NEW DMG from the stapled APP ----
+        println("📀 Step 2: Create DMG from stapled APP")
+
+        val outDir = file("build/compose/notarized").apply { mkdirs() }
+        val dmgOut = outDir.resolve("Askimo-${project.version}.dmg")
+        if (dmgOut.exists()) dmgOut.delete()
+
+        execSupport.execOps.exec {
+            commandLine(
+                "hdiutil",
+                "create",
+                "-volname",
+                "Askimo",
+                "-srcfolder",
+                appFile.absolutePath,
+                "-ov",
+                "-format",
+                "UDZO",
+                dmgOut.absolutePath,
+            )
+            isIgnoreExitValue = false
+            standardOutput = System.out
+            errorOutput = System.err
+        }
+
+        println("🔐 Step 3: Notarize DMG: ${dmgOut.name}")
+        val dmgNotarize =
+            execSupport.execOps.exec {
+                commandLine(
+                    "xcrun",
+                    "notarytool",
+                    "submit",
+                    dmgOut.absolutePath,
+                    *notarytoolAuthArgs().toTypedArray(),
+                    "--wait",
+                )
+                isIgnoreExitValue = false
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+        if (dmgNotarize.exitValue != 0) error("❌ DMG notarization failed")
+
+        println("📎 Stapling DMG ticket...")
+        val dmgStaple =
+            execSupport.execOps.exec {
+                commandLine("xcrun", "stapler", "staple", dmgOut.absolutePath)
+                isIgnoreExitValue = true
+                standardOutput = System.out
+                errorOutput = System.err
+            }
+
+        if (dmgStaple.exitValue == 0) {
+            println("✅ DMG ticket stapled successfully!")
+        } else {
+            println("")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("⚠️  DMG stapling failed - This is ACCEPTABLE")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("")
+            println("✅ Your DMG is FULLY NOTARIZED by Apple")
+            println("   • Contains notarized ${if (appStapled) "and stapled" else "but unstapled"} app")
+            println("   • Users can download and install without warnings")
+            println("")
+            println("ℹ️  To staple DMG later (after 15-30 min):")
+            println("   xcrun stapler staple \"${dmgOut.absolutePath}\"")
+            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            println("")
         }
 
         println("")
         println("========================================")
-        println("✅ Notarization Complete!")
+        println("✅ Build Complete!")
         println("========================================")
         println("")
-        println("Your fully signed and notarized DMG:")
-        println("  ${dmgFile.absolutePath}")
+        println("Notarized DMG location:")
+        println("  ${dmgOut.absolutePath}")
         println("")
-        println("Users will NOT see any security warnings when opening this app!")
-    }
-}
-
-// Task to build, sign, and notarize in one command
-tasks.register("packageNotarizedDmg") {
-    group = "distribution"
-    description = "Build, sign, and notarize the macOS DMG (complete release build with manual wait)"
-
-    dependsOn("packageDmg")
-    finalizedBy("notarizeAndStapleDmg")
-
-    doLast {
-        println("========================================")
-        println("📦 Complete Release Package")
-        println("========================================")
+        println("Status:")
+        println("  • APP notarized: ✅")
+        println("  • APP stapled: ${if (appStapled) "✅" else "⚠️  (needs internet on first launch)"}")
+        println("  • DMG notarized: ✅")
+        println("  • DMG stapled: ${if (dmgStaple.exitValue == 0) "✅" else "⚠️  (optional)"}")
         println("")
-        println("This will:")
-        println("  1. Build the application")
-        println("  2. Create and sign the DMG")
-        println("  3. Submit for notarization (5-60 min wait)")
-        println("  4. Staple the notarization ticket")
-        println("  5. Verify everything worked")
+        println("Verify with:")
+        println("  spctl -a -t open -vv \"${dmgOut.absolutePath}\"")
+        println("  hdiutil attach \"${dmgOut.absolutePath}\"")
+        println("  spctl -a -vv \"/Volumes/Askimo/Askimo.app\"")
         println("")
-        println("Please be patient - notarization can take up to an hour.")
     }
 }
 
