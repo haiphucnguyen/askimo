@@ -531,7 +531,7 @@ private fun navigationItemLabelWithMenu(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),

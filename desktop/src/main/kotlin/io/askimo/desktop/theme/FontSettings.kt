@@ -14,8 +14,8 @@ data class FontSettings(
 }
 
 enum class FontSize(val displayName: String, val scale: Float) {
-    SMALL("Small", 0.875f),
+    SMALL("Small", 0.85f),
     MEDIUM("Medium", 1.0f),
-    LARGE("Large", 1.125f),
-    EXTRA_LARGE("Extra Large", 1.25f),
+    LARGE("Large", 1.15f),
+    EXTRA_LARGE("Extra Large", 1.35f),
 }
