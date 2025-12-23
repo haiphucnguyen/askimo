@@ -423,6 +423,48 @@ fun jarContainsDylib(jar: File): Boolean {
     return out.toString().lineSequence().any { it.trim().endsWith(".dylib") }
 }
 
+fun signDylibsInsideJar(
+    jar: File,
+    identity: String,
+    workRoot: File,
+) {
+    if (!jarContainsDylib(jar)) return
+
+    println("   • Signing dylibs inside JAR: ${jar.name}")
+
+    val jarWorkDir =
+        File(workRoot, jar.nameWithoutExtension).apply {
+            deleteRecursively()
+            mkdirs()
+        }
+
+    // Extract
+    execLogged(
+        "bash",
+        "-lc",
+        """cd "${jarWorkDir.absolutePath}" && jar xf "${jar.absolutePath}"""",
+    )
+
+    // Sign extracted dylibs
+    execLogged(
+        "bash",
+        "-lc",
+        """
+        set -e
+        find "${jarWorkDir.absolutePath}" -type f -name "*.dylib" -print0 \
+          | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+        """.trimIndent(),
+    )
+
+    // Repack (overwrite original JAR)
+    jar.delete()
+    execLogged(
+        "bash",
+        "-lc",
+        """cd "${jarWorkDir.absolutePath}" && jar cf "${jar.absolutePath}" .""",
+    )
+}
+
 /**
  * Fix notarization "Invalid" due to:
  * - unsigned or untimestamped dylibs inside JARs (sqlite-jdbc, skiko)
@@ -433,18 +475,26 @@ fun jarContainsDylib(jar: File): Boolean {
  */
 fun postSignComposeApp(appFile: File) {
     val identity = codesignIdentity()
-    println("🔏 Post-signing for notarization: ${appFile.absolutePath}")
-    println("🔑 Using identity: $identity")
 
-    val contents = File(appFile, "Contents").also { require(it.exists()) { "Missing Contents in $appFile" } }
+    println("🔏 Post-signing app for notarization:")
+    println("   ${appFile.absolutePath}")
+    println("🔑 Identity: $identity")
+
+    val contents =
+        File(appFile, "Contents").also {
+            require(it.exists()) { "Missing Contents in $appFile" }
+        }
+
     val runtimeDir = File(contents, "runtime")
     val appDir = File(contents, "app")
     val macOsDir = File(contents, "MacOS")
     val mainExe = File(macOsDir, "Askimo")
 
-    // 1) Sign embedded runtime dylibs + helpers
+    /* ------------------------------------------------------------
+     * 1) Sign embedded JRE dylibs + helpers
+     * ------------------------------------------------------------ */
     if (runtimeDir.exists()) {
-        println("🔧 Signing embedded runtime binaries...")
+        println("🔧 Signing embedded runtime dylibs...")
         execLogged(
             "bash",
             "-lc",
@@ -456,9 +506,11 @@ fun postSignComposeApp(appFile: File) {
         )
     }
 
-    // 2) Sign loose dylibs under Contents/app (e.g., libskiko-macos-arm64.dylib)
+    /* ------------------------------------------------------------
+     * 2) Sign loose dylibs under Contents/app
+     * ------------------------------------------------------------ */
     if (appDir.exists()) {
-        println("🔧 Signing native dylibs under Contents/app...")
+        println("🔧 Signing loose dylibs under Contents/app...")
         execLogged(
             "bash",
             "-lc",
@@ -469,44 +521,27 @@ fun postSignComposeApp(appFile: File) {
             """.trimIndent(),
         )
 
-        // 3) Sign dylibs embedded inside JARs (sqlite-jdbc, skiko, and any others)
-        println("🔧 Signing dylibs inside JARs (if any)...")
-        val work =
+        /* --------------------------------------------------------
+         * 3) Sign dylibs embedded INSIDE JARs (sqlite, skiko)
+         * -------------------------------------------------------- */
+        println("🔧 Signing dylibs embedded inside JARs...")
+        val workRoot =
             File(project.buildDir, "codesign-jar-work").apply {
                 deleteRecursively()
                 mkdirs()
             }
 
-        val jars = appDir.walkTopDown().filter { it.isFile && it.extension == "jar" }.toList()
-        for (jar in jars) {
-            if (!jarContainsDylib(jar)) continue
-
-            println("   • Fixing JAR: ${jar.name}")
-            val jarWorkDir =
-                File(work, jar.nameWithoutExtension).apply {
-                    deleteRecursively()
-                    mkdirs()
-                }
-
-            // Extract
-            execLogged("bash", "-lc", """cd "${jarWorkDir.absolutePath}" && jar xf "${jar.absolutePath}"""")
-            // Sign extracted dylibs
-            execLogged(
-                "bash",
-                "-lc",
-                """
-                set -e
-                find "${jarWorkDir.absolutePath}" -type f -name "*.dylib" -print0 \
-                  | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
-                """.trimIndent(),
-            )
-            // Repack (overwrite)
-            jar.delete()
-            execLogged("bash", "-lc", """cd "${jarWorkDir.absolutePath}" && jar cf "${jar.absolutePath}" .""")
-        }
+        appDir
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "jar" }
+            .forEach { jar ->
+                signDylibsInsideJar(jar, identity, workRoot)
+            }
     }
 
-    // 4) Sign main executable (Askimo)
+    /* ------------------------------------------------------------
+     * 4) Sign main executable
+     * ------------------------------------------------------------ */
     if (mainExe.exists()) {
         println("🔧 Signing main executable: ${mainExe.absolutePath}")
         execLogged(
@@ -520,20 +555,22 @@ fun postSignComposeApp(appFile: File) {
             mainExe.absolutePath,
         )
     } else {
-        println("⚠️  Main executable not found at ${mainExe.absolutePath}. Signing all files in Contents/MacOS...")
+        println("⚠️  Main executable not found, signing Contents/MacOS files")
         execLogged(
             "bash",
             "-lc",
             """
             set -e
-            find "${macOsDir.absolutePath}" -type f -maxdepth 1 -print0 \
+            find "${macOsDir.absolutePath}" -maxdepth 1 -type f -print0 \
               | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
             """.trimIndent(),
         )
     }
 
-    // 5) Final: re-sign the entire app bundle (required because we modified JARs)
-    println("🔧 Re-signing entire app bundle (final)...")
+    /* ------------------------------------------------------------
+     * 5) FINAL re-sign of entire app bundle (MANDATORY)
+     * ------------------------------------------------------------ */
+    println("🔧 Re-signing entire app bundle...")
     execLogged(
         "codesign",
         "--force",
@@ -546,17 +583,20 @@ fun postSignComposeApp(appFile: File) {
         appFile.absolutePath,
     )
 
-    // 6) Verify
-    println("✅ Verifying signature...")
-    execLogged("codesign", "--verify", "--deep", "--strict", "--verbose=2", appFile.absolutePath)
-
-    println("✅ Signature details:")
+    /* ------------------------------------------------------------
+     * 6) Verify
+     * ------------------------------------------------------------ */
+    println("✅ Verifying final signature...")
     execLogged(
-        "bash",
-        "-lc",
-        """codesign -dv --verbose=4 "${appFile.absolutePath}" 2>&1 | egrep 'Identifier=|TeamIdentifier=|flags=|Timestamp|CDHash=' || true""",
-        ignoreExit = true,
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "--verbose=2",
+        appFile.absolutePath,
     )
+
+    println("✅ App fully signed and ready for notarization")
 }
 
 /** Staple with a long retry window (propagation delay is normal). */
