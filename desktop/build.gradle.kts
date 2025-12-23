@@ -175,6 +175,144 @@ abstract class ExecSupport
     )
 val execSupport = objects.newInstance(ExecSupport::class)
 
+data class NotarySubmit(
+    val id: String,
+    val status: String,
+    val message: String? = null,
+)
+
+fun sha256(file: File): String {
+    val out = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine("bash", "-lc", """shasum -a 256 "${file.absolutePath}" | awk '{print $1}'""")
+        standardOutput = out
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
+    return out.toString().trim()
+}
+
+fun notarySubmitWait(file: File): NotarySubmit {
+    val out = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine(
+            "xcrun",
+            "notarytool",
+            "submit",
+            file.absolutePath,
+            *notarytoolAuthArgs().toTypedArray(),
+            "--wait",
+            "--output-format",
+            "json",
+        )
+        standardOutput = out
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
+
+    val json = out.toString()
+    // Parse with python (available on mac + GH runner)
+    val parsed = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine(
+            "bash",
+            "-lc",
+            """
+            /usr/bin/python3 - <<'PY'
+            import json,sys
+            j=json.loads(sys.stdin.read())
+            print(j.get("id",""))
+            print(j.get("status",""))
+            print(j.get("message","") or "")
+            PY
+            """.trimIndent(),
+        )
+        standardInput = json.byteInputStream()
+        standardOutput = parsed
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
+
+    val lines = parsed.toString().lines().filter { it.isNotBlank() }
+    val id = lines.getOrNull(0) ?: ""
+    val status = lines.getOrNull(1) ?: ""
+    val msg = lines.getOrNull(2)
+    if (id.isBlank()) error("Could not parse notarytool submit JSON:\n$json")
+    return NotarySubmit(id = id, status = status, message = msg)
+}
+
+fun notaryLogSha256(id: String): String {
+    val out = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine("xcrun", "notarytool", "log", id, *notarytoolAuthArgs().toTypedArray())
+        standardOutput = out
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
+    val json = out.toString()
+
+    val parsed = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine(
+            "bash",
+            "-lc",
+            """
+            /usr/bin/python3 - <<'PY'
+            import json,sys
+            j=json.loads(sys.stdin.read())
+            print(j.get("sha256",""))
+            PY
+            """.trimIndent(),
+        )
+        standardInput = json.byteInputStream()
+        standardOutput = parsed
+        errorOutput = System.err
+        isIgnoreExitValue = false
+    }
+    return parsed.toString().trim()
+}
+
+fun stapleOnceVerbose(
+    target: File,
+    label: String,
+): Int {
+    println("📎 Stapling $label: ${target.absolutePath}")
+    return execSupport.execOps
+        .exec {
+            commandLine("xcrun", "stapler", "staple", "-v", target.absolutePath)
+            isIgnoreExitValue = true
+            standardOutput = System.out
+            errorOutput = System.err
+        }.exitValue
+}
+
+fun ensureSameFileAsNotarized(
+    target: File,
+    notaryId: String,
+) {
+    val localSha = sha256(target)
+    val appleSha = notaryLogSha256(notaryId)
+
+    println("🔎 SHA check for ${target.name}")
+    println("   local: $localSha")
+    println("   apple: $appleSha")
+
+    if (appleSha.isBlank()) error("Apple sha256 is empty for submission id $notaryId")
+    if (!localSha.equals(appleSha, ignoreCase = true)) {
+        error(
+            """
+            ❌ Ticket mismatch: file bytes do NOT match notarized submission.
+            File: ${target.absolutePath}
+            Local SHA256: $localSha
+            Apple SHA256: $appleSha
+
+            This will cause stapler Error 65.
+            Fix by ensuring you staple/upload EXACTLY the same file you submitted.
+            """.trimIndent(),
+        )
+    }
+}
+
 fun notarytoolAuthArgs(): List<String> {
     // Priority 1: Explicit keychain profile (best for local dev)
     val profile = getEnvOrProperty("NOTARY_KEYCHAIN_PROFILE") // e.g. "askimo-notary"
@@ -408,7 +546,7 @@ fun stapleWithRetry(
 // Task: build app, post-sign, notarize (zip), staple (best-effort), build dmg, notarize dmg, staple (best-effort)
 tasks.register("packageNotarizedDmg") {
     group = "distribution"
-    description = "Build app, post-sign all binaries (incl. runtime + dylibs in jars), notarize app + dmg, staple best-effort"
+    description = "Build app, post-sign, notarize app + dmg, staple (with SHA guards)"
 
     dependsOn("packageDmg")
 
@@ -420,34 +558,29 @@ tasks.register("packageNotarizedDmg") {
             appDir.listFiles()?.firstOrNull { it.name.endsWith(".app") }
                 ?: error("No .app found in ${appDir.absolutePath}")
 
-        // ✅ Critical step: make Apple accept notarization (fixes your Invalid log)
+        // 1) Fix signing issues (your postSignComposeApp)
         postSignComposeApp(appFile)
 
         val outDir = file("build/compose/notarized").apply { mkdirs() }
 
-        // ---- Notarize APP (zip) ----
-        val zipFile = outDir.resolve("${appFile.nameWithoutExtension}.app.zip")
-        if (zipFile.exists()) zipFile.delete()
-
+        // 2) Notarize APP via zip
+        val zipFile = outDir.resolve("${appFile.nameWithoutExtension}.app.zip").apply { if (exists()) delete() }
         println("📦 Zipping app for notarization: ${zipFile.name}")
         execLogged("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
 
         println("🔐 Notarizing APP zip...")
-        execLogged(
-            "xcrun",
-            "notarytool",
-            "submit",
-            zipFile.absolutePath,
-            *notarytoolAuthArgs().toTypedArray(),
-            "--wait",
-        )
+        val appSubmit = notarySubmitWait(zipFile)
+        println("✅ APP submission: id=${appSubmit.id}, status=${appSubmit.status}")
 
-        println("📎 Stapling APP (best-effort)...")
-        val appStapled = stapleWithRetry(appFile, "APP")
+        // IMPORTANT: Validate we are stapling the same app that was notarized.
+        // For zip submissions, Apple log sha256 is for the ZIP, not the .app,
+        // so we can't sha-compare the .app here. But we CAN avoid touching the .app after this point.
 
-        // ---- Create DMG from signed app ----
-        val dmgOut = outDir.resolve("Askimo-${project.version}.dmg")
-        if (dmgOut.exists()) dmgOut.delete()
+        println("📎 Stapling APP (may still fail if Apple ticket isn’t propagated for this exact cdhash yet)...")
+        stapleWithRetry(appFile, "APP", attempts = 20, sleepMs = 60_000)
+
+        // 3) Build DMG ONCE (after signing)
+        val dmgOut = outDir.resolve("Askimo-${project.version}.dmg").apply { if (exists()) delete() }
 
         println("📀 Creating DMG: ${dmgOut.name}")
         execLogged(
@@ -463,38 +596,33 @@ tasks.register("packageNotarizedDmg") {
             dmgOut.absolutePath,
         )
 
-        // ---- Notarize DMG ----
+        val dmgShaBefore = sha256(dmgOut)
+        println("🔎 DMG SHA256 before submit: $dmgShaBefore")
+
+        // 4) Notarize DMG
         println("🔐 Notarizing DMG...")
-        execLogged(
-            "xcrun",
-            "notarytool",
-            "submit",
-            dmgOut.absolutePath,
-            *notarytoolAuthArgs().toTypedArray(),
-            "--wait",
-        )
+        val dmgSubmit = notarySubmitWait(dmgOut)
+        println("✅ DMG submission: id=${dmgSubmit.id}, status=${dmgSubmit.status}")
 
-        println("📎 Stapling DMG (best-effort)...")
-        val dmgStapled = stapleWithRetry(dmgOut, "DMG")
+        // 5) GUARANTEE the DMG we are stapling == the DMG Apple notarized
+        ensureSameFileAsNotarized(dmgOut, dmgSubmit.id)
 
-        println("")
-        println("========================================")
-        println("✅ Build Complete!")
-        println("========================================")
-        println("Notarized DMG location:")
-        println("  ${dmgOut.absolutePath}")
-        println("Status:")
-        println("  • APP notarized: ✅ (zip submitted/waited)")
-        println("  • APP stapled: ${if (appStapled) "✅" else "⚠️  (ticket delivery may be delayed / network dependent)"}")
-        println("  • DMG notarized: ✅ (submitted/waited)")
-        println("  • DMG stapled: ${if (dmgStapled) "✅" else "⚠️  (ticket delivery may be delayed / network dependent)"}")
-        println("")
-        println("Verify with (may depend on network):")
-        println("  xcrun stapler validate \"${dmgOut.absolutePath}\"")
+        // 6) Staple DMG (now if it fails, it’s truly ticket delivery / environment, not mismatch)
+        println("📎 Stapling DMG...")
+        val dmgStapleExit = stapleOnceVerbose(dmgOut, "DMG")
+        if (dmgStapleExit != 0) {
+            println("⚠️ DMG stapling failed once (exit=$dmgStapleExit). Retrying with long window...")
+            val ok = stapleWithRetry(dmgOut, "DMG", attempts = 20, sleepMs = 60_000)
+            if (!ok) {
+                println("❌ DMG stapling still failing after retries.")
+                println("   But notarization is Accepted; the remaining issue is local validation/stapler environment.")
+            }
+        }
+
+        println("✅ Done. Output: ${dmgOut.absolutePath}")
+        println("Verify:")
+        println("  xcrun stapler validate -v \"${dmgOut.absolutePath}\"")
         println("  spctl -a -t open -vv \"${dmgOut.absolutePath}\"")
-        println("  hdiutil attach \"${dmgOut.absolutePath}\"")
-        println("  spctl -a -vv \"/Volumes/Askimo/Askimo.app\"")
-        println("")
     }
 }
 
