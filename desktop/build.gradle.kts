@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.time.Year
 import java.time.ZoneOffset
@@ -208,178 +209,288 @@ fun notarytoolAuthArgs(): List<String> {
     )
 }
 
+fun isMac(): Boolean = System.getProperty("os.name").lowercase().contains("mac")
+
+fun codesignIdentity(): String =
+    getEnvOrProperty("MACOS_IDENTITY")
+        ?: error("MACOS_IDENTITY is required (e.g. 'Developer ID Application: Hai Nguyen (xxxxxxxx)')")
+
+/** Runs command, prints output, throws on failure by default. */
+fun execLogged(
+    vararg args: String,
+    ignoreExit: Boolean = false,
+): Int {
+    val result =
+        execSupport.execOps.exec {
+            commandLine(*args)
+            isIgnoreExitValue = ignoreExit
+            standardOutput = System.out
+            errorOutput = System.err
+        }
+    if (!ignoreExit && result.exitValue != 0) {
+        error("Command failed (${result.exitValue}): ${args.joinToString(" ")}")
+    }
+    return result.exitValue
+}
+
+/** Returns true if a jar contains at least one .dylib entry. */
+fun jarContainsDylib(jar: File): Boolean {
+    val out = ByteArrayOutputStream()
+    execSupport.execOps.exec {
+        commandLine("bash", "-lc", """jar tf "${jar.absolutePath}" || true""")
+        standardOutput = out
+        errorOutput = System.err
+        isIgnoreExitValue = true
+    }
+    return out.toString().lineSequence().any { it.trim().endsWith(".dylib") }
+}
+
+/**
+ * Fix notarization "Invalid" due to:
+ * - unsigned or untimestamped dylibs inside JARs (sqlite-jdbc, skiko)
+ * - unsigned/untimestamped embedded runtime dylibs (Contents/runtime/...)
+ * - unsigned/untimestamped main executable (Contents/MacOS/Askimo)
+ *
+ * This MUST run AFTER Compose/jpackage produced the .app, and BEFORE notarization.
+ */
+fun postSignComposeApp(appFile: File) {
+    val identity = codesignIdentity()
+    println("🔏 Post-signing for notarization: ${appFile.absolutePath}")
+    println("🔑 Using identity: $identity")
+
+    val contents = File(appFile, "Contents").also { require(it.exists()) { "Missing Contents in $appFile" } }
+    val runtimeDir = File(contents, "runtime")
+    val appDir = File(contents, "app")
+    val macOsDir = File(contents, "MacOS")
+    val mainExe = File(macOsDir, "Askimo")
+
+    // 1) Sign embedded runtime dylibs + helpers
+    if (runtimeDir.exists()) {
+        println("🔧 Signing embedded runtime binaries...")
+        execLogged(
+            "bash",
+            "-lc",
+            """
+            set -e
+            find "${runtimeDir.absolutePath}" -type f \( -name "*.dylib" -o -name "jspawnhelper" \) -print0 \
+              | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+            """.trimIndent(),
+        )
+    }
+
+    // 2) Sign loose dylibs under Contents/app (e.g., libskiko-macos-arm64.dylib)
+    if (appDir.exists()) {
+        println("🔧 Signing native dylibs under Contents/app...")
+        execLogged(
+            "bash",
+            "-lc",
+            """
+            set -e
+            find "${appDir.absolutePath}" -type f -name "*.dylib" -print0 \
+              | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+            """.trimIndent(),
+        )
+
+        // 3) Sign dylibs embedded inside JARs (sqlite-jdbc, skiko, and any others)
+        println("🔧 Signing dylibs inside JARs (if any)...")
+        val work =
+            File(project.buildDir, "codesign-jar-work").apply {
+                deleteRecursively()
+                mkdirs()
+            }
+
+        val jars = appDir.walkTopDown().filter { it.isFile && it.extension == "jar" }.toList()
+        for (jar in jars) {
+            if (!jarContainsDylib(jar)) continue
+
+            println("   • Fixing JAR: ${jar.name}")
+            val jarWorkDir =
+                File(work, jar.nameWithoutExtension).apply {
+                    deleteRecursively()
+                    mkdirs()
+                }
+
+            // Extract
+            execLogged("bash", "-lc", """cd "${jarWorkDir.absolutePath}" && jar xf "${jar.absolutePath}"""")
+            // Sign extracted dylibs
+            execLogged(
+                "bash",
+                "-lc",
+                """
+                set -e
+                find "${jarWorkDir.absolutePath}" -type f -name "*.dylib" -print0 \
+                  | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+                """.trimIndent(),
+            )
+            // Repack (overwrite)
+            jar.delete()
+            execLogged("bash", "-lc", """cd "${jarWorkDir.absolutePath}" && jar cf "${jar.absolutePath}" .""")
+        }
+    }
+
+    // 4) Sign main executable (Askimo)
+    if (mainExe.exists()) {
+        println("🔧 Signing main executable: ${mainExe.absolutePath}")
+        execLogged(
+            "codesign",
+            "--force",
+            "--sign",
+            identity,
+            "--timestamp",
+            "--options",
+            "runtime",
+            mainExe.absolutePath,
+        )
+    } else {
+        println("⚠️  Main executable not found at ${mainExe.absolutePath}. Signing all files in Contents/MacOS...")
+        execLogged(
+            "bash",
+            "-lc",
+            """
+            set -e
+            find "${macOsDir.absolutePath}" -type f -maxdepth 1 -print0 \
+              | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+            """.trimIndent(),
+        )
+    }
+
+    // 5) Final: re-sign the entire app bundle (required because we modified JARs)
+    println("🔧 Re-signing entire app bundle (final)...")
+    execLogged(
+        "codesign",
+        "--force",
+        "--deep",
+        "--sign",
+        identity,
+        "--timestamp",
+        "--options",
+        "runtime",
+        appFile.absolutePath,
+    )
+
+    // 6) Verify
+    println("✅ Verifying signature...")
+    execLogged("codesign", "--verify", "--deep", "--strict", "--verbose=2", appFile.absolutePath)
+
+    println("✅ Signature details:")
+    execLogged(
+        "bash",
+        "-lc",
+        """codesign -dv --verbose=4 "${appFile.absolutePath}" 2>&1 | egrep 'Identifier=|TeamIdentifier=|flags=|Timestamp|CDHash=' || true""",
+        ignoreExit = true,
+    )
+}
+
+/** Staple with a long retry window (propagation delay is normal). */
+fun stapleWithRetry(
+    target: File,
+    label: String,
+    attempts: Int = 20,
+    sleepMs: Long = 60_000,
+): Boolean {
+    for (i in 1..attempts) {
+        println("📎 Stapling $label ticket (attempt $i/$attempts): ${target.name}")
+        val exit =
+            execSupport.execOps
+                .exec {
+                    commandLine("xcrun", "stapler", "staple", "-v", target.absolutePath)
+                    isIgnoreExitValue = true
+                    standardOutput = System.out
+                    errorOutput = System.err
+                }.exitValue
+        if (exit == 0) return true
+        Thread.sleep(sleepMs)
+    }
+    return false
+}
+
 // Task to notarize both app bundle and DMG
+// Task: build app, post-sign, notarize (zip), staple (best-effort), build dmg, notarize dmg, staple (best-effort)
 tasks.register("packageNotarizedDmg") {
     group = "distribution"
-    description = "Build app, notarize+staple app, create DMG from stapled app, notarize+staple DMG"
+    description = "Build app, post-sign all binaries (incl. runtime + dylibs in jars), notarize app + dmg, staple best-effort"
 
-    // Build the app bundle first. If you don't have a dedicated task, keep packageDmg,
-    // but we will RECREATE the DMG ourselves from the stapled app.
     dependsOn("packageDmg")
 
     doLast {
-        val os = System.getProperty("os.name").lowercase()
-        if (!os.contains("mac")) return@doLast
+        if (!isMac()) return@doLast
 
-        // ---- Locate APP (produced by compose) ----
         val appDir = file("build/compose/binaries/main/app")
         val appFile =
             appDir.listFiles()?.firstOrNull { it.name.endsWith(".app") }
                 ?: error("No .app found in ${appDir.absolutePath}")
 
-        println("🔐 Step 1: Notarize APP: ${appFile.name}")
-
-        // Apple accepts .app directly too, but ZIP is fine.
-        val zipFile = file("build/compose/binaries/main/${appFile.nameWithoutExtension}.zip")
-        if (zipFile.exists()) zipFile.delete()
-
-        execSupport.execOps.exec {
-            commandLine("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
-        }
-
-        val appNotarize =
-            execSupport.execOps.exec {
-                commandLine(
-                    "xcrun",
-                    "notarytool",
-                    "submit",
-                    zipFile.absolutePath,
-                    *notarytoolAuthArgs().toTypedArray(),
-                    "--wait",
-                )
-                isIgnoreExitValue = false
-                standardOutput = System.out
-                errorOutput = System.err
-            }
-        zipFile.delete()
-
-        if (appNotarize.exitValue != 0) error("❌ App notarization failed")
-
-        // Staple APP (retry once if CDN delay, but continue if it fails)
-        fun stapleApp(): Int =
-            execSupport.execOps
-                .exec {
-                    commandLine("xcrun", "stapler", "staple", appFile.absolutePath)
-                    isIgnoreExitValue = true
-                    standardOutput = System.out
-                    errorOutput = System.err
-                }.exitValue
-
-        println("📎 Stapling APP ticket...")
-        var appStapled = false
-        var stapleExit = stapleApp()
-        if (stapleExit != 0) {
-            println("⚠️  APP stapling failed (CDN delay). Retrying in 30 seconds...")
-            Thread.sleep(30000) // Wait 30 seconds for CDN
-            stapleExit = stapleApp()
-        }
-
-        if (stapleExit == 0) {
-            println("✅ APP ticket stapled successfully!")
-            appStapled = true
-        } else {
-            println("")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("⚠️  APP stapling failed - This is ACCEPTABLE")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("")
-            println("✅ Your APP is FULLY NOTARIZED by Apple")
-            println("   • Status: Accepted (confirmed)")
-            println("   • Stapling: Failed (CDN propagation delay)")
-            println("   • User impact: Internet required on first launch")
-            println("")
-            println("ℹ️  To staple later (after 15-30 min):")
-            println("   xcrun stapler staple \"${appFile.absolutePath}\"")
-            println("")
-            println("✅ Build will continue - APP is production-ready")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("")
-        }
-
-        // ---- Create a NEW DMG from the stapled APP ----
-        println("📀 Step 2: Create DMG from stapled APP")
+        // ✅ Critical step: make Apple accept notarization (fixes your Invalid log)
+        postSignComposeApp(appFile)
 
         val outDir = file("build/compose/notarized").apply { mkdirs() }
+
+        // ---- Notarize APP (zip) ----
+        val zipFile = outDir.resolve("${appFile.nameWithoutExtension}.app.zip")
+        if (zipFile.exists()) zipFile.delete()
+
+        println("📦 Zipping app for notarization: ${zipFile.name}")
+        execLogged("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
+
+        println("🔐 Notarizing APP zip...")
+        execLogged(
+            "xcrun",
+            "notarytool",
+            "submit",
+            zipFile.absolutePath,
+            *notarytoolAuthArgs().toTypedArray(),
+            "--wait",
+        )
+
+        println("📎 Stapling APP (best-effort)...")
+        val appStapled = stapleWithRetry(appFile, "APP")
+
+        // ---- Create DMG from signed app ----
         val dmgOut = outDir.resolve("Askimo-${project.version}.dmg")
         if (dmgOut.exists()) dmgOut.delete()
 
-        execSupport.execOps.exec {
-            commandLine(
-                "hdiutil",
-                "create",
-                "-volname",
-                "Askimo",
-                "-srcfolder",
-                appFile.absolutePath,
-                "-ov",
-                "-format",
-                "UDZO",
-                dmgOut.absolutePath,
-            )
-            isIgnoreExitValue = false
-            standardOutput = System.out
-            errorOutput = System.err
-        }
+        println("📀 Creating DMG: ${dmgOut.name}")
+        execLogged(
+            "hdiutil",
+            "create",
+            "-volname",
+            "Askimo",
+            "-srcfolder",
+            appFile.absolutePath,
+            "-ov",
+            "-format",
+            "UDZO",
+            dmgOut.absolutePath,
+        )
 
-        println("🔐 Step 3: Notarize DMG: ${dmgOut.name}")
-        val dmgNotarize =
-            execSupport.execOps.exec {
-                commandLine(
-                    "xcrun",
-                    "notarytool",
-                    "submit",
-                    dmgOut.absolutePath,
-                    *notarytoolAuthArgs().toTypedArray(),
-                    "--wait",
-                )
-                isIgnoreExitValue = false
-                standardOutput = System.out
-                errorOutput = System.err
-            }
-        if (dmgNotarize.exitValue != 0) error("❌ DMG notarization failed")
+        // ---- Notarize DMG ----
+        println("🔐 Notarizing DMG...")
+        execLogged(
+            "xcrun",
+            "notarytool",
+            "submit",
+            dmgOut.absolutePath,
+            *notarytoolAuthArgs().toTypedArray(),
+            "--wait",
+        )
 
-        println("📎 Stapling DMG ticket...")
-        val dmgStaple =
-            execSupport.execOps.exec {
-                commandLine("xcrun", "stapler", "staple", dmgOut.absolutePath)
-                isIgnoreExitValue = true
-                standardOutput = System.out
-                errorOutput = System.err
-            }
-
-        if (dmgStaple.exitValue == 0) {
-            println("✅ DMG ticket stapled successfully!")
-        } else {
-            println("")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("⚠️  DMG stapling failed - This is ACCEPTABLE")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("")
-            println("✅ Your DMG is FULLY NOTARIZED by Apple")
-            println("   • Contains notarized ${if (appStapled) "and stapled" else "but unstapled"} app")
-            println("   • Users can download and install without warnings")
-            println("")
-            println("ℹ️  To staple DMG later (after 15-30 min):")
-            println("   xcrun stapler staple \"${dmgOut.absolutePath}\"")
-            println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            println("")
-        }
+        println("📎 Stapling DMG (best-effort)...")
+        val dmgStapled = stapleWithRetry(dmgOut, "DMG")
 
         println("")
         println("========================================")
         println("✅ Build Complete!")
         println("========================================")
-        println("")
         println("Notarized DMG location:")
         println("  ${dmgOut.absolutePath}")
-        println("")
         println("Status:")
-        println("  • APP notarized: ✅")
-        println("  • APP stapled: ${if (appStapled) "✅" else "⚠️  (needs internet on first launch)"}")
-        println("  • DMG notarized: ✅")
-        println("  • DMG stapled: ${if (dmgStaple.exitValue == 0) "✅" else "⚠️  (optional)"}")
+        println("  • APP notarized: ✅ (zip submitted/waited)")
+        println("  • APP stapled: ${if (appStapled) "✅" else "⚠️  (ticket delivery may be delayed / network dependent)"}")
+        println("  • DMG notarized: ✅ (submitted/waited)")
+        println("  • DMG stapled: ${if (dmgStapled) "✅" else "⚠️  (ticket delivery may be delayed / network dependent)"}")
         println("")
-        println("Verify with:")
+        println("Verify with (may depend on network):")
+        println("  xcrun stapler validate \"${dmgOut.absolutePath}\"")
         println("  spctl -a -t open -vv \"${dmgOut.absolutePath}\"")
         println("  hdiutil attach \"${dmgOut.absolutePath}\"")
         println("  spctl -a -vv \"/Volumes/Askimo/Askimo.app\"")
