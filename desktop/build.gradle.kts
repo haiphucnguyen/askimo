@@ -175,12 +175,6 @@ abstract class ExecSupport
     )
 val execSupport = objects.newInstance(ExecSupport::class)
 
-data class NotarySubmit(
-    val id: String,
-    val status: String,
-    val message: String? = null,
-)
-
 fun sha256(file: File): String {
     val out = ByteArrayOutputStream()
     execSupport.execOps.exec {
@@ -192,53 +186,82 @@ fun sha256(file: File): String {
     return out.toString().trim()
 }
 
-fun notarySubmitWait(file: File): NotarySubmit {
-    val out = ByteArrayOutputStream()
-    execSupport.execOps.exec {
-        commandLine(
-            "xcrun",
-            "notarytool",
-            "submit",
-            file.absolutePath,
-            *notarytoolAuthArgs().toTypedArray(),
-            "--wait",
-            "--output-format",
-            "json",
-        )
-        standardOutput = out
-        errorOutput = System.err
-        isIgnoreExitValue = false
-    }
+data class NotarySubmit(
+    val id: String,
+    val status: String,
+    val raw: String,
+)
 
-    val json = out.toString()
-    // Parse with python (available on mac + GH runner)
-    val parsed = ByteArrayOutputStream()
-    execSupport.execOps.exec {
-        commandLine(
-            "bash",
-            "-lc",
+fun notarySubmitWait(file: File): NotarySubmit {
+    val stdout = ByteArrayOutputStream()
+    val stderr = ByteArrayOutputStream()
+
+    val result =
+        execSupport.execOps.exec {
+            commandLine(
+                "xcrun",
+                "notarytool",
+                "submit",
+                file.absolutePath,
+                *notarytoolAuthArgs().toTypedArray(),
+                "--wait",
+                "--output-format",
+                "json",
+            )
+            isIgnoreExitValue = true
+            standardOutput = stdout
+            errorOutput = stderr
+        }
+
+    val out = stdout.toString().trim()
+    val err = stderr.toString().trim()
+
+    if (result.exitValue != 0) {
+        error(
             """
-            /usr/bin/python3 - <<'PY'
-            import json,sys
-            j=json.loads(sys.stdin.read())
-            print(j.get("id",""))
-            print(j.get("status",""))
-            print(j.get("message","") or "")
-            PY
+            ❌ notarytool submit failed
+            File: ${file.absolutePath}
+            Exit code: ${result.exitValue}
+
+            --- stdout ---
+            ${out.ifBlank { "<empty>" }}
+
+            --- stderr ---
+            ${err.ifBlank { "<empty>" }}
             """.trimIndent(),
         )
-        standardInput = json.byteInputStream()
-        standardOutput = parsed
-        errorOutput = System.err
-        isIgnoreExitValue = false
     }
 
-    val lines = parsed.toString().lines().filter { it.isNotBlank() }
-    val id = lines.getOrNull(0) ?: ""
-    val status = lines.getOrNull(1) ?: ""
-    val msg = lines.getOrNull(2)
-    if (id.isBlank()) error("Could not parse notarytool submit JSON:\n$json")
-    return NotarySubmit(id = id, status = status, message = msg)
+    if (out.isBlank()) {
+        error(
+            """
+            ❌ notarytool returned empty JSON output
+            File: ${file.absolutePath}
+
+            stderr:
+            ${err.ifBlank { "<empty>" }}
+            """.trimIndent(),
+        )
+    }
+
+    // Minimal, robust parsing
+    val id =
+        Regex("\"id\"\\s*:\\s*\"([^\"]+)\"")
+            .find(out)
+            ?.groupValues
+            ?.get(1)
+            ?: error("❌ Could not find submission id in notarytool output:\n$out")
+
+    val status =
+        Regex("\"status\"\\s*:\\s*\"([^\"]+)\"")
+            .find(out)
+            ?.groupValues
+            ?.get(1)
+            ?: "UNKNOWN"
+
+    println("🧾 Notarytool result: id=$id status=$status")
+
+    return NotarySubmit(id = id, status = status, raw = out)
 }
 
 fun notaryLogSha256(id: String): String {
@@ -569,6 +592,8 @@ tasks.register("packageNotarizedDmg") {
         execLogged("ditto", "-c", "-k", "--keepParent", appFile.absolutePath, zipFile.absolutePath)
 
         println("🔐 Notarizing APP zip...")
+        println("📄 Submitting for notarization: ${zipFile.absolutePath}")
+        println("🔎 SHA256: ${sha256(zipFile)}")
         val appSubmit = notarySubmitWait(zipFile)
         println("✅ APP submission: id=${appSubmit.id}, status=${appSubmit.status}")
 
