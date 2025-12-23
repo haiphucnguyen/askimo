@@ -266,33 +266,50 @@ fun notarySubmitWait(file: File): NotarySubmit {
 
 fun notaryLogSha256(id: String): String {
     val out = ByteArrayOutputStream()
-    execSupport.execOps.exec {
-        commandLine("xcrun", "notarytool", "log", id, *notarytoolAuthArgs().toTypedArray())
-        standardOutput = out
-        errorOutput = System.err
-        isIgnoreExitValue = false
-    }
-    val json = out.toString()
+    val err = ByteArrayOutputStream()
 
-    val parsed = ByteArrayOutputStream()
-    execSupport.execOps.exec {
-        commandLine(
-            "bash",
-            "-lc",
+    val r =
+        execSupport.execOps.exec {
+            commandLine("xcrun", "notarytool", "log", id, *notarytoolAuthArgs().toTypedArray())
+            standardOutput = out
+            errorOutput = err
+            isIgnoreExitValue = true
+        }
+
+    val stdout = out.toString(Charsets.UTF_8).trim()
+    val stderr = err.toString(Charsets.UTF_8).trim()
+
+    if (r.exitValue != 0) {
+        error(
             """
-            /usr/bin/python3 - <<'PY'
-            import json,sys
-            j=json.loads(sys.stdin.read())
-            print(j.get("sha256",""))
-            PY
+            notarytool log failed (exit ${r.exitValue}) for id=$id
+            ---- stdout ----
+            $stdout
+            ---- stderr ----
+            $stderr
             """.trimIndent(),
         )
-        standardInput = json.byteInputStream()
-        standardOutput = parsed
-        errorOutput = System.err
-        isIgnoreExitValue = false
     }
-    return parsed.toString().trim()
+
+    // notarytool log SHOULD be JSON; if stdout is empty, show stderr too.
+    val raw = if (stdout.isNotBlank()) stdout else stderr
+    if (raw.isBlank()) {
+        error("notarytool log returned empty output for id=$id (both stdout and stderr were empty).")
+    }
+
+    val m = Regex(""""sha256"\s*:\s*"([0-9a-fA-F]{64})"""").find(raw)
+    val sha = m?.groupValues?.get(1)?.lowercase()
+
+    if (sha.isNullOrBlank()) {
+        error(
+            """
+            Could not extract sha256 from notarytool log for id=$id
+            ---- raw log ----
+            $raw
+            """.trimIndent(),
+        )
+    }
+    return sha
 }
 
 fun stapleOnceVerbose(
