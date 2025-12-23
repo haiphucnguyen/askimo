@@ -95,52 +95,30 @@ fun messageList(
 ) {
     val scrollState = rememberScrollState()
 
-    // Key shouldAutoScroll to the first message ID (if exists) or message count
-    // This ensures it resets to true when switching to a different session
-    val sessionKey = messages.firstOrNull()?.id ?: messages.size
-    var shouldAutoScroll by remember(sessionKey) { mutableStateOf(true) }
-
-    // Auto-scroll to bottom when messages change (including streaming updates) or when thinking
-    LaunchedEffect(messages, isThinking) {
-        if (shouldAutoScroll) {
-            // Use scrollTo instead of animateScrollTo for instant scroll during streaming
-            // This ensures the view stays at the bottom even during rapid updates
-            scrollState.scrollTo(scrollState.maxValue)
-        }
+    // Simple: whenever messages change, scroll to bottom
+    LaunchedEffect(messages) {
+        scrollState.scrollTo(scrollState.maxValue)
     }
 
-    // Additional auto-scroll effect that triggers on every scroll state change
-    // This ensures we stay at the bottom during streaming even if maxValue changes
+    // Also scroll when content grows (during AI streaming)
     LaunchedEffect(scrollState.maxValue) {
-        if (shouldAutoScroll) {
-            scrollState.scrollTo(scrollState.maxValue)
+        scrollState.scrollTo(scrollState.maxValue)
+    }
+
+    // Load previous messages when scrolled to top
+    LaunchedEffect(scrollState.value) {
+        if (scrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
+            onLoadPrevious()
         }
     }
 
     // Auto-scroll to active search result when it changes
     LaunchedEffect(currentSearchResultIndex, searchQuery) {
         if (searchQuery.isNotBlank() && messages.isNotEmpty()) {
-            // Estimate the scroll position for the active result
-            // Each message bubble is approximately 150dp (this is an estimate)
             val estimatedItemHeight = 150f
             val targetPosition = (currentSearchResultIndex * estimatedItemHeight * scrollState.maxValue / (messages.size * estimatedItemHeight)).toInt()
-
-            // Scroll to the estimated position
             scrollState.animateScrollTo(targetPosition)
         }
-    }
-
-    // Detect when user scrolls to top to load previous messages
-    LaunchedEffect(scrollState.value) {
-        // Check if scrolled to top (within 100px threshold)
-        if (scrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
-            onLoadPrevious()
-        }
-
-        // Update shouldAutoScroll based on scroll position
-        // If user is near the bottom, enable auto-scroll
-        val isNearBottom = scrollState.value >= scrollState.maxValue - 200
-        shouldAutoScroll = isNearBottom
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
