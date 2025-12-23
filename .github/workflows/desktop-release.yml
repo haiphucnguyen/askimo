@@ -176,7 +176,7 @@ jobs:
       - name: Package desktop installer (Linux/macOS)
         if: runner.os != 'Windows'
         env:
-          MACOS_IDENTITY: ${{ secrets.MACOS_IDENTITY }}
+          MACOS_IDENTITY: "Developer ID Application: Hai Nguyen (QM4ZMNHH5B)"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
