@@ -659,7 +659,7 @@ tasks.register("packageNotarizedDmg") {
         // so we can't sha-compare the .app here. But we CAN avoid touching the .app after this point.
 
         println("📎 Stapling APP (may still fail if Apple ticket isn’t propagated for this exact cdhash yet)...")
-        stapleWithRetry(appFile, "APP", attempts = 20, sleepMs = 60_000)
+        stapleWithRetry(appFile, "APP", attempts = 3, sleepMs = 60_000)
 
         // 3) Build DMG ONCE (after signing)
         val dmgOut = outDir.resolve("Askimo-${project.version}.dmg").apply { if (exists()) delete() }
@@ -694,7 +694,7 @@ tasks.register("packageNotarizedDmg") {
         val dmgStapleExit = stapleOnceVerbose(dmgOut, "DMG")
         if (dmgStapleExit != 0) {
             println("⚠️ DMG stapling failed once (exit=$dmgStapleExit). Retrying with long window...")
-            val ok = stapleWithRetry(dmgOut, "DMG", attempts = 20, sleepMs = 60_000)
+            val ok = stapleWithRetry(dmgOut, "DMG", attempts = 3, sleepMs = 60_000)
             if (!ok) {
                 println("❌ DMG stapling still failing after retries.")
                 println("   But notarization is Accepted; the remaining issue is local validation/stapler environment.")
