@@ -25,7 +25,7 @@
   <a href="./CONTRIBUTING.md#-enforcing-dco">
     <img src="https://img.shields.io/badge/DCO-Signed--off-green.svg" alt="DCO">
   </a>
-<img src="https://img.shields.io/badge/OpenAI-Supported-412991" /> <img src="https://img.shields.io/badge/Claude-Supported-542683" /> <img src="https://img.shields.io/badge/Gemini-Supported-4285F4" /> <img src="https://img.shields.io/badge/Ollama-Supported-000000" />
+<img src="https://img.shields.io/badge/OpenAI-Supported-412991" /> <img src="https://img.shields.io/badge/Claude-Supported-542683" /> <img src="https://img.shields.io/badge/Gemini-Supported-4285F4" /> <img src="https://img.shields.io/badge/Ollama-Supported-000000" /> <img src="https://img.shields.io/badge/LocalAI-Supported-00ADD8" /> <img src="https://img.shields.io/badge/LMStudio-Supported-6B46C1" /> <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" />
 </p>
 
 # Why Askimo?
