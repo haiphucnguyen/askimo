@@ -394,11 +394,21 @@ if ! xcrun stapler staple -v "${SIGNED_DMG}" 2>&1 | tee /tmp/stapler.log; then
   if [[ -f "${TICKET_PATH}" ]]; then
     echo "📋 Found downloaded ticket: ${TICKET_PATH}"
 
-    # Manually attach ticket to DMG using xattr
+    # Manually attach ticket to DMG using xattr with binary data
     echo "📎 Manually attaching ticket to DMG..."
-    xattr -w com.apple.stapler "$(cat "${TICKET_PATH}")" "${SIGNED_DMG}"
+    xattr -w com.apple.stapler "$(cat "${TICKET_PATH}" | base64)" "${SIGNED_DMG}"
 
-    echo "✅ Ticket manually attached"
+    echo "✅ Ticket manually attached (base64 encoded)"
+
+    # For proper binary attachment, use Python
+    python3 <<EOF
+import sys
+import xattr
+with open("${TICKET_PATH}", "rb") as f:
+    ticket_data = f.read()
+xattr.setxattr("${SIGNED_DMG}", "com.apple.stapler", ticket_data)
+print("✅ Ticket reattached as binary")
+EOF
   else
     echo "❌ Could not find downloaded ticket file"
     exit 1
