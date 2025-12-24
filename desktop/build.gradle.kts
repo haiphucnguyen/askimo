@@ -769,10 +769,9 @@ tasks.register("createSignedDmg") {
             commandLine("ln", "-s", "/Applications", "Applications")
         }
 
-        // Create DMG
-        val signedDmg = File(notarizedDir, "Askimo-signed.dmg").apply { delete() }
-        logger.lifecycle("📀 Creating DMG (UDZO): ${signedDmg.absolutePath}")
-
+        // Create temporary read-write DMG
+        val tempDmg = File(notarizedDir, "Askimo-temp.dmg").apply { delete() }
+        logger.lifecycle("📀 Creating temporary DMG...")
         project.exec {
             commandLine(
                 "hdiutil",
@@ -783,12 +782,87 @@ tasks.register("createSignedDmg") {
                 dmgStaging.absolutePath,
                 "-ov",
                 "-format",
+                "UDRW",
+                tempDmg.absolutePath,
+            )
+        }
+
+        // Mount the DMG
+        logger.lifecycle("💿 Mounting DMG for customization...")
+        val mountOutput = ByteArrayOutputStream()
+        project.exec {
+            commandLine("hdiutil", "attach", "-readwrite", "-noverify", tempDmg.absolutePath)
+            standardOutput = mountOutput
+        }
+
+        val mountPath =
+            mountOutput
+                .toString()
+                .lines()
+                .firstOrNull { it.contains("/Volumes/") }
+                ?.substringAfter("/Volumes/")
+                ?.trim()
+                ?.let { "/Volumes/$it" }
+                ?: throw GradleException("Could not determine mount path")
+
+        logger.lifecycle("✅ Mounted at: $mountPath")
+
+        try {
+            // Create .DS_Store settings using AppleScript
+            val appleScript =
+                """
+                tell application "Finder"
+                    tell disk "Askimo"
+                        open
+                        set current view of container window to icon view
+                        set toolbar visible of container window to false
+                        set statusbar visible of container window to false
+                        set the bounds of container window to {400, 100, 920, 480}
+                        set viewOptions to the icon view options of container window
+                        set arrangement of viewOptions to not arranged
+                        set icon size of viewOptions to 100
+                        set position of item "${appToSign.name}" of container window to {130, 150}
+                        set position of item "Applications" of container window to {390, 150}
+                        close
+                        open
+                        update without registering applications
+                        delay 2
+                    end tell
+                end tell
+                """.trimIndent()
+
+            logger.lifecycle("🎨 Applying window settings...")
+            project.exec {
+                commandLine("osascript", "-e", appleScript)
+                isIgnoreExitValue = true
+            }
+
+            Thread.sleep(3000)
+        } finally {
+            // Unmount
+            logger.lifecycle("💿 Unmounting DMG...")
+            project.exec {
+                commandLine("hdiutil", "detach", mountPath)
+            }
+        }
+
+        // Convert to compressed, read-only DMG
+        val signedDmg = File(notarizedDir, "Askimo-signed.dmg").apply { delete() }
+        logger.lifecycle("📀 Creating final compressed DMG...")
+        project.exec {
+            commandLine(
+                "hdiutil",
+                "convert",
+                tempDmg.absolutePath,
+                "-format",
                 "UDZO",
+                "-o",
                 signedDmg.absolutePath,
             )
         }
 
-        // Clean up staging folder
+        // Clean up
+        tempDmg.delete()
         dmgStaging.deleteRecursively()
 
         // Sign DMG
