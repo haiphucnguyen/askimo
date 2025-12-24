@@ -25,7 +25,27 @@
   <a href="./CONTRIBUTING.md#-enforcing-dco">
     <img src="https://img.shields.io/badge/DCO-Signed--off-green.svg" alt="DCO">
   </a>
-<img src="https://img.shields.io/badge/OpenAI-Supported-412991" /> <img src="https://img.shields.io/badge/Claude-Supported-542683" /> <img src="https://img.shields.io/badge/Gemini-Supported-4285F4" /> <img src="https://img.shields.io/badge/Ollama-Supported-000000" /> <img src="https://img.shields.io/badge/LocalAI-Supported-00ADD8" /> <img src="https://img.shields.io/badge/LMStudio-Supported-6B46C1" /> <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/haiphucnguyen/askimo/stargazers">
+    <img src="https://img.shields.io/github/stars/haiphucnguyen/askimo?style=social" alt="GitHub Stars">
+  </a>
+  <img src="https://img.shields.io/github/commit-activity/m/haiphucnguyen/askimo" alt="Commit Activity">
+  <img src="https://img.shields.io/github/last-commit/haiphucnguyen/askimo" alt="Last Commit">
+  <img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" alt="macOS">
+  <img src="https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" alt="Linux">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/OpenAI-Supported-412991" alt="OpenAI">
+  <img src="https://img.shields.io/badge/Claude-Supported-542683" alt="Claude">
+  <img src="https://img.shields.io/badge/Gemini-Supported-4285F4" alt="Gemini">
+  <img src="https://img.shields.io/badge/Ollama-Supported-000000" alt="Ollama">
+  <img src="https://img.shields.io/badge/LocalAI-Supported-00ADD8" alt="LocalAI">
+  <img src="https://img.shields.io/badge/LMStudio-Supported-6B46C1" alt="LMStudio">
+  <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" alt="DockerAI">
 </p>
 
 # Why Askimo?
