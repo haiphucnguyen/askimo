@@ -135,6 +135,7 @@ sign_dylibs_inside_jar() {
   local jar_path="$1"
   local identity="$2"
   local work_root="$3"
+  local entitlements="$4"
 
   echo "   • Signing dylibs inside JAR: $(basename "$jar_path")"
   echo "     Path: $jar_path"
@@ -174,7 +175,7 @@ sign_dylibs_inside_jar() {
 
   echo "     Signing dylibs..."
   find "$extract_dir" -type f -name "*.dylib" -print0 \
-    | xargs -0 -I{} codesign --force --sign "$identity" --timestamp --options runtime "{}"
+    | xargs -0 -I{} codesign --force --sign "$identity" --entitlements "$entitlements" --timestamp --options runtime "{}"
 
   echo "     Repacking JAR..."
   echo "     tmp_jar path: $tmp_jar"
@@ -232,6 +233,8 @@ fi
 # --------------------------
 OUT_DIR="desktop/build/compose/notarized"
 mkdir -p "$OUT_DIR"
+# Convert to absolute path
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
 MOUNT_DIR=""
 cleanup() {
@@ -278,18 +281,39 @@ MAIN_EXE="${APP_CONTENTS}/MacOS/${MAIN_EXE_NAME}"
 # 5) Post-sign (mirrors retrieved context)
 # --------------------------
 
+# Create entitlements file for hardened runtime
+ENTITLEMENTS_FILE="${OUT_DIR}/entitlements.plist"
+cat > "${ENTITLEMENTS_FILE}" <<'ENTITLEMENTS_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
+ENTITLEMENTS_EOF
+
+echo "📝 Created entitlements file: ${ENTITLEMENTS_FILE}"
+
 # 5.1 Sign embedded runtime dylibs + jspawnhelper
 if [[ -d "${RUNTIME_DIR}" ]]; then
   echo "🔧 Signing embedded runtime dylibs + helpers..."
   find "${RUNTIME_DIR}" -type f \( -name "*.dylib" -o -name "jspawnhelper" \) -print0 \
-    | xargs -0 -I{} codesign --force --sign "${MACOS_IDENTITY}" --timestamp --options runtime "{}"
+    | xargs -0 -I{} codesign --force --sign "${MACOS_IDENTITY}" --entitlements "${ENTITLEMENTS_FILE}" --timestamp --options runtime "{}"
 fi
 
 # 5.2 Sign loose dylibs under Contents/app
 if [[ -d "${APP_DIR}" ]]; then
   echo "🔧 Signing loose dylibs under Contents/app..."
   find "${APP_DIR}" -type f -name "*.dylib" -print0 \
-    | xargs -0 -I{} codesign --force --sign "${MACOS_IDENTITY}" --timestamp --options runtime "{}"
+    | xargs -0 -I{} codesign --force --sign "${MACOS_IDENTITY}" --entitlements "${ENTITLEMENTS_FILE}" --timestamp --options runtime "{}"
 fi
 
 # 5.3 Sign dylibs embedded inside JARs
@@ -305,7 +329,7 @@ if [[ -d "${APP_DIR}" ]]; then
 
   while IFS= read -r jarfile; do
     [[ -f "$jarfile" ]] || { echo "⚠️ Missing jar, skip: $jarfile"; continue; }
-    sign_dylibs_inside_jar "$jarfile" "${MACOS_IDENTITY}" "$WORK_ROOT"
+    sign_dylibs_inside_jar "$jarfile" "${MACOS_IDENTITY}" "$WORK_ROOT" "${ENTITLEMENTS_FILE}"
   done < "$JAR_LIST"
 
   rm -f "$JAR_LIST"
@@ -314,7 +338,7 @@ fi
 # 5.4 Sign main executable
 if [[ -n "${MAIN_EXE_NAME}" && -f "${MAIN_EXE}" ]]; then
   echo "🔧 Signing main executable: ${MAIN_EXE}"
-  codesign --force --sign "${MACOS_IDENTITY}" --timestamp --options runtime "${MAIN_EXE}"
+  codesign --force --sign "${MACOS_IDENTITY}" --entitlements "${ENTITLEMENTS_FILE}" --timestamp --options runtime "${MAIN_EXE}"
 else
   echo "⚠️ Could not resolve main executable via CFBundleExecutable."
   echo "   CFBundleExecutable='${MAIN_EXE_NAME}'"
@@ -323,25 +347,37 @@ fi
 
 # 5.5 Sign app bundle (deep)
 echo "🔧 Signing app bundle (deep): ${APP_TO_SIGN}"
-codesign --force --deep --sign "${MACOS_IDENTITY}" --timestamp --options runtime "${APP_TO_SIGN}"
+codesign --force --deep --sign "${MACOS_IDENTITY}" --entitlements "${ENTITLEMENTS_FILE}" --timestamp --options runtime "${APP_TO_SIGN}"
 
 echo "🔎 Verifying signature..."
 codesign --verify --deep --strict --verbose=2 "${APP_TO_SIGN}"
 
 
 # --------------------------
-# 6) Create fresh signed DMG (UDZO)
+# 6) Create fresh signed DMG (UDZO) with Applications symlink
 # --------------------------
 SIGNED_DMG="${OUT_DIR}/Askimo-signed.dmg"
 rm -f "${SIGNED_DMG}"
 
+# Create staging folder with Applications symlink
+DMG_STAGING="${OUT_DIR}/dmg-staging"
+rm -rf "${DMG_STAGING}"
+mkdir -p "${DMG_STAGING}"
+
+echo "📦 Preparing DMG contents..."
+cp -R "${APP_TO_SIGN}" "${DMG_STAGING}/"
+ln -s /Applications "${DMG_STAGING}/Applications"
+
 echo "📀 Creating DMG (UDZO): ${SIGNED_DMG}"
 hdiutil create \
   -volname "Askimo" \
-  -srcfolder "${APP_TO_SIGN}" \
+  -srcfolder "${DMG_STAGING}" \
   -ov \
   -format UDZO \
   "${SIGNED_DMG}"
+
+# Clean up staging folder
+rm -rf "${DMG_STAGING}"
 
 echo "🔧 Signing DMG..."
 codesign --force --sign "${MACOS_IDENTITY}" --timestamp "${SIGNED_DMG}"
@@ -394,21 +430,32 @@ if ! xcrun stapler staple -v "${SIGNED_DMG}" 2>&1 | tee /tmp/stapler.log; then
   if [[ -f "${TICKET_PATH}" ]]; then
     echo "📋 Found downloaded ticket: ${TICKET_PATH}"
 
-    # Manually attach ticket to DMG using xattr with binary data
+    # Manually attach ticket to DMG using native macOS commands
     echo "📎 Manually attaching ticket to DMG..."
-    xattr -w com.apple.stapler "$(cat "${TICKET_PATH}" | base64)" "${SIGNED_DMG}"
 
-    echo "✅ Ticket manually attached (base64 encoded)"
-
-    # For proper binary attachment, use Python
-    python3 <<EOF
+    # Use the 'attr' command or create a small helper script
+    # Method: Use dd and xattr together
+    python3 -c "
+import subprocess
 import sys
-import xattr
-with open("${TICKET_PATH}", "rb") as f:
+
+ticket_path = '${TICKET_PATH}'
+dmg_path = '${SIGNED_DMG}'
+
+# Read the ticket file as binary
+with open(ticket_path, 'rb') as f:
     ticket_data = f.read()
-xattr.setxattr("${SIGNED_DMG}", "com.apple.stapler", ticket_data)
-print("✅ Ticket reattached as binary")
-EOF
+
+# Write to a temp file
+import tempfile
+with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tmp:
+    tmp.write(ticket_data)
+    tmp_path = tmp.name
+
+# Use xattr to attach
+subprocess.run(['xattr', '-wx', 'com.apple.stapler', ticket_data.hex(), dmg_path], check=True)
+print('✅ Ticket attached successfully')
+"
   else
     echo "❌ Could not find downloaded ticket file"
     exit 1
