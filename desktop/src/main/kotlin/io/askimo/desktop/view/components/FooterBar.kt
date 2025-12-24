@@ -136,7 +136,9 @@ fun footerBar(
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(ComponentColors.sidebarSurfaceColor()),
     ) {
         // Top border
         HorizontalDivider()
@@ -144,7 +146,6 @@ fun footerBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ComponentColors.sidebarSurfaceColor())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,

@@ -461,7 +461,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         ) {
             // Main application structure: MenuBar → Body (Stack) → Footer
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
             ) {
                 Row(
                     modifier = Modifier
