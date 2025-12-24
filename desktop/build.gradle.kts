@@ -604,13 +604,140 @@ tasks.register("signMacApp") {
 }
 
 /**
- * Create a DMG with Applications folder symlink
+ * Notarize the .app bundle
+ */
+tasks.register("notarizeApp") {
+    group = "distribution"
+    description = "Notarize the signed .app bundle with Apple's notarization service"
+
+    dependsOn("signMacApp")
+
+    @Suppress("DEPRECATION")
+    doLast {
+        val notarizedDir = file("${layout.buildDirectory.get()}/compose/notarized")
+        val appToSign =
+            notarizedDir.listFiles()?.firstOrNull { it.extension == "app" }
+                ?: throw GradleException("No signed .app bundle found in $notarizedDir")
+
+        // Notarization credentials - App-Specific Password
+        val appleId =
+            getEnvOrProperty("APPLE_ID")
+                ?: throw GradleException("APPLE_ID environment variable is required")
+        val applePassword =
+            getEnvOrProperty("APPLE_PASSWORD")
+                ?: throw GradleException("APPLE_PASSWORD environment variable is required (use app-specific password)")
+        val appleTeamId =
+            getEnvOrProperty("APPLE_TEAM_ID")
+                ?: throw GradleException("APPLE_TEAM_ID environment variable is required")
+
+        val notaryArgs =
+            listOf(
+                "--apple-id",
+                appleId,
+                "--team-id",
+                appleTeamId,
+                "--password",
+                applePassword,
+            )
+
+        logger.lifecycle("🔐 Notarizing .app bundle...")
+        logger.lifecycle("📦 App: ${appToSign.name}")
+
+        // Create ZIP of .app for notarization (Apple requires ZIP for .app bundles)
+        val appZip = File(notarizedDir, "${appToSign.nameWithoutExtension}.zip")
+        appZip.delete()
+
+        logger.lifecycle("📦 Creating ZIP for notarization...")
+        project.exec {
+            workingDir = notarizedDir
+            commandLine("ditto", "-c", "-k", "--keepParent", appToSign.name, appZip.name)
+        }
+
+        // Calculate SHA256 before submission
+        val sha256Before =
+            ByteArrayOutputStream().use { output ->
+                project.exec {
+                    commandLine("shasum", "-a", "256", appZip.absolutePath)
+                    standardOutput = output
+                }
+                output.toString().split(" ")[0]
+            }
+
+        logger.lifecycle("🔎 ZIP SHA256: $sha256Before")
+
+        // Submit for notarization
+        val notarizationOutput =
+            ByteArrayOutputStream().use { output ->
+                project.exec {
+                    commandLine(
+                        "xcrun",
+                        "notarytool",
+                        "submit",
+                        appZip.absolutePath,
+                        *notaryArgs.toTypedArray(),
+                        "--wait",
+                        "--output-format",
+                        "json",
+                    )
+                    standardOutput = output
+                }
+                output.toString()
+            }
+
+        logger.lifecycle(notarizationOutput)
+
+        // Parse JSON response
+        val statusMatch = Regex(""""status":\s*"([^"]+)"""").find(notarizationOutput)
+        val status = statusMatch?.groupValues?.get(1)
+
+        val idMatch = Regex(""""id":\s*"([^"]+)"""").find(notarizationOutput)
+        val submissionId = idMatch?.groupValues?.get(1)
+
+        logger.lifecycle("✅ .app submission: id=$submissionId, status=$status")
+
+        if (status != "Accepted") {
+            throw GradleException("❌ .app notarization failed with status: $status")
+        }
+
+        // Wait for ticket propagation
+        logger.lifecycle("⏳ Waiting 60s for ticket propagation...")
+        Thread.sleep(60000)
+
+        // Staple ticket to .app
+        logger.lifecycle("📎 Stapling ticket to .app...")
+        val staplerOutput = ByteArrayOutputStream()
+        val staplerError = ByteArrayOutputStream()
+        val stapleResult =
+            project.exec {
+                commandLine("xcrun", "stapler", "staple", "-v", appToSign.absolutePath)
+                isIgnoreExitValue = true
+                standardOutput = staplerOutput
+                errorOutput = staplerError
+            }
+
+        if (stapleResult.exitValue != 0) {
+            logger.warn("⚠️ Stapler failed for .app, but continuing (ticket is available online)")
+            logger.lifecycle(staplerOutput.toString())
+            logger.lifecycle(staplerError.toString())
+        } else {
+            logger.lifecycle("✅ Ticket stapled to .app")
+        }
+
+        // Clean up ZIP
+        appZip.delete()
+
+        logger.lifecycle("✅ .app notarization complete!")
+    }
+}
+
+/**
+ * Create a signed DMG with Applications folder symlink
  */
 tasks.register("createSignedDmg") {
     group = "distribution"
     description = "Create a signed DMG with Applications folder symlink"
 
-    dependsOn("signMacApp")
+    dependsOn("notarizeApp") // Changed from signMacApp to notarizeApp
 
     @Suppress("DEPRECATION")
     doLast {
@@ -860,11 +987,11 @@ tasks.register("customNotarizeDmg") {
 }
 
 /**
- * Complete notarization workflow
+ * Complete notarization workflow - notarizes both .app and DMG
  */
 tasks.register("customNotarizeMacApp") {
     group = "distribution"
-    description = "Complete macOS code signing and notarization workflow (custom implementation)"
+    description = "Complete macOS code signing and notarization workflow (signs app, notarizes app, creates DMG, notarizes DMG)"
 
     dependsOn("customNotarizeDmg")
 
