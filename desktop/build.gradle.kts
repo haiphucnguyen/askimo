@@ -808,8 +808,8 @@ tasks.register("createSignedDmg") {
         logger.lifecycle("✅ Mounted at: $mountPath")
 
         try {
-            // Create .DS_Store settings using AppleScript
-            val appleScript =
+            // Set background color (light gray/blue gradient effect)
+            val backgroundScript =
                 """
                 tell application "Finder"
                     tell disk "Askimo"
@@ -821,6 +821,8 @@ tasks.register("createSignedDmg") {
                         set viewOptions to the icon view options of container window
                         set arrangement of viewOptions to not arranged
                         set icon size of viewOptions to 100
+                        set background color of viewOptions to {53456, 56797, 63736}
+                        set text size of viewOptions to 13
                         set position of item "${appToSign.name}" of container window to {130, 150}
                         set position of item "Applications" of container window to {390, 150}
                         close
@@ -831,9 +833,9 @@ tasks.register("createSignedDmg") {
                 end tell
                 """.trimIndent()
 
-            logger.lifecycle("🎨 Applying window settings...")
+            logger.lifecycle("🎨 Applying window settings and background color...")
             project.exec {
-                commandLine("osascript", "-e", appleScript)
+                commandLine("osascript", "-e", backgroundScript)
                 isIgnoreExitValue = true
             }
 
