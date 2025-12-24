@@ -816,9 +816,15 @@ tasks.register("createSignedDmg") {
             if (backgroundImage.exists()) {
                 logger.lifecycle("🖼️ Copying background image...")
                 backgroundImage.copyTo(File(backgroundDir, "background.png"), overwrite = true)
+            }
 
-                // Set background image and window settings
-                val backgroundScript =
+            // Wait for Finder to recognize the mounted volume
+            logger.lifecycle("⏳ Waiting for Finder to recognize volume...")
+            Thread.sleep(2000)
+
+            // Set background image and window settings
+            val backgroundScript =
+                if (backgroundImage.exists()) {
                     """
                     tell application "Finder"
                         tell disk "Askimo"
@@ -832,26 +838,17 @@ tasks.register("createSignedDmg") {
                             set icon size of viewOptions to 100
                             set background picture of viewOptions to file ".background:background.png"
                             set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 150}
-                            set position of item "Applications" of container window to {390, 150}
-                            close
-                            open
+                            set position of item "${appToSign.name}" of container window to {130, 190}
+                            set position of item "Applications" of container window to {390, 190}
                             update without registering applications
-                            delay 2
+                            delay 1
+                            close
                         end tell
                     end tell
                     """.trimIndent()
+                } else {
+                    logger.warn("⚠️ Background image not found at ${backgroundImage.absolutePath}, using color fallback...")
 
-                logger.lifecycle("🎨 Applying window settings and background image...")
-                project.exec {
-                    commandLine("osascript", "-e", backgroundScript)
-                    isIgnoreExitValue = true
-                }
-            } else {
-                logger.warn("⚠️ Background image not found at ${backgroundImage.absolutePath}, using color fallback...")
-
-                // Fallback to background color if image doesn't exist
-                val backgroundScript =
                     """
                     tell application "Finder"
                         tell disk "Askimo"
@@ -865,24 +862,25 @@ tasks.register("createSignedDmg") {
                             set icon size of viewOptions to 100
                             set background color of viewOptions to {53456, 56797, 63736}
                             set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 150}
-                            set position of item "Applications" of container window to {390, 150}
-                            close
-                            open
+                            set position of item "${appToSign.name}" of container window to {130, 190}
+                            set position of item "Applications" of container window to {390, 190}
                             update without registering applications
-                            delay 2
+                            delay 1
+                            close
                         end tell
                     end tell
                     """.trimIndent()
-
-                logger.lifecycle("🎨 Applying window settings and background color...")
-                project.exec {
-                    commandLine("osascript", "-e", backgroundScript)
-                    isIgnoreExitValue = true
                 }
+
+            logger.lifecycle("🎨 Applying window settings...")
+            project.exec {
+                commandLine("osascript", "-e", backgroundScript)
+                isIgnoreExitValue = true
             }
 
-            Thread.sleep(3000)
+            // Give Finder time to save the settings
+            logger.lifecycle("⏳ Waiting for Finder to save settings...")
+            Thread.sleep(5000)
         } finally {
             // Unmount
             logger.lifecycle("💿 Unmounting DMG...")
