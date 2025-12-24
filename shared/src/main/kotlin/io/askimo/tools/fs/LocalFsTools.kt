@@ -6,6 +6,7 @@ package io.askimo.tools.fs
 
 import dev.langchain4j.agent.tool.Tool
 import io.askimo.core.util.AskimoHome
+import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.tools.ToolResponseBuilder
 import java.nio.file.Files
 import java.nio.file.Path
@@ -529,12 +530,12 @@ object LocalFsTools {
                 when {
                     os.contains("windows") -> {
                         // Windows: use cmd.exe or powershell
-                        ProcessBuilder("cmd.exe", "/c", command)
+                        ProcessBuilderExt("cmd.exe", "/c", command)
                     }
                     else -> {
                         // Unix-like systems: try to find available shell
                         val shell = findAvailableShell()
-                        ProcessBuilder(shell, "-c", command)
+                        ProcessBuilderExt(shell, "-c", command)
                     }
                 }
 

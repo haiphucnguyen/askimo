@@ -24,7 +24,7 @@ object Git {
         vararg cmd: String,
     ): String {
         val p =
-            ProcessBuilder(*cmd)
+            ProcessBuilderExt(*cmd)
                 .directory(File(dir))
                 .redirectErrorStream(true)
                 .start()

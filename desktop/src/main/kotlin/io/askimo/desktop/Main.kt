@@ -73,6 +73,7 @@ import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.i18n.provideLocalization
 import io.askimo.desktop.i18n.stringResource
@@ -135,12 +136,13 @@ fun detectMacOSDarkMode(): Boolean {
             return false
         }
 
-        val process = ProcessBuilder(
-            "defaults",
-            "read",
-            "-g",
-            "AppleInterfaceStyle",
-        ).start()
+        val process =
+            ProcessBuilderExt(
+                "defaults",
+                "read",
+                "-g",
+                "AppleInterfaceStyle",
+            ).start()
 
         val result = process.inputStream.bufferedReader().readText().trim()
         val exitCode = process.waitFor()

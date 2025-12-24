@@ -16,6 +16,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
@@ -25,7 +26,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
     override fun availableModels(settings: DockerAiSettings): List<String> = try {
         val process =
-            ProcessBuilder("docker", "model", "ls", "--openai")
+            ProcessBuilderExt("docker", "model", "ls", "--openai")
                 .redirectErrorStream(true)
                 .start()
 

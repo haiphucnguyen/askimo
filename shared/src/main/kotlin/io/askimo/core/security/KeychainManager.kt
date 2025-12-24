@@ -9,6 +9,7 @@ import io.askimo.core.security.KeychainManager.OperatingSystem.LINUX
 import io.askimo.core.security.KeychainManager.OperatingSystem.MACOS
 import io.askimo.core.security.KeychainManager.OperatingSystem.UNKNOWN
 import io.askimo.core.security.KeychainManager.OperatingSystem.WINDOWS
+import io.askimo.core.util.ProcessBuilderExt
 import java.io.IOException
 
 /**
@@ -89,7 +90,7 @@ object KeychainManager {
     ): Boolean {
         val account = "askimo-$provider"
         val process =
-            ProcessBuilder(
+            ProcessBuilderExt(
                 "security",
                 "add-generic-password",
                 "-a",
@@ -108,7 +109,7 @@ object KeychainManager {
     private fun retrieveMacOSKeychain(provider: String): String? {
         val account = "askimo-$provider"
         val process =
-            ProcessBuilder(
+            ProcessBuilderExt(
                 "security",
                 "find-generic-password",
                 "-a",
@@ -132,7 +133,7 @@ object KeychainManager {
     private fun removeMacOSKeychain(provider: String): Boolean {
         val account = "askimo-$provider"
         val process =
-            ProcessBuilder(
+            ProcessBuilderExt(
                 "security",
                 "delete-generic-password",
                 "-a",
@@ -153,7 +154,7 @@ object KeychainManager {
         if (isCommandAvailable("secret-tool")) {
             try {
                 val process =
-                    ProcessBuilder(
+                    ProcessBuilderExt(
                         "secret-tool",
                         "store",
                         "--label",
@@ -193,7 +194,7 @@ object KeychainManager {
         if (isCommandAvailable("secret-tool")) {
             try {
                 val process =
-                    ProcessBuilder(
+                    ProcessBuilderExt(
                         "secret-tool",
                         "lookup",
                         "service",
@@ -227,7 +228,7 @@ object KeychainManager {
         if (isCommandAvailable("secret-tool")) {
             try {
                 val process =
-                    ProcessBuilder(
+                    ProcessBuilderExt(
                         "secret-tool",
                         "clear",
                         "service",
@@ -255,12 +256,13 @@ object KeychainManager {
         val target = "$SERVICE_NAME:askimo-$provider"
 
         try {
-            val process = ProcessBuilder(
-                "cmdkey",
-                "/generic:$target",
-                "/user:askimo",
-                "/pass:$apiKey",
-            ).start()
+            val process =
+                ProcessBuilderExt(
+                    "cmdkey",
+                    "/generic:$target",
+                    "/user:askimo",
+                    "/pass:$apiKey",
+                ).start()
 
             val exitCode = process.waitFor()
             return exitCode == 0
@@ -326,15 +328,16 @@ public class CredentialManager {
                 "if (\$password -ne \$null) { Write-Output \$password; exit 0 } " +
                 "else { [Console]::Error.WriteLine('Credential not found'); exit 1 }"
 
-            val process = ProcessBuilder(
-                "powershell.exe",
-                "-WindowStyle",
-                "Hidden",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                powershellScript,
-            ).start()
+            val process =
+                ProcessBuilderExt(
+                    "powershell.exe",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    powershellScript,
+                ).start()
 
             val output = process.inputStream.bufferedReader().readText().trim()
             val errorOutput = process.errorStream.bufferedReader().readText().trim()
@@ -353,7 +356,7 @@ public class CredentialManager {
 
         // PowerShell failed, check if credential exists via cmdkey
         try {
-            val checkProcess = ProcessBuilder("cmdkey", "/list:$target").start()
+            val checkProcess = ProcessBuilderExt("cmdkey", "/list:$target").start()
             val checkOutput = checkProcess.inputStream.bufferedReader().readText()
             val checkExitCode = checkProcess.waitFor()
 
@@ -371,10 +374,11 @@ public class CredentialManager {
         val target = "$SERVICE_NAME:askimo-$provider"
 
         try {
-            val process = ProcessBuilder(
-                "cmdkey",
-                "/delete:$target",
-            ).start()
+            val process =
+                ProcessBuilderExt(
+                    "cmdkey",
+                    "/delete:$target",
+                ).start()
 
             val exitCode = process.waitFor()
             return exitCode == 0
@@ -395,9 +399,9 @@ public class CredentialManager {
     }
 
     private fun isCommandAvailable(command: String): Boolean = try {
-        val process = ProcessBuilder("which", command).start()
+        val process = ProcessBuilderExt("which", command).start()
         process.waitFor() == 0
-    } catch (e: IOException) {
+    } catch (_: IOException) {
         false
     }
 
