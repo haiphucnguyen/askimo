@@ -832,8 +832,8 @@ tasks.register("createSignedDmg") {
                             set icon size of viewOptions to 100
                             set background picture of viewOptions to file ".background:background.png"
                             set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 150}
-                            set position of item "Applications" of container window to {390, 150}
+                            set position of item "${appToSign.name}" of container window to {130, 190}
+                            set position of item "Applications" of container window to {390, 190}
                             close
                             open
                             update without registering applications
@@ -865,8 +865,8 @@ tasks.register("createSignedDmg") {
                             set icon size of viewOptions to 100
                             set background color of viewOptions to {53456, 56797, 63736}
                             set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 150}
-                            set position of item "Applications" of container window to {390, 150}
+                            set position of item "${appToSign.name}" of container window to {130, 190}
+                            set position of item "Applications" of container window to {390, 190}
                             close
                             open
                             update without registering applications
