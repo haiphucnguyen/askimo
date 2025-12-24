@@ -119,7 +119,7 @@ object NativeMenuBar {
             val starGitHubText = LocalizationManager.getString("menu.help.star.github")
             // On Windows, replace emoji with Unicode star character that renders better in AWT
             val starGitHubDisplayText = if (Platform.isWindows) {
-                starGitHubText.replace("⭐", "★")
+                starGitHubText.replace("⭐", "")
             } else {
                 starGitHubText
             }
