@@ -824,53 +824,27 @@ tasks.register("createSignedDmg") {
 
             // Set background image and window settings
             val backgroundScript =
-                if (backgroundImage.exists()) {
-                    """
-                    tell application "Finder"
-                        tell disk "Askimo"
-                            open
-                            set current view of container window to icon view
-                            set toolbar visible of container window to false
-                            set statusbar visible of container window to false
-                            set the bounds of container window to {400, 100, 920, 480}
-                            set viewOptions to the icon view options of container window
-                            set arrangement of viewOptions to not arranged
-                            set icon size of viewOptions to 100
-                            set background picture of viewOptions to file ".background:background.png"
-                            set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 190}
-                            set position of item "Applications" of container window to {390, 190}
-                            update without registering applications
-                            delay 1
-                            close
-                        end tell
+                """
+                tell application "Finder"
+                    tell disk "Askimo"
+                        open
+                        set current view of container window to icon view
+                        set toolbar visible of container window to false
+                        set statusbar visible of container window to false
+                        set the bounds of container window to {400, 100, 920, 480}
+                        set viewOptions to the icon view options of container window
+                        set arrangement of viewOptions to not arranged
+                        set icon size of viewOptions to 100
+                        set background picture of viewOptions to file ".background:background.png"
+                        set text size of viewOptions to 13
+                        set position of item "${appToSign.name}" of container window to {130, 190}
+                        set position of item "Applications" of container window to {390, 190}
+                        update without registering applications
+                        delay 1
+                        close
                     end tell
-                    """.trimIndent()
-                } else {
-                    logger.warn("⚠️ Background image not found at ${backgroundImage.absolutePath}, using color fallback...")
-
-                    """
-                    tell application "Finder"
-                        tell disk "Askimo"
-                            open
-                            set current view of container window to icon view
-                            set toolbar visible of container window to false
-                            set statusbar visible of container window to false
-                            set the bounds of container window to {400, 100, 920, 480}
-                            set viewOptions to the icon view options of container window
-                            set arrangement of viewOptions to not arranged
-                            set icon size of viewOptions to 100
-                            set background color of viewOptions to {53456, 56797, 63736}
-                            set text size of viewOptions to 13
-                            set position of item "${appToSign.name}" of container window to {130, 190}
-                            set position of item "Applications" of container window to {390, 190}
-                            update without registering applications
-                            delay 1
-                            close
-                        end tell
-                    end tell
-                    """.trimIndent()
-                }
+                end tell
+                """.trimIndent()
 
             logger.lifecycle("🎨 Applying window settings...")
             project.exec {
