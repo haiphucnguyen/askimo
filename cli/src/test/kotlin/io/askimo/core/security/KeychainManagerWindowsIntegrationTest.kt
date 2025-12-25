@@ -4,6 +4,7 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.util.ProcessBuilderExt
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -44,7 +45,7 @@ class KeychainManagerWindowsIntegrationTest {
             try {
                 // Always remove from Windows Credential Manager
                 val target = "askimo-cli:askimo-$provider"
-                val process = ProcessBuilder("cmdkey", "/delete:$target").start()
+                val process = ProcessBuilderExt("cmdkey", "/delete:$target").start()
                 process.waitFor()
                 println("Cleaned up credential for provider: $provider")
             } catch (e: Exception) {
@@ -196,7 +197,7 @@ class KeychainManagerWindowsIntegrationTest {
     }
 
     private fun isCmdKeyCommandAvailable(): Boolean = try {
-        val process = ProcessBuilder("where", "cmdkey").start()
+        val process = ProcessBuilderExt("where", "cmdkey").start()
         process.waitFor() == 0
     } catch (e: IOException) {
         false

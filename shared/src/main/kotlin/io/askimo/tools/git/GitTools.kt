@@ -5,6 +5,7 @@
 package io.askimo.tools.git
 
 import dev.langchain4j.agent.tool.Tool
+import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.tools.fs.LocalFsTools
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
@@ -127,7 +128,7 @@ class GitTools {
 
     private fun exec(cmd: List<String>): String {
         val p =
-            ProcessBuilder(cmd)
+            ProcessBuilderExt(cmd)
                 .redirectErrorStream(true)
                 .start()
         val out = ByteArrayOutputStream()
@@ -145,7 +146,7 @@ class GitTools {
         cmd: List<String>,
         input: String,
     ): String {
-        val pb = ProcessBuilder(cmd).redirectErrorStream(true)
+        val pb = ProcessBuilderExt(cmd).redirectErrorStream(true)
         val p = pb.start()
         p.outputStream.bufferedWriter().use { it.write(input) }
         val out = ByteArrayOutputStream()

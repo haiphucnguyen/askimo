@@ -116,7 +116,14 @@ object NativeMenuBar {
             helpMenu.add(docsItem)
 
             // Star on GitHub
-            val starGitHubItem = MenuItem(LocalizationManager.getString("menu.help.star.github"))
+            val starGitHubText = LocalizationManager.getString("menu.help.star.github")
+            // On Windows, replace emoji with Unicode star character that renders better in AWT
+            val starGitHubDisplayText = if (Platform.isWindows) {
+                starGitHubText.replace("⭐", "")
+            } else {
+                starGitHubText
+            }
+            val starGitHubItem = MenuItem(starGitHubDisplayText)
             starGitHubItem.addActionListener(
                 ActionListener {
                     try {

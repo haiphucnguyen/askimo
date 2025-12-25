@@ -4,6 +4,7 @@
  */
 package io.askimo.core.security
 
+import io.askimo.core.util.ProcessBuilderExt
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -166,7 +167,7 @@ class SecureApiKeyManagerLinuxIntegrationTest {
     }
 
     private fun isSecretToolCommandAvailable(): Boolean = try {
-        val process = ProcessBuilder("which", "secret-tool").start()
+        val process = ProcessBuilderExt("which", "secret-tool").start()
         process.waitFor() == 0
     } catch (e: IOException) {
         false

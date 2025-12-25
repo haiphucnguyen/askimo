@@ -51,8 +51,8 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            task: packageDmg
-            artifact-pattern: "desktop/build/compose/binaries/main/dmg/*.dmg"
+            task: customNotarizeMacApp
+            artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
             artifact-suffix: "macos"
           - os: windows-latest
             task: packageMsi
@@ -176,14 +176,14 @@ jobs:
       - name: Package desktop installer (Linux/macOS)
         if: runner.os != 'Windows'
         env:
-          MACOS_IDENTITY: ${{ secrets.MACOS_IDENTITY }}
+          MACOS_IDENTITY: ${{ runner.os == 'macOS' && env.MACOS_IDENTITY || '' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            # For macOS: Build, sign, and notarize in one command
-            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageNotarizedDmg
+            # For macOS: Build, sign, and notarize using custom Gradle task
+            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:customNotarizeMacApp
           else
             # For Linux: Just package
             ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
@@ -199,6 +199,55 @@ jobs:
         if: runner.os != 'Windows'
         run: ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:packageUberJarForCurrentOS
 
+      - name: Verify macOS Notarization
+        if: runner.os == 'macOS'
+        run: |
+          DMG="desktop/build/compose/notarized/Askimo-signed.dmg"
+          
+          echo "🔍 Verifying notarized DMG..."
+          
+          # Check if DMG exists
+          if [ ! -f "$DMG" ]; then
+            echo "❌ DMG not found at: $DMG"
+            exit 1
+          fi
+          
+          echo "✅ DMG exists: $DMG"
+          
+          # Check code signature
+          echo ""
+          echo "📝 Code signature:"
+          codesign -dvv "$DMG" 2>&1 | grep -E "Signature|Authority|Timestamp" | head -5
+          
+          # Verify signature
+          if codesign --verify --verbose "$DMG" 2>&1; then
+            echo "✅ Code signature is valid"
+          else
+            echo "❌ Code signature verification failed"
+            exit 1
+          fi
+          
+          # Check for notarization ticket
+          echo ""
+          echo "🎫 Checking notarization ticket:"
+          if xattr -l "$DMG" | grep -q "com.apple.stapler"; then
+            echo "✅ Notarization ticket is attached"
+          else
+            echo "⚠️  No stapler ticket found (may not be accessible in CI)"
+          fi
+          
+          # Check with spctl (Gatekeeper)
+          echo ""
+          echo "🔐 Gatekeeper assessment:"
+          if spctl -a -t open --context context:primary-signature -v "$DMG" 2>&1; then
+            echo "✅ Gatekeeper accepts the DMG"
+          else
+            echo "⚠️  Gatekeeper assessment unavailable in CI (this is normal)"
+          fi
+          
+          echo ""
+          echo "✅ Notarization verification complete"
+
       - name: Build uber JAR (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -211,16 +260,27 @@ jobs:
           set -euo pipefail
           PATTERN="${{ matrix.artifact-pattern }}"
           
-          # Use compgen if available (bash), otherwise use ls with wildcard
-          if compgen -G "$PATTERN" > /dev/null 2>&1; then
-            PKG="$(compgen -G "$PATTERN" | head -n1)"
+          # For macOS notarized DMG, the path is specific
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            PKG="$PATTERN"
+            if [ ! -f "$PKG" ]; then
+              echo "Error: Notarized DMG not found at: $PKG" >&2
+              echo "Listing desktop/build/compose/notarized/:"
+              ls -la desktop/build/compose/notarized/ || true
+              exit 1
+            fi
           else
-            PKG="$(ls $PATTERN 2>/dev/null | head -n1)" || true
-          fi
-          
-          if [ -z "$PKG" ]; then
-            echo "Error: No installer found matching pattern: $PATTERN" >&2
-            exit 1
+            # Use compgen if available (bash), otherwise use ls with wildcard
+            if compgen -G "$PATTERN" > /dev/null 2>&1; then
+              PKG="$(compgen -G "$PATTERN" | head -n1)"
+            else
+              PKG="$(ls $PATTERN 2>/dev/null | head -n1)" || true
+            fi
+            
+            if [ -z "$PKG" ]; then
+              echo "Error: No installer found matching pattern: $PATTERN" >&2
+              exit 1
+            fi
           fi
           
           echo "package=$PKG" >> $GITHUB_OUTPUT

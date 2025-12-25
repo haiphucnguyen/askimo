@@ -32,6 +32,8 @@ object ThemePreferences {
     private const val WINDOW_IS_MAXIMIZED_KEY = "window_is_maximized"
     private const val USER_AVATAR_PATH_KEY = "user_avatar_path"
     private const val AI_AVATAR_PATH_KEY = "ai_avatar_path"
+    private const val MAIN_SIDEBAR_WIDTH_FRACTION_KEY = "main_sidebar_width_fraction"
+    private const val SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY = "settings_sidebar_width_fraction"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
@@ -191,5 +193,17 @@ object ThemePreferences {
         } else {
             prefs.remove(AI_AVATAR_PATH_KEY)
         }
+    }
+
+    // Sidebar width management
+    fun getMainSidebarWidthFraction(): Float = prefs.getFloat(MAIN_SIDEBAR_WIDTH_FRACTION_KEY, 0.20f)
+    fun getSettingsSidebarWidthFraction(): Float = prefs.getFloat(SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY, 0.18f)
+
+    fun setMainSidebarWidthFraction(fraction: Float) {
+        prefs.putFloat(MAIN_SIDEBAR_WIDTH_FRACTION_KEY, fraction)
+    }
+
+    fun setSettingsSidebarWidthFraction(fraction: Float) {
+        prefs.putFloat(SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY, fraction)
     }
 }

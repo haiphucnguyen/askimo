@@ -7,6 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
+import io.askimo.core.util.ProcessBuilderExt
 import org.jline.reader.ParsedLine
 
 /**
@@ -40,24 +41,24 @@ class CopyCommandHandler : CommandHandler {
 
             when {
                 os.contains("mac") -> {
-                    val process = ProcessBuilder("pbcopy").start()
+                    val process = ProcessBuilderExt("pbcopy").start()
                     process.outputStream.use { it.write(text.toByteArray()) }
                 }
                 os.contains("win") -> {
-                    val process = ProcessBuilder("cmd", "/c", "clip").start()
+                    val process = ProcessBuilderExt("cmd", "/c", "clip").start()
                     process.outputStream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                 }
                 os.contains("nux") || os.contains("nix") -> {
-                    val hasXclip = ProcessBuilder("which", "xclip").start().waitFor() == 0
-                    val hasXsel = ProcessBuilder("which", "xsel").start().waitFor() == 0
+                    val hasXclip = ProcessBuilderExt("which", "xclip").start().waitFor() == 0
+                    val hasXsel = ProcessBuilderExt("which", "xsel").start().waitFor() == 0
 
                     when {
                         hasXclip -> {
-                            val process = ProcessBuilder("xclip", "-selection", "clipboard").start()
+                            val process = ProcessBuilderExt("xclip", "-selection", "clipboard").start()
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
                         hasXsel -> {
-                            val process = ProcessBuilder("xsel", "--clipboard", "--input").start()
+                            val process = ProcessBuilderExt("xsel", "--clipboard", "--input").start()
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
                         else -> {

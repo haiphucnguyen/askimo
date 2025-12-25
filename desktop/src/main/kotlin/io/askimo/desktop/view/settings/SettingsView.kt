@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.i18n.stringResource
+import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import org.jetbrains.skia.Image
@@ -69,7 +71,8 @@ fun settingsViewWithSidebar(
     initialSection: SettingsSection = SettingsSection.GENERAL,
 ) {
     var selectedSection by remember { mutableStateOf(initialSection) }
-    var sidebarWidth by remember { mutableStateOf(240.dp) }
+    // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
+    var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getSettingsSidebarWidthFraction()) }
 
     // Settings view - full screen replacement with top header bar
     Column(
@@ -129,108 +132,130 @@ fun settingsViewWithSidebar(
         HorizontalDivider()
 
         // Content area: Sidebar + Main Content
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            // Left Sidebar
-            Column(
-                modifier = Modifier
-                    .width(sidebarWidth)
-                    .fillMaxHeight()
-                    .background(ComponentColors.sidebarSurfaceColor()),
-            ) {
-                settingsSidebarItem(
-                    title = stringResource("settings.general"),
-                    icon = Icons.Default.Settings,
-                    isSelected = selectedSection == SettingsSection.GENERAL,
-                    onClick = { selectedSection = SettingsSection.GENERAL },
-                )
-                settingsSidebarItem(
-                    title = stringResource("settings.ai.provider"),
-                    icon = Icons.Default.SmartToy,
-                    isSelected = selectedSection == SettingsSection.AI_PROVIDER,
-                    onClick = { selectedSection = SettingsSection.AI_PROVIDER },
-                )
-                settingsSidebarItem(
-                    title = stringResource("settings.appearance"),
-                    icon = Icons.Default.Palette,
-                    isSelected = selectedSection == SettingsSection.APPEARANCE,
-                    onClick = { selectedSection = SettingsSection.APPEARANCE },
-                )
-                settingsSidebarItem(
-                    title = stringResource("settings.shortcuts"),
-                    icon = Icons.Outlined.Keyboard,
-                    isSelected = selectedSection == SettingsSection.SHORTCUTS,
-                    onClick = { selectedSection = SettingsSection.SHORTCUTS },
-                )
-                settingsSidebarItem(
-                    title = stringResource("settings.advanced"),
-                    icon = Icons.Outlined.Tune,
-                    isSelected = selectedSection == SettingsSection.ADVANCED,
-                    onClick = { selectedSection = SettingsSection.ADVANCED },
-                )
-                settingsSidebarItem(
-                    title = stringResource("settings.about"),
-                    icon = Icons.Default.Info,
-                    isSelected = selectedSection == SettingsSection.ABOUT,
-                    onClick = { selectedSection = SettingsSection.ABOUT },
-                )
-            } // End Left Sidebar Column
+            // Calculate actual sidebar width from fraction
+            // Min 180dp, max 30% of screen width, default ~18%
+            val minSidebarWidth = 180.dp
+            val maxSidebarWidthFraction = 0.30f
+            val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
+                minSidebarWidth,
+                maxWidth * maxSidebarWidthFraction,
+            )
 
-            // Draggable divider
-            Box(
-                modifier = Modifier
-                    .width(8.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                    .pointerInput(Unit) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            val newWidth = (sidebarWidth.value + dragAmount.x / density).dp
-                            sidebarWidth = newWidth.coerceIn(200.dp, 400.dp)
-                        }
-                    },
-                contentAlignment = Alignment.Center,
+            // Capture maxWidth for use in pointerInput
+            val containerWidth = maxWidth
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
             ) {
+                // Left Sidebar
                 Column(
                     modifier = Modifier
-                        .width(2.dp)
-                        .fillMaxHeight(0.1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                        .width(calculatedWidth)
+                        .fillMaxHeight()
+                        .background(ComponentColors.sidebarSurfaceColor()),
                 ) {
-                    repeat(3) {
-                        Box(
-                            modifier = Modifier
-                                .size(2.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    shape = CircleShape,
-                                ),
-                        )
+                    settingsSidebarItem(
+                        title = stringResource("settings.general"),
+                        icon = Icons.Default.Settings,
+                        isSelected = selectedSection == SettingsSection.GENERAL,
+                        onClick = { selectedSection = SettingsSection.GENERAL },
+                    )
+                    settingsSidebarItem(
+                        title = stringResource("settings.ai.provider"),
+                        icon = Icons.Default.SmartToy,
+                        isSelected = selectedSection == SettingsSection.AI_PROVIDER,
+                        onClick = { selectedSection = SettingsSection.AI_PROVIDER },
+                    )
+                    settingsSidebarItem(
+                        title = stringResource("settings.appearance"),
+                        icon = Icons.Default.Palette,
+                        isSelected = selectedSection == SettingsSection.APPEARANCE,
+                        onClick = { selectedSection = SettingsSection.APPEARANCE },
+                    )
+                    settingsSidebarItem(
+                        title = stringResource("settings.shortcuts"),
+                        icon = Icons.Outlined.Keyboard,
+                        isSelected = selectedSection == SettingsSection.SHORTCUTS,
+                        onClick = { selectedSection = SettingsSection.SHORTCUTS },
+                    )
+                    settingsSidebarItem(
+                        title = stringResource("settings.advanced"),
+                        icon = Icons.Outlined.Tune,
+                        isSelected = selectedSection == SettingsSection.ADVANCED,
+                        onClick = { selectedSection = SettingsSection.ADVANCED },
+                    )
+                    settingsSidebarItem(
+                        title = stringResource("settings.about"),
+                        icon = Icons.Default.Info,
+                        isSelected = selectedSection == SettingsSection.ABOUT,
+                        onClick = { selectedSection = SettingsSection.ABOUT },
+                    )
+                } // End Left Sidebar Column
+
+                // Draggable divider
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                        .pointerInput(containerWidth) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                // Calculate new fraction based on drag
+                                val dragWidthDp = (dragAmount.x / density).dp
+                                val newFraction = sidebarWidthFraction + (dragWidthDp / containerWidth)
+                                // Min 10%, max 30%
+                                val coercedFraction = newFraction.coerceIn(0.10f, 0.30f)
+                                sidebarWidthFraction = coercedFraction
+                                // Save preference
+                                ThemePreferences.setSettingsSidebarWidthFraction(coercedFraction)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .fillMaxHeight(0.1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                    ) {
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .size(2.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        shape = CircleShape,
+                                    ),
+                            )
+                        }
                     }
                 }
-            }
 
-            // Main Content Area
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-            ) {
-                when (selectedSection) {
-                    SettingsSection.GENERAL -> generalSettingsSection()
-                    SettingsSection.AI_PROVIDER -> aiProviderSettingsSection(settingsViewModel)
-                    SettingsSection.APPEARANCE -> appearanceSettingsSection()
-                    SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
-                    SettingsSection.ADVANCED -> advancedSettingsSection()
-                    SettingsSection.ABOUT -> aboutSettingsSection()
-                }
-            } // End Box (main content)
-        } // End Row (sidebar + content)
-    } // End Column (settings view with top header)
+                // Main Content Area
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                ) {
+                    when (selectedSection) {
+                        SettingsSection.GENERAL -> generalSettingsSection()
+                        SettingsSection.AI_PROVIDER -> aiProviderSettingsSection(settingsViewModel)
+                        SettingsSection.APPEARANCE -> appearanceSettingsSection()
+                        SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
+                        SettingsSection.ADVANCED -> advancedSettingsSection()
+                        SettingsSection.ABOUT -> aboutSettingsSection()
+                    }
+                } // End Box (main content)
+            } // End Row (sidebar + content)
+        }
+    }
 
     // Dialogs
     if (settingsViewModel.showModelDialog) {

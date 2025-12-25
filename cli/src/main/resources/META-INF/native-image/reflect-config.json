@@ -728,41 +728,10 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "com.github.dockerjava.api.model.PullResponseItem",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "com.github.dockerjava.api.model.ResourceVersion",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ResponseItem",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ResponseItem$AuxDetail",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ResponseItem$ErrorDetail",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "com.github.dockerjava.api.model.ResponseItem$ProgressDetail",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.RestartPolicy",
@@ -4343,7 +4312,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$SzKrlkBm",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$e0HrPH0o",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
