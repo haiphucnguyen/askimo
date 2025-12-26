@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -318,6 +319,36 @@ fun providerSelectionDialog(
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        // Help link for provider setup instructions
+                        if (viewModel.selectedProvider != null) {
+                            TextButton(
+                                onClick = {
+                                    try {
+                                        val providerName = viewModel.selectedProvider?.name?.lowercase() ?: return@TextButton
+                                        Desktop.getDesktop().browse(
+                                            URI("https://askimo.chat/docs/desktop/providers/$providerName/"),
+                                        )
+                                    } catch (_: Exception) {
+                                        // Silently fail if browser cannot be opened
+                                    }
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Help,
+                                    contentDescription = "Help",
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource("provider.setup.guide", viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                             }
                         }
 
