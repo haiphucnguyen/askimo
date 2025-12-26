@@ -56,11 +56,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -75,6 +78,7 @@ import io.askimo.desktop.view.components.markdownText
 import io.askimo.desktop.view.components.themedTooltip
 import java.time.LocalDateTime
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun messageList(
     messages: List<ChatMessageDTO>,
@@ -121,13 +125,20 @@ fun messageList(
         }
     }
 
+    var scrollableColumnBounds by remember { mutableStateOf<Rect?>(null) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(end = 12.dp) // Add padding for scrollbar
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+                .verticalScroll(scrollState)
+                .onGloballyPositioned { coordinates ->
+                    if (coordinates.isAttached) {
+                        scrollableColumnBounds = coordinates.boundsInWindow()
+                    }
+                },
+            verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
             // Show loading indicator when loading previous messages
             if (isLoadingPrevious) {
@@ -166,6 +177,7 @@ fun messageList(
                             aiAvatarPath = aiAvatarPath,
                             onRetryMessage = onRetryMessage,
                             addTopPadding = isFirstMessage,
+                            viewportTopY = scrollableColumnBounds?.top,
                         )
                         isFirstMessage = false
                         messageIndex++
@@ -226,6 +238,7 @@ fun messageBubble(
     aiAvatarPath: String? = null,
     onRetryMessage: ((String) -> Unit)? = null,
     addTopPadding: Boolean = false,
+    viewportTopY: Float? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -370,6 +383,7 @@ fun messageBubble(
                                             top = 12.dp,
                                             bottom = 12.dp,
                                         ),
+                                        viewportTopY = viewportTopY,
                                     )
                                 }
                             }
@@ -381,7 +395,7 @@ fun messageBubble(
                     Card(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .offset(x = (-8).dp, y = (-16).dp),
+                            .offset(x = (-12).dp, y = (-12).dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -438,7 +452,7 @@ fun messageBubble(
                     Card(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .offset(x = (-8).dp, y = (-16).dp),
+                            .offset(x = (-12).dp, y = (-12).dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,

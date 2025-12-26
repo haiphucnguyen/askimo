@@ -47,8 +47,10 @@ class ChatSessionRepository internal constructor(
     private val log = logger<ChatSessionRepository>()
 
     fun createSession(session: ChatSession): ChatSession {
+        val trimmedTitle = generateTitle(session.title)
         val sessionWithInjectedFields = session.copy(
             id = session.id.ifBlank { UUID.randomUUID().toString() },
+            title = trimmedTitle,
         )
 
         transaction(database) {

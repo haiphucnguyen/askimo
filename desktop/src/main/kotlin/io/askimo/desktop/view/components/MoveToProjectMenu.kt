@@ -4,10 +4,6 @@
  */
 package io.askimo.desktop.view.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
@@ -52,7 +48,6 @@ import io.askimo.desktop.theme.ComponentColors
  * @param onSelectProject Callback when a project is selected
  * @param onDismiss Callback to close the parent menu
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun moveToProjectMenuItem(
     projects: List<Project>,
@@ -63,18 +58,13 @@ fun moveToProjectMenuItem(
     var showSubmenu by remember { mutableStateOf(false) }
     var itemWidth by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
-
-    // Show submenu when hovered
-    if (isHovered && !showSubmenu) {
-        showSubmenu = true
-    }
 
     Box {
         DropdownMenuItem(
             text = { Text(stringResource("session.move.to.project")) },
-            onClick = { showSubmenu = !showSubmenu },
+            onClick = {
+                showSubmenu = !showSubmenu
+            },
             leadingIcon = {
                 Icon(
                     Icons.AutoMirrored.Filled.DriveFileMove,
@@ -91,7 +81,6 @@ fun moveToProjectMenuItem(
             },
             modifier = Modifier
                 .pointerHoverIcon(PointerIcon.Hand)
-                .hoverable(interactionSource = interactionSource)
                 .onGloballyPositioned { coordinates ->
                     itemWidth = with(density) { coordinates.size.width.toDp() }
                 },
