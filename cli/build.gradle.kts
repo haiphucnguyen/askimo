@@ -193,7 +193,7 @@ graalvmNative {
                     "--report-unsupported-elements-at-runtime",
                     "--features=io.askimo.cli.graal.AskimoFeature",
                     "-Dorg.apache.lucene.store.MMapDirectory.enableMemorySegments=false",
-                    "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries",
+                    "--initialize-at-build-time=kotlin.DeprecationLevel,kotlin.jvm.internal.Intrinsics,kotlin.enums.EnumEntries, com.github.benmanes.caffeine",
                     "--initialize-at-run-time=kotlinx.coroutines,kotlin.coroutines,io.askimo.core.project.ProjectFileWatcher",
                     "-H:IncludeResources=logback.xml|logback-.*\\.xml",
                     "--allow-incomplete-classpath",
@@ -202,6 +202,53 @@ graalvmNative {
             )
             resources.autodetect()
             configurationFileDirectories.from(file("src/main/resources/META-INF/native-image"))
+        }
+    }
+}
+
+// Remove macOS quarantine before compilation to prevent GraalVM component blocking
+tasks.named("nativeCompile") {
+    doFirst {
+        if (System.getProperty("os.name").contains("Mac", ignoreCase = true)) {
+            val nativeDir = file("build/native")
+            if (nativeDir.exists()) {
+                try {
+                    exec {
+                        commandLine("xattr", "-dr", "com.apple.quarantine", nativeDir.absolutePath)
+                        isIgnoreExitValue = true
+                    }
+                    println("🔓 Pre-cleared quarantine from build/native directory")
+                } catch (e: Exception) {
+                    // Ignore errors
+                }
+            }
+        }
+    }
+
+    doLast {
+        if (System.getProperty("os.name").contains("Mac", ignoreCase = true)) {
+            val nativeDir = file("build/native")
+            val binary = file("build/native/nativeCompile/askimo")
+
+            try {
+                // Remove quarantine from entire native build directory
+                exec {
+                    commandLine("xattr", "-dr", "com.apple.quarantine", nativeDir.absolutePath)
+                    isIgnoreExitValue = true
+                }
+                println("✅ Removed quarantine from all native build artifacts")
+
+                // Also specifically remove from the binary
+                if (binary.exists()) {
+                    exec {
+                        commandLine("xattr", "-d", "com.apple.quarantine", binary.absolutePath)
+                        isIgnoreExitValue = true
+                    }
+                    println("✅ Removed quarantine from binary: ${binary.name}")
+                }
+            } catch (e: Exception) {
+                println("⚠️  Could not remove quarantine attribute (this is normal if it doesn't exist)")
+            }
         }
     }
 }

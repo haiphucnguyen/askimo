@@ -43,6 +43,9 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -92,14 +95,12 @@ import org.commonmark.node.Text as MarkdownText
 
 /**
  * Simple Markdown renderer for Compose.
- *
- * This component renders markdown text using commonmark parser and Compose UI components.
- * It supports basic markdown features like headings, lists, code blocks, emphasis, etc.
  */
 @Composable
 fun markdownText(
     markdown: String,
     modifier: Modifier = Modifier,
+    viewportTopY: Float? = null,
 ) {
     val parser = Parser.builder()
         .extensions(listOf(TablesExtension.create(), AutolinkExtension.create()))
@@ -107,12 +108,12 @@ fun markdownText(
     val document = parser.parse(markdown)
 
     Column(modifier = modifier) {
-        renderNode(document)
+        renderNode(document, viewportTopY)
     }
 }
 
 @Composable
-private fun renderNode(node: Node) {
+private fun renderNode(node: Node, viewportTopY: Float? = null) {
     var child = node.firstChild
     while (child != null) {
         when (child) {
@@ -128,8 +129,8 @@ private fun renderNode(node: Node) {
             is Heading -> renderHeading(child)
             is BulletList -> renderBulletList(child)
             is OrderedList -> renderOrderedList(child)
-            is FencedCodeBlock -> renderCodeBlock(child)
-            is BlockQuote -> renderBlockQuote(child)
+            is FencedCodeBlock -> renderCodeBlock(child, viewportTopY)
+            is BlockQuote -> renderBlockQuote(child, viewportTopY)
             is TableBlock -> renderTable(child)
             is Image -> {
                 // Check if it's actually a video
@@ -140,7 +141,7 @@ private fun renderNode(node: Node) {
                     renderImage(child)
                 }
             }
-            else -> renderNode(child)
+            else -> renderNode(child, viewportTopY)
         }
         child = child.next
     }
@@ -489,38 +490,52 @@ private fun renderListItem(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
-    // Use surface color for code blocks to ensure proper contrast with primaryContainer message background
-    // This provides better visual separation and respects the theme colors
+private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null) {
     val backgroundColor = MaterialTheme.colorScheme.surface
     val isDark = backgroundColor.luminance() < 0.5
-
     val clipboardManager = LocalClipboardManager.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
     var isHovered by remember { mutableStateOf(false) }
+    var codeBlockBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var codeBlockPositionInRoot by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
 
-    // Get language from the info string (e.g., "kotlin", "java", "python")
     val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
-
-    // Choose theme based on background luminance
-    val theme = if (isDark) {
-        CodeHighlighter.darkTheme()
-    } else {
-        CodeHighlighter.lightTheme()
-    }
-
-    // Apply syntax highlighting
+    val theme = if (isDark) CodeHighlighter.darkTheme() else CodeHighlighter.lightTheme()
     val highlightedCode = CodeHighlighter.highlight(
         code = codeBlock.literal,
         language = language,
         theme = theme,
     )
 
+    // Calculate button offset - simple logic
+    val copyButtonTopOffset = if (viewportTopY != null && codeBlockPositionInRoot != null) {
+        val posInRoot = codeBlockPositionInRoot!!
+        // If position in root is less than viewport top, the top is scrolled out
+        if (posInRoot.y < viewportTopY) {
+            // Position button in visible area
+            with(density) {
+                val offsetPx = viewportTopY - posInRoot.y + 10f
+                offsetPx.toDp()
+            }
+        } else {
+            4.dp
+        }
+    } else {
+        4.dp
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .pointerHoverIcon(PointerIcon.Hand)
             .onPointerEvent(PointerEventType.Enter) { isHovered = true }
-            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+            .onPointerEvent(PointerEventType.Exit) { isHovered = false }
+            .onGloballyPositioned { coordinates ->
+                if (coordinates.isAttached) {
+                    codeBlockBounds = coordinates.boundsInWindow()
+                    codeBlockPositionInRoot = coordinates.positionInRoot()
+                }
+            },
     ) {
         Text(
             text = highlightedCode,
@@ -534,24 +549,20 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
                 .horizontalScroll(rememberScrollState()),
         )
 
-        // Copy button (shown on hover)
+        // Simple: button inside code block, just adjust offset
         if (isHovered) {
             Card(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 4.dp, end = 4.dp),
+                    .padding(top = copyButtonTopOffset, end = 4.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             ) {
-                themedTooltip(
-                    text = stringResource("code.copy"),
-                ) {
+                themedTooltip(text = stringResource("code.copy")) {
                     IconButton(
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(codeBlock.literal))
-                        },
+                        onClick = { clipboardManager.setText(AnnotatedString(codeBlock.literal)) },
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
@@ -568,7 +579,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock) {
 }
 
 @Composable
-private fun renderBlockQuote(blockQuote: BlockQuote) {
+private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -576,7 +587,7 @@ private fun renderBlockQuote(blockQuote: BlockQuote) {
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .padding(8.dp),
     ) {
-        renderNode(blockQuote)
+        renderNode(blockQuote, viewportTopY)
     }
 }
 
