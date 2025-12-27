@@ -24,19 +24,12 @@ import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
-import kotlinx.serialization.json.Json
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     private val log = logger<OpenAiModelFactory>()
-
-    companion object {
-        private val json = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }
-    }
 
     override fun availableModels(settings: OpenAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()

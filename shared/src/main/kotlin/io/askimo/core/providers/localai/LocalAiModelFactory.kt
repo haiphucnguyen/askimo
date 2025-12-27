@@ -9,7 +9,6 @@ import dev.langchain4j.model.localai.LocalAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.LOCALAI
@@ -22,7 +21,6 @@ import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
 
 class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
-    private val log = logger<LocalAiModelFactory>()
 
     override fun availableModels(settings: LocalAiSettings): List<String> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -73,14 +71,6 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .systemMessageProvider {
                     systemMessage(
                         """
-                        You are a helpful AI assistant. Follow these rules strictly:
-
-                        Response format:
-                        • Respond directly with your answer - no prefixes, no meta-commentary
-                        • Do NOT include: "analysis", "User asks:", "Need to answer", "assistant", "final", or any reasoning steps
-                        • Do NOT repeat the user's question
-                        • Start your response with the actual answer immediately
-
                         Tool response format:
                         • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
                         • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data

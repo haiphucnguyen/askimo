@@ -87,8 +87,6 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
-                    // Integrate chat memory if provided
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }
