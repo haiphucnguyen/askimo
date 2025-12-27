@@ -13,6 +13,7 @@ import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -115,6 +116,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

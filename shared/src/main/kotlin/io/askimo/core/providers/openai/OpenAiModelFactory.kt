@@ -18,6 +18,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -111,6 +112,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

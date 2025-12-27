@@ -633,53 +633,7 @@ class ChatSessionService(
             }
         }
 
-        val directivePrompt = buildDirectivePrompt(sessionId)
-
-        val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)
-        return if (directivePrompt != null) {
-            buildString {
-                append(directivePrompt)
-                appendLine()
-                appendLine()
-                appendLine("---")
-                appendLine()
-                append(messageWithAttachments)
-            }
-        } else {
-            messageWithAttachments
-        }
-    }
-
-    /**
-     * Builds the directive prompt by combining system-level and session-specific directives.
-     *
-     * This creates a system instruction that is prepended to user messages to provide
-     * context and constraints for the AI's behavior.
-     *
-     * @return The combined directive text, or null if no directives are active
-     */
-    private fun buildDirectivePrompt(sessionId: String): String? {
-        val parts = mutableListOf<String>()
-
-        // Add system-level directive (applies to all sessions)
-        appContext.systemDirective?.let { sysDir ->
-            if (sysDir.isNotBlank()) {
-                parts.add(sysDir.trim())
-            }
-        }
-
-        // Add session-specific directive (applies only to this session)
-        val directive = directiveRepository.findDirectiveBySessionId(sessionId)
-        if (directive != null) {
-            val sessionDirectiveText = directive.content.trim()
-            parts.add(sessionDirectiveText)
-        }
-
-        return if (parts.isEmpty()) {
-            null
-        } else {
-            parts.joinToString("\n\n---\n\n")
-        }
+        return constructMessageWithAttachments(userMessage, attachments)
     }
 }
 

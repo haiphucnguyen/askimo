@@ -11,6 +11,7 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -87,6 +88,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
