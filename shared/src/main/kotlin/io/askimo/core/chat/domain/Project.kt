@@ -10,21 +10,29 @@ import java.time.LocalDateTime
 
 /**
  * Represents a project that groups chat sessions and provides RAG context
- * through indexed files/folders.
+ * through indexed knowledge sources (files, web pages, etc.).
  *
  * Projects enable knowledge base organization:
  * - Each project has its own Lucene index for RAG
  * - Sessions belong to projects to share project-level context
- * - Indexed paths are used for semantic search across conversations
+ * - Knowledge sources define where content comes from (local files, web, SEC, etc.)
  */
 data class Project(
     val id: String,
     val name: String,
     val description: String? = null,
-    val indexedPaths: String, // JSON array of paths, e.g., "['/path/to/folder1', '/path/to/folder2']"
+    val knowledgeSources: List<KnowledgeSourceConfig>,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
-)
+) {
+    /**
+     * Backward compatibility property for old code that accesses indexedPaths.
+     * @deprecated Use knowledgeSources instead
+     */
+    @Deprecated("Use knowledgeSources instead", ReplaceWith("knowledgeSources"))
+    val indexedPaths: String
+        get() = KnowledgeSourceSerializer.serialize(knowledgeSources)
+}
 
 /**
  * Exposed table definition for projects.
@@ -34,7 +42,7 @@ object ProjectsTable : Table("projects") {
     val id = varchar("id", 36)
     val name = varchar("name", 255)
     val description = text("description").nullable()
-    val indexedPaths = text("indexed_paths") // JSON array as text
+    val knowledgeSourcesConfig = text("indexed_paths") // JSON - database column name kept as 'indexed_paths' for backward compatibility
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")
 

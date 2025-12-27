@@ -7,9 +7,9 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.FileSegmentRepository
 import io.askimo.core.rag.LuceneIndexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -33,8 +33,8 @@ class HybridIndexer(
 ) {
     private val log = logger<HybridIndexer>()
     private val luceneIndexer = LuceneIndexer.getInstance(projectId)
-    private val segmentRepository: FileSegmentRepository by lazy {
-        DatabaseManager.getInstance().getFileSegmentRepository()
+    private val segmentRepository: ResourceSegmentRepository by lazy {
+        DatabaseManager.getInstance().getResourceSegmentRepository()
     }
 
     companion object {

@@ -16,13 +16,12 @@ import java.time.Instant
 data class IndexingStartedEvent(
     val projectId: String,
     val projectName: String,
-    val estimatedFiles: Int,
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
     override val type = EventType.USER
 
-    override fun getDetails(): String = "Indexing project '$projectName' (~$estimatedFiles file(s))..."
+    override fun getDetails(): String = "Indexing project '$projectName' ..."
 }
 
 /**

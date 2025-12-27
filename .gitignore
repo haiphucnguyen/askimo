@@ -51,6 +51,5 @@ certificate*.txt
 
 cloudflare-worker-openai-proxy.js
 .idea/
-README.md
 create_dmg_bg.py
 create_dmg_background.sh

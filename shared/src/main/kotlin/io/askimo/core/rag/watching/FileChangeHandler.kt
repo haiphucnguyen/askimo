@@ -10,8 +10,8 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.filter.FilterChain
-import io.askimo.core.rag.indexing.FileProcessor
 import io.askimo.core.rag.indexing.HybridIndexer
+import io.askimo.core.rag.indexing.ResourceContentProcessor
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
@@ -28,7 +28,7 @@ class FileChangeHandler(
     private val appContext: AppContext,
 ) {
     private val log = logger<FileChangeHandler>()
-    private val fileProcessor = FileProcessor(appContext)
+    private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val batchIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val filterChain: FilterChain = FilterChain.DEFAULT
@@ -75,14 +75,14 @@ class FileChangeHandler(
         try {
             batchIndexer.removeFileFromIndex(filePath)
 
-            val text = fileProcessor.extractTextFromFile(filePath) ?: return
+            val text = resourceContentProcessor.extractTextFromFile(filePath) ?: return
 
             if (text.isBlank()) {
                 log.debug("Skipping re-index of file with blank content: ${filePath.fileName}")
                 return
             }
 
-            val chunks = fileProcessor.chunkText(text)
+            val chunks = resourceContentProcessor.chunkText(text)
 
             if (chunks.isEmpty()) {
                 log.debug("No valid chunks created for file: ${filePath.fileName}")
@@ -90,7 +90,7 @@ class FileChangeHandler(
             }
 
             for ((idx, chunk) in chunks.withIndex()) {
-                val segment = fileProcessor.createTextSegment(
+                val segment = resourceContentProcessor.createTextSegment(
                     chunk = chunk,
                     filePath = filePath,
                     chunkIndex = idx,

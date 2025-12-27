@@ -42,10 +42,10 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import kotlinx.coroutines.delay
@@ -183,11 +183,11 @@ fun newProjectDialog(
             try {
                 val projectRepository = DatabaseManager.getInstance().getProjectRepository()
 
-                // Convert folder path to JSON array
-                val indexedPathsJson = if (selectedFolder != null) {
-                    json.encodeToString(listOf(selectedFolder))
+                // Create knowledge source configuration
+                val knowledgeSources = if (selectedFolder != null) {
+                    listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf(selectedFolder!!)))
                 } else {
-                    json.encodeToString(emptyList<String>())
+                    emptyList()
                 }
 
                 // Create project
@@ -195,7 +195,7 @@ fun newProjectDialog(
                     id = "",
                     name = projectName.trim(),
                     description = projectDescription.takeIf { it.isNotBlank() },
-                    indexedPaths = indexedPathsJson,
+                    knowledgeSources = knowledgeSources,
                     createdAt = LocalDateTime.now(),
                     updatedAt = LocalDateTime.now(),
                 )

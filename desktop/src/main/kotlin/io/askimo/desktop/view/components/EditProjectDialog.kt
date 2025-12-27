@@ -42,8 +42,9 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
-import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import java.awt.FileDialog
@@ -57,18 +58,18 @@ import java.io.File
 fun editProjectDialog(
     project: Project,
     onDismiss: () -> Unit,
-    onSave: (projectId: String, name: String, description: String?, indexedPaths: String) -> Unit,
+    onSave: (projectId: String, name: String, description: String?, knowledgeSources: List<KnowledgeSourceConfig>) -> Unit,
 ) {
     var projectName by remember { mutableStateOf(project.name) }
     var projectDescription by remember { mutableStateOf(project.description ?: "") }
 
-    // Parse existing indexed paths from JSON
+    // Get existing folder path from knowledge sources
     val existingPaths = remember {
-        try {
-            json.decodeFromString<List<String>>(project.indexedPaths).firstOrNull()
-        } catch (e: Exception) {
-            null
-        }
+        project.knowledgeSources
+            .filterIsInstance<LocalFilesKnowledgeSourceConfig>()
+            .firstOrNull()
+            ?.resourceIdentifiers
+            ?.firstOrNull()
     }
     var selectedFolder by remember { mutableStateOf(existingPaths) }
 
@@ -153,18 +154,18 @@ fun editProjectDialog(
             }
         }
 
-        // Convert folder path to JSON array
-        val indexedPathsJson = if (selectedFolder != null) {
-            json.encodeToString(listOf(selectedFolder))
+        // Create knowledge source configuration
+        val knowledgeSources = if (selectedFolder != null) {
+            listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf(selectedFolder!!)))
         } else {
-            json.encodeToString(emptyList<String>())
+            emptyList()
         }
 
         onSave(
             project.id,
             projectName.trim(),
             projectDescription.trim().takeIf { it.isNotEmpty() },
-            indexedPathsJson,
+            knowledgeSources,
         )
     }
 

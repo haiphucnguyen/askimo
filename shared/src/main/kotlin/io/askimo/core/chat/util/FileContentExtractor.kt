@@ -63,6 +63,19 @@ object FileContentExtractor {
                 mimeType in SUPPORTED_APPLICATION_TYPES -> {
                 file.readText()
             }
+            // Fallback: Extension-based check for files Tika misdetects
+            // This handles .md, .gradle.kts, .gitignore, and other text files
+            mimeType == "application/octet-stream" ||
+                mimeType.startsWith("application/x-") -> {
+                val extension = file.extension.lowercase()
+                if (extension in SUPPORTED_TEXT_EXTENSIONS) {
+                    file.readText()
+                } else if (extension in SUPPORTED_BINARY_EXTENSIONS) {
+                    extractUsingTika(file)
+                } else {
+                    throw UnsupportedOperationException("Cannot extract content from: $mimeType (extension: .$extension)")
+                }
+            }
             else -> throw UnsupportedOperationException("Cannot extract content from: $mimeType")
         }
     }
@@ -83,30 +96,31 @@ object FileContentExtractor {
 
     /**
      * Check if a file type is supported for content extraction.
-     * Uses content-type detection (magic bytes) instead of file extension.
+     * Uses content-type detection (magic bytes) with extension-based fallback.
      *
      * @param file The file to check
      * @return true if the file type is supported, false otherwise
      */
     fun isSupported(file: File): Boolean {
         val mimeType = detectMimeType(file)
-        return isSupportedMimeType(mimeType)
-    }
 
-    /**
-     * Overload for backward compatibility - detects from file path.
-     *
-     * @param fileName The name of the file (with extension)
-     * @return true if the file type is supported, false otherwise
-     */
-    fun isSupported(fileName: String): Boolean {
-        val file = File(fileName)
-        return if (file.exists()) {
-            isSupported(file)
-        } else {
-            val extension = fileName.substringAfterLast('.', "").lowercase()
-            extension in SUPPORTED_TEXT_EXTENSIONS || extension in SUPPORTED_BINARY_EXTENSIONS
+        // First, check if MIME type is supported
+        if (isSupportedMimeType(mimeType)) {
+            return true
         }
+
+        // Fallback: Check file extension for text files that Tika misdetects
+        // This handles cases like .md, .gradle.kts, .gitignore, etc.
+        if (mimeType == "application/octet-stream" ||
+            mimeType.startsWith("application/x-") ||
+            mimeType == "text/plain"
+        ) {
+            val extension = file.extension.lowercase()
+            return extension in SUPPORTED_TEXT_EXTENSIONS ||
+                extension in SUPPORTED_BINARY_EXTENSIONS
+        }
+
+        return false
     }
 
     /**

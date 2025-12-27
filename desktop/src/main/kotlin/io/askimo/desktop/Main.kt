@@ -1096,8 +1096,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             showEditProjectDialog = false
                             editingProjectId = null
                         },
-                        onSave = { projectId, name, description, indexedPaths ->
-                            projectsViewModel.updateProject(projectId, name, description, indexedPaths)
+                        onSave = { projectId, name, description, knowledgeSources ->
+                            projectsViewModel.updateProject(projectId, name, description, knowledgeSources)
                             showEditProjectDialog = false
                             editingProjectId = null
                         },

@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
@@ -95,17 +96,17 @@ class ProjectsViewModel(
     /**
      * Update an existing project.
      */
-    fun updateProject(projectId: String, name: String, description: String?, indexedPaths: String) {
+    fun updateProject(projectId: String, name: String, description: String?, knowledgeSources: List<KnowledgeSourceConfig>) {
         scope.launch {
             try {
                 projectRepository.updateProject(
                     projectId = projectId,
                     name = name,
                     description = description,
-                    indexedPaths = indexedPaths,
+                    knowledgeSources = knowledgeSources,
                 )
                 log.debug("Updated project $projectId")
-                loadProjects() // Refresh the list
+                loadProjects()
             } catch (e: Exception) {
                 log.error("Failed to update project $projectId", e)
             }

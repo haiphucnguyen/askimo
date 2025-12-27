@@ -11,8 +11,8 @@ import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ProjectRepository
+import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
-import io.askimo.core.rag.FileSegmentRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
@@ -328,8 +328,8 @@ class DatabaseManager private constructor(
         ProjectRepository(this)
     }
 
-    private val _fileSegmentRepository: FileSegmentRepository by lazy {
-        FileSegmentRepository(this)
+    private val _resourceSegmentRepository: ResourceSegmentRepository by lazy {
+        ResourceSegmentRepository(this)
     }
 
     /**
@@ -369,10 +369,18 @@ class DatabaseManager private constructor(
     fun getProjectRepository(): ProjectRepository = _projectRepository
 
     /**
-     * Get the singleton FileSegmentRepository instance.
-     * All access to file-segment mappings should go through this repository.
+     * Get the singleton ResourceSegmentRepository instance.
+     * All access to resource-segment mappings should go through this repository.
      */
-    fun getFileSegmentRepository(): FileSegmentRepository = _fileSegmentRepository
+    fun getResourceSegmentRepository(): ResourceSegmentRepository = _resourceSegmentRepository
+
+    /**
+     * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).
+     * All access to file-segment mappings should go through this repository.
+     * @deprecated Use getResourceSegmentRepository() instead
+     */
+    @Deprecated("Use getResourceSegmentRepository() instead", ReplaceWith("getResourceSegmentRepository()"))
+    fun getFileSegmentRepository(): ResourceSegmentRepository = _resourceSegmentRepository
 
     /**
      * Closes the HikariCP connection pool and releases all database resources.

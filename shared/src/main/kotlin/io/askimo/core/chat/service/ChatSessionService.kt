@@ -37,7 +37,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
-import io.askimo.core.rag.getEmbeddingdtore
+import io.askimo.core.rag.getEmbeddingStore
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -191,18 +191,9 @@ class ChatSessionService(
      */
     private fun createRetrieverForProject(project: Project): ContentRetriever? {
         try {
-            val indexedPaths = parseIndexedPaths(project.indexedPaths)
-
-            if (indexedPaths.isEmpty()) {
-                log.debug("Project ${project.id} has no indexed paths, RAG disabled")
-                return null
-            }
-
-            log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
-
             val embeddingModel = getEmbeddingModel(appContext)
 
-            val embeddingStore = getEmbeddingdtore(project.id, embeddingModel)
+            val embeddingStore = getEmbeddingStore(project.id, embeddingModel)
 
             val vectorRetriever = enrichContentRetrieverWithLucene(
                 project.id,
@@ -217,7 +208,6 @@ class ChatSessionService(
             EventBus.post(
                 ProjectIndexingRequestedEvent(
                     projectId = project.id,
-                    paths = indexedPaths,
                     embeddingStore = embeddingStore,
                     embeddingModel = embeddingModel,
                     watchForChanges = true,
