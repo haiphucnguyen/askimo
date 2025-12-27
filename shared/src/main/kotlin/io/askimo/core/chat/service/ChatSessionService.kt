@@ -177,7 +177,7 @@ class ChatSessionService(
             null
         }
 
-        appContext.createStatefulChatSession(executionMode, retriever = retriever, memory = memory)
+        appContext.createStatefulChatSession(sessionId = sessionId, executionMode = executionMode, retriever = retriever, memory = memory)
     }
 
     /**

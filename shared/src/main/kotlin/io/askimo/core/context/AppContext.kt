@@ -101,6 +101,7 @@ class AppContext(
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
     fun createStatefulChatSession(
+        sessionId: String,
         executionMode: ExecutionMode,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
@@ -115,6 +116,7 @@ class AppContext(
 
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
+            sessionId = sessionId,
             model = modelName,
             settings = settings,
             executionMode = executionMode,
