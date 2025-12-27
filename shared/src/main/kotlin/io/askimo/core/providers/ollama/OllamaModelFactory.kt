@@ -62,6 +62,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: OllamaSettings,
         retrievalAugmentor: RetrievalAugmentor?,

@@ -45,6 +45,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     override fun defaultSettings(): GeminiSettings = GeminiSettings()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: GeminiSettings,
         retrievalAugmentor: RetrievalAugmentor?,

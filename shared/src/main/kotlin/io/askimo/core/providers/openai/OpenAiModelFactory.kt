@@ -59,6 +59,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: OpenAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,

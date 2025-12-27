@@ -35,6 +35,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     )
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: LmStudioSettings,
         retrievalAugmentor: RetrievalAugmentor?,

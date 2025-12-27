@@ -35,6 +35,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
     override fun defaultSettings(): XAiSettings = XAiSettings()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: XAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,

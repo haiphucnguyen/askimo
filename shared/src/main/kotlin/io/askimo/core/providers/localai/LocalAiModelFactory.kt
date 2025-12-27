@@ -37,6 +37,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
     )
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: LocalAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,

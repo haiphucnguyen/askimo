@@ -31,6 +31,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
     override fun defaultSettings(): AnthropicSettings = AnthropicSettings()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: AnthropicSettings,
         retrievalAugmentor: RetrievalAugmentor?,

@@ -64,6 +64,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: DockerAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
