@@ -76,6 +76,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                 .baseUrl("${settings.baseUrl}/v1")
                 .modelName(model)
                 .timeout(Duration.ofMinutes(5))
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .apply {
                     val s = samplingFor(settings.presets.style)
                     temperature(s.temperature)
@@ -120,7 +122,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
         return builder.build()
     }

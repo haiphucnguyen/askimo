@@ -23,23 +23,12 @@
         </encoder>
     </appender>
 
-    <!-- Suppress third-party library logs except errors -->
-    <logger name="org.eclipse.jetty" level="ERROR"/>
-    <logger name="org.testcontainers" level="ERROR"/>
-    <logger name="com.zaxxer.hikari" level="ERROR"/>
-    <logger name="org.jetbrains.exposed" level="ERROR"/>
-    <logger name="org.jetbrains" level="ERROR"/>
-    <logger name="io.netty" level="ERROR"/>
-    <logger name="org.apache.http" level="ERROR"/>
-    <logger name="kotlinx.coroutines" level="ERROR"/>
-
-    <!-- Askimo application logging (more verbose for tests) -->
-    <logger name="io.askimo" level="DEBUG"/>
-
-    <!-- Root logger configuration for tests -->
-    <root level="WARN">
+    <root level="ERROR">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="FILE" />
     </root>
+
+    <!-- Askimo application logging - controlled by LOGBACK_LEVEL env var -->
+    <logger name="io.askimo" level="${LOGBACK_LEVEL:-DEBUG}" />
 </configuration>
 

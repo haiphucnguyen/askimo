@@ -72,6 +72,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .builder()
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .apply {
                     if (supportsSampling(model)) {
                         val s = samplingFor(settings.presets.style)
@@ -117,6 +119,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
+                .storeRetrievedContentInChatMemory(false)
         }
         return builder.build()
     }

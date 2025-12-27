@@ -43,31 +43,55 @@ class ResourceContentProcessor(
     }
 
     /**
+     * Check if a file is a text-based file where line numbers are meaningful.
+     * Returns false for binary files like PDF, DOCX, etc.
+     */
+    fun isTextFile(filePath: Path): Boolean {
+        val resourceIdentifier = FileResourceIdentifier(filePath)
+        return contentExtractor.isTextFile(resourceIdentifier)
+    }
+
+    /**
      * Chunk text into segments using dynamically calculated chunk size and overlap.
      * Delegates to TextProcessor.
      */
     fun chunkText(text: String): List<String> = textProcessor.chunkText(text)
 
     /**
-     * Create a TextSegment with file-specific metadata.
+     * Chunk text with line number tracking for text files.
+     * Delegates to TextProcessor.
+     */
+    fun chunkTextWithLineNumbers(text: String): List<TextProcessor.ChunkWithLineNumbers> = textProcessor.chunkTextWithLineNumbers(text)
+
+    /**
+     * Create a TextSegment with file-specific metadata including line numbers.
+     * This should be used for text files where line numbers are meaningful.
      * Note: Caller must ensure chunk is not blank.
      */
-    fun createTextSegment(
+    fun createTextSegmentWithMetadata(
         chunk: String,
         filePath: Path,
         chunkIndex: Int,
         totalChunks: Int,
+        startLine: Int? = null,
+        endLine: Int? = null,
     ): TextSegment {
         val absolutePath = filePath.toAbsolutePath()
 
         // Build file-specific metadata
-        val metadata = mapOf(
+        val metadata = mutableMapOf(
             "file_path" to absolutePath.toString().replace('\\', '/'),
             "file_name" to filePath.fileName.toString(),
             "extension" to filePath.extension,
             "chunk_index" to chunkIndex.toString(),
             "chunk_total" to totalChunks.toString(),
         )
+
+        // Add line number metadata if provided
+        if (startLine != null && endLine != null) {
+            metadata["start_line"] = startLine.toString()
+            metadata["end_line"] = endLine.toString()
+        }
 
         return textProcessor.createTextSegment(chunk, metadata)
     }

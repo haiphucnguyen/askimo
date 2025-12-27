@@ -82,27 +82,57 @@ class FileChangeHandler(
                 return
             }
 
-            val chunks = resourceContentProcessor.chunkText(text)
+            // Check if this is a text file where line numbers are meaningful
+            val isTextFile = resourceContentProcessor.isTextFile(filePath)
 
-            if (chunks.isEmpty()) {
-                log.debug("No valid chunks created for file: ${filePath.fileName}")
-                return
+            if (isTextFile) {
+                // For text files, use line-aware chunking
+                val chunksWithLineNumbers = resourceContentProcessor.chunkTextWithLineNumbers(text)
+
+                if (chunksWithLineNumbers.isEmpty()) {
+                    log.debug("No valid chunks created for file: ${filePath.fileName}")
+                    return
+                }
+
+                for ((idx, chunkData) in chunksWithLineNumbers.withIndex()) {
+                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
+                        chunk = chunkData.text,
+                        filePath = filePath,
+                        chunkIndex = idx,
+                        totalChunks = chunksWithLineNumbers.size,
+                        startLine = chunkData.startLine,
+                        endLine = chunkData.endLine,
+                    )
+
+                    batchIndexer.addSegmentToBatch(segment, filePath)
+                }
+
+                batchIndexer.flushRemainingSegments()
+
+                log.debug("Re-indexed {} ({} chunks, lines tracked)", filePath.fileName, chunksWithLineNumbers.size)
+            } else {
+                val chunks = resourceContentProcessor.chunkText(text)
+
+                if (chunks.isEmpty()) {
+                    log.debug("No valid chunks created for file: ${filePath.fileName}")
+                    return
+                }
+
+                for ((idx, chunk) in chunks.withIndex()) {
+                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
+                        chunk = chunk,
+                        filePath = filePath,
+                        chunkIndex = idx,
+                        totalChunks = chunks.size,
+                    )
+
+                    batchIndexer.addSegmentToBatch(segment, filePath)
+                }
+
+                batchIndexer.flushRemainingSegments()
+
+                log.debug("Re-indexed {} ({} chunks)", filePath.fileName, chunks.size)
             }
-
-            for ((idx, chunk) in chunks.withIndex()) {
-                val segment = resourceContentProcessor.createTextSegment(
-                    chunk = chunk,
-                    filePath = filePath,
-                    chunkIndex = idx,
-                    totalChunks = chunks.size,
-                )
-
-                batchIndexer.addSegmentToBatch(segment, filePath)
-            }
-
-            batchIndexer.flushRemainingSegments()
-
-            log.debug("Re-indexed {} ({} chunks)", filePath.fileName, chunks.size)
         } catch (e: Exception) {
             log.error("Failed to re-index file {}", filePath.fileName, e)
         }

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import io.askimo.core.VersionInfo
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
@@ -241,6 +242,13 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
 
     LaunchedEffect(Unit) {
         EventBus.userEvents.collect { event ->
+            // Skip IndexingInProgressEvent unless developer mode is enabled and active
+            if (event is IndexingInProgressEvent) {
+                if (!(AppConfig.developer.enabled && AppConfig.developer.active)) {
+                    return@collect // Skip this event
+                }
+            }
+
             // Special handling for IndexingInProgressEvent: replace old progress event for same project
             if (event is IndexingInProgressEvent) {
                 // Find and remove any existing progress event for the same project
