@@ -4,6 +4,7 @@
  */
 package io.askimo.core.rag.indexing
 
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
@@ -65,13 +66,6 @@ class HybridIndexer(
     }
 
     /**
-     * Flush the current batch of segments to both embedding store and keyword index (thread-safe)
-     */
-    suspend fun flushSegmentBatch(): Boolean = batchMutex.withLock {
-        flushSegmentBatchInternal()
-    }
-
-    /**
      * Internal flush method (must be called with lock held)
      */
     private suspend fun flushSegmentBatchInternal(): Boolean {
@@ -90,6 +84,7 @@ class HybridIndexer(
                 val segmentIds = segments.map { generateSegmentId(it) }
 
                 embeddingStore.addAll(embeddings, segments)
+                (embeddingStore as JVectorEmbeddingStore).save()
 
                 luceneIndexer.indexSegments(segments)
 

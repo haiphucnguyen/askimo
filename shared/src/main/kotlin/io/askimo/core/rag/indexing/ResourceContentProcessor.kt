@@ -69,7 +69,6 @@ class ResourceContentProcessor(
             "chunk_total" to totalChunks.toString(),
         )
 
-        // Delegate to TextProcessor for segment creation
         return textProcessor.createTextSegment(chunk, metadata)
     }
 }

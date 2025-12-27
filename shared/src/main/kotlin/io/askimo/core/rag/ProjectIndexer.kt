@@ -40,7 +40,6 @@ class ProjectIndexer(
     private val log = logger<ProjectIndexer>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Store coordinators directly - no wrapper needed
     private val coordinators = ConcurrentHashMap<String, IndexingCoordinator>()
     init {
         scope.launch {
@@ -120,7 +119,7 @@ class ProjectIndexer(
             IndexingCoordinatorFactory.createCoordinator(
                 projectId = projectId,
                 projectName = project.name,
-                knowledgeSources = project.knowledgeSources, // Use typed list
+                knowledgeSources = project.knowledgeSources,
                 embeddingStore = embeddingStore,
                 embeddingModel = embeddingModel,
                 appContext = appContext,

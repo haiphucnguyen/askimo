@@ -336,11 +336,11 @@ private fun ensureModelAvailable(
 }
 
 fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> {
-    val indexDir = RagUtils.getProjectJVectorIndexDir(projectId)
+    val jVectorIndexDir = RagUtils.getProjectJVectorIndexDir(projectId)
 
     val embeddingStore = JVectorEmbeddingStore.builder()
         .dimension(RagUtils.getDimensionForModel(embeddingModel))
-        .persistencePath(indexDir.toString())
+        .persistencePath(jVectorIndexDir.toString())
         .build()
     return embeddingStore
 }

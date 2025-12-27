@@ -63,7 +63,6 @@ class LuceneKeywordRetriever(
                 val searcher = IndexSearcher(reader)
                 val queryParser = QueryParser(LuceneIndexer.FIELD_CONTENT, analyzer)
 
-                // Normalize query to avoid parsing exceptions - escape all special Lucene characters
                 val normalizedQuery = QueryParser.escape(query.text())
                 val luceneQuery = queryParser.parse(normalizedQuery)
 

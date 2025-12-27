@@ -91,7 +91,7 @@ object FileContentExtractor {
             handler.toString().trim()
         }
     } catch (e: TikaException) {
-        throw Exception("Failed to parse file: ${e.message}", e)
+        throw Exception("Failed to parse file: ${file.path}", e)
     }
 
     /**
