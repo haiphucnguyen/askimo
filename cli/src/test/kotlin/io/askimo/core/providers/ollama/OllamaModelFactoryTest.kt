@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.ollama
 
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
@@ -44,6 +45,7 @@ class OllamaModelFactoryTest {
             model = "qwen2.5:0.5b",
             settings = settings,
             retrievalAugmentor = null,
+            executionMode = ExecutionMode.STATELESS_MODE,
         )
     }
 

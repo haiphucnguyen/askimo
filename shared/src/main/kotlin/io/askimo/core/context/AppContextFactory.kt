@@ -26,27 +26,25 @@ object AppContextFactory {
      * - Otherwise builds a new Session and caches it.
      *
      * @param params The session parameters to use
-     * @param mode The execution mode (CLI_PROMPT, CLI_INTERACTIVE, or DESKTOP)
      */
     fun createAppContext(
         params: AppContextParams = AppContextConfigManager.load(),
-        mode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
     ): AppContext {
         val existing = cached
-        if (existing != null && existing.params == params && existing.mode == mode) return existing
+        if (existing != null && existing.params == params) return existing
 
         return synchronized(this) {
             val again = cached
-            if (again != null && again.params == params && again.mode == mode) return@synchronized again
+            if (again != null && again.params == params) return@synchronized again
 
-            val fresh = buildAppContext(params, mode)
+            val fresh = buildAppContext(params)
             cached = fresh
             fresh
         }
     }
 
-    private fun buildAppContext(params: AppContextParams, mode: ExecutionMode): AppContext {
-        log.debug("Building session with params: {}, mode: {}", params, mode)
-        return AppContext(params, mode)
+    private fun buildAppContext(params: AppContextParams): AppContext {
+        log.debug("Building session with params: {}", params)
+        return AppContext(params)
     }
 }

@@ -55,7 +55,7 @@ class ChatSessionServiceIT {
             val sessionMemoryRepository = databaseManager.getSessionMemoryRepository()
             val projectRepository = databaseManager.getProjectRepository()
 
-            val appContext = AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP)
+            val appContext = AppContextFactory.createAppContext()
 
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
@@ -251,7 +251,7 @@ class ChatSessionServiceIT {
         )
 
         // When
-        val result = service.resumeSession(session.id)
+        val result = service.resumeSession(ExecutionMode.STATEFUL_MODE, session.id)
 
         // Then
         assertTrue(result.success)
@@ -269,7 +269,7 @@ class ChatSessionServiceIT {
         val session = sessionRepository.createSession(ChatSession(id = "", title = "Empty Session"))
 
         // When
-        val result = service.resumeSession(session.id)
+        val result = service.resumeSession(ExecutionMode.STATEFUL_MODE, session.id)
 
         // Then
         assertTrue(result.success)
@@ -315,7 +315,7 @@ class ChatSessionServiceIT {
         )
 
         // When
-        val result = service.resumeSession(session.id)
+        val result = service.resumeSession(ExecutionMode.STATEFUL_MODE, session.id)
 
         // Then
         assertEquals(3, result.messages.size)
@@ -352,7 +352,7 @@ class ChatSessionServiceIT {
         service.markMessageAsOutdated(message2.id)
 
         // When
-        val result = service.resumeSession(session.id)
+        val result = service.resumeSession(ExecutionMode.STATEFUL_MODE, session.id)
 
         // Then
         assertEquals(2, result.messages.size)
@@ -378,7 +378,7 @@ class ChatSessionServiceIT {
         }
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 10)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 10)
 
         // Then
         assertTrue(result.success)
@@ -408,7 +408,7 @@ class ChatSessionServiceIT {
         }
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 5)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 5)
 
         // Then
         assertEquals(5, result.messages.size)
@@ -427,7 +427,7 @@ class ChatSessionServiceIT {
         val session = sessionRepository.createSession(ChatSession(id = "", title = "Empty Paginated"))
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 10)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 10)
 
         // Then
         assertTrue(result.success)
@@ -456,7 +456,7 @@ class ChatSessionServiceIT {
         }
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 10)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 10)
 
         // Then
         assertTrue(result.success)
@@ -471,7 +471,7 @@ class ChatSessionServiceIT {
         val nonExistentId = "non-existent-session-id"
 
         // When
-        val result = service.resumeSessionPaginated(nonExistentId, limit = 10)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, nonExistentId, limit = 10)
 
         // Then
         assertTrue(result.success)
@@ -512,7 +512,7 @@ class ChatSessionServiceIT {
         )
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 10)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 10)
 
         // Then
         assertTrue(result.success)
@@ -537,7 +537,7 @@ class ChatSessionServiceIT {
         }
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 1)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 1)
 
         // Then
         assertEquals(1, result.messages.size)
@@ -564,7 +564,7 @@ class ChatSessionServiceIT {
         }
 
         // When
-        val result = service.resumeSessionPaginated(session.id, limit = 1000)
+        val result = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 1000)
 
         // Then
         assertEquals(10, result.messages.size)
@@ -589,7 +589,7 @@ class ChatSessionServiceIT {
         )
 
         // When
-        val result = service.resumeSession(session.id)
+        val result = service.resumeSession(ExecutionMode.STATEFUL_MODE, session.id)
 
         // Then
         assertTrue(result.success)
@@ -615,14 +615,14 @@ class ChatSessionServiceIT {
         }
 
         // When - Load first page
-        val firstResult = service.resumeSessionPaginated(session.id, limit = 5)
+        val firstResult = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 5)
 
         // Then - First page should be consistent
         assertEquals(5, firstResult.messages.size)
         assertTrue(firstResult.hasMore)
 
         // When - Load again (should get same results for first page)
-        val secondResult = service.resumeSessionPaginated(session.id, limit = 5)
+        val secondResult = service.resumeSessionPaginated(ExecutionMode.STATEFUL_MODE, session.id, limit = 5)
 
         // Then - Results should be identical
         assertEquals(firstResult.messages.size, secondResult.messages.size)

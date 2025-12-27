@@ -63,9 +63,6 @@
     "name": "[Ldev.langchain4j.model.googleai.GeminiContent;"
   },
   {
-    "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
-  },
-  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -1014,18 +1011,6 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicToolSchema",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicUsage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1115,36 +1100,13 @@
     "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionCall",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["java.lang.String", "java.util.Map"]
-      },
-      { "name": "args", "parameterTypes": [] },
-      { "name": "name", "parameterTypes": [] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiFunctionResponse",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "name", "parameterTypes": [] },
-      { "name": "response", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiFunctionDeclaration",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "description", "parameterTypes": [] },
-      { "name": "name", "parameterTypes": [] },
-      { "name": "parameters", "parameterTypes": [] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest",
@@ -1165,11 +1127,7 @@
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "codeExecution", "parameterTypes": [] },
-      { "name": "functionDeclarations", "parameterTypes": [] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiCodeExecution",
@@ -1260,32 +1218,10 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.googleai.GeminiSchema",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "getAnyOf", "parameterTypes": [] },
-      { "name": "getDescription", "parameterTypes": [] },
-      { "name": "getFormat", "parameterTypes": [] },
-      { "name": "getItems", "parameterTypes": [] },
-      { "name": "getMaxItems", "parameterTypes": [] },
-      { "name": "getNullable", "parameterTypes": [] },
-      { "name": "getProperties", "parameterTypes": [] },
-      { "name": "getRequired", "parameterTypes": [] },
-      { "name": "getType", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "dev.langchain4j.model.googleai.GeminiThinkingConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.googleai.GeminiType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
   },
   {
     "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
@@ -1307,12 +1243,6 @@
       { "name": "setEmbeddings", "parameterTypes": ["java.util.List"] },
       { "name": "setModel", "parameterTypes": ["java.lang.String"] }
     ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
@@ -1372,33 +1302,14 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "build", "parameterTypes": [] },
       { "name": "content", "parameterTypes": ["java.lang.String"] },
-      { "name": "role", "parameterTypes": ["java.lang.String"] },
-      { "name": "toolCalls", "parameterTypes": ["java.util.List"] }
+      { "name": "role", "parameterTypes": ["java.lang.String"] }
     ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.Function",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "arguments", "parameterTypes": ["java.lang.String"] },
-      { "name": "build", "parameterTypes": [] },
-      { "name": "name", "parameterTypes": ["java.lang.String"] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Message",
@@ -1416,46 +1327,10 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.Tool",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.ToolCall$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "build", "parameterTypes": [] },
-      {
-        "name": "function",
-        "parameterTypes": [
-          "dev.langchain4j.model.openai.internal.chat.FunctionCall"
-        ]
-      },
-      { "name": "id", "parameterTypes": ["java.lang.String"] },
-      { "name": "index", "parameterTypes": ["java.lang.Integer"] },
-      { "name": "type", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.UserMessage",
@@ -2643,10 +2518,7 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": [
-          "io.askimo.core.context.AppContextParams",
-          "io.askimo.core.context.ExecutionMode"
-        ]
+        "parameterTypes": ["io.askimo.core.context.AppContextParams"]
       },
       { "name": "getParams", "parameterTypes": [] }
     ]
@@ -3297,14 +3169,6 @@
     "name": "io.askimo.tools.fs.LocalFsTools",
     "queryAllDeclaredMethods": true,
     "methods": [
-      {
-        "name": "countEntries",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.Boolean",
-          "java.lang.Boolean"
-        ]
-      },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
         "name": "writeFile",
@@ -3434,6 +3298,10 @@
   },
   {
     "name": "java.lang.FunctionalInterface"
+  },
+  {
+    "name": "java.lang.IllegalStateException",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.Integer",
@@ -3834,16 +3702,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.AbstractList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.util.AbstractMap",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.util.ArrayList",
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -3853,18 +3711,6 @@
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.util.Collections$EmptyList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "java.util.Collections$EmptyMap",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Collections$UnmodifiableCollection",
@@ -3913,18 +3759,7 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.ImmutableCollections$AbstractImmutableMap",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.util.ImmutableCollections$ListN",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "java.util.ImmutableCollections$Map1",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -4312,7 +4147,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$LKzBeygm",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$F7PrTLfG",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4345,10 +4180,6 @@
   },
   {
     "name": "sun.security.provider.JavaKeyStore$JKS",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.MD5",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

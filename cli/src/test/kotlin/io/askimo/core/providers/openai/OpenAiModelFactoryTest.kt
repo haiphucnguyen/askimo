@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.openai
 
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -31,6 +32,7 @@ class OpenAiModelFactoryTest {
             model = "gpt-3.5-turbo",
             settings = settings,
             retrievalAugmentor = null,
+            executionMode = ExecutionMode.STATELESS_MODE,
         )
     }
 

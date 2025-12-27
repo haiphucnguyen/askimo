@@ -63,6 +63,7 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
@@ -325,6 +326,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 sessionManager,
                 {
                     chatSessionService.createSession(
+                        ExecutionMode.STATEFUL_MODE,
                         ChatSession(
                             id = "",
                             title = "New Chat",
@@ -1234,7 +1236,6 @@ fun mainContent(
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
-                                    projectName = project.name,
                                     message = message,
                                     attachments = attachments,
                                     onComplete = { onNavigateToChat() },

@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.xai
 
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -31,6 +32,7 @@ class XAiModelFactoryTest {
             model = "grok-4",
             settings = settings,
             retrievalAugmentor = null,
+            executionMode = ExecutionMode.STATELESS_MODE,
         )
     }
 

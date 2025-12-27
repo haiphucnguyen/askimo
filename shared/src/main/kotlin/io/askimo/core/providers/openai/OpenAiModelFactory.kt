@@ -83,7 +83,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                     if (chatMemory != null) {

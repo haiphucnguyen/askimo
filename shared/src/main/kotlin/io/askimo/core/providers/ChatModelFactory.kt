@@ -49,7 +49,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         model: String,
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
-        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient
 
