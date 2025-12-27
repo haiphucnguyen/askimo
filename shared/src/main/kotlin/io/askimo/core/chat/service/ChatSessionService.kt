@@ -23,6 +23,7 @@ import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.constructMessageWithAttachments
 import io.askimo.core.context.AppContext
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
@@ -37,7 +38,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
-import io.askimo.core.rag.getEmbeddingdtore
+import io.askimo.core.rag.getEmbeddingStore
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -147,7 +148,7 @@ class ChatSessionService(
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
+    fun getOrCreateClientForSession(executionMode: ExecutionMode, sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Get current provider settings to check if AI summarization is enabled
@@ -176,7 +177,7 @@ class ChatSessionService(
             null
         }
 
-        appContext.createStatefulChatSession(retriever = retriever, memory = memory)
+        appContext.createStatefulChatSession(sessionId = sessionId, executionMode = executionMode, retriever = retriever, memory = memory)
     }
 
     /**
@@ -191,18 +192,9 @@ class ChatSessionService(
      */
     private fun createRetrieverForProject(project: Project): ContentRetriever? {
         try {
-            val indexedPaths = parseIndexedPaths(project.indexedPaths)
-
-            if (indexedPaths.isEmpty()) {
-                log.debug("Project ${project.id} has no indexed paths, RAG disabled")
-                return null
-            }
-
-            log.debug("Creating hybrid RAG retriever for project ${project.id} with ${indexedPaths.size} indexed paths")
-
             val embeddingModel = getEmbeddingModel(appContext)
 
-            val embeddingStore = getEmbeddingdtore(project.id, embeddingModel)
+            val embeddingStore = getEmbeddingStore(project.id, embeddingModel)
 
             val vectorRetriever = enrichContentRetrieverWithLucene(
                 project.id,
@@ -217,7 +209,6 @@ class ChatSessionService(
             EventBus.post(
                 ProjectIndexingRequestedEvent(
                     projectId = project.id,
-                    paths = indexedPaths,
                     embeddingStore = embeddingStore,
                     embeddingModel = embeddingModel,
                     watchForChanges = true,
@@ -316,10 +307,10 @@ class ChatSessionService(
      * @param session The session to create
      * @return The created session with generated ID (if not provided)
      */
-    fun createSession(session: ChatSession): ChatSession {
+    fun createSession(executionMode: ExecutionMode, session: ChatSession): ChatSession {
         val createdSession = sessionRepository.createSession(session)
 
-        getOrCreateClientForSession(createdSession.id)
+        getOrCreateClientForSession(executionMode, createdSession.id)
 
         eventScope.launch {
             EventBus.emit(
@@ -463,11 +454,11 @@ class ChatSessionService(
      * @param sessionId The ID of the session to resume
      * @return ResumeSessionResult containing success status, messages, and any error
      */
-    fun resumeSession(sessionId: String): ResumeSessionResult {
+    fun resumeSession(executionMode: ExecutionMode, sessionId: String): ResumeSessionResult {
         // Try to pre-create/cache the chat client for this session
         // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
         try {
-            getOrCreateClientForSession(sessionId)
+            getOrCreateClientForSession(executionMode, sessionId)
         } catch (e: Exception) {
             log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
         }
@@ -488,14 +479,14 @@ class ChatSessionService(
      * @param limit The number of messages to load
      * @return ResumeSessionPaginatedResult containing success status, messages, cursor, and any error
      */
-    fun resumeSessionPaginated(sessionId: String, limit: Int): ResumeSessionPaginatedResult {
+    fun resumeSessionPaginated(executionMode: ExecutionMode, sessionId: String, limit: Int): ResumeSessionPaginatedResult {
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
             // Try to pre-create/cache the chat client for this session
             // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
             try {
-                getOrCreateClientForSession(sessionId)
+                getOrCreateClientForSession(executionMode, sessionId)
             } catch (e: Exception) {
                 log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
             }
@@ -642,53 +633,7 @@ class ChatSessionService(
             }
         }
 
-        val directivePrompt = buildDirectivePrompt(sessionId)
-
-        val messageWithAttachments = constructMessageWithAttachments(userMessage, attachments)
-        return if (directivePrompt != null) {
-            buildString {
-                append(directivePrompt)
-                appendLine()
-                appendLine()
-                appendLine("---")
-                appendLine()
-                append(messageWithAttachments)
-            }
-        } else {
-            messageWithAttachments
-        }
-    }
-
-    /**
-     * Builds the directive prompt by combining system-level and session-specific directives.
-     *
-     * This creates a system instruction that is prepended to user messages to provide
-     * context and constraints for the AI's behavior.
-     *
-     * @return The combined directive text, or null if no directives are active
-     */
-    private fun buildDirectivePrompt(sessionId: String): String? {
-        val parts = mutableListOf<String>()
-
-        // Add system-level directive (applies to all sessions)
-        appContext.systemDirective?.let { sysDir ->
-            if (sysDir.isNotBlank()) {
-                parts.add(sysDir.trim())
-            }
-        }
-
-        // Add session-specific directive (applies only to this session)
-        val directive = directiveRepository.findDirectiveBySessionId(sessionId)
-        if (directive != null) {
-            val sessionDirectiveText = directive.content.trim()
-            parts.add(sessionDirectiveText)
-        }
-
-        return if (parts.isEmpty()) {
-            null
-        } else {
-            parts.joinToString("\n\n---\n\n")
-        }
+        return constructMessageWithAttachments(userMessage, attachments)
     }
 }
 

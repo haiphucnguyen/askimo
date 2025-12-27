@@ -8,7 +8,6 @@ import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextFactory
-import io.askimo.core.context.ExecutionMode
 import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.service.UpdateService
@@ -26,7 +25,7 @@ import org.koin.dsl.module
  * Koin module for desktop application dependencies.
  */
 val desktopModule = module {
-    single<AppContext> { AppContextFactory.createAppContext(mode = ExecutionMode.DESKTOP) }
+    single<AppContext> { AppContextFactory.createAppContext() }
 
     single { DatabaseManager.getInstance() }
 

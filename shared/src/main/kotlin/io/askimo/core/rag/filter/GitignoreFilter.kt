@@ -60,6 +60,12 @@ class GitignoreParser(private val rootPath: Path) {
         val isDirectoryOnly = pattern.endsWith("/")
         if (isDirectoryOnly) pattern = pattern.removeSuffix("/")
 
+        // Check for ** at the beginning
+        val hasLeadingDoubleAsterisk = pattern.startsWith("**/")
+        if (hasLeadingDoubleAsterisk) {
+            pattern = pattern.substring(3) // Remove **/ prefix
+        }
+
         // Convert .gitignore pattern to regex
         val regexPattern = buildString {
             var i = 0
@@ -67,7 +73,7 @@ class GitignoreParser(private val rootPath: Path) {
                 when (val c = pattern[i]) {
                     '*' -> {
                         if (i + 1 < pattern.length && pattern[i + 1] == '*') {
-                            // ** matches any number of directories
+                            // ** in middle or end - matches any number of directories
                             append(".*")
                             i++ // Skip next *
                         } else {
@@ -86,48 +92,66 @@ class GitignoreParser(private val rootPath: Path) {
 
         // Anchor pattern appropriately
         val finalPattern = when {
-            pattern.startsWith("/") -> "^${regexPattern.substring(1)}.*"
-            pattern.contains("/") -> ".*/$regexPattern.*"
-            else -> ".*(^|/)$regexPattern(/.*|\$)"
+            // Pattern started with **/ - match at any level
+            hasLeadingDoubleAsterisk -> "(^|.*/)$regexPattern(/.*|\$)"
+            // Pattern starts with / - anchored to root (relative to .gitignore location)
+            line.startsWith("/") -> "^${regexPattern.substring(1)}(/.*|\$)"
+            // Pattern contains / - match from current directory down
+            pattern.contains("/") -> "^$regexPattern(/.*|\$)"
+            // Simple pattern without / - match at any level relative to .gitignore directory
+            else -> "(^|.*/)$regexPattern(/.*|\$)"
         }
 
-        return GitignorePattern(
+        val gitignorePattern = GitignorePattern(
             pattern = line,
             isNegation = isNegation,
             isDirectoryOnly = isDirectoryOnly,
             regex = Regex(finalPattern),
             gitignorePath = gitignoreDir,
         )
+
+        log.trace("Parsed pattern: '$line' -> regex: '$finalPattern' (negation=$isNegation, dirOnly=$isDirectoryOnly)")
+
+        return gitignorePattern
     }
 
     /**
      * Check if a path should be ignored according to .gitignore rules.
      */
     fun shouldIgnore(path: Path, isDirectory: Boolean): Boolean {
-        val relativePath = try {
+        val absoluteRelativePath = try {
             rootPath.relativize(path).toString().replace('\\', '/')
         } catch (e: Exception) {
             return false
         }
 
         var ignored = false
+        var matchedPattern: GitignorePattern? = null
 
         // Apply patterns in order (later patterns override earlier ones)
         for (pattern in patterns) {
-            // Check if pattern applies to this path (based on .gitignore location)
+            // Get the directory where this .gitignore is located (relative to root)
             val patternDir = try {
                 rootPath.relativize(pattern.gitignorePath).toString().replace('\\', '/')
             } catch (e: Exception) {
                 ""
             }
 
-            if (patternDir.isNotEmpty() && !relativePath.startsWith(patternDir)) {
-                continue // Pattern doesn't apply to this path
+            // Skip if this .gitignore doesn't apply to the path
+            // (path must be within or under the .gitignore's directory)
+            if (patternDir.isNotEmpty() && !absoluteRelativePath.startsWith("$patternDir/") && absoluteRelativePath != patternDir) {
+                continue
             }
 
-            // Check if pattern matches
-            val matches = pattern.regex.matches(relativePath) ||
-                pattern.regex.matches("/$relativePath")
+            // Make path relative to the .gitignore file's directory
+            val pathRelativeToGitignore = if (patternDir.isEmpty()) {
+                absoluteRelativePath
+            } else {
+                absoluteRelativePath.removePrefix("$patternDir/")
+            }
+
+            // Check if pattern matches the path relative to .gitignore location
+            val matches = pattern.regex.matches(pathRelativeToGitignore)
 
             if (matches) {
                 // Directory-only patterns only match directories
@@ -140,7 +164,12 @@ class GitignoreParser(private val rootPath: Path) {
                 } else {
                     true // Normal pattern ignores the file
                 }
+                matchedPattern = pattern
             }
+        }
+
+        if (ignored && matchedPattern != null) {
+            log.trace("Path excluded by gitignore filter: $absoluteRelativePath (pattern: '${matchedPattern.pattern}', regex: '${matchedPattern.regex.pattern}')")
         }
 
         return ignored

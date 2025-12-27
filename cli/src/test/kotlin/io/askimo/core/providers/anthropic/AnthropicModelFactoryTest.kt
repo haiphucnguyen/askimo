@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.anthropic
 
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -34,6 +35,7 @@ class AnthropicModelFactoryTest {
                 model = "claude-sonnet-4-5",
                 settings = settings,
                 retrievalAugmentor = null,
+                executionMode = ExecutionMode.STATELESS_MODE,
             )
 
         val prompt = "Reply with a single short word."

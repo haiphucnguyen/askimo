@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.gemini
 
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
@@ -31,6 +32,7 @@ class GeminiModelFactoryTest {
             model = "gemini-2.5-flash",
             settings = settings,
             retrievalAugmentor = null,
+            executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )
     }
 

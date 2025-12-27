@@ -18,25 +18,19 @@ import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
-import kotlinx.serialization.json.Json
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     private val log = logger<OpenAiModelFactory>()
-
-    companion object {
-        private val json = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }
-    }
 
     override fun availableModels(settings: OpenAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -66,6 +60,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: OpenAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
@@ -90,7 +85,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                     if (chatMemory != null) {
@@ -117,6 +112,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

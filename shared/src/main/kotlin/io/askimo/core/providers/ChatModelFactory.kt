@@ -46,10 +46,11 @@ interface ChatModelFactory<T : ProviderSettings> {
      * @return A configured ChatModel instance
      */
     fun create(
+        sessionId: String? = null,
         model: String,
         settings: T,
         retrievalAugmentor: RetrievalAugmentor? = null,
-        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient
 

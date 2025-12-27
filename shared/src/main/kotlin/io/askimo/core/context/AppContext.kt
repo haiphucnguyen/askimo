@@ -10,7 +10,6 @@ import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.injector.DefaultContentInjector
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
@@ -20,28 +19,13 @@ import io.askimo.core.providers.ProviderSettings
 import java.util.Locale
 
 /**
- * Manages a chat session with language models, handling model creation, provider settings, and conversation memory.
+ * Application context holding session-specific parameters and state.
  *
- * The Session class serves as the central coordinator for interactions between the CLI and language model providers.
- * It maintains:
- * - The active chat model instance
- * - Provider-specific settings
- * - Conversation memory for each provider/model combination
- * - Session parameters that control behavior
- *
- * Session instances are responsible for creating and configuring chat models based on the current
- * session parameters, managing conversation history through memory buckets, and providing access
- * to the active model for sending prompts and receiving responses.
- *
- * @property params The parameters that configure this session, including the current provider, model name,
- *                  and provider-specific settings
- * @property mode The execution mode indicating how the user is running the application
+ * @param params The parameters defining the current application context.
  */
 class AppContext(
     val params: AppContextParams,
-    val mode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
 ) {
-    private val log = logger<AppContext>()
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
@@ -96,7 +80,7 @@ class AppContext(
         return (factory as ChatModelFactory<ProviderSettings>).create(
             model = modelName,
             settings = settings,
-            executionMode = ExecutionMode.CLI_PROMPT,
+            executionMode = ExecutionMode.STATELESS_MODE,
         )
     }
 
@@ -117,7 +101,8 @@ class AppContext(
      * @throws IllegalStateException if no model factory is registered for the current provider.
      */
     fun createStatefulChatSession(
-        executionMode: ExecutionMode = ExecutionMode.CLI_INTERACTIVE,
+        sessionId: String,
+        executionMode: ExecutionMode,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
     ): ChatClient {
@@ -131,9 +116,10 @@ class AppContext(
 
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
+            sessionId = sessionId,
             model = modelName,
             settings = settings,
-            executionMode = ExecutionMode.DESKTOP,
+            executionMode = executionMode,
             retrievalAugmentor = retrievalAugmentor,
             chatMemory = memory,
         )

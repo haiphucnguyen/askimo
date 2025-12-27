@@ -13,29 +13,45 @@ import kotlin.test.assertTrue
 class FileContentExtractorTest {
 
     @Test
-    fun `should support PDF files`() {
-        assertTrue(FileContentExtractor.isSupported("test.pdf"))
+    fun `should support PDF files`(@TempDir tempDir: Path) {
+        val pdfFile = tempDir.resolve("test.pdf").toFile()
+        // Create a minimal PDF file
+        pdfFile.writeText("%PDF-1.4\n%EOF")
+        assertTrue(FileContentExtractor.isSupported(pdfFile))
     }
 
     @Test
-    fun `should support DOCX files`() {
-        assertTrue(FileContentExtractor.isSupported("test.docx"))
+    fun `should support DOCX files`(@TempDir tempDir: Path) {
+        val docxFile = tempDir.resolve("test.docx").toFile()
+        // Create a file (MIME type will be detected by Tika)
+        docxFile.writeText("") // Empty file for test
+        assertTrue(FileContentExtractor.isSupported(docxFile))
     }
 
     @Test
-    fun `should support DOC files`() {
-        assertTrue(FileContentExtractor.isSupported("test.doc"))
+    fun `should support DOC files`(@TempDir tempDir: Path) {
+        val docFile = tempDir.resolve("test.doc").toFile()
+        // Create a file (MIME type will be detected by Tika)
+        docFile.writeText("") // Empty file for test
+        assertTrue(FileContentExtractor.isSupported(docFile))
     }
 
     @Test
-    fun `should support text files`() {
-        assertTrue(FileContentExtractor.isSupported("test.txt"))
+    fun `should support text files`(@TempDir tempDir: Path) {
+        val textFile = tempDir.resolve("test.txt").toFile()
+        textFile.writeText("Sample text content")
+        assertTrue(FileContentExtractor.isSupported(textFile))
     }
 
     @Test
-    fun `should not support images`() {
-        assertFalse(FileContentExtractor.isSupported("test.png"))
-        assertFalse(FileContentExtractor.isSupported("test.jpg"))
+    fun `should not support images`(@TempDir tempDir: Path) {
+        val pngFile = tempDir.resolve("test.png").toFile()
+        pngFile.writeBytes(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)) // PNG header
+        assertFalse(FileContentExtractor.isSupported(pngFile))
+
+        val jpgFile = tempDir.resolve("test.jpg").toFile()
+        jpgFile.writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())) // JPEG header
+        assertFalse(FileContentExtractor.isSupported(jpgFile))
     }
 
     @Test
@@ -54,5 +70,23 @@ class FileContentExtractorTest {
 
         val extracted = FileContentExtractor.extractContent(textFile)
         assertTrue(extracted.contains("Hello, World!"))
+    }
+
+    @Test
+    fun `should support markdown files`(@TempDir tempDir: Path) {
+        val mdFile = tempDir.resolve("test.md").toFile()
+        mdFile.writeText("# Markdown Header\n\nSome content")
+        assertTrue(FileContentExtractor.isSupported(mdFile))
+    }
+
+    @Test
+    fun `should extract text from markdown file`(@TempDir tempDir: Path) {
+        val mdFile = tempDir.resolve("README.md").toFile()
+        val testContent = "# My Project\n\nThis is a test markdown file."
+        mdFile.writeText(testContent)
+
+        val extracted = FileContentExtractor.extractContent(mdFile)
+        assertTrue(extracted.contains("My Project"))
+        assertTrue(extracted.contains("test markdown file"))
     }
 }

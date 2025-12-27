@@ -6,6 +6,7 @@ package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.context.MessageRole
@@ -75,7 +76,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Test Project",
                 description = "Test Description",
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -84,7 +85,7 @@ class ProjectRepositoryIT {
         assertNotNull(project.id)
         assertEquals("Test Project", project.name)
         assertEquals("Test Description", project.description)
-        assertEquals("[]", project.indexedPaths)
+        assertEquals(emptyList<LocalFilesKnowledgeSourceConfig>(), project.knowledgeSources)
         assertNotNull(project.createdAt)
         assertNotNull(project.updatedAt)
     }
@@ -96,7 +97,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 1",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -106,7 +107,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 2",
                 description = "Description 2",
-                indexedPaths = "['/path/to/folder']",
+                knowledgeSources = listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf("/path/to/folder"))),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -133,7 +134,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Original Name",
                 description = "Original Description",
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -145,7 +146,7 @@ class ProjectRepositoryIT {
             projectId = project.id,
             name = "Updated Name",
             description = "Updated Description",
-            indexedPaths = "['/new/path']",
+            knowledgeSources = listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf("/new/path"))),
         )
 
         assertTrue(updated)
@@ -155,7 +156,8 @@ class ProjectRepositoryIT {
         assertNotNull(updatedProject)
         assertEquals("Updated Name", updatedProject!!.name)
         assertEquals("Updated Description", updatedProject.description)
-        assertEquals("['/new/path']", updatedProject.indexedPaths)
+        assertEquals(1, updatedProject.knowledgeSources.size)
+        assertEquals(listOf("/new/path"), (updatedProject.knowledgeSources[0] as LocalFilesKnowledgeSourceConfig).resourceIdentifiers)
         assertTrue(updatedProject.updatedAt.isAfter(project.updatedAt))
     }
 
@@ -166,7 +168,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Test Project",
                 description = "Some Description",
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -176,7 +178,7 @@ class ProjectRepositoryIT {
             projectId = project.id,
             name = "Updated Name",
             description = null,
-            indexedPaths = "[]",
+            knowledgeSources = emptyList(),
         )
 
         assertTrue(updated)
@@ -192,7 +194,7 @@ class ProjectRepositoryIT {
             projectId = "non-existent-id",
             name = "Some Name",
             description = null,
-            indexedPaths = "[]",
+            knowledgeSources = emptyList(),
         )
 
         assertFalse(updated)
@@ -206,7 +208,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Test Project",
                 description = "Test Description",
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -281,13 +283,17 @@ class ProjectRepositoryIT {
 
     @Test
     fun `should create project with indexed paths`() {
-        val indexedPaths = """["/path/to/folder1", "/path/to/folder2"]"""
+        val knowledgeSources = listOf(
+            LocalFilesKnowledgeSourceConfig(
+                resourceIdentifiers = listOf("/path/to/folder1", "/path/to/folder2"),
+            ),
+        )
         val project = projectRepository.createProject(
             Project(
                 id = "",
                 name = "Project with Paths",
                 description = null,
-                indexedPaths = indexedPaths,
+                knowledgeSources = knowledgeSources,
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -295,7 +301,7 @@ class ProjectRepositoryIT {
 
         val projects = projectRepository.getAllProjects()
         val createdProject = projects.find { it.id == project.id }
-        assertEquals(indexedPaths, createdProject!!.indexedPaths)
+        assertEquals(knowledgeSources, createdProject!!.knowledgeSources)
     }
 
     @Test
@@ -306,7 +312,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "First",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = now.minusHours(2),
                 updatedAt = now.minusHours(2),
             ),
@@ -317,7 +323,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Second",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = now.minusHours(1),
                 updatedAt = now.minusHours(1),
             ),
@@ -328,7 +334,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Third",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -349,7 +355,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Test Project: \"Special\" & <Characters>",
                 description = "Description with 'quotes' and \"escapes\"",
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -368,7 +374,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 1",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -378,7 +384,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 2",
                 description = null,
-                indexedPaths = "[]",
+                knowledgeSources = emptyList(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),

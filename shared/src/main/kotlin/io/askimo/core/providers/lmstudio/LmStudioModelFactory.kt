@@ -12,6 +12,7 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
@@ -35,6 +36,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     )
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: LmStudioSettings,
         retrievalAugmentor: RetrievalAugmentor?,
@@ -67,7 +69,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                 }
@@ -91,6 +93,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

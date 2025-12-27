@@ -7,7 +7,6 @@ package io.askimo.core.project
 import dev.langchain4j.data.segment.TextSegment
 import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.AppContextParams
-import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
@@ -55,7 +54,6 @@ class EmbeddingModelFactoryOllamaTest {
         )
         val session = AppContextFactory.createAppContext(
             params = params,
-            mode = ExecutionMode.CLI_PROMPT,
         )
 
         val model = getEmbeddingModel(session)

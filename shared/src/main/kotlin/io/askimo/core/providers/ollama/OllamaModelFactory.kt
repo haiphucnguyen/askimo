@@ -13,6 +13,7 @@ import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -62,6 +63,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: OllamaSettings,
         retrievalAugmentor: RetrievalAugmentor?,
@@ -90,7 +92,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                 }
@@ -114,6 +116,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

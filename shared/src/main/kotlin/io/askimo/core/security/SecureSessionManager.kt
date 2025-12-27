@@ -115,7 +115,7 @@ class SecureSessionManager {
         val secureKey = SecureApiKeyManager.retrieveApiKey(provider.name.lowercase())
         if (secureKey != null) {
             settings.apiKey = secureKey
-            log.debug("Loaded API key for ${provider.name} from secure storage")
+            log.trace("Loaded API key for ${provider.name} from secure storage")
         } else if (currentKey.startsWith(ENCRYPTED_API_KEY_PREFIX)) {
             // Try to decrypt legacy encrypted key
             val encryptedPart = currentKey.removePrefix(ENCRYPTED_API_KEY_PREFIX)

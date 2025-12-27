@@ -4,25 +4,32 @@
  */
 package io.askimo.core.providers.gemini
 
+import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
-import dev.langchain4j.model.googleai.GoogleAiGeminiTokenCountEstimator
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
+import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
 class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
+
+    private val log = logger<GeminiModelFactory>()
+
     override fun availableModels(settings: GeminiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
 
@@ -39,6 +46,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     override fun defaultSettings(): GeminiSettings = GeminiSettings()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: GeminiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
@@ -57,18 +65,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                     }
                 }.build()
 
-        // Create separate summarizer model if AI summarization enabled
-        val summarizerModel = if (settings.enableAiSummarization) {
-            createSummarizerModel(settings)
-        } else {
-            null
-        }
-
-        val tokenEstimator = GoogleAiGeminiTokenCountEstimator.builder()
-            .apiKey(safeApiKey(settings.apiKey))
-            .modelName(model)
-            .build()
-
         val builder =
             AiServices
                 .builder(ChatClient::class.java)
@@ -77,7 +73,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                 }
@@ -115,6 +111,8 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)
@@ -130,4 +128,44 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         .modelName(settings.summarizerModel)
         .temperature(0.3)
         .build()
+
+    override fun createSummarizer(settings: GeminiSettings): ((String) -> ConversationSummary)? {
+        if (!settings.enableAiSummarization) {
+            return null
+        }
+
+        val summarizerModel = createSummarizerModel(settings)
+
+        return { conversationText ->
+            val prompt = """
+                Analyze the following conversation and provide a structured summary in JSON format.
+                Extract key facts, main topics, and recent context.
+
+                Conversation:
+                $conversationText
+
+                Respond with JSON only (no markdown formatting):
+                {
+                    "keyFacts": {"fact_name": "fact_value", ...},
+                    "mainTopics": ["topic1", "topic2", ...],
+                    "recentContext": "brief summary of the most recent discussion"
+                }
+            """.trimIndent()
+
+            try {
+                val response = summarizerModel.chat(UserMessage.from(prompt))
+                val jsonText = response.aiMessage().text()
+                    .removePrefix("```json").removeSuffix("```").trim()
+
+                json.decodeFromString<ConversationSummary>(jsonText)
+            } catch (e: Exception) {
+                log.error("Failed to generate conversation summary with Gemini summarizer", e)
+                ConversationSummary(
+                    keyFacts = emptyMap(),
+                    mainTopics = emptyList(),
+                    recentContext = conversationText.takeLast(500),
+                )
+            }
+        }
+    }
 }

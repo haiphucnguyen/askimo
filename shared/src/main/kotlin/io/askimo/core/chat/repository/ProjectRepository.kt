@@ -5,6 +5,8 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatSessionsTable
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
+import io.askimo.core.chat.domain.KnowledgeSourceSerializer
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
@@ -31,7 +33,7 @@ private fun ResultRow.toProject(): Project = Project(
     id = this[ProjectsTable.id],
     name = this[ProjectsTable.name],
     description = this[ProjectsTable.description],
-    indexedPaths = this[ProjectsTable.indexedPaths],
+    knowledgeSources = KnowledgeSourceSerializer.deserialize(this[ProjectsTable.knowledgeSourcesConfig]),
     createdAt = this[ProjectsTable.createdAt],
     updatedAt = this[ProjectsTable.updatedAt],
 )
@@ -60,7 +62,7 @@ class ProjectRepository internal constructor(
                 it[id] = projectWithInjectedFields.id
                 it[name] = projectWithInjectedFields.name
                 it[description] = projectWithInjectedFields.description
-                it[indexedPaths] = projectWithInjectedFields.indexedPaths
+                it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(projectWithInjectedFields.knowledgeSources)
                 it[createdAt] = projectWithInjectedFields.createdAt
                 it[updatedAt] = projectWithInjectedFields.updatedAt
             }
@@ -126,24 +128,24 @@ class ProjectRepository internal constructor(
 
     /**
      * Update a project's information.
-     * Updates name, description, and indexed paths. Also updates the updatedAt timestamp.
+     * Updates name, description, and knowledge sources. Also updates the updatedAt timestamp.
      *
      * @param projectId The project id
      * @param name The new name
      * @param description The new description (nullable)
-     * @param indexedPaths The new indexed paths (JSON string)
+     * @param knowledgeSources The new knowledge sources configuration
      * @return true if updated successfully
      */
     fun updateProject(
         projectId: String,
         name: String,
         description: String?,
-        indexedPaths: String,
+        knowledgeSources: List<KnowledgeSourceConfig>,
     ): Boolean = transaction(database) {
         val updated = ProjectsTable.update({ ProjectsTable.id eq projectId }) {
             it[ProjectsTable.name] = name
             it[ProjectsTable.description] = description
-            it[ProjectsTable.indexedPaths] = indexedPaths
+            it[ProjectsTable.knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(knowledgeSources)
             it[updatedAt] = LocalDateTime.now()
         } > 0
 

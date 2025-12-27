@@ -13,6 +13,7 @@ import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ChatRequestTransformers
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -64,6 +65,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     """.trimIndent()
 
     override fun create(
+        sessionId: String?,
         model: String,
         settings: DockerAiSettings,
         retrievalAugmentor: RetrievalAugmentor?,
@@ -87,12 +89,10 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .builder(ChatClient::class.java)
                 .streamingChatModel(chatModel)
                 .apply {
-                    // Only enable tools for non-DESKTOP modes
-                    // Integrate chat memory if provided
                     if (chatMemory != null) {
                         chatMemory(chatMemory)
                     }
-                    if (executionMode != ExecutionMode.DESKTOP) {
+                    if (executionMode.isToolEnabled()) {
                         tools(LocalFsTools)
                     }
                 }
@@ -116,6 +116,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
+                }.chatRequestTransformer { chatRequest, memoryId ->
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor)

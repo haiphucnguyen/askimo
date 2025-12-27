@@ -72,11 +72,11 @@ fun main(args: Array<String>) {
 
     // Determine the execution mode based on arguments
     val mode = when {
-        args.isNotEmpty() -> ExecutionMode.CLI_PROMPT
-        else -> ExecutionMode.CLI_INTERACTIVE
+        args.isNotEmpty() -> ExecutionMode.STATELESS_MODE
+        else -> ExecutionMode.STATEFUL_MODE
     }
 
-    val appContext = AppContextFactory.createAppContext(mode = mode)
+    val appContext = AppContextFactory.createAppContext()
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =
@@ -292,7 +292,7 @@ fun main(args: Array<String>) {
                 }
             } else {
                 val prompt = parsedLine.line()
-                val output = sendChatMessage(prompt, reader.terminal, chatSessionService)
+                val output = sendChatMessage(mode, prompt, reader.terminal, chatSessionService)
                 CliInteractiveContext.setLastResponse(output)
                 reader.terminal.writer().println()
                 reader.terminal.writer().flush()
@@ -312,6 +312,7 @@ private fun sendNonInteractiveChatMessage(
 ): String = streamChatResponse(chatClient, prompt, terminal)
 
 private fun sendChatMessage(
+    mode: ExecutionMode,
     prompt: String,
     terminal: Terminal,
     chatSessionService: ChatSessionService,
@@ -319,6 +320,7 @@ private fun sendChatMessage(
     var currentSession = CliInteractiveContext.currentChatSession
     if (currentSession == null) {
         val session = chatSessionService.createSession(
+            mode,
             ChatSession(
                 id = "",
                 title = "New Chat",
@@ -328,7 +330,7 @@ private fun sendChatMessage(
         currentSession = session
     }
     val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId = currentSession.id, userMessage = prompt)
-    val chatClient = chatSessionService.getOrCreateClientForSession(currentSession.id)
+    val chatClient = chatSessionService.getOrCreateClientForSession(mode, currentSession.id)
     val output = streamChatResponse(chatClient, promptWithContext, terminal)
     chatSessionService.saveAiResponse(currentSession.id, output)
     return output

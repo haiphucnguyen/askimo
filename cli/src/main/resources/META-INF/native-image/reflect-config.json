@@ -1014,18 +1014,6 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicToolSchema",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicUsage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2643,10 +2631,7 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": [
-          "io.askimo.core.context.AppContextParams",
-          "io.askimo.core.context.ExecutionMode"
-        ]
+        "parameterTypes": ["io.askimo.core.context.AppContextParams"]
       },
       { "name": "getParams", "parameterTypes": [] }
     ]
@@ -3834,11 +3819,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.AbstractList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.util.AbstractMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
@@ -3853,18 +3833,6 @@
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "java.util.Collections$EmptyList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "java.util.Collections$EmptyMap",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Collections$UnmodifiableCollection",
@@ -4312,7 +4280,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$e0HrPH0o",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$zAoTLCkA",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

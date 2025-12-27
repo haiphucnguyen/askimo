@@ -4,12 +4,13 @@
  */
 package io.askimo.core.rag.indexing
 
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.FileSegmentRepository
 import io.askimo.core.rag.LuceneIndexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -33,8 +34,8 @@ class HybridIndexer(
 ) {
     private val log = logger<HybridIndexer>()
     private val luceneIndexer = LuceneIndexer.getInstance(projectId)
-    private val segmentRepository: FileSegmentRepository by lazy {
-        DatabaseManager.getInstance().getFileSegmentRepository()
+    private val segmentRepository: ResourceSegmentRepository by lazy {
+        DatabaseManager.getInstance().getResourceSegmentRepository()
     }
 
     companion object {
@@ -54,6 +55,7 @@ class HybridIndexer(
         segment: TextSegment,
         filePath: Path,
     ): Boolean = batchMutex.withLock {
+        log.trace("Adding segment {} to batch for project {}", segment.metadata().getString("file_name"), projectId)
         segmentBatch.add(segment to filePath)
 
         if (segmentBatch.size >= BATCH_SIZE) {
@@ -61,13 +63,6 @@ class HybridIndexer(
         }
 
         return true
-    }
-
-    /**
-     * Flush the current batch of segments to both embedding store and keyword index (thread-safe)
-     */
-    suspend fun flushSegmentBatch(): Boolean = batchMutex.withLock {
-        flushSegmentBatchInternal()
     }
 
     /**
@@ -89,6 +84,7 @@ class HybridIndexer(
                 val segmentIds = segments.map { generateSegmentId(it) }
 
                 embeddingStore.addAll(embeddings, segments)
+                (embeddingStore as JVectorEmbeddingStore).save()
 
                 luceneIndexer.indexSegments(segments)
 

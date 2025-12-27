@@ -206,18 +206,24 @@ class TokenAwareSummarizingMemory(
     /**
      * Summarizes the oldest portion of the conversation and removes those messages
      * to free up token space while preserving context.
+     *
+     * System messages are excluded from summarization as they contain instructions,
+     * not conversation content. They are preserved in the message list.
      */
     private fun summarizeAndPrune() {
-        if (messages.isEmpty()) return
-
-        val messagesToSummarizeCount = (messages.size * 0.45).toInt().coerceAtLeast(1)
-
-        // Copy messages to avoid holding lock during AI call
-        val messagesToSummarize = synchronized(messages) {
-            messages.take(messagesToSummarizeCount).toList()
+        // Get only user and AI messages (exclude system messages from conversation)
+        val conversationMessages = synchronized(messages) {
+            messages.filterNot { it is SystemMessage }
         }
 
-        log.info("Summarizing $messagesToSummarizeCount out of ${messages.size} messages")
+        if (conversationMessages.isEmpty()) return
+
+        val messagesToSummarizeCount = (conversationMessages.size * 0.45).toInt().coerceAtLeast(1)
+
+        // Copy messages to avoid holding lock during AI call
+        val messagesToSummarize = conversationMessages.take(messagesToSummarizeCount)
+
+        log.info("Summarizing $messagesToSummarizeCount out of ${conversationMessages.size} conversation messages (excluding system messages)")
 
         try {
             if (summarizer != null) {
@@ -231,10 +237,17 @@ class TokenAwareSummarizingMemory(
             generateBasicSummary(messagesToSummarize)
         }
 
-        // Remove messages AFTER summarization succeeds
+        // Remove the oldest conversation messages from the original list
+        // System messages are never removed during pruning
         synchronized(messages) {
-            repeat(messagesToSummarizeCount.coerceAtMost(messages.size)) {
-                messages.removeAt(0)
+            var removed = 0
+            val iterator = messages.iterator()
+            while (iterator.hasNext() && removed < messagesToSummarizeCount) {
+                val msg = iterator.next()
+                if (msg !is SystemMessage) {
+                    iterator.remove()
+                    removed++
+                }
             }
         }
 
@@ -331,8 +344,12 @@ class TokenAwareSummarizingMemory(
         else -> ""
     }
 
+    /**
+     * Build conversation text from messages for AI summarization.
+     * Only includes User and AI messages, excluding system messages as they are instructions.
+     */
     private fun buildConversationText(messages: List<ChatMessage>): String = buildString {
-        messages.forEach { message ->
+        messages.filterNot { it is SystemMessage }.forEach { message ->
             appendLine("${message.getRoleName()}: ${message.getTextContent()}")
             appendLine()
         }

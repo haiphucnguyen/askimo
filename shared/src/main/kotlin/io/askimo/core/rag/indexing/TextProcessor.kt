@@ -6,22 +6,22 @@ package io.askimo.core.rag.indexing
 
 import dev.langchain4j.data.document.Metadata
 import dev.langchain4j.data.segment.TextSegment
-import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.getModelTokenLimit
-import java.nio.file.Path
-import kotlin.io.path.extension
 
 /**
- * Handles file processing: reading, text extraction, and chunking.
+ * Handles generic text processing operations: chunking and segment creation.
+ * This class is resource-agnostic - it doesn't care where the text came from
+ * (file, web page, SEC filing, etc.). It only processes text.
+ *
  * Dynamically calculates optimal chunk size based on the embedding model's token limit.
  */
-class FileProcessor(
+class TextProcessor(
     private val appContext: AppContext,
 ) {
-    private val log = logger<FileProcessor>()
+    private val log = logger<TextProcessor>()
 
     /**
      * Dynamically calculated maximum characters per chunk based on the embedding model's token limit.
@@ -76,28 +76,10 @@ class FileProcessor(
     }
 
     /**
-     * Extract text from a file using FileContentExtractor.
-     * Supports text files, PDF, DOCX, and other formats via Apache Tika.
-     */
-    fun extractTextFromFile(filePath: Path): String? {
-        return try {
-            val file = filePath.toFile()
-
-            if (!FileContentExtractor.isSupported(file)) {
-                log.debug("Unsupported file type: {} - {}", filePath.fileName, FileContentExtractor.getUnsupportedMessage(file))
-                return null
-            }
-
-            FileContentExtractor.extractContent(file)
-        } catch (e: Exception) {
-            log.warn("Failed to extract content from file {}: {}", filePath.fileName, e.message)
-            null
-        }
-    }
-
-    /**
      * Chunk text into segments using dynamically calculated chunk size and overlap.
      * Filters out blank chunks to avoid validation errors.
+     *
+     * This method is resource-agnostic - it works with any text regardless of source.
      */
     fun chunkText(text: String): List<String> {
         if (text.isBlank()) {
@@ -135,27 +117,19 @@ class FileProcessor(
 
     /**
      * Create a TextSegment with metadata.
+     *
+     * This is a generic method that creates segments with arbitrary metadata.
      * Note: Caller must ensure chunk is not blank.
+     *
+     * @param chunk The text chunk
+     * @param metadata Map of metadata key-value pairs
+     * @return TextSegment with the provided metadata
      */
     fun createTextSegment(
         chunk: String,
-        filePath: Path,
-        chunkIndex: Int,
-        totalChunks: Int,
-    ): TextSegment {
-        val absolutePath = filePath.toAbsolutePath()
-
-        return TextSegment.from(
-            chunk,
-            Metadata(
-                mapOf(
-                    "file_path" to absolutePath.toString().replace('\\', '/'),
-                    "file_name" to filePath.fileName.toString(),
-                    "extension" to filePath.extension,
-                    "chunk_index" to chunkIndex.toString(),
-                    "chunk_total" to totalChunks.toString(),
-                ),
-            ),
-        )
-    }
+        metadata: Map<String, String>,
+    ): TextSegment = TextSegment.from(
+        chunk,
+        Metadata(metadata),
+    )
 }

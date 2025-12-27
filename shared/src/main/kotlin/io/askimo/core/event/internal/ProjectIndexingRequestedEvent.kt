@@ -10,7 +10,6 @@ import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventSource
 import io.askimo.core.event.EventType
-import java.nio.file.Path
 import java.time.Instant
 
 /**
@@ -20,7 +19,6 @@ import java.time.Instant
  */
 data class ProjectIndexingRequestedEvent(
     val projectId: String,
-    val paths: List<Path>,
     val embeddingStore: EmbeddingStore<TextSegment>? = null,
     val embeddingModel: EmbeddingModel? = null,
     val watchForChanges: Boolean = true,
@@ -29,5 +27,5 @@ data class ProjectIndexingRequestedEvent(
 ) : Event {
     override val type = EventType.INTERNAL
 
-    override fun getDetails(): String = "Indexing requested for project $projectId with ${paths.size} path(s)"
+    override fun getDetails(): String = "Indexing requested for project $projectId"
 }

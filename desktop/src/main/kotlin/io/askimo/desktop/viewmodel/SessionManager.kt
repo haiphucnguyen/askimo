@@ -11,6 +11,7 @@ import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
@@ -163,6 +164,7 @@ class SessionManager(
             runBlocking {
                 withContext(Dispatchers.IO) {
                     chatSessionService.createSession(
+                        ExecutionMode.STATEFUL_MODE,
                         ChatSession(
                             id = sessionId,
                             title = userMessage,
@@ -212,7 +214,7 @@ class SessionManager(
         streamingScope.launch(thread.job) {
             try {
                 val fullResponse = chatSessionService
-                    .getOrCreateClientForSession(sessionId)
+                    .getOrCreateClientForSession(ExecutionMode.STATEFUL_MODE, sessionId)
                     .sendStreamingMessageWithCallback(promptWithContext) { token ->
                         streamingScope.launch {
                             thread.appendChunk(token)
@@ -343,14 +345,12 @@ class SessionManager(
      * This is used when starting a chat from ProjectView.
      *
      * @param projectId The project ID to associate with the session
-     * @param projectName The project name for the session title
      * @param message The first message to send
      * @param attachments The file attachments to include with the message
      * @param onComplete Callback when the session is ready (for navigation)
      */
     fun createProjectSessionAndSendMessage(
         projectId: String,
-        projectName: String,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         onComplete: () -> Unit,
@@ -359,6 +359,7 @@ class SessionManager(
             try {
                 // Create a new session associated with the project
                 val newSession = chatSessionService.createSession(
+                    ExecutionMode.STATEFUL_MODE,
                     ChatSession(
                         id = "",
                         title = message,

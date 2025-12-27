@@ -19,10 +19,8 @@ import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.indexing.IndexingCoordinator
+import io.askimo.core.rag.indexing.IndexingCoordinatorFactory
 import io.askimo.core.rag.state.IndexStatus
-import io.askimo.core.rag.watching.FileChangeHandler
-import io.askimo.core.rag.watching.FileWatcher
-import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,8 +28,6 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.Closeable
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -44,14 +40,14 @@ class ProjectIndexer(
     private val log = logger<ProjectIndexer>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val indexers = ConcurrentHashMap<String, ProjectIndexInstance>()
+    private val coordinators = ConcurrentHashMap<String, IndexingCoordinator>()
     init {
         scope.launch {
             EventBus.internalEvents
                 .filterIsInstance<ProjectDeletedEvent>()
                 .collect { event ->
-                    log.info("Project deleted, cleaning up indexer: ${event.projectId}")
-                    removeIndexer(event.projectId, deleteIndexFiles = true)
+                    log.info("Project deleted, cleaning up coordinator: ${event.projectId}")
+                    removeCoordinator(event.projectId, deleteIndexFiles = true)
                 }
         }
 
@@ -75,12 +71,12 @@ class ProjectIndexer(
     }
 
     /**
-     * Remove indexer and cleanup resources
+     * Remove coordinator and cleanup resources
      * @param projectId The project ID
      * @param deleteIndexFiles If true, also delete the index files from disk
      */
-    fun removeIndexer(projectId: String, deleteIndexFiles: Boolean = false) {
-        indexers.remove(projectId)?.close()
+    fun removeCoordinator(projectId: String, deleteIndexFiles: Boolean = false) {
+        coordinators.remove(projectId)?.close() // Coordinator handles cleanup including file watcher
 
         LuceneIndexer.removeInstance(projectId)
 
@@ -102,49 +98,64 @@ class ProjectIndexer(
      */
     private suspend fun performIndexing(
         projectId: String,
-        projectName: String,
-        paths: List<Path>,
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         watchForChanges: Boolean,
     ) {
-        val coordinator = IndexingCoordinator(
-            projectId = projectId,
-            projectName = projectName,
-            embeddingStore = embeddingStore,
-            embeddingModel = embeddingModel,
-            appContext = appContext,
-        )
+        val project = try {
+            projectRepository.getProject(projectId)
+        } catch (e: Exception) {
+            log.error("Failed to get project $projectId for indexing", e)
+            return
+        }
 
-        val instance = ProjectIndexInstance(
-            projectId = projectId,
-            embeddingStore = embeddingStore,
-            embeddingModel = embeddingModel,
-            coordinator = coordinator,
-            appContext = appContext,
-        )
+        if (project == null) {
+            log.warn("Project $projectId not found, cannot index")
+            return
+        }
 
-        indexers[projectId] = instance
+        // Create coordinator using factory with typed knowledge sources
+        val coordinator = try {
+            IndexingCoordinatorFactory.createCoordinator(
+                projectId = projectId,
+                projectName = project.name,
+                knowledgeSources = project.knowledgeSources,
+                embeddingStore = embeddingStore,
+                embeddingModel = embeddingModel,
+                appContext = appContext,
+            )
+        } catch (e: Exception) {
+            log.error("Failed to create indexing coordinator for project $projectId", e)
+            EventBus.emit(
+                IndexingFailedEvent(
+                    projectId = projectId,
+                    projectName = project.name,
+                    errorMessage = e.message ?: "Failed to create indexing coordinator",
+                ),
+            )
+            return
+        }
+
+        coordinators[projectId] = coordinator
 
         EventBus.emit(
             IndexingStartedEvent(
                 projectId = projectId,
-                projectName = projectName,
-                estimatedFiles = paths.size,
+                projectName = project.name,
             ),
         )
 
-        val success = coordinator.indexPathsWithProgress(paths)
+        val success = coordinator.startIndexing()
 
         if (success) {
             if (watchForChanges) {
-                instance.startWatching(paths)
+                coordinator.startWatching(scope)
             }
 
             EventBus.emit(
                 IndexingCompletedEvent(
                     projectId = projectId,
-                    projectName = projectName,
+                    projectName = project.name,
                     filesIndexed = coordinator.progress.value.processedFiles,
                 ),
             )
@@ -153,7 +164,7 @@ class ProjectIndexer(
             EventBus.emit(
                 IndexingFailedEvent(
                     projectId = projectId,
-                    projectName = projectName,
+                    projectName = project.name,
                     errorMessage = error,
                 ),
             )
@@ -169,59 +180,29 @@ class ProjectIndexer(
         try {
             val projectId = event.projectId
 
-            val existingInstance = indexers[projectId]
+            val existingCoordinator = coordinators[projectId]
 
-            if (existingInstance != null && existingInstance.coordinator.progress.value.isComplete) {
+            if (existingCoordinator != null && existingCoordinator.progress.value.isComplete) {
                 log.debug("Project $projectId already indexed, removing and re-indexing")
-                removeIndexer(projectId, deleteIndexFiles = true)
+                removeCoordinator(projectId, deleteIndexFiles = true)
             }
 
-            if (existingInstance != null && existingInstance.coordinator.progress.value.status == IndexStatus.INDEXING) {
+            if (existingCoordinator != null && existingCoordinator.progress.value.status == IndexStatus.INDEXING) {
                 log.debug("Project $projectId is currently being indexed, skipping duplicate re-index request")
                 return
             }
 
-            // Get project to retrieve indexed paths
-            val project = try {
-                projectRepository.getProject(projectId)
-            } catch (e: Exception) {
-                log.error("Failed to get project $projectId for re-indexing", e)
-                return
-            }
-
-            if (project == null) {
-                log.warn("Project $projectId not found, cannot re-index")
-                return
-            }
-
-            // Parse indexed paths from project configuration
-            val indexedPaths = try {
-                json.decodeFromString<List<String>>(project.indexedPaths)
-                    .map { Paths.get(it) }
-            } catch (e: Exception) {
-                log.error("Failed to parse indexed paths for project $projectId", e)
-                return
-            }
-
-            if (indexedPaths.isEmpty()) {
-                log.warn("No indexed paths found for project $projectId, skipping re-index")
-                return
-            }
-
-            // Remove existing indexer and delete all index files for a clean re-index
-            removeIndexer(projectId, deleteIndexFiles = true)
-            log.info("Removed existing indexer and deleted index files for project $projectId")
+            removeCoordinator(projectId, deleteIndexFiles = true)
+            log.info("Removed existing coordinator and deleted index files for project $projectId")
 
             // Create new embedding components for re-indexing
             val embeddingModel = getEmbeddingModel(appContext)
             checkEmbeddingModelAvailable(embeddingModel)
 
-            val embeddingStore = getEmbeddingdtore(projectId, embeddingModel)
+            val embeddingStore = getEmbeddingStore(projectId, embeddingModel)
 
             performIndexing(
                 projectId = projectId,
-                projectName = project.name,
-                paths = indexedPaths,
                 embeddingStore = embeddingStore,
                 embeddingModel = embeddingModel,
                 watchForChanges = true,
@@ -244,24 +225,16 @@ class ProjectIndexer(
             val projectId = event.projectId
 
             // Check for duplicate/in-progress indexing (same as handleReIndexRequest)
-            val existingInstance = indexers[projectId]
+            val existingCoordinator = coordinators[projectId]
 
-            if (existingInstance != null && existingInstance.coordinator.progress.value.isComplete) {
+            if (existingCoordinator != null && existingCoordinator.progress.value.isComplete) {
                 log.debug("Project $projectId already indexed, skipping duplicate request")
                 return
             }
 
-            if (existingInstance != null && existingInstance.coordinator.progress.value.status == IndexStatus.INDEXING) {
+            if (existingCoordinator != null && existingCoordinator.progress.value.status == IndexStatus.INDEXING) {
                 log.debug("Project $projectId is currently being indexed, skipping duplicate request")
                 return
-            }
-
-            // Get project name
-            val projectName = try {
-                projectRepository.getProject(projectId)?.name ?: projectId
-            } catch (e: Exception) {
-                log.warn("Failed to get project name for $projectId, using ID as fallback", e)
-                projectId
             }
 
             // Create embedding model and store if not provided
@@ -272,13 +245,11 @@ class ProjectIndexer(
             }
 
             val embeddingStore = event.embeddingStore ?: run {
-                getEmbeddingdtore(projectId, embeddingModel)
+                getEmbeddingStore(projectId, embeddingModel)
             }
 
             performIndexing(
                 projectId = projectId,
-                projectName = projectName,
-                paths = event.paths,
                 embeddingStore = embeddingStore,
                 embeddingModel = embeddingModel,
                 watchForChanges = event.watchForChanges,
@@ -316,9 +287,9 @@ class ProjectIndexer(
     }
 
     override fun close() {
-        log.info("Closing ProjectIndexer, cleaning up ${indexers.size} indexers")
-        indexers.values.forEach { it.close() }
-        indexers.clear()
+        log.info("Closing ProjectIndexer, cleaning up ${coordinators.size} coordinators")
+        coordinators.values.forEach { it.close() }
+        coordinators.clear()
     }
 
     /**
@@ -332,53 +303,5 @@ class ProjectIndexer(
                 }
             },
         )
-    }
-}
-
-/**
- * Instance of an indexer for a specific project
- */
-private class ProjectIndexInstance(
-    val projectId: String,
-    val embeddingStore: EmbeddingStore<TextSegment>,
-    val embeddingModel: EmbeddingModel,
-    val coordinator: IndexingCoordinator,
-    val appContext: AppContext,
-) : Closeable {
-    private val log = logger<ProjectIndexInstance>()
-    private var fileWatcher: FileWatcher? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    /**
-     * Start watching for file changes
-     */
-    fun startWatching(paths: List<Path>) {
-        if (fileWatcher != null) {
-            log.debug("File watcher already active for project $projectId")
-            return
-        }
-
-        val changeHandler = FileChangeHandler(
-            projectId = projectId,
-            embeddingStore = embeddingStore,
-            embeddingModel = embeddingModel,
-            appContext = appContext,
-        )
-
-        fileWatcher = FileWatcher(
-            projectId = projectId,
-            onFileChange = { path, kind ->
-                changeHandler.handleFileChange(path, kind)
-            },
-        )
-
-        fileWatcher?.startWatching(paths, scope)
-        log.info("Started file watching for project $projectId")
-    }
-
-    override fun close() {
-        log.debug("Closing indexer instance for project $projectId")
-        fileWatcher?.stopWatching()
-        fileWatcher = null
     }
 }
