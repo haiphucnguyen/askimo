@@ -45,6 +45,8 @@ import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -200,7 +202,18 @@ fun newProjectDialog(
                     updatedAt = LocalDateTime.now(),
                 )
 
-                projectRepository.createProject(project)
+                val createdProject = projectRepository.createProject(project)
+
+                // Emit indexing event if the project has knowledge sources
+                if (createdProject.knowledgeSources.isNotEmpty()) {
+                    EventBus.post(
+                        ProjectIndexingRequestedEvent(
+                            projectId = createdProject.id,
+                            watchForChanges = true,
+                        ),
+                    )
+                    log.debug("Emitted indexing event for project ${createdProject.id}")
+                }
 
                 // Show success message
                 createdProjectName = projectName.trim()

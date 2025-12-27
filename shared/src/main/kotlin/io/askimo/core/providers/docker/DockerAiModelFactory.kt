@@ -77,6 +77,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .builder()
                 .baseUrl("${settings.baseUrl}/v1")
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .apply {
                     val s = samplingFor(settings.presets.style)
@@ -120,7 +122,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
         return builder.build()
     }

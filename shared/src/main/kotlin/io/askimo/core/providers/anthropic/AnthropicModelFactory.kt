@@ -10,6 +10,7 @@ import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
@@ -20,6 +21,9 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
 class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
+
+    private val log = logger<AnthropicModelFactory>()
+
     override fun availableModels(settings: AnthropicSettings): List<String> = listOf(
         "claude-opus-4-1",
         "claude-opus-4-0",
@@ -44,6 +48,8 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .builder()
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .baseUrl(settings.baseUrl)
                 .build()
 
@@ -83,7 +89,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()

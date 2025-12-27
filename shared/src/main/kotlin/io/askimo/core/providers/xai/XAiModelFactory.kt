@@ -9,6 +9,7 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
@@ -22,6 +23,8 @@ import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 
 class XAiModelFactory : ChatModelFactory<XAiSettings> {
+    private val log = logger<XAiModelFactory>()
+
     override fun availableModels(settings: XAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
         val url = "${settings.baseUrl.trimEnd('/')}/models"
@@ -49,6 +52,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .apiKey(safeApiKey(settings.apiKey))
                 .baseUrl(settings.baseUrl)
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .apply {
                     if (supportsSampling(model)) {
                         val s = samplingFor(settings.presets.style)
@@ -92,7 +97,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()

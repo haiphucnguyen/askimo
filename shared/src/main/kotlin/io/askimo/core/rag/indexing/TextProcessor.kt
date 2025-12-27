@@ -116,6 +116,95 @@ class TextProcessor(
     }
 
     /**
+     * Data class to hold chunk text with line number metadata.
+     */
+    data class ChunkWithLineNumbers(
+        val text: String,
+        val startLine: Int,
+        val endLine: Int,
+    )
+
+    /**
+     * Chunk text with line number tracking for text files.
+     * This method reads the text line-by-line to track line numbers.
+     *
+     * @param text The text to chunk
+     * @return List of chunks with line number information
+     */
+    fun chunkTextWithLineNumbers(text: String): List<ChunkWithLineNumbers> {
+        if (text.isBlank()) {
+            return emptyList()
+        }
+
+        val maxChars = maxCharsPerChunk
+        val overlap = chunkOverlap
+
+        val lines = text.lines()
+        val chunks = mutableListOf<ChunkWithLineNumbers>()
+
+        var currentChunk = StringBuilder()
+        var currentStartLine = 1
+        var currentLine = 1
+
+        for (line in lines) {
+            val lineWithNewline = line + "\n"
+
+            // If adding this line would exceed max chars, save current chunk and start new one
+            if (currentChunk.isNotEmpty() && currentChunk.length + lineWithNewline.length > maxChars) {
+                val chunkText = currentChunk.toString()
+                if (chunkText.isNotBlank()) {
+                    chunks.add(ChunkWithLineNumbers(chunkText, currentStartLine, currentLine - 1))
+                }
+
+                // Start new chunk with overlap
+                // Calculate how many chars of overlap we need
+                val overlapText = if (overlap > 0) {
+                    // Take last few lines that fit in overlap size
+                    val chunkLines = chunkText.lines()
+                    val overlapLines = mutableListOf<String>()
+                    var overlapSize = 0
+
+                    for (i in chunkLines.indices.reversed()) {
+                        val testLine = chunkLines[i] + "\n"
+                        if (overlapSize + testLine.length <= overlap) {
+                            overlapLines.add(0, chunkLines[i])
+                            overlapSize += testLine.length
+                        } else {
+                            break
+                        }
+                    }
+
+                    if (overlapLines.isNotEmpty()) {
+                        currentStartLine = currentLine - overlapLines.size
+                        overlapLines.joinToString("\n") + "\n"
+                    } else {
+                        currentStartLine = currentLine
+                        ""
+                    }
+                } else {
+                    currentStartLine = currentLine
+                    ""
+                }
+
+                currentChunk = StringBuilder(overlapText)
+            }
+
+            currentChunk.append(lineWithNewline)
+            currentLine++
+        }
+
+        // Add final chunk
+        if (currentChunk.isNotEmpty()) {
+            val chunkText = currentChunk.toString()
+            if (chunkText.isNotBlank()) {
+                chunks.add(ChunkWithLineNumbers(chunkText, currentStartLine, currentLine - 1))
+            }
+        }
+
+        return chunks
+    }
+
+    /**
      * Create a TextSegment with metadata.
      *
      * This is a generic method that creates segments with arbitrary metadata.

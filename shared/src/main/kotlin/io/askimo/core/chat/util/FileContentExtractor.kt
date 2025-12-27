@@ -34,6 +34,11 @@ object FileContentExtractor {
      * @throws Exception if the file cannot be read or the format is unsupported
      */
     fun extractContent(file: File): String {
+        val extension = file.extension.lowercase()
+        if (extension in SUPPORTED_TEXT_EXTENSIONS) {
+            return file.readText()
+        }
+
         val mimeType = detectMimeType(file)
 
         return when {
@@ -67,10 +72,7 @@ object FileContentExtractor {
             // This handles .md, .gradle.kts, .gitignore, and other text files
             mimeType == "application/octet-stream" ||
                 mimeType.startsWith("application/x-") -> {
-                val extension = file.extension.lowercase()
-                if (extension in SUPPORTED_TEXT_EXTENSIONS) {
-                    file.readText()
-                } else if (extension in SUPPORTED_BINARY_EXTENSIONS) {
+                if (extension in SUPPORTED_BINARY_EXTENSIONS) {
                     extractUsingTika(file)
                 } else {
                     throw UnsupportedOperationException("Cannot extract content from: $mimeType (extension: .$extension)")
@@ -87,6 +89,7 @@ object FileContentExtractor {
         FileInputStream(file).use { stream ->
             val handler = BodyContentHandler(-1) // -1 = no character limit
             val metadata = Metadata()
+            metadata.set("resourceName", file.name)
             parser.parse(stream, handler, metadata)
             handler.toString().trim()
         }
@@ -118,6 +121,47 @@ object FileContentExtractor {
             val extension = file.extension.lowercase()
             return extension in SUPPORTED_TEXT_EXTENSIONS ||
                 extension in SUPPORTED_BINARY_EXTENSIONS
+        }
+
+        return false
+    }
+
+    /**
+     * Check if a file is a text-based file where line numbers are meaningful.
+     * Returns false for binary formats like PDF, DOCX, etc.
+     *
+     * @param file The file to check
+     * @return true if the file is a text file, false for binary formats
+     */
+    fun isTextFile(file: File): Boolean {
+        val mimeType = detectMimeType(file)
+        val extension = file.extension.lowercase()
+
+        // Check if it's a binary format that we extract text from
+        if (extension in SUPPORTED_BINARY_EXTENSIONS) {
+            return false
+        }
+
+        // Check if MIME type indicates a binary document format
+        if (mimeType.startsWith("application/pdf") ||
+            mimeType.contains("word") || mimeType.contains("wordprocessingml") || mimeType.contains("msword") ||
+            mimeType.contains("spreadsheet") || mimeType.contains("excel") || mimeType.contains("ms-excel") ||
+            mimeType.contains("presentation") || mimeType.contains("powerpoint") || mimeType.contains("ms-powerpoint") ||
+            mimeType.startsWith("application/vnd.oasis.opendocument") ||
+            mimeType.contains("message/rfc822") || mimeType.contains("application/vnd.ms-outlook") ||
+            mimeType.contains("rtf")
+        ) {
+            return false
+        }
+
+        // Text files
+        if (mimeType.startsWith("text/") || mimeType in SUPPORTED_APPLICATION_TYPES) {
+            return true
+        }
+
+        // Fallback to extension check for files Tika misdetects
+        if (mimeType == "application/octet-stream" || mimeType.startsWith("application/x-")) {
+            return extension in SUPPORTED_TEXT_EXTENSIONS
         }
 
         return false
@@ -187,17 +231,36 @@ object FileContentExtractor {
         "kt", "kts", "java", "py", "js", "ts", "jsx", "tsx",
         "c", "cpp", "h", "hpp", "cs", "go", "rs", "rb", "php",
         "swift", "m", "mm", "scala", "groovy", "clj", "ex", "exs",
+        "r", "lua", "pl", "perl", "dart", "jl", "zig", "nim", "v",
+        "f90", "f95", "f", "asm", "s", "hs", "elm", "fs", "fsx",
+        "ml", "mli", "erl", "hrl", "lisp", "scm", "vim", "d", "pas",
         // Web
         "html", "htm", "css", "scss", "sass", "less",
+        "vue", "svelte", "astro",
+        // Templates
+        "hbs", "mustache", "ejs", "pug", "jade", "twig", "jinja", "j2",
         // Data formats
         "json", "xml", "yaml", "yml", "toml", "ini", "conf", "config",
-        "csv", "tsv",
+        "csv", "tsv", "graphql", "gql", "proto",
         // Shell scripts
-        "sh", "bash", "zsh", "fish", "bat", "ps1",
+        "sh", "bash", "zsh", "fish", "bat", "ps1", "cmd",
+        // Build files
+        "gradle", "maven", "cmake", "mk", "makefile", "gnumakefile",
+        "dockerfile", "containerfile", "rakefile",
+        // Infrastructure as Code
+        "tf", "tfvars", "hcl", "nomad", "pkr.hcl",
+        // Configuration files
+        "cfg", "cnf", "editorconfig", "gitignore", "gitattributes",
+        "dockerignore", "npmignore", "eslintrc", "prettierrc", "babelrc",
+        "npmrc", "yarnrc", "htaccess",
         // Documentation
-        "rst", "adoc", "tex",
+        "rst", "adoc", "asciidoc", "org", "pod", "rdoc",
+        // Patches & Diffs
+        "diff", "patch", "rej",
+        // Certificates & Keys (text format)
+        "pem", "crt", "key", "pub", "asc",
         // Other
-        "sql", "log", "properties", "env",
+        "sql", "log", "properties", "env", "lock", "iml",
     )
 
     private val SUPPORTED_BINARY_EXTENSIONS = setOf(

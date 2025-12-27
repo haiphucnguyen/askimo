@@ -704,7 +704,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -958,6 +959,7 @@
       { "name": "getMessages", "parameterTypes": [] },
       { "name": "getMetadata", "parameterTypes": [] },
       { "name": "getModel", "parameterTypes": [] },
+      { "name": "getOutputFormat", "parameterTypes": [] },
       { "name": "getStopSequences", "parameterTypes": [] },
       { "name": "getSystem", "parameterTypes": [] },
       { "name": "getTemperature", "parameterTypes": [] },
@@ -1236,6 +1238,7 @@
       { "name": "logprobs", "parameterTypes": [] },
       { "name": "maxOutputTokens", "parameterTypes": [] },
       { "name": "presencePenalty", "parameterTypes": [] },
+      { "name": "responseJsonSchema", "parameterTypes": [] },
       { "name": "responseLogprobs", "parameterTypes": [] },
       { "name": "responseMimeType", "parameterTypes": [] },
       { "name": "responseSchema", "parameterTypes": [] },
@@ -1300,7 +1303,8 @@
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "customParameters", "parameterTypes": [] }]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
@@ -1396,12 +1400,6 @@
     "name": "dev.langchain4j.model.openai.internal.chat.Role",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.SystemMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Tool",
@@ -3292,6 +3290,15 @@
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
+        "name": "totalSizeByType",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.Boolean"
+        ]
+      },
+      {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
       }
@@ -4280,7 +4287,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$zAoTLCkA",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$Eh9DsdEp",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

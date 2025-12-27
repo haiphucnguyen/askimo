@@ -58,6 +58,8 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .builder()
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .apply {
                     if (supportsSampling(model)) {
                         val s = samplingFor(settings.presets.style)
@@ -115,7 +117,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()

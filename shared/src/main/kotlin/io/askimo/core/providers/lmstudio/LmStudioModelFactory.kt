@@ -10,6 +10,7 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
@@ -24,6 +25,8 @@ import java.net.http.HttpClient
 import java.time.Duration
 
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
+
+    private val log = logger<LmStudioModelFactory>()
 
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
@@ -53,6 +56,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .baseUrl(settings.baseUrl)
                 .apiKey("lm-studio")
                 .modelName(model)
+                .logger(log)
+                .logRequests(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apply {
@@ -97,7 +102,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                     ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
                 }
         if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor)
+            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()

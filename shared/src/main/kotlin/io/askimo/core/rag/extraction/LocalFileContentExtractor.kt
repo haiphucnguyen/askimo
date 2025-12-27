@@ -41,4 +41,13 @@ class LocalFileContentExtractor : ContentExtractor<FileResourceIdentifier> {
             null
         }
     }
+
+    /**
+     * Check if a file is a text-based file where line numbers are meaningful.
+     * Returns false for binary files like PDF, DOCX, etc.
+     */
+    fun isTextFile(resourceIdentifier: FileResourceIdentifier): Boolean {
+        val file = resourceIdentifier.filePath.toFile()
+        return UtilFileContentExtractor.isTextFile(file)
+    }
 }

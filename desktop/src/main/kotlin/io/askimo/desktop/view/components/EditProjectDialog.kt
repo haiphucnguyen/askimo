@@ -45,6 +45,8 @@ import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import java.awt.FileDialog
@@ -112,12 +114,12 @@ fun editProjectDialog(
             selectedFolder = folderPath
 
             // Validate selected folder
-            when (validateFolder(folderPath)) {
-                FolderValidationResult.Valid -> folderError = null
-                FolderValidationResult.NotExists -> folderError = errorFolderNotExists
-                FolderValidationResult.NotAFolder -> folderError = errorFolderNotFolder
-                FolderValidationResult.NotReadable -> folderError = errorFolderNotReadable
-                FolderValidationResult.Empty -> folderError = null
+            folderError = when (validateFolder(folderPath)) {
+                FolderValidationResult.Valid -> null
+                FolderValidationResult.NotExists -> errorFolderNotExists
+                FolderValidationResult.NotAFolder -> errorFolderNotFolder
+                FolderValidationResult.NotReadable -> errorFolderNotReadable
+                FolderValidationResult.Empty -> null
             }
         }
     }
@@ -161,12 +163,26 @@ fun editProjectDialog(
             emptyList()
         }
 
+        // Check if knowledge source has changed
+        val knowledgeSourceChanged = selectedFolder != existingPaths
+
+        // Save the project
         onSave(
             project.id,
             projectName.trim(),
             projectDescription.trim().takeIf { it.isNotEmpty() },
             knowledgeSources,
         )
+
+        // If knowledge source changed, emit re-index event
+        if (knowledgeSourceChanged) {
+            EventBus.post(
+                ProjectReIndexEvent(
+                    projectId = project.id,
+                    reason = "Knowledge source changed from '${existingPaths ?: "none"}' to '${selectedFolder ?: "none"}'",
+                ),
+            )
+        }
     }
 
     LaunchedEffect(Unit) {

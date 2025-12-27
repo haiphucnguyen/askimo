@@ -286,31 +286,71 @@ class LocalFilesIndexingCoordinator(
                 return true
             }
 
-            val chunks = resourceContentProcessor.chunkText(text)
+            // Check if this is a text file where line numbers are meaningful
+            val isTextFile = resourceContentProcessor.isTextFile(filePath)
 
-            // Skip if no valid chunks were created
-            if (chunks.isEmpty()) {
-                log.debug("No valid chunks created for file: {}", filePath.fileName)
-                updateProgressAtomic()
-                return true
-            }
+            if (isTextFile) {
+                // For text files, use line-aware chunking
+                val chunksWithLineNumbers = resourceContentProcessor.chunkTextWithLineNumbers(text)
 
-            log.debug("Start indexing {} ({} chunks)", filePath.fileName, chunks.size)
-            for ((idx, chunk) in chunks.withIndex()) {
-                val segment = resourceContentProcessor.createTextSegment(
-                    chunk = chunk,
-                    filePath = filePath,
-                    chunkIndex = idx,
-                    totalChunks = chunks.size,
-                )
-
-                if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
-                    return false
+                // Skip if no valid chunks were created
+                if (chunksWithLineNumbers.isEmpty()) {
+                    log.debug("No valid chunks created for file: {}", filePath.fileName)
+                    updateProgressAtomic()
+                    return true
                 }
-            }
 
-            val elapsedTime = System.currentTimeMillis() - startTime
-            log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+                log.debug("Start indexing {} ({} chunks, text file)", filePath.fileName, chunksWithLineNumbers.size)
+                for ((idx, chunkData) in chunksWithLineNumbers.withIndex()) {
+                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
+                        chunk = chunkData.text,
+                        filePath = filePath,
+                        chunkIndex = idx,
+                        totalChunks = chunksWithLineNumbers.size,
+                        startLine = chunkData.startLine,
+                        endLine = chunkData.endLine,
+                    )
+
+                    if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
+                        return false
+                    }
+                }
+
+                val elapsedTime = System.currentTimeMillis() - startTime
+                log.debug(
+                    "Indexed {} ({} chunks, lines tracked) in {}ms",
+                    filePath.fileName,
+                    chunksWithLineNumbers.size,
+                    elapsedTime,
+                )
+            } else {
+                // For binary files (PDF, DOCX, etc.), use regular chunking without line numbers
+                val chunks = resourceContentProcessor.chunkText(text)
+
+                // Skip if no valid chunks were created
+                if (chunks.isEmpty()) {
+                    log.debug("No valid chunks created for file: {}", filePath.fileName)
+                    updateProgressAtomic()
+                    return true
+                }
+
+                log.debug("Start indexing {} ({} chunks, binary file)", filePath.fileName, chunks.size)
+                for ((idx, chunk) in chunks.withIndex()) {
+                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
+                        chunk = chunk,
+                        filePath = filePath,
+                        chunkIndex = idx,
+                        totalChunks = chunks.size,
+                    )
+
+                    if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
+                        return false
+                    }
+                }
+
+                val elapsedTime = System.currentTimeMillis() - startTime
+                log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+            }
 
             updateProgressAtomic()
             return true

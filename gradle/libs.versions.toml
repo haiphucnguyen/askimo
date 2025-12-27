@@ -1,7 +1,7 @@
 [versions]
 graalvm-plugin = "0.11.3"
 jline = "3.30.6"
-langchain4j = "1.9.1"
+langchain4j = "1.10.0"
 commonmark = "0.27.0"
 kotlinxSerializationJson = "1.9.0"
 kotlinxCoroutines = "1.9.0"
@@ -24,7 +24,7 @@ koin = "4.1.1"
 jlatexmath = "1.0.7"
 tika = "3.2.3"
 lucene = "10.3.2"
-langchain4j-extra = "1.9.1-beta17"
+langchain4j-extra = "1.10.0-beta18"
 caffeine = "3.2.3"
 
 [libraries]
