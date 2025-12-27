@@ -54,6 +54,7 @@ class HybridIndexer(
         segment: TextSegment,
         filePath: Path,
     ): Boolean = batchMutex.withLock {
+        log.trace("Adding segment {} to batch for project {}", segment.metadata().getString("file_name"), projectId)
         segmentBatch.add(segment to filePath)
 
         if (segmentBatch.size >= BATCH_SIZE) {

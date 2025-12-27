@@ -30,7 +30,7 @@ class FilterChain(filters: List<IndexingFilter>) {
     fun shouldExclude(path: Path, isDirectory: Boolean, context: FilterContext): Boolean {
         for (filter in sortedFilters) {
             if (filter.shouldExclude(path, isDirectory, context)) {
-                log.debug("Path excluded by ${filter.name} filter: ${context.relativePath}")
+                log.trace("Path excluded by ${filter.name} filter: ${context.relativePath}")
                 return true
             }
         }

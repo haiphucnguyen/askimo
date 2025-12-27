@@ -110,7 +110,7 @@ class GitignoreParser(private val rootPath: Path) {
             gitignorePath = gitignoreDir,
         )
 
-        log.debug("Parsed pattern: '$line' -> regex: '$finalPattern' (negation=$isNegation, dirOnly=$isDirectoryOnly)")
+        log.trace("Parsed pattern: '$line' -> regex: '$finalPattern' (negation=$isNegation, dirOnly=$isDirectoryOnly)")
 
         return gitignorePattern
     }
@@ -169,7 +169,7 @@ class GitignoreParser(private val rootPath: Path) {
         }
 
         if (ignored && matchedPattern != null) {
-            log.debug("Path excluded by gitignore filter: $absoluteRelativePath (pattern: '${matchedPattern.pattern}', regex: '${matchedPattern.regex.pattern}')")
+            log.trace("Path excluded by gitignore filter: $absoluteRelativePath (pattern: '${matchedPattern.pattern}', regex: '${matchedPattern.regex.pattern}')")
         }
 
         return ignored

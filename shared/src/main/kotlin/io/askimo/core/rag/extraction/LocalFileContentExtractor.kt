@@ -37,7 +37,7 @@ class LocalFileContentExtractor : ContentExtractor<FileResourceIdentifier> {
 
             UtilFileContentExtractor.extractContent(file)
         } catch (e: Exception) {
-            log.warn("Failed to extract content from file {}: {}", filePath.fileName, e.message)
+            log.warn("Failed to extract content from file {}", filePath.fileName, e)
             null
         }
     }
