@@ -45,7 +45,7 @@ class OllamaModelFactoryTest {
             model = "qwen2.5:0.5b",
             settings = settings,
             retrievalAugmentor = null,
-            executionMode = ExecutionMode.STATELESS_MODE,
+            executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )
     }
 

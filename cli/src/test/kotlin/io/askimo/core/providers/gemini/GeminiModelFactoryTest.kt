@@ -32,7 +32,7 @@ class GeminiModelFactoryTest {
             model = "gemini-2.5-flash",
             settings = settings,
             retrievalAugmentor = null,
-            executionMode = ExecutionMode.STATELESS_MODE,
+            executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )
     }
 

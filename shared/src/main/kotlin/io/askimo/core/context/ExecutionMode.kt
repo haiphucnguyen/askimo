@@ -30,6 +30,6 @@ value class ExecutionMode(val flags: Int) {
 
         val STATELESS_MODE = ExecutionMode(STATELESS)
         val STATEFUL_MODE = ExecutionMode(STATEFUL)
-        val STATEFUL_TOOLS_MODE = ExecutionMode(STATEFUL and TOOL_ENABLED)
+        val STATEFUL_TOOLS_MODE = ExecutionMode(STATEFUL xor TOOL_ENABLED)
     }
 }

@@ -79,6 +79,15 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .systemMessageProvider {
                     systemMessage(
                         """
+                        You are a helpful assistant.
+
+                        Tool-use rules:
+                        • For general knowledge questions, answer directly. Do not mention tools.
+                        • Use LocalFsTools **only** when the request clearly involves the local file system
+                          (paths like ~, /, \\, or mentions such as "folder", "directory", "file", ".pdf", ".txt", etc.).
+                        • Never refuse general questions by claiming you can only use tools.
+                        • When using tools, call the most specific LocalFsTools function that matches the request.
+
                         Tool response format:
                         • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
                         • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data
@@ -92,6 +101,11 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                         • If success=true: Use the output and metadata to answer user's question
                         • If success=false: Explain what went wrong using the error message
                         • Never assume tool success without checking the response
+
+                        Fallback policy:
+                        • If the user asks about local resources but no matching tool is available (e.g. "delete pdf files"),
+                          do not reject the request. Instead, provide safe, generic guidance on how they could do it
+                          manually (for example, using the command line or a file manager).
                         """.trimIndent(),
                         verbosityInstruction(settings.presets.verbosity),
                     )
