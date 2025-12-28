@@ -39,34 +39,6 @@ class ChatMessageAttachmentRepository internal constructor(
 ) : AbstractSQLiteRepository(databaseManager) {
 
     /**
-     * Add a new attachment to the database.
-     *
-     * @param attachment The attachment to add
-     * @return The attachment with generated ID if not provided
-     */
-    fun addAttachment(attachment: FileAttachment): FileAttachment {
-        val attachmentWithId = if (attachment.id.isEmpty()) {
-            attachment.copy(id = UUID.randomUUID().toString())
-        } else {
-            attachment
-        }
-
-        transaction(database) {
-            ChatMessageAttachmentsTable.insert {
-                it[id] = attachmentWithId.id
-                it[messageId] = attachmentWithId.messageId
-                it[sessionId] = attachmentWithId.sessionId
-                it[fileName] = attachmentWithId.fileName
-                it[mimeType] = attachmentWithId.mimeType
-                it[size] = attachmentWithId.size
-                it[createdAt] = attachmentWithId.createdAt
-            }
-        }
-
-        return attachmentWithId
-    }
-
-    /**
      * Add multiple attachments in a batch.
      * NOTE: Must be called within a transaction context.
      *
@@ -94,38 +66,6 @@ class ChatMessageAttachmentRepository internal constructor(
     }
 
     /**
-     * Get all attachments for a specific message.
-     *
-     * @param messageId The message ID
-     * @return List of attachments (without file content)
-     */
-    fun getAttachmentsByMessageId(messageId: String): List<FileAttachment> = transaction(database) {
-        ChatMessageAttachmentsTable
-            .selectAll()
-            .where { ChatMessageAttachmentsTable.messageId eq messageId }
-            .map { it.toFileAttachment() }
-    }
-
-    /**
-     * Get all attachments for multiple messages in a single query.
-     * Useful for loading attachments for a list of messages efficiently.
-     *
-     * @param messageIds List of message IDs
-     * @return Map of messageId to list of attachments
-     */
-    fun getAttachmentsByMessageIds(messageIds: List<String>): Map<String, List<FileAttachment>> {
-        if (messageIds.isEmpty()) return emptyMap()
-
-        return transaction(database) {
-            ChatMessageAttachmentsTable
-                .selectAll()
-                .where { ChatMessageAttachmentsTable.messageId inList messageIds }
-                .map { it.toFileAttachment() }
-                .groupBy { it.messageId }
-        }
-    }
-
-    /**
      * Get all attachments for a session.
      *
      * @param sessionId The session ID
@@ -148,43 +88,5 @@ class ChatMessageAttachmentRepository internal constructor(
         ChatMessageAttachmentsTable.deleteWhere {
             ChatMessageAttachmentsTable.messageId eq messageId
         }
-    }
-
-    /**
-     * Delete all attachments for a session.
-     *
-     * @param sessionId The session ID
-     * @return Number of attachments deleted
-     */
-    fun deleteAttachmentsBySessionId(sessionId: String): Int = transaction(database) {
-        ChatMessageAttachmentsTable.deleteWhere {
-            ChatMessageAttachmentsTable.sessionId eq sessionId
-        }
-    }
-
-    /**
-     * Delete a specific attachment by its ID.
-     *
-     * @param attachmentId The attachment ID
-     * @return Number of attachments deleted (0 or 1)
-     */
-    fun deleteAttachment(attachmentId: String): Int = transaction(database) {
-        ChatMessageAttachmentsTable.deleteWhere {
-            id eq attachmentId
-        }
-    }
-
-    /**
-     * Get a specific attachment by its ID.
-     *
-     * @param attachmentId The attachment ID
-     * @return The attachment, or null if not found
-     */
-    fun getAttachmentById(attachmentId: String): FileAttachment? = transaction(database) {
-        ChatMessageAttachmentsTable
-            .selectAll()
-            .where { ChatMessageAttachmentsTable.id eq attachmentId }
-            .map { it.toFileAttachment() }
-            .singleOrNull()
     }
 }

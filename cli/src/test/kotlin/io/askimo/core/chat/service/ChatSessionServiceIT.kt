@@ -60,7 +60,6 @@ class ChatSessionServiceIT {
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
-                directiveRepository = directiveRepository,
                 sessionMemoryRepository = sessionMemoryRepository,
                 projectRepository = projectRepository,
                 appContext = appContext,

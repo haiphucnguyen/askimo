@@ -243,21 +243,6 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Get all sessions belonging to a specific project.
-     */
-    fun getSessionsByProject(projectId: String): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.projectId eq projectId }
-            .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
-            )
-            .map { it.toChatSession() }
-    }
-
-    /**
      * Get all sessions not belonging to any project (general chat sessions).
      */
     fun getSessionsWithoutProject(): List<ChatSession> = transaction(database) {
