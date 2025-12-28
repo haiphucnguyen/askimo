@@ -223,6 +223,21 @@ data class ChatConfig(
     val enableAsyncSummarization: Boolean = true,
 )
 
+/**
+ * RAG (Retrieval-Augmented Generation) configuration.
+ * Controls how relevant documents are retrieved from the knowledge base.
+ */
+data class RagConfig(
+    /** Maximum number of documents to retrieve from vector search */
+    val vectorSearchMaxResults: Int = 20,
+    /** Minimum similarity score for vector search results (0.0 to 1.0) */
+    val vectorSearchMinScore: Double = 0.3,
+    /** Maximum number of final documents to return after hybrid fusion */
+    val hybridMaxResults: Int = 15,
+    /** RRF constant for rank fusion algorithm (standard value is 60) */
+    val rankFusionConstant: Int = 60,
+)
+
 data class ProxyConfig(
     val enabled: Boolean = false,
     val url: String = "",
@@ -237,16 +252,17 @@ data class AppConfigData(
     val indexing: IndexingConfig = IndexingConfig(),
     val developer: DeveloperConfig = DeveloperConfig(),
     val chat: ChatConfig = ChatConfig(),
+    val rag: RagConfig = RagConfig(),
 )
 
 object AppConfig {
     val embedding: EmbeddingConfig get() = delegate.embedding
     val embeddingModels: EmbeddingModelsConfig get() = delegate.embeddingModels
     val retry: RetryConfig get() = delegate.retry
-    val throttle: ThrottleConfig get() = delegate.throttle
     val indexing: IndexingConfig get() = delegate.indexing
     val developer: DeveloperConfig get() = delegate.developer
     val chat: ChatConfig get() = delegate.chat
+    val rag: RagConfig get() = delegate.rag
 
     val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
 

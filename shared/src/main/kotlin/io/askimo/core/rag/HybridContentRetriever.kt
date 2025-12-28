@@ -22,12 +22,17 @@ import io.askimo.core.logging.logger
  * - Catching exact keyword matches
  * - Leveraging semantic understanding
  * - Being robust to individual retriever failures
+ *
+ * @param vectorRetriever The vector-based semantic search retriever
+ * @param keywordRetriever The keyword-based (BM25/Lucene) retriever
+ * @param maxResults Maximum number of final results to return after fusion
+ * @param k RRF constant for rank fusion (configured via AppConfig.rag.rankFusionConstant)
  */
 class HybridContentRetriever(
     private val vectorRetriever: ContentRetriever,
     private val keywordRetriever: ContentRetriever,
-    private val maxResults: Int = 5,
-    private val k: Int = 60,
+    private val maxResults: Int,
+    private val k: Int,
 ) : ContentRetriever {
 
     private val log = logger<HybridContentRetriever>()

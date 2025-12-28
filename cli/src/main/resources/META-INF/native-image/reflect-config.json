@@ -2409,7 +2409,8 @@
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
-          "io.askimo.core.config.ChatConfig"
+          "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.RagConfig"
         ]
       },
       {
@@ -2422,6 +2423,7 @@
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.RagConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2583,6 +2585,15 @@
         "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.util.Set", "java.util.Set"]
       }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.RagConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["int", "double", "int", "int"] }
     ]
   },
   {
@@ -3289,15 +3300,6 @@
         ]
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
-      {
-        "name": "totalSizeByType",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.Boolean"
-        ]
-      },
       {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
@@ -4287,7 +4289,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$Eh9DsdEp",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$Zqjhg9Gw",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

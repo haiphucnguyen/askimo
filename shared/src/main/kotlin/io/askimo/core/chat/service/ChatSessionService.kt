@@ -22,6 +22,7 @@ import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.constructMessageWithAttachments
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
@@ -39,14 +40,11 @@ import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.core.rag.getEmbeddingStore
-import io.askimo.core.util.JsonUtils.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
@@ -196,13 +194,15 @@ class ChatSessionService(
 
             val embeddingStore = getEmbeddingStore(project.id, embeddingModel)
 
+            val ragConfig = AppConfig.rag
+
             val vectorRetriever = enrichContentRetrieverWithLucene(
                 project.id,
                 EmbeddingStoreContentRetriever.builder()
                     .embeddingStore(embeddingStore)
                     .embeddingModel(embeddingModel)
-                    .maxResults(10)
-                    .minScore(0.5)
+                    .maxResults(ragConfig.vectorSearchMaxResults)
+                    .minScore(ragConfig.vectorSearchMinScore)
                     .build(),
             )
 
@@ -221,19 +221,6 @@ class ChatSessionService(
             log.error("Failed to create content retriever for project ${project.id}", e)
             return null
         }
-    }
-
-    /**
-     * Parse indexed paths from JSON string.
-     * @param indexedPathsJson JSON array string of paths, e.g., "['/path1', '/path2']"
-     * @return List of Path objects
-     */
-    private fun parseIndexedPaths(indexedPathsJson: String): List<Path> = try {
-        val paths = json.decodeFromString<List<String>>(indexedPathsJson)
-        paths.map { Paths.get(it) }
-    } catch (e: Exception) {
-        log.error("Failed to parse indexed paths: $indexedPathsJson", e)
-        emptyList()
     }
 
     /**

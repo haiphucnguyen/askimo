@@ -48,7 +48,7 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectReIndexEvent
-import io.askimo.core.event.internal.ProjectsRefreshRequested
+import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
 import io.askimo.core.event.internal.SessionsRefreshRequested
 import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
@@ -73,12 +73,11 @@ fun projectView(
     appContext: AppContext,
     onStartChat: (projectId: String, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
     onResumeSession: (String) -> Unit,
-    onDeleteSession: (String) -> Unit,
+    onDeleteSession: (sessionId: String, projectId: String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onEditProject: (String) -> Unit,
     onDeleteProject: (String) -> Unit,
-    refreshTrigger: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
@@ -86,24 +85,33 @@ fun projectView(
     var projectSessions by remember { mutableStateOf<List<ChatSession>>(emptyList()) }
     var showProjectMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var localRefreshTrigger by remember { mutableStateOf(0) }
 
     val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
+    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
 
     // Load all projects for Move to Project functionality
     var allProjects by remember { mutableStateOf<List<Project>>(emptyList()) }
-    LaunchedEffect(refreshTrigger, localRefreshTrigger) {
+    LaunchedEffect(Unit) {
         allProjects = withContext(Dispatchers.IO) {
             projectRepository.getAllProjects()
         }
     }
 
-    // Load sessions for this project - refreshes when project.id, refreshTrigger, or localRefreshTrigger changes
-    LaunchedEffect(project.id, refreshTrigger, localRefreshTrigger) {
+    // Load sessions for this project initially
+    LaunchedEffect(project.id) {
         projectSessions = withContext(Dispatchers.IO) {
-            DatabaseManager.getInstance()
-                .getChatSessionRepository()
-                .getSessionsByProjectId(project.id)
+            sessionRepository.getSessionsByProjectId(project.id)
+        }
+    }
+
+    // Listen for project sessions refresh events
+    LaunchedEffect(project.id) {
+        EventBus.internalEvents.collect { event ->
+            if (event is ProjectSessionsRefreshRequested && event.projectId == project.id) {
+                projectSessions = withContext(Dispatchers.IO) {
+                    sessionRepository.getSessionsByProjectId(project.id)
+                }
+            }
         }
     }
 
@@ -229,8 +237,8 @@ fun projectView(
                         index = index,
                         onClick = { onResumeSession(session.id) },
                         onDeleteSession = { sessionId ->
-                            onDeleteSession(sessionId)
-                            localRefreshTrigger++
+                            // Pass both sessionId and projectId to parent
+                            onDeleteSession(sessionId, project.id)
                         },
                         onRenameSession = onRenameSession,
                         onExportSession = onExportSession,
@@ -359,27 +367,24 @@ private fun sessionCard(
                         onMoveToExistingProject = { selectedProject ->
                             // Move session to another project
                             sessionRepository.updateSessionProject(session.id, selectedProject.id)
-                            // Publish events to refresh both projects and sessions
+                            // Refresh current project's session list (remove the moved session)
                             EventBus.post(
-                                ProjectsRefreshRequested(
-                                    reason = "Session ${session.id} moved from ${currentProject.id} to ${selectedProject.id}",
-                                ),
-                            )
-                            EventBus.post(
-                                SessionsRefreshRequested(
-                                    reason = "Session ${session.id} moved to project ${selectedProject.id}",
+                                ProjectSessionsRefreshRequested(
+                                    projectId = currentProject.id,
+                                    reason = "Session ${session.id} moved to ${selectedProject.id}",
                                 ),
                             )
                         },
                         onRemoveFromProject = {
-                            // Remove session from current project (set projectId to null)
                             sessionRepository.updateSessionProject(session.id, null)
-                            // Publish events to refresh both projects and sessions
+                            // Refresh current project's session list (remove the session)
                             EventBus.post(
-                                ProjectsRefreshRequested(
-                                    reason = "Session ${session.id} removed from project ${currentProject.id}",
+                                ProjectSessionsRefreshRequested(
+                                    projectId = currentProject.id,
+                                    reason = "Session ${session.id} removed from project",
                                 ),
                             )
+                            // Refresh global sessions list (session now appears in "All Sessions")
                             EventBus.post(
                                 SessionsRefreshRequested(
                                     reason = "Session ${session.id} removed from project",
@@ -406,14 +411,10 @@ private fun sessionCard(
 
                 if (createdProject != null) {
                     sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
-                    // Publish events to refresh both projects and sessions
+                    // Refresh current project's session list (remove the moved session)
                     EventBus.post(
-                        ProjectsRefreshRequested(
-                            reason = "Session $sessionIdToMove moved from ${currentProject.id} to new project ${createdProject.id}",
-                        ),
-                    )
-                    EventBus.post(
-                        SessionsRefreshRequested(
+                        ProjectSessionsRefreshRequested(
+                            projectId = currentProject.id,
                             reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
                         ),
                     )
