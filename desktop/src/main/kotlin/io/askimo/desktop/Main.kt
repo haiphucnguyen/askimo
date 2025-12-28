@@ -70,6 +70,7 @@ import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.IndexingErrorEvent
 import io.askimo.core.event.internal.IndexingErrorType
+import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.logger
@@ -316,8 +317,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     val appContext = remember { koin.get<AppContext>() }
     val chatSessionService = remember { koin.get<ChatSessionService>() }
 
-    var projectViewRefreshTrigger by remember { mutableStateOf(0) }
-
     val sessionManager = remember { koin.get<SessionManager>() }
     val sessionsViewModel = remember {
         koin.get<SessionsViewModel> {
@@ -335,8 +334,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     ).id
                 },
                 {
-                    // Callback when rename completes - refresh ProjectView sessions
-                    projectViewRefreshTrigger++
+                    // Callback when rename completes - sessions will auto-refresh via events
                 },
             )
         }
@@ -690,9 +688,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                             onNavigateToSessions = {
                                                 currentView = View.SESSIONS
                                             },
-                                            onProjectSessionsChanged = {
-                                                projectViewRefreshTrigger++
-                                            },
                                             onEditProject = { projectId ->
                                                 editingProjectId = projectId
                                                 showEditProjectDialog = true
@@ -709,7 +704,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                                 }
                                             },
                                             selectedProjectId = selectedProjectId,
-                                            projectViewRefreshTrigger = projectViewRefreshTrigger,
                                         )
                                     } else {
                                         Box(
@@ -1133,14 +1127,14 @@ fun mainContent(
     onResumeSession: (String) -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
-    onProjectSessionsChanged: () -> Unit,
     onEditProject: (String) -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
-    projectViewRefreshTrigger: Int,
 ) {
+    val scope = rememberCoroutineScope()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1242,9 +1236,22 @@ fun mainContent(
                                 )
                             },
                             onResumeSession = onResumeSession,
-                            onDeleteSession = { sessionId ->
-                                sessionsViewModel.deleteSessionWithCleanup(sessionId)
-                                onProjectSessionsChanged()
+                            onDeleteSession = { sessionId, projectId ->
+                                scope.launch {
+                                    // Delete session from database
+                                    withContext(Dispatchers.IO) {
+                                        DatabaseManager.getInstance()
+                                            .getChatSessionRepository()
+                                            .deleteSession(sessionId)
+                                    }
+
+                                    EventBus.post(
+                                        ProjectSessionsRefreshRequested(
+                                            projectId = projectId,
+                                            reason = "Session $sessionId deleted from project",
+                                        ),
+                                    )
+                                }
                             },
                             onRenameSession = { sessionId, _ ->
                                 sessionsViewModel.showRenameDialog(sessionId)
@@ -1257,7 +1264,6 @@ fun mainContent(
                                 projectsViewModel.deleteProject(projectId)
                                 onNavigateToSessions()
                             },
-                            refreshTrigger = projectViewRefreshTrigger,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {

@@ -48,41 +48,32 @@
   <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" alt="DockerAI">
 </p>
 
+---
+
+**[Why Askimo?](#why-askimo)** · **[Supported Providers](#supported-providers)** · **[Quick Start](#-quick-start)** · **[Desktop vs CLI](#-choose-your-tool)** · **[Comparisons](#askimo-vs-other-ai-clients)**
+
+---
+
 # Why Askimo?
 
-Askimo is a provider-agnostic AI toolkit built for developers, writers, researchers, and anyone who wants full control over their AI experience.
+**Stop switching between multiple AI apps. Stop vendor lock-in. Stop sacrificing privacy.**
 
-* One desktop app for ALL AI providers
+Askimo is a provider-agnostic AI toolkit that gives developers, writers, and researchers complete control over their AI workflow - whether you're chatting with Claude 3.5 Sonnet, automating with GPT-4o, or running local models with Ollama.
 
-* CLI automation for logs, files, scripts, and pipelines
+### 🚀 Key Benefits
 
-* Local-first: your chat history stays on your machine
+* **🎯 One Interface, Every AI Provider** - Switch between OpenAI, Claude, Gemini, X AI, Ollama, and local models instantly
+* **⚡ CLI for Power Users** - Pipe logs, automate workflows, and integrate AI into your dev pipeline
+* **🔒 Privacy-First Architecture** - All chat history stored locally on your machine, not in the cloud
+* **📦 No Vendor Lock-In** - Works with any OpenAI-compatible API endpoint
+* **🎨 Custom Directives & Prompts** - Build reusable prompt libraries and automation recipes
+* **💾 Smart History & Search** - Never lose an important conversation - search, star, and export everything
 
-* Lightning-fast provider switching
+### 📦 Two Products, One Philosophy
 
-* Searchable chat history with favorites & exports
+**Askimo Desktop** - Beautiful native chat interface for interactive AI conversations  
+**Askimo CLI** - Terminal-first automation tool for scripts, pipelines, and batch processing
 
-* Custom directives and prompt libraries
-
-* RAG-enabled project workspaces (CLI)
-
-* Extensible architecture for future tools
-
-Askimo is both:
-
-* A native desktop chat client, and
-
-* A command-line automation tool
-
-## Demo
-
-### Askimo Desktop Chat
-
-[![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/desktop)
-
-### Askimo CLI Workflows
-
-[![Askimo CLI Demo](public/cli-demo.gif)](https://askimo.chat/cli)
 
 
 ## Supported Providers
@@ -100,65 +91,157 @@ Askimo is both:
 
 * Ollama
 
-* LM Studio (coming)
+* LM Studio
 
-* LocalAI (coming)
+* LocalAI
 
-* llama.cpp Server (coming)
+* Docker AI
 
 Askimo works with any OpenAI-compatible API endpoint.
 
+## 🚀 Quick Start
+
+### Desktop
+Download the installer for your operating system:
+
+- **macOS**: [Download .dmg](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-macos.dmg)
+- **Windows**: [Download .msi](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-windows.msi)
+- **Linux**: [Download .deb](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-linux.deb)
+
+Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) for all available versions.
+
+### CLI
+
+**Recommended (macOS/Linux):**
+```bash
+curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.sh | bash
+```
+
+**Recommended (Windows - PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex
+```
+
+For alternative installation methods (Homebrew, Scoop, Manual Download), visit the [installation guide](https://askimo.chat/docs/cli/installation/).
+
+**First-time setup:** Visit the [getting started guide](https://askimo.chat/docs/cli/getting-started/) to configure your AI providers and models.
+
+**Quick Start:**
+```bash
+# Verify installation
+askimo --version
+
+# Start chatting
+askimo -p "Hello, AI!"
+```
+
+---
+
 ## Askimo vs Other AI Clients
+
+**Why choose Askimo?** Most AI tools lock you into one provider or lack automation capabilities. Askimo gives you both a beautiful desktop experience AND powerful CLI automation - with complete freedom to switch providers.
 
 | Feature | **Askimo** | **LM Studio** | **Ollama Desktop GUIs** | **ChatGPT Desktop** |
 |--------|-------------|----------------|--------------------------|----------------------|
-| Works with multiple providers | ✅ | ❌ | ❌ | ❌ |
+| Works with multiple providers | ✅ | ❌ (Local only) | ❌ (Local only) | ❌ (OpenAI only) |
 | Works with local models | ✅ | ✅ | ✅ | ❌ |
-| Works with cloud models (OpenAI, Claude, Gemini, etc.) | ✅ | ❌ | ❌ | ❌ |
-| Desktop application | ✅ | ✅ | Varies | ❌ |
-| Command-line interface (CLI) | ✅ | ❌ | ❌ | ❌ |
-| Automation / scripting support | ✅ | ❌ | ❌ | ❌ |
-| RAG (Retrieval-Augmented Generation) | CLI only (Desktop coming) | ❌ | ❌ | ❌ |
-| Searchable chat history | ✅ | ❌ | ❌ | ❌ |
-| Star/favorite conversations | ✅ | ❌ | ❌ | ❌ |
-| Custom directives / prompt profiles | ✅ | ❌ | ❌ | ❌ |
-| Export conversations | ✅ | ❌ | Varies | ❌ |
-| Privacy (local storage) | ✅ | Partial | Partial | ❌ |
-| Multi-workspace organization | Coming | ❌ | ❌ | ❌ |
+| Works with cloud models (OpenAI, Claude, Gemini, etc.) | ✅ | ❌ | ❌ | ✅ |
+| Desktop application | ✅ | ✅ | ✅ | ✅ |
+| Command-line interface (CLI) | ✅ | ✅ (API server) | ✅ (CLI only) | ❌ |
+| Automation / scripting support | ✅ | ✅ (via API) | ✅ (via CLI) | ❌ |
+| RAG (Retrieval-Augmented Generation) | ✅ Desktop (Single folder) | ❌ | ❌ | ✅ (File upload) |
+| Searchable chat history | ✅ | ✅ | Varies | ✅ |
+| Star/favorite conversations | ✅ | ❌ | ❌ | ✅ (Pinned) |
+| Custom directives / prompt profiles | ✅ | ✅ (System prompt) | ❌ | ✅ (Custom instructions) |
+| Export conversations | ✅ | ❌ | ❌ | ✅ |
+| Privacy (local storage) | ✅ | ✅ | ✅ | ❌ (Cloud sync) |
+| Multi-workspace organization | ✅ (Projects) | ❌ | ❌ | ✅ (Projects + Memory) |
 | Works offline (local models) | ✅ | ✅ | ✅ | ❌ |
 
 
-## Askimo Products
+## 🛠️ Choose Your Tool
 
 ### Askimo Desktop
 
-A native application that brings all your AI conversations into one interface.  
-Designed for writers, developers, researchers, and anyone who needs fast and consistent AI assistance.
+**Who it's for:** Developers, writers, researchers, and anyone who needs fast, reliable AI assistance without switching apps.
 
-#### Key Desktop Features
-- Switch between OpenAI, Claude, Gemini, X AI, and Ollama instantly
-- Persistent local chat history
-- Markdown rendering, syntax highlighting, and image support
-- Star and save important conversations
-- Custom directives for shaping AI responses
-- Smart search across your chat history
-- Privacy by default, no cloud storage
-- Prompt library and keyboard shortcuts
+**Think of it as:** Your personal AI workbench - one app to rule all AI providers.
 
-Get Askimo Desktop: https://askimo.chat/desktop
+[![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/desktop)
+
+A native desktop application that brings all your AI conversations into one beautiful, searchable interface with complete privacy and control.
+
+#### 🎯 Key Features
+- **Multi-Provider Support** - Switch between OpenAI, Claude, Gemini, X AI, and Ollama without leaving the app
+- **100% Local Storage** - All chat history stored on your machine, never in the cloud
+- **RAG (Retrieval-Augmented Generation)** - Connect a knowledge folder to give AI context from your documents, code, and notes
+- **Smart Organization** - Star important conversations, search across all chats, create collections
+- **Rich Markdown Support** - Code syntax highlighting, tables, images, and formatted text
+- **Custom Directives** - Save reusable prompts and system messages for different tasks
+- **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search
+- **Export Anywhere** - Download conversations in JSON, Markdown, or plain text
+
+**Perfect for:**
+- 💬 Daily AI conversations without context loss
+- 📝 Writing and content creation with consistent AI assistance
+- 🔍 Research that requires comparing responses from different models
+- 🎨 Creative work with saved prompt templates
+- 📚 Working with AI on your private knowledge base and documentation
+
+[**Download Askimo Desktop →**](https://askimo.chat/desktop)
+
+**Screenshots:**
+
+<p align="center">
+  <img src="public/desktop_ai_provider_switcher.png" alt="Provider Switching" width="45%">
+  <img src="public/desktop_chat_search.png" alt="Search & Favorites" width="45%">
+  <img src="public/desktop_rag.png" alt="RAG" width="45%">
+</p>
+
+
+---
 
 ### Askimo CLI
 
-A flexible AI automation tool built for terminal workflows, scripting, and development pipelines.
+**Who it's for:** Developers, DevOps engineers, data analysts, and automation enthusiasts.
 
-#### Key CLI Features
-- Provider-agnostic commands
-- Pipe logs, files, or command outputs directly into AI
-- Reusable Recipes for automation
-- Non-interactive mode for CI and automation
-- Extensible provider and command architecture
+**Think of it as:** The `curl` for AI - pipe anything to any model, automate everything.
 
-Get Askimo CLI: https://askimo.chat/cli
+[![Askimo CLI Demo](public/cli-demo.gif)](https://askimo.chat/cli)
+
+A terminal-native AI tool designed for scripting, automation, and integrating AI into your development workflows.
+
+#### ⚡ Key Features
+- **Pipe-Friendly** - Works seamlessly with Unix pipes and command chaining
+- **Recipe System** - Create reusable YAML workflows for common AI tasks
+- **Non-Interactive Mode** - Perfect for CI/CD pipelines and batch processing
+- **Provider Agnostic** - Same commands work across OpenAI, Claude, Ollama, and more
+- **Structured Output** - JSON output mode for parsing AI responses in scripts
+- **Session Management** - Continue conversations across multiple commands
+- **RAG Support** - Coming soon: Include files, directories, or URLs as context
+
+**Perfect for:**
+- 🔧 Log analysis and debugging
+- 🤖 CI/CD automation and code review
+- 📊 Data processing and transformation
+- 🧪 Testing and quality assurance
+- 📋 Documentation generation
+- 🔄 Batch file processing
+
+**Example Usage:**
+```bash
+# Pipe directly from commands
+cat app.log | askimo -p "Find critical errors and suggest fixes"
+git diff | askimo -p "Review this code for bugs and improvements"
+
+# Use recipes for writing commit messages
+git add -A
+askimo -r gitcommit
+
+```
+
+[**Get Started with CLI →**](https://askimo.chat/cli)
+
 
 ## 🌐 Language Support
 
@@ -180,7 +263,7 @@ Askimo Desktop is fully localized into:
 
 * German (de)
 
-* Portuguese – Brazil (pt_BR)
+* Portuguese - Brazil (pt_BR)
 
 * Vietnamese (vi)
 

@@ -345,4 +345,12 @@ fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): Embedd
     return embeddingStore
 }
 
-fun enrichContentRetrieverWithLucene(projectId: String, retriever: ContentRetriever): ContentRetriever = HybridContentRetriever(retriever, LuceneKeywordRetriever(projectId))
+fun enrichContentRetrieverWithLucene(projectId: String, retriever: ContentRetriever): ContentRetriever {
+    val ragConfig = AppConfig.rag
+    return HybridContentRetriever(
+        vectorRetriever = retriever,
+        keywordRetriever = LuceneKeywordRetriever(projectId),
+        maxResults = ragConfig.hybridMaxResults,
+        k = ragConfig.rankFusionConstant,
+    )
+}
