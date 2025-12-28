@@ -29,14 +29,6 @@ interface ChatClient {
     ): TokenStream
 
     /**
-     * Sends a simple chat message and returns the complete response.
-     *
-     * @param prompt The user message to send
-     * @return The complete response from the AI
-     */
-    fun sendMessage(@UserMessage prompt: String): String
-
-    /**
      * Clear all memory from the current session.
      */
     fun clearMemory()

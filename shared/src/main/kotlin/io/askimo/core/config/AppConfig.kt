@@ -314,6 +314,12 @@ object AppConfig {
           summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:0.75}
           enable_async_summarization: ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
 
+        rag:
+          vector_search_max_results: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
+          vector_search_min_score: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE:0.3}
+          hybrid_max_results: ${'$'}{ASKIMO_RAG_HYBRID_MAX_RESULTS:15}
+          rank_fusion_constant: ${'$'}{ASKIMO_RAG_RANK_FUSION_CONSTANT:60}
+
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
           active: ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
@@ -518,7 +524,9 @@ object AppConfig {
                 "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
+                "embeddingModels" -> current.copy(embeddingModels = updateEmbeddingModelsField(current.embeddingModels, field, value))
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
+                "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -560,14 +568,32 @@ object AppConfig {
     private fun updateEmbeddingField(config: EmbeddingConfig, field: String, value: Any): EmbeddingConfig = when (field) {
         "maxCharsPerChunk" -> config.copy(maxCharsPerChunk = value as Int)
         "chunkOverlap" -> config.copy(chunkOverlap = value as Int)
-        "preferredDim" -> config.copy(preferredDim = value as? Int)
+        "preferredDim" -> config.copy(preferredDim = if (value is String && value.isBlank()) null else value as? Int)
+        else -> config
+    }
+
+    private fun updateEmbeddingModelsField(config: EmbeddingModelsConfig, field: String, value: Any): EmbeddingModelsConfig = when (field) {
+        "openai" -> config.copy(openai = value as String)
+        "docker" -> config.copy(docker = value as String)
+        "ollama" -> config.copy(ollama = value as String)
+        "localai" -> config.copy(localai = value as String)
+        "lmstudio" -> config.copy(lmstudio = value as String)
+        "gemini" -> config.copy(gemini = value as String)
         else -> config
     }
 
     private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
         "maxTokens" -> config.copy(maxTokens = value as Int)
-        "summarizationThreshold" -> config.copy(summarizationThreshold = value as Double)
+        "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
+        else -> config
+    }
+
+    private fun updateRagField(config: RagConfig, field: String, value: Any): RagConfig = when (field) {
+        "vectorSearchMaxResults" -> config.copy(vectorSearchMaxResults = value as Int)
+        "vectorSearchMinScore" -> config.copy(vectorSearchMinScore = (value as Number).toDouble())
+        "hybridMaxResults" -> config.copy(hybridMaxResults = value as Int)
+        "rankFusionConstant" -> config.copy(rankFusionConstant = value as Int)
         else -> config
     }
 

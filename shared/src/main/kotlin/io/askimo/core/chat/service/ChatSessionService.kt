@@ -15,7 +15,6 @@ import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDomain
-import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
@@ -81,14 +80,12 @@ data class ResumeSessionPaginatedResult(
  *
  * @param sessionRepository The chat session repository
  * @param messageRepository The chat message repository
- * @param directiveRepository The chat directive repository
  * @param sessionMemoryRepository The session memory repository
  * @param appContext The application context
  */
 class ChatSessionService(
     private val sessionRepository: ChatSessionRepository = DatabaseManager.getInstance().getChatSessionRepository(),
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
-    private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository(),
     private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
     private val projectRepository: ProjectRepository = DatabaseManager.getInstance().getProjectRepository(),
     private val appContext: AppContext,
@@ -107,7 +104,7 @@ class ChatSessionService(
         .removalListener<String, ChatClient> { sessionId, client, cause ->
             if (client != null && sessionId != null) {
                 log.debug("Evicting ChatClient for session {} (cause: {})", sessionId, cause)
-                client.clearMemory()
+                sessionMemoryRepository.deleteBySessionId(sessionId)
             }
         }
         .build()

@@ -315,42 +315,6 @@ class ChatMessageRepository internal constructor(
     }
 
     /**
-     * Get active (non-outdated) messages after a specific message with filtering at database level.
-     * This guarantees we get exactly the requested number of active messages.
-     *
-     * @param sessionId The session ID
-     * @param afterMessageId The message ID to start from (exclusive)
-     * @param limit Number of active messages to retrieve
-     * @return List of active messages after the specified message
-     */
-    fun getActiveMessagesAfter(sessionId: String, afterMessageId: String, limit: Int): List<ChatMessage> = transaction(database) {
-        val afterTimestamp = ChatMessagesTable
-            .select(ChatMessagesTable.createdAt)
-            .where { ChatMessagesTable.id eq afterMessageId }
-            .singleOrNull()
-            ?.get(ChatMessagesTable.createdAt)
-            ?: return@transaction emptyList()
-
-        val messages = ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isOutdated eq 0) and
-                    ChatMessagesTable.createdAt.greater(afterTimestamp)
-            }
-            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .limit(limit)
-            .map { it.toChatMessage() }
-
-        val messageIds = messages.map { it.id }
-        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
-
-        messages.map { message ->
-            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
-        }
-    }
-
-    /**
      * Mark a single message as outdated.
      * This is used when editing a message to mark the original message as outdated.
      *

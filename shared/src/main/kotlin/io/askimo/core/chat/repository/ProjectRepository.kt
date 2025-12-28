@@ -173,17 +173,4 @@ class ProjectRepository internal constructor(
         }
         return deleted
     }
-
-    /**
-     * Update the updatedAt timestamp of a project.
-     * This is typically called when a session in the project is updated.
-     *
-     * @param projectId The project id
-     * @return true if updated successfully
-     */
-    fun touchProject(projectId: String): Boolean = transaction(database) {
-        ProjectsTable.update({ ProjectsTable.id eq projectId }) {
-            it[updatedAt] = LocalDateTime.now()
-        } > 0
-    }
 }

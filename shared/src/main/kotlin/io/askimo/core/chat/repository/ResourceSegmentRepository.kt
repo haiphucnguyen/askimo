@@ -9,13 +9,12 @@ import io.askimo.core.db.DatabaseManager
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.nio.file.Path
 import java.time.LocalDateTime
-import kotlin.text.get
 
 /**
  * Repository for managing resource-to-segment mappings in the embedding store.
@@ -31,7 +30,7 @@ import kotlin.text.get
 class ResourceSegmentRepository(
     private val databaseManager: DatabaseManager,
 ) {
-    private val database: Database by lazy { Database.Companion.connect(databaseManager.dataSource) }
+    private val database: Database by lazy { Database.connect(databaseManager.dataSource) }
 
     /**
      * Save multiple segment mappings in a batch
@@ -42,15 +41,18 @@ class ResourceSegmentRepository(
         resourceId: String,
         segmentIds: List<Pair<String, Int>>,
     ) {
+        if (segmentIds.isEmpty()) return
+
         transaction(database) {
-            for ((segmentId, chunkIndex) in segmentIds) {
-                ResourceSegmentsTable.insert {
-                    it[ResourceSegmentsTable.projectId] = projectId
-                    it[ResourceSegmentsTable.resourceId] = resourceId
-                    it[ResourceSegmentsTable.segmentId] = segmentId
-                    it[ResourceSegmentsTable.chunkIndex] = chunkIndex
-                    it[ResourceSegmentsTable.createdAt] = LocalDateTime.now()
-                }
+            ResourceSegmentsTable.batchInsert(
+                data = segmentIds,
+                ignore = true,
+            ) { (segmentId, chunkIndex) ->
+                this[ResourceSegmentsTable.projectId] = projectId
+                this[ResourceSegmentsTable.resourceId] = resourceId
+                this[ResourceSegmentsTable.segmentId] = segmentId
+                this[ResourceSegmentsTable.chunkIndex] = chunkIndex
+                this[ResourceSegmentsTable.createdAt] = LocalDateTime.now()
             }
         }
     }
