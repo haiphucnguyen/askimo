@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LocalAiSettings(
-    override var baseUrl: String = "http://localhost:8080",
+    override var baseUrl: String = "http://localhost:8080/v1",
     override val defaultModel: String = "",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings,

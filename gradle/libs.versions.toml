@@ -38,11 +38,9 @@ graalvm-nativeimage-svm = { group = "org.graalvm.nativeimage", name = "svm", ver
 # LangChain4j
 langchain4j = { group = "dev.langchain4j", name = "langchain4j", version.ref = "langchain4j" }
 langchain4j-open-ai = { group = "dev.langchain4j", name = "langchain4j-open-ai", version.ref = "langchain4j" }
-langchain4j-ollama = { group = "dev.langchain4j", name = "langchain4j-ollama", version.ref = "langchain4j" }
 langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
 langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
-langchain4j-localai = { group = "dev.langchain4j", name = "langchain4j-local-ai", version.ref = "langchain4j-extra" }
 langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
 
 # Markdown
@@ -111,11 +109,9 @@ kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.re
 langchain4j = [
     "langchain4j",
     "langchain4j-open-ai",
-    "langchain4j-ollama",
     "langchain4j-google-ai-gemini",
     "langchain4j-anthropic",
     "langchain4j-http-client",
-    "langchain4j-localai",
     "langchain4j-jvector"
 ]
 

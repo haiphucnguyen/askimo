@@ -5,13 +5,15 @@
 package io.askimo.core.providers.localai
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.model.localai.LocalAiStreamingChatModel
+import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.LOCALAI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -28,14 +30,12 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
         return fetchModels(
             apiKey = "not-needed",
-            url = "$baseUrl/v1/models",
+            url = "$baseUrl/models",
             providerName = LOCALAI,
         )
     }
 
-    override fun defaultSettings(): LocalAiSettings = LocalAiSettings(
-        baseUrl = "http://localhost:8080",
-    )
+    override fun defaultSettings(): LocalAiSettings = LocalAiSettings()
 
     override fun create(
         sessionId: String?,
@@ -46,7 +46,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         chatMemory: ChatMemory?,
     ): ChatClient {
         val chatModel =
-            LocalAiStreamingChatModel
+            OpenAiStreamingChatModel
                 .builder()
                 .baseUrl(settings.baseUrl)
                 .modelName(model)
@@ -90,12 +90,34 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        ModelProvider.LOCALAI,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()
+    }
+
+    override fun createUtilityClient(
+        settings: LocalAiSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .modelName(fallbackModel)
+            .timeout(Duration.ofSeconds(10))
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 }

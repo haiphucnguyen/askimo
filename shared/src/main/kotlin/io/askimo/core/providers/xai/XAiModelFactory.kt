@@ -5,6 +5,7 @@
 package io.askimo.core.providers.xai
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -21,6 +22,7 @@ import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import java.time.Duration
 
 class XAiModelFactory : ChatModelFactory<XAiSettings> {
     private val log = logger<XAiModelFactory>()
@@ -94,13 +96,36 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        XAI,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()
+    }
+
+    override fun createUtilityClient(
+        settings: XAiSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(fallbackModel)
+            .timeout(Duration.ofSeconds(10))
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 
     private fun supportsSampling(model: String): Boolean = true

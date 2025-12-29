@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
@@ -15,6 +16,8 @@ import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.LocalModelValidator
+import io.askimo.core.providers.ModelAvailabilityResult
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderRegistry
@@ -691,59 +694,59 @@ class SettingsViewModel(
                 val result = withContext(Dispatchers.IO) {
                     when (provider) {
                         ModelProvider.OLLAMA -> {
-                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.ollama
-                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                            val modelName = AppConfig.embeddingModels.ollama
+                            LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
                                 modelName,
                             )
                         }
                         ModelProvider.DOCKER -> {
-                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.docker
-                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                            val modelName = AppConfig.embeddingModels.docker
+                            LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
                                 modelName,
                             )
                         }
                         ModelProvider.LOCALAI -> {
-                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.localai
-                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                            val modelName = AppConfig.embeddingModels.localai
+                            LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
                                 modelName,
                             )
                         }
                         ModelProvider.LMSTUDIO -> {
-                            val modelName = io.askimo.core.config.AppConfig.embeddingModels.lmstudio
-                            io.askimo.core.providers.LocalModelValidator.checkModelExists(
+                            val modelName = AppConfig.embeddingModels.lmstudio
+                            LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
                                 modelName,
                             )
                         }
                         ModelProvider.ANTHROPIC -> {
-                            io.askimo.core.providers.ModelAvailabilityResult.NotAvailable(
+                            ModelAvailabilityResult.NotAvailable(
                                 reason = LocalizationManager.getString("settings.embedding.anthropic_no_embedding"),
                                 canAutoPull = false,
                             )
                         }
                         ModelProvider.XAI -> {
-                            io.askimo.core.providers.ModelAvailabilityResult.NotAvailable(
+                            ModelAvailabilityResult.NotAvailable(
                                 reason = LocalizationManager.getString("settings.embedding.xai_no_embedding"),
                                 canAutoPull = false,
                             )
                         }
-                        else -> io.askimo.core.providers.ModelAvailabilityResult.Available
+                        else -> ModelAvailabilityResult.Available
                     }
                 }
 
                 when (result) {
-                    is io.askimo.core.providers.ModelAvailabilityResult.Available -> {
+                    is ModelAvailabilityResult.Available -> {
                         // Model is available, no warning needed
                         embeddingModelWarning = null
                     }
-                    is io.askimo.core.providers.ModelAvailabilityResult.NotAvailable -> {
+                    is ModelAvailabilityResult.NotAvailable -> {
                         embeddingModelWarning = LocalizationManager.getString(
                             "settings.embedding.not_available_rag_only",
                             result.reason,
@@ -751,7 +754,7 @@ class SettingsViewModel(
                         embeddingModelProvider = provider.name
                         canPullEmbeddingModel = result.canAutoPull
                     }
-                    is io.askimo.core.providers.ModelAvailabilityResult.ProviderUnreachable -> {
+                    is ModelAvailabilityResult.ProviderUnreachable -> {
                         embeddingModelWarning = LocalizationManager.getString(
                             "settings.embedding.provider_unreachable",
                             result.error,
@@ -781,9 +784,9 @@ class SettingsViewModel(
         isCheckingEmbeddingModel = true
         scope.launch {
             try {
-                val modelName = io.askimo.core.config.AppConfig.embeddingModels.ollama
+                val modelName = AppConfig.embeddingModels.ollama
                 val success = withContext(Dispatchers.IO) {
-                    io.askimo.core.providers.LocalModelValidator.pullOllamaModel(baseUrl, modelName)
+                    LocalModelValidator.pullOllamaModel(baseUrl, modelName)
                 }
 
                 if (success) {

@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class OllamaSettings(
-    override var baseUrl: String = "http://localhost:11434",
+    override var baseUrl: String = "http://localhost:11434/v1",
     override val defaultModel: String = "",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings,

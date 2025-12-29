@@ -5,19 +5,20 @@
 package io.askimo.core.providers.ollama
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils
+import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
-import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.time.Duration
@@ -25,33 +26,17 @@ import java.time.Duration
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     private val log = logger<OllamaModelFactory>()
 
-    override fun availableModels(settings: OllamaSettings): List<String> = try {
-        val process =
-            ProcessBuilderExt("ollama", "list")
-                .redirectErrorStream(true)
-                .start()
+    override fun availableModels(settings: OllamaSettings): List<String> {
+        val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
 
-        val output = process.inputStream.bufferedReader().readText()
-        process.waitFor()
-
-        // Parse lines like:
-        // llama2 7B   4.3 GB
-        // mistral 7B 4.1 GB
-        output
-            .lines()
-            .drop(1) // skip header
-            .mapNotNull { line ->
-                line.trim().split("\\s+".toRegex()).firstOrNull()
-            }.filter { it.isNotBlank() }
-            .distinct()
-    } catch (e: Exception) {
-        log.displayError("⚠️ Failed to fetch models from Ollama: ${e.message}", e)
-        emptyList()
+        return fetchModels(
+            apiKey = "not-needed",
+            url = "$baseUrl/models",
+            providerName = ModelProvider.OLLAMA,
+        )
     }
 
-    override fun defaultSettings(): OllamaSettings = OllamaSettings(
-        baseUrl = "http://localhost:11434", // default Ollama endpoint
-    )
+    override fun defaultSettings(): OllamaSettings = OllamaSettings()
 
     override fun getNoModelsHelpText(): String = """
         You may not have any models installed yet.
@@ -73,7 +58,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
-                .baseUrl("${settings.baseUrl}/v1")
+                .baseUrl(settings.baseUrl)
                 .modelName(model)
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
@@ -119,11 +104,36 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        ModelProvider.OLLAMA,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
         return builder.build()
+    }
+
+    override fun createUtilityClient(
+        settings: OllamaSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey("ollama")
+            .modelName(fallbackModel)
+            .timeout(Duration.ofSeconds(10))
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 }

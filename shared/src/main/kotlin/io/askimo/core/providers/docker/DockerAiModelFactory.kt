@@ -5,6 +5,7 @@
 package io.askimo.core.providers.docker
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -14,6 +15,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
@@ -53,9 +55,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         emptyList()
     }
 
-    override fun defaultSettings(): DockerAiSettings = DockerAiSettings(
-        baseUrl = "http://localhost:12434", // default Docker AI endpoint
-    )
+    override fun defaultSettings(): DockerAiSettings = DockerAiSettings()
 
     override fun getNoModelsHelpText(): String = """
         You may not have any models installed yet.
@@ -75,7 +75,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
-                .baseUrl("${settings.baseUrl}/v1")
+                .baseUrl(settings.baseUrl)
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
@@ -119,11 +119,34 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        ModelProvider.DOCKER,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
         return builder.build()
+    }
+
+    override fun createUtilityClient(
+        settings: DockerAiSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey("docker-ai")
+            .modelName(fallbackModel)
+            .timeout(Duration.ofSeconds(10))
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 }

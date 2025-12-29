@@ -48,7 +48,7 @@ object RagUtils {
     fun getDimensionForModel(embeddingModel: EmbeddingModel): Int = try {
         val testSegment = TextSegment.from("test")
         val embedding = embeddingModel.embed(testSegment).content()
-        embedding.dimension()
+        embedding.vector().size
     } catch (e: Exception) {
         log.warn("Failed to detect embedding dimension, using default 384", e)
         384

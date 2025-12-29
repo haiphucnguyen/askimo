@@ -84,6 +84,32 @@ class AppContext(
     }
 
     /**
+     * Creates an intent classification client for RAG decisions.
+     * Returns a cheap, fast model suitable for YES/NO classification.
+     *
+     * For cloud providers: uses a cheap model (e.g., GPT-3.5-turbo for OpenAI)
+     * For local providers: uses the current model (no extra cost)
+     *
+     * This client is stateless and lightweight - no tools, transformers, or custom messages.
+     *
+     * @return ChatClient configured with a classification model
+     */
+    fun createClassifierClient(): ChatClient {
+        val provider = params.currentProvider
+        val factory = getModelFactory(provider)
+            ?: error("No model factory registered for $provider")
+
+        val settings = getOrCreateProviderSettings(provider)
+        val currentModel = params.model
+
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).createUtilityClient(
+            settings = settings,
+            currentModel,
+        )
+    }
+
+    /**
      * Creates a fresh ChatClient instance without using cache.
      * This should be used when you need a clean client as a base delegate for session-specific clients.
      *

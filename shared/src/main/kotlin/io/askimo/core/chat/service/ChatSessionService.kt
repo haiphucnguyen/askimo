@@ -167,7 +167,7 @@ class ChatSessionService(
         // Create content retriever if project has indexed paths
         val retriever = if (project != null) {
             log.debug("Session $sessionId belongs to project: ${project.id}")
-            createRetrieverForProject(project)
+            createRetrieverForProject(appContext.createClassifierClient(), project)
         } else {
             null
         }
@@ -185,7 +185,7 @@ class ChatSessionService(
      * @param project The project to create a retriever for
      * @return Content retriever if project has indexed paths, null otherwise
      */
-    private fun createRetrieverForProject(project: Project): ContentRetriever? {
+    private fun createRetrieverForProject(classifierChatClient: ChatClient, project: Project): ContentRetriever? {
         try {
             val embeddingModel = getEmbeddingModel(appContext)
 
@@ -194,6 +194,7 @@ class ChatSessionService(
             val ragConfig = AppConfig.rag
 
             val vectorRetriever = enrichContentRetrieverWithLucene(
+                classifierChatClient,
                 project.id,
                 EmbeddingStoreContentRetriever.builder()
                     .embeddingStore(embeddingStore)

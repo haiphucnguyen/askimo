@@ -24,6 +24,13 @@ sealed class ModelAvailabilityResult {
 object LocalModelValidator {
     private val log = logger("LocalModelValidator")
 
+    private val LOCAL_PROVIDERS = setOf(
+        ModelProvider.OLLAMA,
+        ModelProvider.DOCKER,
+        ModelProvider.LOCALAI,
+        ModelProvider.LMSTUDIO,
+    )
+
     /**
      * Check if a model exists on the provider.
      * This is a generic method that works for both chat models and embedding models.
@@ -41,71 +48,19 @@ object LocalModelValidator {
         modelName: String,
         connectTimeoutMs: Int = 5_000,
         readTimeoutMs: Int = 8_000,
-    ): ModelAvailabilityResult = when (provider) {
-        ModelProvider.OLLAMA -> checkOllamaModel(baseUrl, modelName, connectTimeoutMs, readTimeoutMs)
-        ModelProvider.DOCKER -> checkOpenAiCompatibleModel(
-            providerName = "Docker AI",
+    ): ModelAvailabilityResult = if (provider in LOCAL_PROVIDERS) {
+        checkOpenAiCompatibleModel(
+            providerName = provider,
             baseUrl = baseUrl,
             modelName = modelName,
-            apiPath = "/v1/models",
+            apiPath = "/models",
             connectTimeoutMs = connectTimeoutMs,
             readTimeoutMs = readTimeoutMs,
             canAutoPull = false,
         )
-        ModelProvider.LOCALAI -> checkOpenAiCompatibleModel(
-            providerName = "LocalAI",
-            baseUrl = baseUrl,
-            modelName = modelName,
-            apiPath = "/v1/models",
-            connectTimeoutMs = connectTimeoutMs,
-            readTimeoutMs = readTimeoutMs,
-            canAutoPull = false,
-        )
-        ModelProvider.LMSTUDIO -> checkOpenAiCompatibleModel(
-            providerName = "LMStudio",
-            baseUrl = baseUrl,
-            modelName = modelName,
-            apiPath = "/v1/models",
-            connectTimeoutMs = connectTimeoutMs,
-            readTimeoutMs = readTimeoutMs,
-            canAutoPull = false,
-        )
-        else -> ModelAvailabilityResult.Available // Cloud providers don't need local model checks
-    }
-
-    /**
-     * Check if a model exists on Ollama using its native API
-     */
-    private fun checkOllamaModel(
-        baseUrl: String,
-        modelName: String,
-        connectTimeoutMs: Int,
-        readTimeoutMs: Int,
-    ): ModelAvailabilityResult {
-        try {
-            val tags = getOllamaTags(baseUrl, connectTimeoutMs, readTimeoutMs)
-                ?: return ModelAvailabilityResult.ProviderUnreachable(
-                    baseUrl = baseUrl,
-                    error = "Cannot connect to Ollama at $baseUrl. Please ensure Ollama is running: ollama serve",
-                )
-
-            val hasModel = tags.contains("\"name\":\"$modelName\"") || tags.contains("\"name\":\"$modelName:")
-
-            return if (hasModel) {
-                ModelAvailabilityResult.Available
-            } else {
-                ModelAvailabilityResult.NotAvailable(
-                    reason = "Model '$modelName' not found in Ollama",
-                    canAutoPull = true,
-                )
-            }
-        } catch (e: Exception) {
-            log.error("Error checking Ollama model: ${e.message}", e)
-            return ModelAvailabilityResult.ProviderUnreachable(
-                baseUrl = baseUrl,
-                error = e.message ?: "Unknown error",
-            )
-        }
+    } else {
+        // Cloud providers – no local check needed
+        ModelAvailabilityResult.Available
     }
 
     /**
@@ -113,7 +68,7 @@ object LocalModelValidator {
      * (Docker AI, LocalAI, LMStudio, etc.)
      */
     private fun checkOpenAiCompatibleModel(
-        providerName: String,
+        providerName: ModelProvider,
         baseUrl: String,
         modelName: String,
         apiPath: String,

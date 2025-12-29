@@ -3,9 +3,6 @@
     "name": "[B"
   },
   {
-    "name": "[F"
-  },
-  {
     "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
   },
   {
@@ -704,8 +701,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1279,27 +1275,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "dev.langchain4j.model.ollama.EmbeddingRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "getInput", "parameterTypes": [] },
-      { "name": "getModel", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.ollama.EmbeddingResponse",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setEmbeddings", "parameterTypes": ["java.util.List"] },
-      { "name": "setModel", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1448,6 +1423,44 @@
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.embedding.Embedding$Builder",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "build", "parameterTypes": [] },
+      { "name": "embedding", "parameterTypes": ["java.util.List"] },
+      { "name": "index", "parameterTypes": ["java.lang.Integer"] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.embedding.EmbeddingRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.embedding.EmbeddingResponse$Builder",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "build", "parameterTypes": [] },
+      { "name": "data", "parameterTypes": ["java.util.List"] },
+      { "name": "model", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "usage",
+        "parameterTypes": ["dev.langchain4j.model.openai.internal.shared.Usage"]
+      }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.embedding.OpenAiEmbeddingDeserializer",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.shared.CompletionTokensDetails$Builder",
@@ -2593,7 +2606,18 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["int", "double", "int", "int"] }
+      { "name": "<init>", "parameterTypes": ["int", "double", "int", "int"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "double",
+          "int",
+          "int",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
     ]
   },
   {
@@ -2681,6 +2705,79 @@
   {
     "name": "io.askimo.core.providers.ChatClient",
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.providers.ChatRequestTransformersTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "io.askimo.core.providers.ChatRequestTransformersTest$EdgeCaseTests",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.providers.ChatRequestTransformersTest"
+        ]
+      },
+      { "name": "shouldHandleLongMessages", "parameterTypes": [] },
+      { "name": "shouldHandleNullSessionId", "parameterTypes": [] },
+      { "name": "shouldHandleOnlyUserMessages", "parameterTypes": [] },
+      { "name": "shouldHandleShortMessages", "parameterTypes": [] },
+      { "name": "shouldPreserveMessageOrder", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.providers.ChatRequestTransformersTest$ModelProviderTests",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.providers.ChatRequestTransformersTest"
+        ]
+      },
+      { "name": "shouldWorkWithAnthropic", "parameterTypes": [] },
+      { "name": "shouldWorkWithGemini", "parameterTypes": [] },
+      { "name": "shouldWorkWithOllama", "parameterTypes": [] },
+      { "name": "shouldWorkWithOpenAI", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.providers.ChatRequestTransformersTest$TokenBudgetTests",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.providers.ChatRequestTransformersTest"
+        ]
+      },
+      { "name": "shouldHandleLargeContextModels", "parameterTypes": [] },
+      { "name": "shouldKeepAllMessagesUnderBudget", "parameterTypes": [] },
+      { "name": "shouldKeepMostRecentMessages", "parameterTypes": [] },
+      {
+        "name": "shouldTruncateOldMessagesWhenExceedingBudget",
+        "parameterTypes": []
+      }
+    ]
   },
   {
     "name": "io.askimo.core.providers.HasApiKey",
@@ -4289,7 +4386,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$Zqjhg9Gw",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$rwxFnx3k",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

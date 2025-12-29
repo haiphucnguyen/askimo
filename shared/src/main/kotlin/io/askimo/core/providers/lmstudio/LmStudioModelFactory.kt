@@ -6,6 +6,7 @@ package io.askimo.core.providers.lmstudio
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -30,13 +31,11 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
-        url = "${settings.baseUrl}/models",
+        url = "${settings.baseUrl}/v1/models",
         providerName = ModelProvider.LMSTUDIO,
     )
 
-    override fun defaultSettings(): LmStudioSettings = LmStudioSettings(
-        baseUrl = "http://localhost:1234/v1",
-    )
+    override fun defaultSettings(): LmStudioSettings = LmStudioSettings()
 
     override fun create(
         sessionId: String?,
@@ -99,12 +98,40 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        ModelProvider.LMSTUDIO,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()
+    }
+
+    override fun createUtilityClient(
+        settings: LmStudioSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        // LMStudio requires HTTP/1.1
+        val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
+        val chatModel = OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey("lm-studio")
+            .modelName(fallbackModel)
+            .timeout(Duration.ofSeconds(10))
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 }

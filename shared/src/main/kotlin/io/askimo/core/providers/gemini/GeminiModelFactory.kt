@@ -13,22 +13,28 @@ import dev.langchain4j.service.AiServices
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
+import io.askimo.core.memory.DefaultConversationSummarizer
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
-import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import java.time.Duration
 
 class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     private val log = logger<GeminiModelFactory>()
+
+    companion object {
+        private const val CLASSIFICATION_MODEL = "gemini-1.5-flash"
+    }
 
     override fun availableModels(settings: GeminiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -114,7 +120,13 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        GEMINI,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
@@ -137,37 +149,24 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         }
 
         val summarizerModel = createSummarizerModel(settings)
-
-        return { conversationText ->
-            val prompt = """
-                Analyze the following conversation and provide a structured summary in JSON format.
-                Extract key facts, main topics, and recent context.
-
-                Conversation:
-                $conversationText
-
-                Respond with JSON only (no markdown formatting):
-                {
-                    "keyFacts": {"fact_name": "fact_value", ...},
-                    "mainTopics": ["topic1", "topic2", ...],
-                    "recentContext": "brief summary of the most recent discussion"
-                }
-            """.trimIndent()
-
-            try {
-                val response = summarizerModel.chat(UserMessage.from(prompt))
-                val jsonText = response.aiMessage().text()
-                    .removePrefix("```json").removeSuffix("```").trim()
-
-                json.decodeFromString<ConversationSummary>(jsonText)
-            } catch (e: Exception) {
-                log.error("Failed to generate conversation summary with Gemini summarizer", e)
-                ConversationSummary(
-                    keyFacts = emptyMap(),
-                    mainTopics = emptyList(),
-                    recentContext = conversationText.takeLast(500),
-                )
-            }
+        return DefaultConversationSummarizer.createSummarizer(ModelProvider.GEMINI) { prompt ->
+            summarizerModel.chat(UserMessage.from(prompt)).aiMessage().text()
         }
+    }
+
+    override fun createUtilityClient(
+        settings: GeminiSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = GoogleAiGeminiChatModel.builder()
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(CLASSIFICATION_MODEL)
+            .timeout(Duration.ofSeconds(10))
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .chatModel(chatModel)
+            .build()
     }
 }

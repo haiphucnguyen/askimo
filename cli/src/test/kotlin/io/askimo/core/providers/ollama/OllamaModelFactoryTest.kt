@@ -30,7 +30,7 @@ class OllamaModelFactoryTest {
 
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
-        val baseUrl = "http://$host:$port"
+        val baseUrl = "http://$host:$port/v1"
 
         println("Ollama container running at: $baseUrl")
         SharedOllama.ensureModelPulled("qwen2.5:0.5b")

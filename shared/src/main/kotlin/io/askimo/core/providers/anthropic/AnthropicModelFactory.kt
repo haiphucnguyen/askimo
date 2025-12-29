@@ -5,7 +5,6 @@
 package io.askimo.core.providers.anthropic
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.rag.RetrievalAugmentor
 import dev.langchain4j.service.AiServices
@@ -14,15 +13,21 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ChatRequestTransformers
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
 import io.askimo.core.providers.verbosityInstruction
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
+import java.time.Duration
 
 class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     private val log = logger<AnthropicModelFactory>()
+
+    companion object {
+        private const val UTILITY_MODEL = "claude-3-haiku-20240307"
+    }
 
     override fun availableModels(settings: AnthropicSettings): List<String> = listOf(
         "claude-opus-4-1",
@@ -86,7 +91,13 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                         verbosityInstruction(settings.presets.verbosity),
                     )
                 }.chatRequestTransformer { chatRequest, memoryId ->
-                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(sessionId, chatRequest, memoryId)
+                    ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                        sessionId,
+                        chatRequest,
+                        memoryId,
+                        ModelProvider.ANTHROPIC,
+                        model,
+                    )
                 }
         if (retrievalAugmentor != null) {
             builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
@@ -95,10 +106,20 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         return builder.build()
     }
 
-    private fun createSummarizerModel(settings: AnthropicSettings): AnthropicChatModel = AnthropicChatModel.builder()
-        .apiKey(safeApiKey(settings.apiKey))
-        .modelName(settings.summarizerModel)
-        .baseUrl(settings.baseUrl)
-        .temperature(0.3)
-        .build()
+    override fun createUtilityClient(
+        settings: AnthropicSettings,
+        fallbackModel: String,
+    ): ChatClient {
+        // Simple client for classification - no tools, no transformers, no custom messages
+        val chatModel = AnthropicStreamingChatModel.builder()
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(UTILITY_MODEL)
+            .baseUrl(settings.baseUrl)
+            .timeout(Duration.ofSeconds(10))
+            .build()
+
+        return AiServices.builder(ChatClient::class.java)
+            .streamingChatModel(chatModel)
+            .build()
+    }
 }
