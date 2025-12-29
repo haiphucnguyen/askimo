@@ -70,4 +70,20 @@ interface ChatModelFactory<T : ProviderSettings> {
      * @return A function that takes conversation text and returns a ConversationSummary, or null
      */
     fun createSummarizer(settings: T): ((String) -> ConversationSummary)? = null
+
+    /**
+     * Creates an intent classification client for RAG decisions.
+     * Returns a cheap, fast model suitable for YES/NO classification.
+     *
+     * For cloud providers: returns a cheap model (e.g., GPT-3.5-turbo for OpenAI)
+     * For local providers: returns the current model (no extra overhead)
+     *
+     * @param settings Provider-specific settings
+     * @param fallbackModel The model currently selected by the user (used by local providers)
+     * @return ChatClient configured with a classification model
+     */
+    fun createUtilityClient(
+        settings: T,
+        fallbackModel: String,
+    ): ChatClient
 }

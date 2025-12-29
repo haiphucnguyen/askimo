@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class DockerAiSettings(
-    override var baseUrl: String = "http://localhost:12434",
+    override var baseUrl: String = "http://localhost:12434/v1",
     override val defaultModel: String = "",
     override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) : ProviderSettings,

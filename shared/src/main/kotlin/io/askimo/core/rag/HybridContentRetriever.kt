@@ -44,7 +44,7 @@ class HybridContentRetriever(
         val vectorResults = try {
             vectorRetriever.retrieve(query)
         } catch (e: Exception) {
-            log.warn("Vector retrieval failed: ${e.message}")
+            log.warn("Vector retrieval failed: ${e.message}", e)
             emptyList()
         }
 

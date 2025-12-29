@@ -83,7 +83,6 @@ class TokenAwareSummarizingMemory(
     private val log = logger<TokenAwareSummarizingMemory>()
 
     init {
-        // Load existing memory from database on initialization
         loadFromDatabase()
     }
 
@@ -251,7 +250,6 @@ class TokenAwareSummarizingMemory(
             }
         }
 
-        // Persist updated memory state to database
         persistToDatabase()
 
         log.info("Summarization complete. Remaining: ${messages.size}, Tokens: ${estimateTotalTokens()}")

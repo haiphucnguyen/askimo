@@ -8,7 +8,6 @@ import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
-import dev.langchain4j.model.ollama.OllamaEmbeddingModel.OllamaEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.store.embedding.EmbeddingStore
@@ -17,6 +16,7 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.LocalModelValidator
 import io.askimo.core.providers.ModelAvailabilityResult
 import io.askimo.core.providers.ModelProvider
@@ -131,15 +131,8 @@ fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext
     OPENAI -> {
         val openAiKey = (appContext.getCurrentProviderSettings() as OpenAiSettings).apiKey
         val modelName = AppConfig.embeddingModels.openai
-
-        val baseUrl = if (AppConfig.proxy.enabled && AppConfig.proxy.url.isNotBlank()) {
-            "${AppConfig.proxy.url}/openai"
-        } else {
-            "https://api.openai.com/v1"
-        }
         OpenAiEmbeddingModelBuilder()
             .apiKey(safeApiKey(openAiKey))
-            .baseUrl(baseUrl)
             .modelName(modelName)
             .build()
     }
@@ -192,9 +185,10 @@ private fun buildOllamaEmbeddingModel(settings: OllamaSettings): EmbeddingModel 
     val baseUrl = settings.baseUrl.removeSuffix("/")
     val modelName = AppConfig.embeddingModels.ollama
 
-    ensureModelAvailable(ModelProvider.OLLAMA, baseUrl, modelName)
+    ensureModelAvailable(OLLAMA, baseUrl, modelName)
 
-    return OllamaEmbeddingModelBuilder()
+    return OpenAiEmbeddingModelBuilder()
+        .apiKey("not-needed")
         .baseUrl(baseUrl)
         .modelName(modelName)
         .build()
@@ -231,6 +225,8 @@ private fun buildDockerEmbeddingModel(settings: DockerAiSettings): EmbeddingMode
         """.trimIndent(),
     )
 
+    ensureModelAvailable(DOCKER, baseUrl, modelName)
+
     return OpenAiEmbeddingModelBuilder()
         .apiKey("not-needed")
         .baseUrl("$baseUrl/v1")
@@ -251,6 +247,8 @@ private fun buildLocalAiEmbeddingModel(settings: LocalAiSettings): EmbeddingMode
         """.trimIndent(),
     )
 
+    ensureModelAvailable(LOCALAI, baseUrl, modelName)
+
     return OpenAiEmbeddingModelBuilder()
         .apiKey("not-needed")
         .baseUrl(baseUrl)
@@ -270,10 +268,10 @@ private fun buildLmStudioEmbeddingModel(settings: LmStudioSettings): EmbeddingMo
            • Configure in askimo.yml: embedding_models.lmstudio
         """.trimIndent(),
     )
-
+    ensureModelAvailable(LMSTUDIO, baseUrl, modelName)
     return OpenAiEmbeddingModelBuilder()
         .apiKey("not-needed")
-        .baseUrl("$baseUrl/v1")
+        .baseUrl(baseUrl)
         .modelName(modelName)
         .build()
 }
@@ -306,31 +304,14 @@ private fun ensureModelAvailable(
         }
 
         is ModelAvailabilityResult.NotAvailable -> {
-            if (result.canAutoPull && provider == OLLAMA) {
-                log.display("⏳ Model '$modelName' not found. Attempting to download...")
-                if (LocalModelValidator.pullOllamaModel(baseUrl, modelName)) {
-                    log.display("✅ Successfully downloaded model '$modelName'")
-                } else {
-                    log.displayError(
-                        """
-                        ❌ Failed to download model '$modelName'
-
-                        Please download it manually:
-                          ollama pull $modelName
-                        """.trimIndent(),
-                    )
-                    error("Failed to pull ${provider.name} model '$modelName'")
-                }
-            } else {
-                log.displayError(
-                    """
+            log.displayError(
+                """
                     ❌ ${result.reason}
 
                     Please ensure the model is available in ${provider.name} at: $baseUrl
-                    """.trimIndent(),
-                )
-                error("Model '$modelName' not available in ${provider.name}")
-            }
+                """.trimIndent(),
+            )
+            error("Model '$modelName' not available in ${provider.name}")
         }
     }
 }
@@ -345,12 +326,15 @@ fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): Embedd
     return embeddingStore
 }
 
-fun enrichContentRetrieverWithLucene(projectId: String, retriever: ContentRetriever): ContentRetriever {
+fun enrichContentRetrieverWithLucene(classifierChatClient: ChatClient, projectId: String, retriever: ContentRetriever): ContentRetriever {
     val ragConfig = AppConfig.rag
-    return HybridContentRetriever(
-        vectorRetriever = retriever,
-        keywordRetriever = LuceneKeywordRetriever(projectId),
-        maxResults = ragConfig.hybridMaxResults,
-        k = ragConfig.rankFusionConstant,
+    return RAGContentProcessor(
+        HybridContentRetriever(
+            vectorRetriever = retriever,
+            keywordRetriever = LuceneKeywordRetriever(projectId),
+            maxResults = ragConfig.hybridMaxResults,
+            k = ragConfig.rankFusionConstant,
+        ),
+        classifierChatClient,
     )
 }

@@ -4,23 +4,16 @@
  */
 package io.askimo.core.memory
 
-import dev.langchain4j.data.message.AiMessage
-import dev.langchain4j.data.message.UserMessage
-import dev.langchain4j.model.chat.ChatModel
-import dev.langchain4j.model.chat.response.ChatResponse
+import io.askimo.core.providers.ModelProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 
 class DefaultConversationSummarizerTest {
 
     @Test
     fun `should parse valid JSON response`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -30,16 +23,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["introduction", "greetings"],
               "recentContext": "User introduced themselves"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(2, summary.keyFacts.size)
@@ -52,8 +42,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle JSON wrapped in markdown code blocks`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             ```json
             {
@@ -64,16 +53,13 @@ class DefaultConversationSummarizerTest {
               "recentContext": "Test context"
             }
             ```
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(1, summary.keyFacts.size)
@@ -83,8 +69,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should sanitize arrays in keyFacts to comma-separated strings`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -95,16 +80,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["programming"],
               "recentContext": "Discussion about frameworks"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(3, summary.keyFacts.size)
@@ -116,8 +98,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle multiple arrays in keyFacts`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -128,16 +109,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["development"],
               "recentContext": "Tech stack discussion"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(3, summary.keyFacts.size)
@@ -149,28 +127,26 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should return empty summary on parsing failure`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from("This is not valid JSON at all!")
+        val mockChatFunction: (String) -> String = {
+            "This is not valid JSON at all!"
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(0, summary.keyFacts.size)
         assertEquals(0, summary.mainTopics.size)
-        assertEquals("", summary.recentContext)
+        // recentContext should be last 500 chars of conversation on error
+        assertEquals("Test conversation", summary.recentContext)
     }
 
     @Test
     fun `should handle JSON with extra text before and after`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             Here is the summary:
             {
@@ -181,16 +157,13 @@ class DefaultConversationSummarizerTest {
               "recentContext": "Test"
             }
             That's all!
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(1, summary.keyFacts.size)
@@ -200,24 +173,20 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle empty keyFacts`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {},
               "mainTopics": ["general"],
               "recentContext": "No specific facts"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(0, summary.keyFacts.size)
@@ -228,8 +197,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle empty mainTopics`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -238,16 +206,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": [],
               "recentContext": "Context"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(1, summary.keyFacts.size)
@@ -257,25 +222,25 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle chatModel throwing exception`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        whenever(chatModel.chat(any<UserMessage>())).thenThrow(RuntimeException("API Error"))
+        val mockChatFunction: (String) -> String = {
+            throw RuntimeException("API Error")
+        }
 
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then - Should return empty summary without throwing
         assertEquals(0, summary.keyFacts.size)
         assertEquals(0, summary.mainTopics.size)
-        assertEquals("", summary.recentContext)
+        assertEquals("Test conversation", summary.recentContext)
     }
 
     @Test
     fun `should handle arrays with single values`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -284,16 +249,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["build"],
               "recentContext": "Build tool"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(1, summary.keyFacts.size)
@@ -303,8 +265,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should handle nested quotes in array values`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -313,16 +274,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["conversation"],
               "recentContext": "Dialogue"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals(1, summary.keyFacts.size)
@@ -332,8 +290,7 @@ class DefaultConversationSummarizerTest {
     @Test
     fun `should preserve special characters in values`() {
         // Given
-        val chatModel = mock<ChatModel>()
-        val aiMessage = AiMessage.from(
+        val mockChatFunction: (String) -> String = {
             """
             {
               "keyFacts": {
@@ -343,16 +300,13 @@ class DefaultConversationSummarizerTest {
               "mainTopics": ["contact"],
               "recentContext": "User info"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+        }
 
-        val response = ChatResponse.builder().aiMessage(aiMessage).build()
-        whenever(chatModel.chat(any<UserMessage>())).thenReturn(response)
-
-        val summarizer = DefaultConversationSummarizer(chatModel)
+        val summarizer = DefaultConversationSummarizer.createSummarizer(ModelProvider.OPENAI, mockChatFunction)
 
         // When
-        val summary = summarizer.summarize("Test conversation")
+        val summary = summarizer("Test conversation")
 
         // Then
         assertEquals("user@example.com", summary.keyFacts["email"])

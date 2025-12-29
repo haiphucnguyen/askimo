@@ -68,4 +68,20 @@ enum class ModelProvider {
      */
     @SerialName("UNKNOWN")
     UNKNOWN,
+    ;
+
+    /**
+     * Returns the lowercase name of this provider for use in cache keys and logging.
+     */
+    fun providerKey(): String = when (this) {
+        OPENAI -> "openai"
+        XAI -> "xai"
+        GEMINI -> "gemini"
+        OLLAMA -> "ollama"
+        DOCKER -> "docker-ai"
+        ANTHROPIC -> "anthropic"
+        LOCALAI -> "localai"
+        LMSTUDIO -> "lmstudio"
+        UNKNOWN -> "unknown"
+    }
 }
