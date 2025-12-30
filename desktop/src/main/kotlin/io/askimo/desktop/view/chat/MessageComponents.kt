@@ -99,14 +99,46 @@ fun messageList(
 ) {
     val scrollState = rememberScrollState()
 
-    // Simple: whenever messages change, scroll to bottom
-    LaunchedEffect(messages) {
-        scrollState.scrollTo(scrollState.maxValue)
+    // Track if user has manually scrolled up during AI response
+    var userScrolledUp by remember { mutableStateOf(false) }
+
+    // Track the last user message count to detect new messages being sent
+    var lastUserMessageCount by remember { mutableStateOf(0) }
+    val currentUserMessageCount = messages.count { it.isUser }
+
+    // When a new user message is sent, reset auto-scroll and scroll to bottom
+    LaunchedEffect(currentUserMessageCount) {
+        if (currentUserMessageCount > lastUserMessageCount) {
+            lastUserMessageCount = currentUserMessageCount
+            userScrolledUp = false // Reset flag when new message sent
+            scrollState.scrollTo(scrollState.maxValue)
+        }
     }
 
-    // Also scroll when content grows (during AI streaming)
+    // Track user manual scroll - if they scroll significantly up, disable auto-scroll
+    LaunchedEffect(scrollState.value, scrollState.maxValue) {
+        // Only check if we're receiving AI response (thinking or messages being streamed)
+        if (isThinking || messages.lastOrNull()?.isUser == false) {
+            val scrollThreshold = 100 // pixels from bottom
+            val distanceFromBottom = scrollState.maxValue - scrollState.value
+
+            // If user scrolled up more than threshold, mark as manually scrolled
+            if (distanceFromBottom > scrollThreshold) {
+                userScrolledUp = true
+            }
+            // If user scrolled back to near bottom, re-enable auto-scroll
+            else if (distanceFromBottom < 50) {
+                userScrolledUp = false
+            }
+        }
+    }
+
+    // Auto-scroll to bottom when content grows (during AI streaming)
+    // BUT only if user hasn't manually scrolled up
     LaunchedEffect(scrollState.maxValue) {
-        scrollState.scrollTo(scrollState.maxValue)
+        if (!userScrolledUp) {
+            scrollState.scrollTo(scrollState.maxValue)
+        }
     }
 
     // Load previous messages when scrolled to top

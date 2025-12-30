@@ -78,7 +78,7 @@ class FileChangeHandler(
             val text = resourceContentProcessor.extractTextFromFile(filePath) ?: return
 
             if (text.isBlank()) {
-                log.debug("Skipping re-index of file with blank content: ${filePath.fileName}")
+                log.debug("Skipping re-index of file with blank content: {}", filePath.fileName)
                 return
             }
 
@@ -90,7 +90,7 @@ class FileChangeHandler(
                 val chunksWithLineNumbers = resourceContentProcessor.chunkTextWithLineNumbers(text)
 
                 if (chunksWithLineNumbers.isEmpty()) {
-                    log.debug("No valid chunks created for file: ${filePath.fileName}")
+                    log.debug("No valid chunks created for file: {}", filePath.fileName)
                     return
                 }
 
@@ -114,7 +114,7 @@ class FileChangeHandler(
                 val chunks = resourceContentProcessor.chunkText(text)
 
                 if (chunks.isEmpty()) {
-                    log.debug("No valid chunks created for file: ${filePath.fileName}")
+                    log.debug("No valid chunks created for file: {}", filePath.fileName)
                     return
                 }
 

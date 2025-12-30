@@ -46,6 +46,7 @@ class TextProcessor(
 
     /**
      * Calculate safe maximum characters per chunk based on the embedding model's token limit.
+     * Uses conservative ratios that work across all embedding models and languages.
      */
     private fun calculateSafeMaxChars(): Int {
         val tokenLimit = try {
@@ -55,21 +56,35 @@ class TextProcessor(
             return AppConfig.embedding.maxCharsPerChunk
         }
 
-        // Use 80% of token limit as safety buffer
-        val safeTokenLimit = (tokenLimit * 0.8).toInt()
+        // Apply 30% safety buffer to handle:
+        // - Tokenization overhead (special tokens, padding)
+        // - Variability across languages (CJK, emoji, etc.)
+        // - Different encoding schemes per model
+        // This ultra-conservative approach ensures we NEVER exceed token limits
+        val safetyFactor = 0.3
+        val safeTokenLimit = (tokenLimit * safetyFactor).toInt()
 
-        // Convert tokens to characters (~4 chars per token)
-        val safeChars = safeTokenLimit * 4
+        // Conservative estimate: 2 characters per token
+        // Works for worst-case scenarios:
+        // - Non-Latin scripts (CJK: 1-2 chars/token)
+        // - Mixed languages and special characters
+        // - Code with lots of symbols
+        // - Different tokenizers (BPE, WordPiece, SentencePiece)
+        val charsPerToken = 2
+        val safeChars = safeTokenLimit * charsPerToken
 
-        // Respect configured maximum
+        // Respect configured bounds
         val configuredMax = AppConfig.embedding.maxCharsPerChunk
         val minChars = 500
 
         val calculated = safeChars.coerceIn(minChars, configuredMax)
 
-        log.info(
+        log.debug(
             "Calculated chunk size: $calculated chars " +
-                "(model limit: $tokenLimit tokens, safe limit: $safeTokenLimit tokens, configured max: $configuredMax)",
+                "(model limit: $tokenLimit tokens, " +
+                "safe limit: $safeTokenLimit tokens @ ${(safetyFactor * 100).toInt()}% safety, " +
+                "ratio: $charsPerToken:1, " +
+                "configured max: $configuredMax)",
         )
 
         return calculated
@@ -148,6 +163,42 @@ class TextProcessor(
 
         for (line in lines) {
             val lineWithNewline = line + "\n"
+
+            // Handle long lines that exceed maxChars by splitting them
+            if (lineWithNewline.length > maxChars) {
+                // Save current chunk if it has content
+                if (currentChunk.isNotEmpty()) {
+                    val chunkText = currentChunk.toString()
+                    if (chunkText.isNotBlank()) {
+                        chunks.add(ChunkWithLineNumbers(chunkText, currentStartLine, currentLine - 1))
+                    }
+                    currentChunk.clear()
+                }
+
+                // Split the long line into multiple chunks
+                var lineStart = 0
+                while (lineStart < lineWithNewline.length) {
+                    val lineEnd = minOf(lineStart + maxChars, lineWithNewline.length)
+                    val linePart = lineWithNewline.substring(lineStart, lineEnd)
+
+                    if (linePart.isNotBlank()) {
+                        chunks.add(ChunkWithLineNumbers(linePart, currentLine, currentLine))
+                        log.debug(
+                            "Split long line {} into chunk of {} chars (line length: {})",
+                            currentLine,
+                            linePart.length,
+                            lineWithNewline.length,
+                        )
+                    }
+
+                    lineStart += maxChars
+                }
+
+                // Move to next line and reset for a fresh chunk
+                currentLine++
+                currentStartLine = currentLine
+                continue
+            }
 
             // If adding this line would exceed max chars, save current chunk and start new one
             if (currentChunk.isNotEmpty() && currentChunk.length + lineWithNewline.length > maxChars) {

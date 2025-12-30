@@ -64,6 +64,7 @@ data class ResumeSessionPaginatedResult(
     val sessionId: String,
     val title: String? = null,
     val directiveId: String?,
+    val project: Project? = null,
     val messages: List<ChatMessageDTO> = emptyList(),
     val cursor: LocalDateTime? = null,
     val hasMore: Boolean = false,
@@ -463,11 +464,18 @@ class ChatSessionService(
                 cursor = null,
                 direction = PaginationDirection.BACKWARD,
             )
+
+            // Fetch project if session belongs to one
+            val project = existingSession.projectId?.let { projectId ->
+                projectRepository.getProject(projectId)
+            }
+
             ResumeSessionPaginatedResult(
                 success = true,
                 sessionId = sessionId,
                 title = existingSession.title,
                 directiveId = existingSession.directiveId,
+                project = project,
                 messages = messages.toDTOs(),
                 cursor = cursor,
                 hasMore = cursor != null,
@@ -478,6 +486,7 @@ class ChatSessionService(
                 sessionId = sessionId,
                 title = null,
                 directiveId = null,
+                project = null,
                 messages = emptyList(),
                 cursor = null,
                 hasMore = false,

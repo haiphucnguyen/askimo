@@ -268,6 +268,48 @@ class ProjectIndexer(
     }
 
     /**
+     * Check if a project has been successfully indexed
+     * @param projectId The project ID to check
+     * @return true if the project has a valid index, false otherwise
+     */
+    fun isProjectIndexed(projectId: String): Boolean {
+        // Check if coordinator exists and indexing is complete
+        val coordinator = coordinators[projectId]
+        if (coordinator != null && coordinator.progress.value.isComplete) {
+            return true
+        }
+
+        // Check if index files exist on disk (for projects indexed in previous sessions)
+        val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)
+        if (!indexDir.toFile().exists()) {
+            return false
+        }
+
+        // Verify the index is valid by checking for essential files
+        val indexFiles = indexDir.toFile().listFiles() ?: return false
+        return indexFiles.any { it.name.startsWith("segments_") } // Lucene segment files indicate valid index
+    }
+
+    /**
+     * Get the current indexing status for a project
+     * @param projectId The project ID to check
+     * @return IndexStatus (NOT_STARTED, INDEXING, READY, WATCHING, FAILED)
+     */
+    fun getProjectIndexStatus(projectId: String): IndexStatus {
+        val coordinator = coordinators[projectId]
+        if (coordinator != null) {
+            return coordinator.progress.value.status
+        }
+
+        // Check disk if no active coordinator
+        return if (isProjectIndexed(projectId)) {
+            IndexStatus.READY
+        } else {
+            IndexStatus.NOT_STARTED
+        }
+    }
+
+    /**
      * Check if embedding model is available and functional
      * @throws ModelNotFoundException if the model is not found or unavailable
      */
