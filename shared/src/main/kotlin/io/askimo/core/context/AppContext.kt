@@ -7,7 +7,10 @@ package io.askimo.core.context
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
+import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
@@ -15,6 +18,11 @@ import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.MetadataAwareContentInjector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -25,12 +33,42 @@ import java.util.Locale
 class AppContext(
     val params: AppContextParams,
 ) {
+    private val log = logger<AppContext>()
+    private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
      * This can be updated when the user changes locale or wants to modify AI's behavior.
      */
     var systemDirective: String? = null
+
+    /**
+     * Cached utility client for lightweight operations (classification, intent detection).
+     * Invalidated when the model or provider changes.
+     */
+    @Volatile
+    private var cachedUtilityClient: ChatClient? = null
+
+    init {
+        // Listen for model change events and invalidate the cached utility client
+        eventScope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<ModelChangedEvent>()
+                .collect { event ->
+                    handleModelChanged(event)
+                }
+        }
+    }
+
+    /**
+     * Handle model change event - clear the cached utility client since it uses the old model.
+     */
+    private fun handleModelChanged(event: ModelChangedEvent) {
+        log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached utility client")
+        synchronized(this) {
+            cachedUtilityClient = null
+        }
+    }
 
     /**
      * Gets the currently active model provider for this session.
@@ -91,22 +129,36 @@ class AppContext(
      * For local providers: uses the current model (no extra cost)
      *
      * This client is stateless and lightweight - no tools, transformers, or custom messages.
+     * The client is cached and reused until the model or provider changes.
      *
      * @return ChatClient configured with a classification model
      */
-    fun createClassifierClient(): ChatClient {
-        val provider = params.currentProvider
-        val factory = getModelFactory(provider)
-            ?: error("No model factory registered for $provider")
+    fun createUtilityClient(): ChatClient {
+        // Return cached client if available
+        cachedUtilityClient?.let { return it }
 
-        val settings = getOrCreateProviderSettings(provider)
-        val currentModel = params.model
+        // Create new client if cache is empty
+        synchronized(this) {
+            // Double-check after acquiring lock
+            cachedUtilityClient?.let { return it }
 
-        @Suppress("UNCHECKED_CAST")
-        return (factory as ChatModelFactory<ProviderSettings>).createUtilityClient(
-            settings = settings,
-            currentModel,
-        )
+            val provider = params.currentProvider
+            val factory = getModelFactory(provider)
+                ?: error("No model factory registered for $provider")
+
+            val settings = getOrCreateProviderSettings(provider)
+            val currentModel = params.model
+
+            @Suppress("UNCHECKED_CAST")
+            val client = (factory as ChatModelFactory<ProviderSettings>).createUtilityClient(
+                settings = settings,
+                currentModel,
+            )
+
+            cachedUtilityClient = client
+            log.debug("Created and cached utility client for provider {} with model {}", provider, currentModel)
+            return client
+        }
     }
 
     /**

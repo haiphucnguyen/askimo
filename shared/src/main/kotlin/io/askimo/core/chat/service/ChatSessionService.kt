@@ -34,8 +34,6 @@ import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.ChatModelFactory
-import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.core.rag.getEmbeddingStore
@@ -110,13 +108,6 @@ class ChatSessionService(
         .build()
 
     init {
-        subscribeToInternalEvents()
-    }
-
-    /**
-     * Subscribe to internal events for component-to-component communication.
-     */
-    private fun subscribeToInternalEvents() {
         eventScope.launch {
             EventBus.internalEvents
                 .filterIsInstance<ModelChangedEvent>()
@@ -146,28 +137,18 @@ class ChatSessionService(
     fun getOrCreateClientForSession(executionMode: ExecutionMode, sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
         val project = projectRepository.findProjectBySessionId(sessionId)
 
-        // Get current provider settings to check if AI summarization is enabled
-        val provider = appContext.getActiveProvider()
-        val factory = appContext.getModelFactory(provider)
-        val settings = appContext.getCurrentProviderSettings()
-
-        // Get summarizer from factory if available
-        @Suppress("UNCHECKED_CAST")
-        val summarizer = (factory as? ChatModelFactory<ProviderSettings>)
-            ?.createSummarizer(settings)
-
         // Create self-managing memory that handles its own persistence
         val memory = TokenAwareSummarizingMemory(
+            appContext,
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
-            summarizer = summarizer,
             asyncSummarization = true,
         )
 
         // Create content retriever if project has indexed paths
         val retriever = if (project != null) {
             log.debug("Session $sessionId belongs to project: ${project.id}")
-            createRetrieverForProject(appContext.createClassifierClient(), project)
+            createRetrieverForProject(appContext.createUtilityClient(), project)
         } else {
             null
         }
