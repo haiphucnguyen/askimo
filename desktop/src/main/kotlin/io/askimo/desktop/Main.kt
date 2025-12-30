@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -90,6 +92,7 @@ import io.askimo.desktop.theme.getDarkColorScheme
 import io.askimo.desktop.theme.getLightColorScheme
 import io.askimo.desktop.ui.dialog.errorDialog
 import io.askimo.desktop.ui.dialog.updateCheckDialog
+import io.askimo.desktop.util.CustomUriHandler
 import io.askimo.desktop.view.View
 import io.askimo.desktop.view.about.aboutDialog
 import io.askimo.desktop.view.chat.chatView
@@ -98,6 +101,7 @@ import io.askimo.desktop.view.components.editProjectDialog
 import io.askimo.desktop.view.components.eventLogPanel
 import io.askimo.desktop.view.components.eventLogWindow
 import io.askimo.desktop.view.components.exportSessionDialog
+import io.askimo.desktop.view.components.fileViewerDialog
 import io.askimo.desktop.view.components.footerBar
 import io.askimo.desktop.view.components.navigationSidebar
 import io.askimo.desktop.view.components.newProjectDialog
@@ -269,6 +273,10 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorDialogTitle by remember { mutableStateOf("") }
     var errorDialogMessage by remember { mutableStateOf("") }
+    var showFileViewerDialog by remember { mutableStateOf(false) }
+    var fileViewerPath by remember { mutableStateOf("") }
+    var fileViewerContent by remember { mutableStateOf("") }
+    var fileViewerTitle by remember { mutableStateOf("File Viewer") }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -457,662 +465,690 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     }
 
     provideLocalization(locale = locale) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = customTypography,
+        CompositionLocalProvider(
+            LocalUriHandler provides CustomUriHandler(
+                onShowFileViewer = { title, filePath, content ->
+                    fileViewerTitle = title
+                    fileViewerPath = filePath
+                    fileViewerContent = content
+                    showFileViewerDialog = true
+                },
+                onShowError = { title, message ->
+                    errorDialogTitle = title
+                    errorDialogMessage = message
+                    showErrorDialog = true
+                },
+            ),
         ) {
-            // Main application structure: MenuBar → Body (Stack) → Footer
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = customTypography,
             ) {
-                Row(
+                // Main application structure: MenuBar → Body (Stack) → Footer
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
                 ) {
-                    if (currentView == View.SETTINGS) {
-                        settingsViewWithSidebar(
-                            onClose = {
-                                currentView = previousView
-                            },
-                            settingsViewModel = settingsViewModel,
-                        )
-                    } else {
-                        // Main View - With sidebar and content
-                        // Main content area - supports event log docking at left/right/bottom
-                        // Event Log Panel - LEFT position
-                        if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.LEFT) {
-                            eventLogPanel(
-                                events = eventLogEvents,
-                                onDetach = {
-                                    showEventLogPanel = false
-                                    showEventLogWindow = true
-                                },
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    ) {
+                        if (currentView == View.SETTINGS) {
+                            settingsViewWithSidebar(
                                 onClose = {
-                                    showEventLogPanel = false
+                                    currentView = previousView
                                 },
-                                onClearEvents = {
-                                    eventLogEvents.clear()
-                                },
-                                onDockPositionChange = { newPosition ->
-                                    eventLogDockPosition = newPosition
-                                },
-                                currentDockPosition = eventLogDockPosition,
-                                size = eventLogPanelSize,
-                                onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                                modifier = Modifier.fillMaxHeight(),
+                                settingsViewModel = settingsViewModel,
                             )
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-
-                                        when (shortcut) {
-                                            AppShortcut.NEW_CHAT -> {
-                                                chatViewModel?.clearChat()
-                                                currentView = View.CHAT
-                                                true
-                                            }
-                                            AppShortcut.SEARCH_IN_CHAT -> {
-                                                if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
-                                                    chatViewModel.enableSearchMode()
-                                                }
-                                                true
-                                            }
-                                            AppShortcut.TOGGLE_CHAT_HISTORY -> {
-                                                isSessionsExpanded = !isSessionsExpanded
-                                                true
-                                            }
-                                            AppShortcut.OPEN_SETTINGS -> {
-                                                previousView = currentView
-                                                currentView = View.SETTINGS
-                                                true
-                                            }
-                                            AppShortcut.STOP_AI_RESPONSE -> {
-                                                if (chatViewModel?.isLoading == true) {
-                                                    chatViewModel.cancelResponse()
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            }
-                                            AppShortcut.QUIT_APPLICATION -> {
-                                                showQuitDialog = true
-                                                true
-                                            }
-                                            else -> false
-                                        }
+                        } else {
+                            // Main View - With sidebar and content
+                            // Main content area - supports event log docking at left/right/bottom
+                            // Event Log Panel - LEFT position
+                            if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.LEFT) {
+                                eventLogPanel(
+                                    events = eventLogEvents,
+                                    onDetach = {
+                                        showEventLogPanel = false
+                                        showEventLogWindow = true
                                     },
+                                    onClose = {
+                                        showEventLogPanel = false
+                                    },
+                                    onClearEvents = {
+                                        eventLogEvents.clear()
+                                    },
+                                    onDockPositionChange = { newPosition ->
+                                        eventLogDockPosition = newPosition
+                                    },
+                                    currentDockPosition = eventLogDockPosition,
+                                    size = eventLogPanelSize,
+                                    onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                                    modifier = Modifier.fillMaxHeight(),
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
                             ) {
-                                val currentSessionId = activeSessionId
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .onPreviewKeyEvent { keyEvent ->
+                                            val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                                Row(modifier = Modifier.fillMaxSize()) {
-                                    BoxWithConstraints {
-                                        // Calculate actual sidebar width from fraction
-                                        // Min 200dp, max 35% of screen width, default ~20%
-                                        val minSidebarWidth = 200.dp
-                                        val maxSidebarWidthFraction = 0.35f
-                                        val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
-                                            minSidebarWidth,
-                                            maxWidth * maxSidebarWidthFraction,
-                                        )
-
-                                        navigationSidebar(
-                                            isExpanded = isSidebarExpanded,
-                                            width = calculatedWidth,
-                                            currentView = currentView,
-                                            isProjectsExpanded = isProjectsExpanded,
-                                            isSessionsExpanded = isSessionsExpanded,
-                                            projectsViewModel = projectsViewModel,
-                                            sessionsViewModel = sessionsViewModel,
-                                            currentSessionId = currentSessionId,
-                                            fontScale = fontSettings.fontSize.scale,
-                                            onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
-                                            onNewChat = {
-                                                chatViewModel?.clearChat()
-                                                currentView = View.CHAT
-                                            },
-                                            onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
-                                            onNewProject = {
-                                                showNewProjectDialog = true
-                                            },
-                                            onSelectProject = { projectId ->
-                                                selectedProjectId = projectId
-                                                currentView = View.PROJECT_DETAIL
-                                            },
-                                            onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                                            onNavigateToSessions = { currentView = View.SESSIONS },
-                                            onResumeSession = handleResumeSession,
-                                            onDeleteSession = { sessionId ->
-                                                sessionsViewModel.deleteSessionWithCleanup(sessionId)
-                                            },
-                                            onStarSession = { sessionId, isStarred ->
-                                                sessionsViewModel.updateSessionStarred(sessionId, isStarred)
-                                            },
-                                            onRenameSession = { sessionId, _ ->
-                                                sessionsViewModel.showRenameDialog(sessionId)
-                                            },
-                                            onExportSession = { sessionId ->
-                                                sessionsViewModel.exportSession(sessionId)
-                                            },
-                                            onShowSessionSummary = { sessionId ->
-                                                // Query session memory from repository
-                                                scope.launch {
-                                                    val memory = withContext(Dispatchers.IO) {
-                                                        val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
-                                                        repository.getBySessionId(sessionId)
-                                                    }
-                                                    sessionMemoryToShow = memory
-                                                    showSessionMemoryDialog = true
+                                            when (shortcut) {
+                                                AppShortcut.NEW_CHAT -> {
+                                                    chatViewModel?.clearChat()
+                                                    currentView = View.CHAT
+                                                    true
                                                 }
-                                            },
-                                            onNavigateToSettings = {
-                                                previousView = currentView
-                                                currentView = View.SETTINGS
-                                            },
-                                        )
-                                    } // End BoxWithConstraints
+                                                AppShortcut.SEARCH_IN_CHAT -> {
+                                                    if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
+                                                        chatViewModel.enableSearchMode()
+                                                    }
+                                                    true
+                                                }
+                                                AppShortcut.TOGGLE_CHAT_HISTORY -> {
+                                                    isSessionsExpanded = !isSessionsExpanded
+                                                    true
+                                                }
+                                                AppShortcut.OPEN_SETTINGS -> {
+                                                    previousView = currentView
+                                                    currentView = View.SETTINGS
+                                                    true
+                                                }
+                                                AppShortcut.STOP_AI_RESPONSE -> {
+                                                    if (chatViewModel?.isLoading == true) {
+                                                        chatViewModel.cancelResponse()
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
+                                                AppShortcut.QUIT_APPLICATION -> {
+                                                    showQuitDialog = true
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        },
+                                ) {
+                                    val currentSessionId = activeSessionId
 
-                                    // Draggable divider
-                                    if (isSidebarExpanded) {
-                                        // Need to recalculate containerWidth for the divider
+                                    Row(modifier = Modifier.fillMaxSize()) {
                                         BoxWithConstraints {
-                                            val containerWidth = maxWidth
+                                            // Calculate actual sidebar width from fraction
+                                            // Min 200dp, max 35% of screen width, default ~20%
+                                            val minSidebarWidth = 200.dp
+                                            val maxSidebarWidthFraction = 0.35f
+                                            val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
+                                                minSidebarWidth,
+                                                maxWidth * maxSidebarWidthFraction,
+                                            )
 
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(8.dp)
-                                                    .fillMaxHeight()
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                                                    .pointerInput(containerWidth) {
-                                                        detectDragGestures { change, dragAmount ->
-                                                            change.consume()
-                                                            // Calculate new fraction based on drag
-                                                            val dragWidthDp = (dragAmount.x / density).dp
-                                                            val newFraction = sidebarWidthFraction + (dragWidthDp / containerWidth)
-                                                            // Min 10%, max 35%
-                                                            val coercedFraction = newFraction.coerceIn(0.10f, 0.35f)
-                                                            sidebarWidthFraction = coercedFraction
-                                                            // Save preference
-                                                            ThemePreferences.setMainSidebarWidthFraction(coercedFraction)
+                                            navigationSidebar(
+                                                isExpanded = isSidebarExpanded,
+                                                width = calculatedWidth,
+                                                currentView = currentView,
+                                                isProjectsExpanded = isProjectsExpanded,
+                                                isSessionsExpanded = isSessionsExpanded,
+                                                projectsViewModel = projectsViewModel,
+                                                sessionsViewModel = sessionsViewModel,
+                                                currentSessionId = currentSessionId,
+                                                fontScale = fontSettings.fontSize.scale,
+                                                onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
+                                                onNewChat = {
+                                                    chatViewModel?.clearChat()
+                                                    currentView = View.CHAT
+                                                },
+                                                onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
+                                                onNewProject = {
+                                                    showNewProjectDialog = true
+                                                },
+                                                onSelectProject = { projectId ->
+                                                    selectedProjectId = projectId
+                                                    currentView = View.PROJECT_DETAIL
+                                                },
+                                                onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
+                                                onNavigateToSessions = { currentView = View.SESSIONS },
+                                                onResumeSession = handleResumeSession,
+                                                onDeleteSession = { sessionId ->
+                                                    sessionsViewModel.deleteSessionWithCleanup(sessionId)
+                                                },
+                                                onStarSession = { sessionId, isStarred ->
+                                                    sessionsViewModel.updateSessionStarred(sessionId, isStarred)
+                                                },
+                                                onRenameSession = { sessionId, _ ->
+                                                    sessionsViewModel.showRenameDialog(sessionId)
+                                                },
+                                                onExportSession = { sessionId ->
+                                                    sessionsViewModel.exportSession(sessionId)
+                                                },
+                                                onShowSessionSummary = { sessionId ->
+                                                    // Query session memory from repository
+                                                    scope.launch {
+                                                        val memory = withContext(Dispatchers.IO) {
+                                                            val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
+                                                            repository.getBySessionId(sessionId)
                                                         }
-                                                    },
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Column(
+                                                        sessionMemoryToShow = memory
+                                                        showSessionMemoryDialog = true
+                                                    }
+                                                },
+                                                onNavigateToSettings = {
+                                                    previousView = currentView
+                                                    currentView = View.SETTINGS
+                                                },
+                                            )
+                                        } // End BoxWithConstraints
+
+                                        // Draggable divider
+                                        if (isSidebarExpanded) {
+                                            // Need to recalculate containerWidth for the divider
+                                            BoxWithConstraints {
+                                                val containerWidth = maxWidth
+
+                                                Box(
                                                     modifier = Modifier
-                                                        .width(2.dp)
-                                                        .fillMaxHeight(0.1f),
-                                                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                                                        .width(8.dp)
+                                                        .fillMaxHeight()
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                                                        .pointerInput(containerWidth) {
+                                                            detectDragGestures { change, dragAmount ->
+                                                                change.consume()
+                                                                // Calculate new fraction based on drag
+                                                                val dragWidthDp = (dragAmount.x / density).dp
+                                                                val newFraction = sidebarWidthFraction + (dragWidthDp / containerWidth)
+                                                                // Min 10%, max 35%
+                                                                val coercedFraction = newFraction.coerceIn(0.10f, 0.35f)
+                                                                sidebarWidthFraction = coercedFraction
+                                                                // Save preference
+                                                                ThemePreferences.setMainSidebarWidthFraction(coercedFraction)
+                                                            }
+                                                        },
+                                                    contentAlignment = Alignment.Center,
                                                 ) {
-                                                    repeat(3) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(2.dp)
-                                                                .background(
-                                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                                    shape = CircleShape,
-                                                                ),
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .width(2.dp)
+                                                            .fillMaxHeight(0.1f),
+                                                        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                                                    ) {
+                                                        repeat(3) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(2.dp)
+                                                                    .background(
+                                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                                        shape = CircleShape,
+                                                                    ),
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            } // End BoxWithConstraints for divider
+                                        }
+
+                                        // Main content - only show when chatViewModel exists
+                                        if (chatViewModel != null) {
+                                            mainContent(
+                                                currentView = currentView,
+                                                chatViewModel = chatViewModel,
+                                                sessionsViewModel = sessionsViewModel,
+                                                projectsViewModel = projectsViewModel,
+                                                appContext = appContext,
+                                                sessionManager = sessionManager,
+                                                onResumeSession = handleResumeSession,
+                                                onNavigateToChat = {
+                                                    currentView = View.CHAT
+                                                },
+                                                onNavigateToSessions = {
+                                                    currentView = View.SESSIONS
+                                                },
+                                                onEditProject = { projectId ->
+                                                    editingProjectId = projectId
+                                                    showEditProjectDialog = true
+                                                },
+                                                activeSessionId = activeSessionId,
+                                                sessionChatState = sessionChatStates[activeSessionId],
+                                                onChatStateChange = { inputText, attachments, editingMessage ->
+                                                    activeSessionId?.let { sessionId ->
+                                                        sessionChatStates[sessionId] = ChatViewState(
+                                                            inputText = inputText,
+                                                            attachments = attachments,
+                                                            editingMessage = editingMessage,
                                                         )
                                                     }
-                                                }
+                                                },
+                                                selectedProjectId = selectedProjectId,
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Text(
+                                                    text = stringResource("chat.no.active.session"),
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
                                             }
-                                        } // End BoxWithConstraints for divider
-                                    }
+                                        }
+                                    } // End Row (sidebar + divider + content)
+                                }
+                            } // End of main content column (chat/sessions)
 
-                                    // Main content - only show when chatViewModel exists
-                                    if (chatViewModel != null) {
-                                        mainContent(
-                                            currentView = currentView,
-                                            chatViewModel = chatViewModel,
-                                            sessionsViewModel = sessionsViewModel,
-                                            projectsViewModel = projectsViewModel,
-                                            appContext = appContext,
-                                            sessionManager = sessionManager,
-                                            onResumeSession = handleResumeSession,
-                                            onNavigateToChat = {
-                                                currentView = View.CHAT
-                                            },
-                                            onNavigateToSessions = {
-                                                currentView = View.SESSIONS
-                                            },
-                                            onEditProject = { projectId ->
-                                                editingProjectId = projectId
-                                                showEditProjectDialog = true
-                                            },
-                                            activeSessionId = activeSessionId,
-                                            sessionChatState = sessionChatStates[activeSessionId],
-                                            onChatStateChange = { inputText, attachments, editingMessage ->
-                                                activeSessionId?.let { sessionId ->
-                                                    sessionChatStates[sessionId] = ChatViewState(
-                                                        inputText = inputText,
-                                                        attachments = attachments,
-                                                        editingMessage = editingMessage,
-                                                    )
-                                                }
-                                            },
-                                            selectedProjectId = selectedProjectId,
+                            // Event Log Panel - RIGHT position
+                            if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.RIGHT) {
+                                eventLogPanel(
+                                    events = eventLogEvents,
+                                    onDetach = {
+                                        showEventLogPanel = false
+                                        showEventLogWindow = true
+                                    },
+                                    onClose = {
+                                        showEventLogPanel = false
+                                    },
+                                    onClearEvents = {
+                                        eventLogEvents.clear()
+                                    },
+                                    onDockPositionChange = { newPosition ->
+                                        eventLogDockPosition = newPosition
+                                    },
+                                    currentDockPosition = eventLogDockPosition,
+                                    size = eventLogPanelSize,
+                                    onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                                    modifier = Modifier.fillMaxHeight(),
+                                )
+                            }
+                        } // End of if-else (Settings OR Chat/Sessions)
+                    } // End of Row (Stack body)
+
+                    // Footer - Always visible at bottom
+                    footerBar(
+                        onShowUpdateDetails = {
+                            updateViewModel.showUpdateDialogForExistingRelease()
+                        },
+                        onConfigureAiProvider = {
+                            settingsViewModel.onChangeProvider()
+                        },
+                    )
+
+                    // Event Log Panel - BOTTOM position
+                    if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.BOTTOM) {
+                        eventLogPanel(
+                            events = eventLogEvents,
+                            onDetach = {
+                                showEventLogPanel = false
+                                showEventLogWindow = true
+                            },
+                            onClose = {
+                                showEventLogPanel = false
+                            },
+                            onClearEvents = {
+                                eventLogEvents.clear()
+                            },
+                            onDockPositionChange = { newPosition ->
+                                eventLogDockPosition = newPosition
+                            },
+                            currentDockPosition = eventLogDockPosition,
+                            size = eventLogPanelSize,
+                            onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                } // End of main Column
+
+                // Quit confirmation dialog
+                if (showQuitDialog) {
+                    ComponentColors.themedAlertDialog(
+                        onDismissRequest = { showQuitDialog = false },
+                        title = { Text(stringResource("menu.quit") + "?") },
+                        text = { Text(stringResource("session.delete.confirm")) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showQuitDialog = false
+                                    exitProcess(0)
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.yes"))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showQuitDialog = false },
+                                colors = ComponentColors.primaryTextButtonColors(),
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.no"))
+                            }
+                        },
+                    )
+                }
+
+                // Provider setup required dialog
+                if (showProviderSetupDialog) {
+                    ComponentColors.themedAlertDialog(
+                        onDismissRequest = { },
+                        title = {
+                            Text(
+                                text = stringResource("provider.setup.required.title"),
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = stringResource("provider.setup.required.message"),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showProviderSetupDialog = false
+                                    settingsViewModel.onChangeProvider(isInitialSetup = true)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("provider.setup.required.button"))
+                            }
+                        },
+                    )
+                }
+
+                if (settingsViewModel.showProviderDialog) {
+                    providerSelectionDialog(
+                        viewModel = settingsViewModel,
+                        onDismiss = { settingsViewModel.closeProviderDialog() },
+                        onSave = { settingsViewModel.saveProvider() },
+                    )
+                }
+
+                // About Dialog
+                if (showAboutDialog) {
+                    aboutDialog(onDismiss = { showAboutDialog = false })
+                }
+
+                if (updateViewModel.showUpdateDialog || updateViewModel.errorMessage != null) {
+                    updateCheckDialog(
+                        viewModel = updateViewModel,
+                        onDismiss = {
+                            updateViewModel.dismissUpdateDialog()
+                        },
+                    )
+                }
+
+                if (sessionsViewModel.showExportDialog) {
+                    exportSessionDialog(
+                        sessionTitle = sessionsViewModel.exportSessionTitle,
+                        selectedFormat = sessionsViewModel.exportFormat,
+                        defaultFilename = sessionsViewModel.exportDefaultFilename,
+                        onFormatChange = { format ->
+                            sessionsViewModel.updateExportFormat(format)
+                        },
+                        onDismiss = { sessionsViewModel.dismissExportDialog() },
+                        onExport = { fullPath ->
+                            sessionsViewModel.executeExport(fullPath)
+                        },
+                    )
+                }
+
+                sessionsViewModel.successMessage?.let { message ->
+                    Dialog(onDismissRequest = { sessionsViewModel.dismissSuccessMessage() }) {
+                        Surface(
+                            modifier = Modifier.width(450.dp),
+                            shape = MaterialTheme.shapes.large,
+                            tonalElevation = 8.dp,
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(32.dp),
+                                    )
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(
+                                            text = stringResource("session.export.success.title"),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
+                                        Text(
+                                            text = message,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { sessionsViewModel.dismissSuccessMessage() },
+                                    modifier = Modifier
+                                        .align(Alignment.End)
+                                        .pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    Text(stringResource("action.ok"))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // File Overwrite Confirmation Dialog
+                if (sessionsViewModel.showOverwriteConfirmation) {
+                    Dialog(onDismissRequest = { sessionsViewModel.cancelOverwrite() }) {
+                        Surface(
+                            modifier = Modifier.width(450.dp),
+                            shape = MaterialTheme.shapes.large,
+                            tonalElevation = 8.dp,
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(32.dp),
+                                    )
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(
+                                            text = stringResource("file.overwrite.title"),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            text = stringResource("file.overwrite.message"),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        sessionsViewModel.pendingExportPath?.let { path ->
                                             Text(
-                                                text = stringResource("chat.no.active.session"),
-                                                style = MaterialTheme.typography.bodyLarge,
+                                                text = path,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(top = 4.dp),
                                             )
                                         }
                                     }
-                                } // End Row (sidebar + divider + content)
-                            }
-                        } // End of main content column (chat/sessions)
-
-                        // Event Log Panel - RIGHT position
-                        if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.RIGHT) {
-                            eventLogPanel(
-                                events = eventLogEvents,
-                                onDetach = {
-                                    showEventLogPanel = false
-                                    showEventLogWindow = true
-                                },
-                                onClose = {
-                                    showEventLogPanel = false
-                                },
-                                onClearEvents = {
-                                    eventLogEvents.clear()
-                                },
-                                onDockPositionChange = { newPosition ->
-                                    eventLogDockPosition = newPosition
-                                },
-                                currentDockPosition = eventLogDockPosition,
-                                size = eventLogPanelSize,
-                                onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                                modifier = Modifier.fillMaxHeight(),
-                            )
-                        }
-                    } // End of if-else (Settings OR Chat/Sessions)
-                } // End of Row (Stack body)
-
-                // Footer - Always visible at bottom
-                footerBar(
-                    onShowUpdateDetails = {
-                        updateViewModel.showUpdateDialogForExistingRelease()
-                    },
-                    onConfigureAiProvider = {
-                        settingsViewModel.onChangeProvider()
-                    },
-                )
-
-                // Event Log Panel - BOTTOM position
-                if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.BOTTOM) {
-                    eventLogPanel(
-                        events = eventLogEvents,
-                        onDetach = {
-                            showEventLogPanel = false
-                            showEventLogWindow = true
-                        },
-                        onClose = {
-                            showEventLogPanel = false
-                        },
-                        onClearEvents = {
-                            eventLogEvents.clear()
-                        },
-                        onDockPositionChange = { newPosition ->
-                            eventLogDockPosition = newPosition
-                        },
-                        currentDockPosition = eventLogDockPosition,
-                        size = eventLogPanelSize,
-                        onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            } // End of main Column
-
-            // Quit confirmation dialog
-            if (showQuitDialog) {
-                ComponentColors.themedAlertDialog(
-                    onDismissRequest = { showQuitDialog = false },
-                    title = { Text(stringResource("menu.quit") + "?") },
-                    text = { Text(stringResource("session.delete.confirm")) },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                showQuitDialog = false
-                                exitProcess(0)
-                            },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Text(stringResource("action.yes"))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showQuitDialog = false },
-                            colors = ComponentColors.primaryTextButtonColors(),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Text(stringResource("action.no"))
-                        }
-                    },
-                )
-            }
-
-            // Provider setup required dialog
-            if (showProviderSetupDialog) {
-                ComponentColors.themedAlertDialog(
-                    onDismissRequest = { },
-                    title = {
-                        Text(
-                            text = stringResource("provider.setup.required.title"),
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = stringResource("provider.setup.required.message"),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                showProviderSetupDialog = false
-                                settingsViewModel.onChangeProvider(isInitialSetup = true)
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Text(stringResource("provider.setup.required.button"))
-                        }
-                    },
-                )
-            }
-
-            if (settingsViewModel.showProviderDialog) {
-                providerSelectionDialog(
-                    viewModel = settingsViewModel,
-                    onDismiss = { settingsViewModel.closeProviderDialog() },
-                    onSave = { settingsViewModel.saveProvider() },
-                )
-            }
-
-            // About Dialog
-            if (showAboutDialog) {
-                aboutDialog(onDismiss = { showAboutDialog = false })
-            }
-
-            if (updateViewModel.showUpdateDialog || updateViewModel.errorMessage != null) {
-                updateCheckDialog(
-                    viewModel = updateViewModel,
-                    onDismiss = {
-                        updateViewModel.dismissUpdateDialog()
-                    },
-                )
-            }
-
-            if (sessionsViewModel.showExportDialog) {
-                exportSessionDialog(
-                    sessionTitle = sessionsViewModel.exportSessionTitle,
-                    selectedFormat = sessionsViewModel.exportFormat,
-                    defaultFilename = sessionsViewModel.exportDefaultFilename,
-                    onFormatChange = { format ->
-                        sessionsViewModel.updateExportFormat(format)
-                    },
-                    onDismiss = { sessionsViewModel.dismissExportDialog() },
-                    onExport = { fullPath ->
-                        sessionsViewModel.executeExport(fullPath)
-                    },
-                )
-            }
-
-            sessionsViewModel.successMessage?.let { message ->
-                Dialog(onDismissRequest = { sessionsViewModel.dismissSuccessMessage() }) {
-                    Surface(
-                        modifier = Modifier.width(450.dp),
-                        shape = MaterialTheme.shapes.large,
-                        tonalElevation = 8.dp,
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.Top,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(32.dp),
-                                )
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Text(
-                                        text = stringResource("session.export.success.title"),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = message,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
                                 }
-                            }
 
-                            Button(
-                                onClick = { sessionsViewModel.dismissSuccessMessage() },
-                                modifier = Modifier
-                                    .align(Alignment.End)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            ) {
-                                Text(stringResource("action.ok"))
-                            }
-                        }
-                    }
-                }
-            }
-
-            // File Overwrite Confirmation Dialog
-            if (sessionsViewModel.showOverwriteConfirmation) {
-                Dialog(onDismissRequest = { sessionsViewModel.cancelOverwrite() }) {
-                    Surface(
-                        modifier = Modifier.width(450.dp),
-                        shape = MaterialTheme.shapes.large,
-                        tonalElevation = 8.dp,
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.Top,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(32.dp),
-                                )
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f),
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
-                                        text = stringResource("file.overwrite.title"),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = stringResource("file.overwrite.message"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    sessionsViewModel.pendingExportPath?.let { path ->
-                                        Text(
-                                            text = path,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(top = 4.dp),
-                                        )
+                                    TextButton(
+                                        onClick = { sessionsViewModel.cancelOverwrite() },
+                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Text(stringResource("action.cancel"))
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Button(
+                                        onClick = { sessionsViewModel.confirmOverwrite() },
+                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                        ),
+                                    ) {
+                                        Text(stringResource("file.overwrite.confirm"))
                                     }
                                 }
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                TextButton(
-                                    onClick = { sessionsViewModel.cancelOverwrite() },
-                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                ) {
-                                    Text(stringResource("action.cancel"))
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                Button(
-                                    onClick = { sessionsViewModel.confirmOverwrite() },
-                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                    ),
-                                ) {
-                                    Text(stringResource("file.overwrite.confirm"))
-                                }
-                            }
                         }
                     }
                 }
-            }
 
-            // Rename Session Dialog
-            if (sessionsViewModel.showRenameDialog) {
-                renameSessionDialog(
-                    currentTitle = sessionsViewModel.renameCurrentTitle,
-                    onDismiss = { sessionsViewModel.dismissRenameDialog() },
-                    onRename = { newTitle ->
-                        sessionsViewModel.executeRename(newTitle)
-                        // Refresh the session title in ChatViewModel if currently viewing this session
-                        chatViewModel?.refreshSessionTitle()
-                    },
-                )
-            }
-
-            // Session Memory Dialog (Developer Mode)
-            if (showSessionMemoryDialog) {
-                sessionMemoryDialog(
-                    sessionMemory = sessionMemoryToShow,
-                    onDismiss = {
-                        showSessionMemoryDialog = false
-                        sessionMemoryToShow = null
-                    },
-                )
-            }
-
-            // Star Prompt Dialog (One-time after usage)
-            if (showStarPromptDialog) {
-                starPromptDialog(
-                    onDismiss = {
-                        StarPromptPreferences.markPromptDismissed()
-                        showStarPromptDialog = false
-                    },
-                    onStar = {
-                        StarPromptPreferences.markAsPrompted()
-                        showStarPromptDialog = false
-                        try {
-                            if (Desktop.isDesktopSupported()) {
-                                Desktop.getDesktop().browse(
-                                    java.net.URI("https://github.com/haiphucnguyen/askimo"),
-                                )
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    },
-                )
-            }
-
-            // Error Dialog (for indexing errors, etc.)
-            if (showErrorDialog) {
-                errorDialog(
-                    title = errorDialogTitle,
-                    message = errorDialogMessage,
-                    onDismiss = {
-                        showErrorDialog = false
-                    },
-                )
-            }
-
-            // New Project Dialog
-            if (showNewProjectDialog) {
-                newProjectDialog(
-                    onDismiss = { showNewProjectDialog = false },
-                    onCreateProject = { _, _, _ ->
-                        projectsViewModel.refresh()
-                    },
-                )
-            }
-
-            // Edit Project Dialog
-            if (showEditProjectDialog) {
-                val projectToEdit = editingProjectId?.let { id ->
-                    projectsViewModel.projects.find { it.id == id }
-                }
-                if (projectToEdit != null) {
-                    editProjectDialog(
-                        project = projectToEdit,
-                        onDismiss = {
-                            showEditProjectDialog = false
-                            editingProjectId = null
-                        },
-                        onSave = { projectId, name, description, knowledgeSources ->
-                            projectsViewModel.updateProject(projectId, name, description, knowledgeSources)
-                            showEditProjectDialog = false
-                            editingProjectId = null
+                // Rename Session Dialog
+                if (sessionsViewModel.showRenameDialog) {
+                    renameSessionDialog(
+                        currentTitle = sessionsViewModel.renameCurrentTitle,
+                        onDismiss = { sessionsViewModel.dismissRenameDialog() },
+                        onRename = { newTitle ->
+                            sessionsViewModel.executeRename(newTitle)
+                            // Refresh the session title in ChatViewModel if currently viewing this session
+                            chatViewModel?.refreshSessionTitle()
                         },
                     )
                 }
-            }
 
-            // Event Log Window (Developer Mode - Detached)
-            if (showEventLogWindow) {
-                eventLogWindow(
-                    events = eventLogEvents,
-                    onCloseRequest = { showEventLogWindow = false },
-                    onReattach = {
-                        showEventLogWindow = false
-                        showEventLogPanel = true
-                    },
-                )
-            }
-        } // MaterialTheme
+                // Session Memory Dialog (Developer Mode)
+                if (showSessionMemoryDialog) {
+                    sessionMemoryDialog(
+                        sessionMemory = sessionMemoryToShow,
+                        onDismiss = {
+                            showSessionMemoryDialog = false
+                            sessionMemoryToShow = null
+                        },
+                    )
+                }
+
+                // Star Prompt Dialog (One-time after usage)
+                if (showStarPromptDialog) {
+                    starPromptDialog(
+                        onDismiss = {
+                            StarPromptPreferences.markPromptDismissed()
+                            showStarPromptDialog = false
+                        },
+                        onStar = {
+                            StarPromptPreferences.markAsPrompted()
+                            showStarPromptDialog = false
+                            try {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(
+                                        java.net.URI("https://github.com/haiphucnguyen/askimo"),
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        },
+                    )
+                }
+
+                // Error Dialog (for indexing errors, etc.)
+                if (showErrorDialog) {
+                    errorDialog(
+                        title = errorDialogTitle,
+                        message = errorDialogMessage,
+                        onDismiss = {
+                            showErrorDialog = false
+                        },
+                    )
+                }
+
+                // File Viewer Dialog (fallback when system cannot open files)
+                if (showFileViewerDialog) {
+                    fileViewerDialog(
+                        title = fileViewerTitle,
+                        filePath = fileViewerPath,
+                        content = fileViewerContent,
+                        onDismiss = {
+                            showFileViewerDialog = false
+                        },
+                    )
+                }
+
+                // New Project Dialog
+                if (showNewProjectDialog) {
+                    newProjectDialog(
+                        onDismiss = { showNewProjectDialog = false },
+                        onCreateProject = { _, _, _ ->
+                            projectsViewModel.refresh()
+                        },
+                    )
+                }
+
+                // Edit Project Dialog
+                if (showEditProjectDialog) {
+                    val projectToEdit = editingProjectId?.let { id ->
+                        projectsViewModel.projects.find { it.id == id }
+                    }
+                    if (projectToEdit != null) {
+                        editProjectDialog(
+                            project = projectToEdit,
+                            onDismiss = {
+                                showEditProjectDialog = false
+                                editingProjectId = null
+                            },
+                            onSave = { projectId, name, description, knowledgeSources ->
+                                projectsViewModel.updateProject(projectId, name, description, knowledgeSources)
+                                showEditProjectDialog = false
+                                editingProjectId = null
+                            },
+                        )
+                    }
+                }
+
+                // Event Log Window (Developer Mode - Detached)
+                if (showEventLogWindow) {
+                    eventLogWindow(
+                        events = eventLogEvents,
+                        onCloseRequest = { showEventLogWindow = false },
+                        onReattach = {
+                            showEventLogWindow = false
+                            showEventLogPanel = true
+                        },
+                    )
+                }
+            } // MaterialTheme
+        } // CompositionLocalProvider
     } // ProvideLocalization
 }
 
