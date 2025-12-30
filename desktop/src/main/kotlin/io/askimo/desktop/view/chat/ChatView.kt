@@ -10,14 +10,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -26,6 +30,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,18 +54,28 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
+import io.askimo.core.chat.domain.Project
+import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.user.IndexingCompletedEvent
+import io.askimo.core.event.user.IndexingFailedEvent
+import io.askimo.core.event.user.IndexingInProgressEvent
+import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.chatInputField
 import io.askimo.desktop.view.components.manageDirectivesDialog
@@ -114,6 +129,7 @@ fun chatView(
     onStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit = { _, _, _ -> },
     sessionId: String? = null,
     sessionTitle: String? = null,
+    project: Project? = null,
     onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
@@ -141,8 +157,78 @@ fun chatView(
 
     // Session memory dialog state
     var showSessionMemoryDialog by remember { mutableStateOf(false) }
-    var sessionMemory by remember { mutableStateOf<io.askimo.core.chat.domain.SessionMemory?>(null) }
+    var sessionMemory by remember { mutableStateOf<SessionMemory?>(null) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // RAG indexing status state
+    var ragIndexingStatus by remember { mutableStateOf<String?>(null) }
+    var ragIndexingPercentage by remember { mutableStateOf<Int?>(null) }
+
+    // Check initial RAG status when project changes and subscribe to indexing events
+    LaunchedEffect(project?.id) {
+        if (project?.id != null && project.knowledgeSources.isNotEmpty()) {
+            // Check if project is already indexed
+            val projectIndexer = try {
+                GlobalContext.get().get<io.askimo.core.rag.ProjectIndexer>()
+            } catch (e: Exception) {
+                log.warn("ProjectIndexer not available: ${e.message}")
+                null
+            }
+
+            if (projectIndexer != null) {
+                val isIndexed = withContext(Dispatchers.IO) {
+                    projectIndexer.isProjectIndexed(project.id)
+                }
+
+                if (isIndexed) {
+                    ragIndexingStatus = "completed"
+                    ragIndexingPercentage = null
+                    log.debug("Project ${project.id} is already indexed")
+                }
+            }
+
+            // Subscribe to future indexing events for this project
+            EventBus.userEvents.collect { event ->
+                // Only process events for this project
+                val eventProjectId = when (event) {
+                    is IndexingStartedEvent -> event.projectId
+                    is IndexingInProgressEvent -> event.projectId
+                    is IndexingCompletedEvent -> event.projectId
+                    is IndexingFailedEvent -> event.projectId
+                    else -> null
+                }
+
+                if (eventProjectId == project.id) {
+                    when (event) {
+                        is IndexingStartedEvent -> {
+                            ragIndexingStatus = "started"
+                            ragIndexingPercentage = null
+                        }
+                        is IndexingInProgressEvent -> {
+                            ragIndexingStatus = "inprogress"
+                            ragIndexingPercentage = if (event.totalFiles > 0) {
+                                (event.filesIndexed * 100 / event.totalFiles)
+                            } else {
+                                0
+                            }
+                        }
+                        is IndexingCompletedEvent -> {
+                            ragIndexingStatus = "completed"
+                            ragIndexingPercentage = null
+                        }
+                        is IndexingFailedEvent -> {
+                            ragIndexingStatus = "failed"
+                            ragIndexingPercentage = null
+                        }
+                    }
+                }
+            }
+        } else {
+            // Reset status when project changes or has no knowledge sources
+            ragIndexingStatus = null
+            ragIndexingPercentage = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         availableDirectives = directiveService.listAllDirectives()
@@ -169,8 +255,8 @@ fun chatView(
     }
 
     // Load avatar paths
-    val userAvatarPath = remember { io.askimo.desktop.preferences.ThemePreferences.getUserAvatarPath() }
-    val aiAvatarPath = remember { io.askimo.desktop.preferences.ThemePreferences.getAIAvatarPath() }
+    val userAvatarPath = remember { ThemePreferences.getUserAvatarPath() }
+    val aiAvatarPath = remember { ThemePreferences.getAIAvatarPath() }
 
     // Show new directive dialog
     if (showNewDirectiveDialog) {
@@ -246,15 +332,178 @@ fun chatView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Left side: Session title
-                    Text(
-                        text = sessionTitle ?: "New Chat",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Project indicator badge
+                        if (project != null) {
+                            TooltipArea(
+                                tooltip = {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(4.dp),
+                                        modifier = Modifier.width(350.dp),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            // Project name
+                                            Text(
+                                                text = project.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+
+                                            // Description
+                                            project.description?.let { description ->
+                                                if (description.isNotBlank()) {
+                                                    Text(
+                                                        text = description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            }
+
+                                            // Knowledge sources
+                                            if (project.knowledgeSources.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Knowledge Sources:",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                )
+                                                Column(
+                                                    modifier = Modifier.padding(start = 8.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                                ) {
+                                                    project.knowledgeSources.forEach { source ->
+                                                        when (source) {
+                                                            is LocalFilesKnowledgeSourceConfig -> {
+                                                                source.resourceIdentifiers.forEach { path ->
+                                                                    Row(
+                                                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                    ) {
+                                                                        Text(
+                                                                            text = "•",
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                        )
+                                                                        Text(
+                                                                            text = path,
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis,
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // Timestamps
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Created: ${formatDateTime(project.createdAt)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(
+                                                text = "Updated: ${formatDateTime(project.updatedAt)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                },
+                            ) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier
+                                        .padding(0.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Text(
+                                        text = project.name.take(3).uppercase(),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
+                        }
+
+                        // RAG indexing status indicator
+                        if (project != null && project.knowledgeSources.isNotEmpty()) {
+                            val statusText = when (ragIndexingStatus) {
+                                "started" -> "RAG (Started)"
+                                "inprogress" -> ragIndexingPercentage?.let { "RAG (In Progress - $it%)" } ?: "RAG (In Progress)"
+                                "completed" -> "RAG"
+                                "failed" -> "RAG (Failed)"
+                                else -> null
+                            }
+
+                            val statusColor = when (ragIndexingStatus) {
+                                "failed" -> MaterialTheme.colorScheme.error
+                                "completed" -> MaterialTheme.colorScheme.primary
+                                "inprogress" -> MaterialTheme.colorScheme.tertiary
+                                "started" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+
+                            if (statusText != null) {
+                                TooltipArea(
+                                    tooltip = {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(4.dp),
+                                        ) {
+                                            Text(
+                                                text = statusText,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                    },
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = "RAG Status",
+                                            tint = statusColor,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        if (ragIndexingStatus == "inprogress") {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(14.dp),
+                                                color = statusColor,
+                                                strokeWidth = 2.dp,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Session title
+                        Text(
+                            text = sessionTitle ?: "New Chat",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
 
                     // Right side: Directive selector and session actions
                     Row(
@@ -628,7 +877,7 @@ fun chatView(
                     if (sourceFile.exists()) {
                         try {
                             sourceFile.copyTo(targetFile, overwrite = true)
-                            log.info("Downloaded attachment: ${attachment.fileName} to ${targetFile.absolutePath}")
+                            log.debug("Downloaded attachment: ${attachment.fileName} to ${targetFile.absolutePath}")
                         } catch (e: Exception) {
                             log.error("Error copying attachment file: ${e.message}", e)
                         }
@@ -781,3 +1030,8 @@ fun chatView(
         )
     }
 }
+
+/**
+ * Format LocalDateTime for display in project info tooltip.
+ */
+private fun formatDateTime(dateTime: LocalDateTime): String = "${dateTime.monthValue.toString().padStart(2, '0')}/${dateTime.dayOfMonth.toString().padStart(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"

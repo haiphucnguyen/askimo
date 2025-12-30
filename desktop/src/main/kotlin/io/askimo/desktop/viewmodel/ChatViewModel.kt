@@ -7,6 +7,7 @@ package io.askimo.desktop.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTO
@@ -86,6 +87,9 @@ class ChatViewModel(
         private set
 
     var sessionTitle by mutableStateOf<String?>(null)
+        private set
+
+    var project by mutableStateOf<Project?>(null)
         private set
 
     /**
@@ -575,8 +579,9 @@ class ChatViewModel(
                     // Load directive from the resumed session
                     selectedDirective = result.directiveId
 
-                    // Load session title
+                    // Load session title and project
                     sessionTitle = result.title
+                    project = result.project
 
                     // Reset thinking state
                     isThinking = false
@@ -888,8 +893,9 @@ class ChatViewModel(
         hasMoreMessages = false
         currentSessionId.value = null
 
-        // Clear session title
+        // Clear session title and project
         sessionTitle = null
+        project = null
 
         // Clear search state
         clearSearch()

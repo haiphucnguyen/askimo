@@ -25,7 +25,67 @@ class GitignoreParser(private val rootPath: Path) {
     )
 
     init {
+        loadGlobalGitignore()
         loadGitignoreFiles(rootPath)
+    }
+
+    /**
+     * Load global gitignore patterns from standard locations:
+     * 1. Git config core.excludesfile
+     * 2. ~/.config/git/ignore (XDG standard)
+     * 3. ~/.gitignore_global (common convention)
+     */
+    private fun loadGlobalGitignore() {
+        val globalGitignorePaths = mutableListOf<Path>()
+
+        // Try to get from git config
+        try {
+            val process = ProcessBuilder("git", "config", "--global", "core.excludesfile")
+                .redirectErrorStream(true)
+                .start()
+
+            val configPath = process.inputStream.bufferedReader().readText().trim()
+            if (configPath.isNotEmpty()) {
+                val expandedPath = if (configPath.startsWith("~/")) {
+                    Path.of(System.getProperty("user.home"), configPath.substring(2))
+                } else {
+                    Path.of(configPath)
+                }
+                if (Files.exists(expandedPath)) {
+                    globalGitignorePaths.add(expandedPath)
+                }
+            }
+        } catch (e: Exception) {
+            log.debug("Could not read git config for global excludesfile: ${e.message}")
+        }
+
+        // Add standard locations if they exist
+        val userHome = System.getProperty("user.home")
+        listOf(
+            Path.of(userHome, ".config", "git", "ignore"),
+            Path.of(userHome, ".gitignore_global"),
+            Path.of(userHome, ".gitignore"),
+        ).forEach { path ->
+            if (Files.exists(path) && !globalGitignorePaths.contains(path)) {
+                globalGitignorePaths.add(path)
+            }
+        }
+
+        // Load patterns from all found global gitignore files
+        globalGitignorePaths.forEach { gitignoreFile ->
+            try {
+                Files.readAllLines(gitignoreFile)
+                    .map { it.trim() }
+                    .filterNot { it.isEmpty() || it.startsWith("#") }
+                    .forEach { line ->
+                        // Global gitignore patterns apply from the root
+                        patterns.add(parsePattern(line, rootPath))
+                    }
+                log.debug("Loaded global .gitignore: $gitignoreFile")
+            } catch (e: Exception) {
+                log.warn("Failed to load global .gitignore: $gitignoreFile", e)
+            }
+        }
     }
 
     private fun loadGitignoreFiles(path: Path) {

@@ -1186,6 +1186,7 @@ fun mainContent(
                     onStateChange = onChatStateChange,
                     sessionId = activeSessionId,
                     sessionTitle = chatViewModel?.sessionTitle,
+                    project = chatViewModel?.project,
                     onRenameSession = { sessionId ->
                         sessionsViewModel.showRenameDialog(sessionId)
                     },
