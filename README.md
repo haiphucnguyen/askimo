@@ -50,7 +50,7 @@
 
 ---
 
-**[Why Askimo?](#why-askimo)** · **[Supported Providers](#supported-providers)** · **[Quick Start](#-quick-start)** · **[Desktop vs CLI](#-choose-your-tool)** · **[Comparisons](#askimo-vs-other-ai-clients)**
+**[Why Askimo?](#why-askimo)** · **[Supported Providers](#supported-providers)** · **[Quick Start](#-quick-start)** · **[Comparisons](#askimo-vs-other-ai-clients)**
 
 ---
 
