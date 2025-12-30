@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.FileAttachmentDTO
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
@@ -161,18 +160,14 @@ fun projectView(
                             showDeleteDialog = true
                             showProjectMenu = false
                         },
-                        onReindexProject = if (AppConfig.developer.enabled && AppConfig.developer.active) {
-                            {
-                                EventBus.post(
-                                    ProjectReIndexEvent(
-                                        projectId = project.id,
-                                        reason = "Manual re-index requested by user from project menu",
-                                    ),
-                                )
-                                showProjectMenu = false
-                            }
-                        } else {
-                            null
+                        onReindexProject = {
+                            EventBus.post(
+                                ProjectReIndexEvent(
+                                    projectId = project.id,
+                                    reason = "Manual re-index requested by user from project menu",
+                                ),
+                            )
+                            showProjectMenu = false
                         },
                         onDismiss = { showProjectMenu = false },
                     )

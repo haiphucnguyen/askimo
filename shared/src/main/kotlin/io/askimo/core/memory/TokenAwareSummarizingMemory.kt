@@ -11,7 +11,10 @@ import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ModelContextSizeCache
+import io.askimo.core.providers.getSummary
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -42,26 +45,29 @@ data class ConversationSummary(
  * Memory persistence is mandatory - sessionId and sessionMemoryRepository are required.
  * The memory automatically loads from database on creation and saves after every change.
  *
+ * The maximum tokens for memory is dynamically calculated as 40% of the model's context
+ * window size, ensuring optimal utilization regardless of which model is active.
+ *
+ * @param appContext The application context for accessing model information
  * @param sessionId The session ID this memory belongs to (required for persistence)
  * @param sessionMemoryRepository Repository for persisting memory state (required)
- * @param maxTokens Maximum number of tokens to keep in memory (excluding summary), default 4000
  * @param tokenEstimator Function to estimate token count for a message (default: words * 1.3)
- * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization, default 0.75
- * @param summarizer Optional function that takes conversation text and returns a ConversationSummary (for AI-powered summarization)
+ * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization, default 0.6
  * @param asyncSummarization Whether to run summarization asynchronously, default true
  * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 30
  */
 class TokenAwareSummarizingMemory(
+    private val appContext: AppContext,
     private val sessionId: String,
     private val sessionMemoryRepository: SessionMemoryRepository,
-    private val maxTokens: Int = 4000,
     private val tokenEstimator: (ChatMessage) -> Int = defaultTokenEstimator(),
     private val summarizationThreshold: Double = 0.6,
-    private val summarizer: ((String) -> ConversationSummary)? = null,
     asyncSummarization: Boolean = true,
     private val summarizationTimeoutSeconds: Long = 30,
 ) : ChatMemory,
     AutoCloseable {
+
+    private val chatClient = appContext.createUtilityClient()
 
     private val executorService: ExecutorService = if (asyncSummarization) {
         Executors.newSingleThreadExecutor { r ->
@@ -84,6 +90,38 @@ class TokenAwareSummarizingMemory(
 
     init {
         loadFromDatabase()
+    }
+
+    /**
+     * Maximum tokens for memory, dynamically calculated from model's context size.
+     * This is a computed property that recalculates every time to ensure it always
+     * reflects the latest context size from ModelContextSizeCache (which may be updated
+     * as the system learns the actual model capabilities).
+     *
+     * Uses 40% of the model's context window, leaving room for:
+     * - Current conversation in request (~40%)
+     * - AI response (20% reserved in ChatRequestTransformers)
+     */
+    private val maxTokens: Int
+        get() = calculateMaxTokensFromCurrentModel()
+
+    private fun calculateMaxTokensFromCurrentModel(): Int {
+        val provider = appContext.getActiveProvider()
+        val model = appContext.params.model
+        val modelKey = ModelContextSizeCache.modelKey(provider, model)
+        val contextSize = ModelContextSizeCache.get(modelKey)
+
+        val memoryAllocation = (contextSize * 0.4).toInt()
+
+        log.debug(
+            "Calculated maxTokens for memory: {} (40% of {} tokens from {})",
+            memoryAllocation,
+            contextSize,
+            modelKey,
+        )
+
+        // Ensure a minimum threshold for safety, even with very small models
+        return memoryAllocation.coerceAtLeast(2000)
     }
 
     override fun id(): Any = this.hashCode()
@@ -225,12 +263,7 @@ class TokenAwareSummarizingMemory(
         log.info("Summarizing $messagesToSummarizeCount out of ${conversationMessages.size} conversation messages (excluding system messages)")
 
         try {
-            if (summarizer != null) {
-                // Call AI-powered summarizer
-                generateStructuredSummary(messagesToSummarize)
-            } else {
-                generateBasicSummary(messagesToSummarize)
-            }
+            generateStructuredSummary(messagesToSummarize)
         } catch (e: Exception) {
             log.error("Summarization failed, using basic fallback", e)
             generateBasicSummary(messagesToSummarize)
@@ -260,7 +293,7 @@ class TokenAwareSummarizingMemory(
      */
     private fun generateStructuredSummary(messagesToSummarize: List<ChatMessage>) {
         val conversationText = buildConversationText(messagesToSummarize)
-        val newSummary = summarizer!!(conversationText)
+        val newSummary = chatClient.getSummary(conversationText)
 
         structuredSummary = mergeWithExistingSummary(newSummary)
         log.info("Generated structured summary with ${newSummary.keyFacts.size} facts, ${newSummary.mainTopics.size} topics")

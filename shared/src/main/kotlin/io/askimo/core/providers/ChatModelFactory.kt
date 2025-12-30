@@ -7,7 +7,6 @@ package io.askimo.core.providers
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.RetrievalAugmentor
 import io.askimo.core.context.ExecutionMode
-import io.askimo.core.memory.ConversationSummary
 
 /**
  * Factory interface for creating chat model instances for a specific AI provider.
@@ -61,15 +60,6 @@ interface ChatModelFactory<T : ProviderSettings> {
      * @return Help text explaining how to set up or configure the provider
      */
     fun getNoModelsHelpText(): String = "Please check your provider configuration."
-
-    /**
-     * Creates a summarizer function for AI-powered conversation summarization.
-     * Returns null if AI summarization is not supported or not enabled for this provider.
-     *
-     * @param settings Provider-specific settings
-     * @return A function that takes conversation text and returns a ConversationSummary, or null
-     */
-    fun createSummarizer(settings: T): ((String) -> ConversationSummary)? = null
 
     /**
      * Creates an intent classification client for RAG decisions.

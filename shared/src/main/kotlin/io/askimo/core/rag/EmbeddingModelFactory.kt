@@ -229,7 +229,7 @@ private fun buildDockerEmbeddingModel(settings: DockerAiSettings): EmbeddingMode
 
     return OpenAiEmbeddingModelBuilder()
         .apiKey("not-needed")
-        .baseUrl("$baseUrl/v1")
+        .baseUrl(baseUrl)
         .modelName(modelName)
         .build()
 }
