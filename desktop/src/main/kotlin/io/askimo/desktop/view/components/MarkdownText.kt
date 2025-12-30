@@ -975,8 +975,11 @@ private fun buildInlineContent(
             }
             is Link -> {
                 // Add link annotation for clickable links using the new LinkAnnotation API
-                val linkText = extractTextContent(child)
-                val displayText = linkText.ifEmpty { child.destination }
+                // Build styled content for link children (e.g., inline code with backticks)
+                val linkContent = buildInlineContent(child, inlineCodeBg, linkColor)
+                val displayContent = linkContent.ifEmpty {
+                    AnnotatedString(child.destination)
+                }
 
                 withLink(
                     LinkAnnotation.Url(
@@ -989,7 +992,7 @@ private fun buildInlineContent(
                         ),
                     ),
                 ) {
-                    append(displayText)
+                    append(displayContent)
                 }
             }
             is Image -> {

@@ -59,7 +59,6 @@ object LocalModelValidator {
             canAutoPull = false,
         )
     } else {
-        // Cloud providers – no local check needed
         ModelAvailabilityResult.Available
     }
 
@@ -111,27 +110,6 @@ object LocalModelValidator {
                 error = e.message ?: "Unknown error",
             )
         }
-    }
-
-    /**
-     * Get available models/tags from Ollama
-     */
-    private fun getOllamaTags(
-        baseUrl: String,
-        connectTimeoutMs: Int,
-        readTimeoutMs: Int,
-    ): String? = try {
-        val url = URI("${baseUrl.removeSuffix("/")}/api/tags").toURL()
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            this.connectTimeout = connectTimeoutMs
-            this.readTimeout = readTimeoutMs
-            requestMethod = "GET"
-            doInput = true
-        }
-        conn.inputStream.bufferedReader().use { it.readText() }
-    } catch (e: Exception) {
-        log.error("Failed to get Ollama tags from $baseUrl: ${e.message}", e)
-        null
     }
 
     /**

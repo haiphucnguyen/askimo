@@ -195,21 +195,6 @@ data class IndexingConfig(
             }
         }
     }
-
-    /**
-     * Cached set of directory names to skip, extracted from allExcludes patterns.
-     * This is computed once when the config is loaded for optimal performance.
-     */
-    val skipDirectoryNames: Set<String> by lazy {
-        allExcludes.mapNotNull { pattern ->
-            when {
-                pattern.endsWith("/") -> pattern.dropLast(1) // Remove trailing slash
-                pattern.startsWith(".") && !pattern.contains("*") -> pattern // Keep dot files/dirs as-is
-                !pattern.contains("*") && !pattern.contains("/") -> pattern // Simple directory names
-                else -> null // Skip wildcard patterns for now
-            }
-        }.toSet()
-    }
 }
 
 data class DeveloperConfig(
@@ -236,6 +221,8 @@ data class RagConfig(
     val hybridMaxResults: Int = 15,
     /** RRF constant for rank fusion algorithm (standard value is 60) */
     val rankFusionConstant: Int = 60,
+    /** Use absolute file paths in citations (true) or relative filenames (false) */
+    val useAbsolutePathInCitations: Boolean = true,
 )
 
 data class ProxyConfig(
