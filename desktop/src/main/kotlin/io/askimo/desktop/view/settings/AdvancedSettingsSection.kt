@@ -27,6 +27,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -424,6 +425,16 @@ private fun ragConfigurationSection() {
                 },
             )
 
+            // Use Absolute Paths in Citations
+            ragBooleanField(
+                label = stringResource("settings.rag.use.absolute.paths"),
+                hint = stringResource("settings.rag.use.absolute.paths.hint"),
+                value = AppConfig.rag.useAbsolutePathInCitations,
+                onValueChange = { newValue ->
+                    AppConfig.updateField("rag.useAbsolutePathInCitations", newValue)
+                },
+            )
+
             // Divider before embedding configuration
             androidx.compose.material3.HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -499,6 +510,44 @@ private fun ragConfigurationSection() {
 }
 
 @Composable
+private fun ragBooleanField(
+    label: String,
+    hint: String,
+    value: Boolean,
+    onValueChange: (Boolean) -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                )
+            }
+            Switch(
+                checked = value,
+                onCheckedChange = onValueChange,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ragIntField(
     label: String,
     hint: String,
@@ -524,7 +573,7 @@ private fun ragIntField(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
-        androidx.compose.material3.OutlinedTextField(
+        OutlinedTextField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
@@ -574,7 +623,7 @@ private fun ragDoubleField(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
-        androidx.compose.material3.OutlinedTextField(
+        OutlinedTextField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
@@ -624,7 +673,7 @@ private fun ragOptionalIntField(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
-        androidx.compose.material3.OutlinedTextField(
+        OutlinedTextField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
@@ -783,7 +832,7 @@ private fun ragEmbeddingModelSelector() {
             }
 
             // Embedding Model Text Field
-            androidx.compose.material3.OutlinedTextField(
+            OutlinedTextField(
                 value = textValue,
                 onValueChange = { newValue ->
                     if (isSupported) {

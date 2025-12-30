@@ -16,10 +16,12 @@ import io.askimo.core.logging.logger
  *
  * @param citationStyle How to format source citations (COMPACT, DETAILED, MINIMAL)
  * @param promptTemplate Custom prompt template. Use {context} and {question} placeholders
+ * @param useAbsolutePaths If true, use absolute file paths in citations; if false, use relative filenames
  */
 class MetadataAwareContentInjector(
     private val citationStyle: CitationStyle = CitationStyle.COMPACT,
     private val promptTemplate: String? = null,
+    private val useAbsolutePaths: Boolean = true,
 ) : ContentInjector {
 
     private val log = logger<MetadataAwareContentInjector>()
@@ -40,25 +42,25 @@ class MetadataAwareContentInjector(
          * Create an injector with minimal citations (just filenames)
          * Best for: General Q&A where exact line numbers aren't critical
          */
-        fun minimal(customTemplate: String? = null) = MetadataAwareContentInjector(CitationStyle.MINIMAL, customTemplate)
+        fun minimal(customTemplate: String? = null, useAbsolutePaths: Boolean = true) = MetadataAwareContentInjector(CitationStyle.MINIMAL, customTemplate, useAbsolutePaths)
 
         /**
          * Create an injector with compact citations (filename + line numbers)
          * Best for: Code discussions, documentation review
          */
-        fun compact(customTemplate: String? = null) = MetadataAwareContentInjector(CitationStyle.COMPACT, customTemplate)
+        fun compact(customTemplate: String? = null, useAbsolutePaths: Boolean = true) = MetadataAwareContentInjector(CitationStyle.COMPACT, customTemplate, useAbsolutePaths)
 
         /**
          * Create an injector with detailed citations (full path + line numbers)
          * Best for: Technical debugging, code review, precise references
          */
-        fun detailed(customTemplate: String? = null) = MetadataAwareContentInjector(CitationStyle.DETAILED, customTemplate)
+        fun detailed(customTemplate: String? = null, useAbsolutePaths: Boolean = true) = MetadataAwareContentInjector(CitationStyle.DETAILED, customTemplate, useAbsolutePaths)
 
         /**
          * Create an injector with a completely custom template
          * Template placeholders: {context}, {question}
          */
-        fun custom(template: String) = MetadataAwareContentInjector(CitationStyle.COMPACT, template)
+        fun custom(template: String, useAbsolutePaths: Boolean = true) = MetadataAwareContentInjector(CitationStyle.COMPACT, template, useAbsolutePaths)
     }
 
     private fun formatSourceCitation(content: Content): String {
@@ -71,13 +73,25 @@ class MetadataAwareContentInjector(
 
         return when (citationStyle) {
             CitationStyle.MINIMAL -> {
-                // Just filename
-                "Source: $fileName"
+                // Just filename or path
+                if (filePath != null && useAbsolutePaths) {
+                    "Source: [`$fileName`](file://$filePath)"
+                } else {
+                    "Source: $fileName"
+                }
             }
             CitationStyle.COMPACT -> {
                 // Filename with line numbers if available
                 buildString {
-                    append("Source: `$fileName`")
+                    if (filePath != null && useAbsolutePaths) {
+                        append("Source: [`$fileName`](file://$filePath")
+                        if (startLine != null && endLine != null) {
+                            append("#L$startLine-L$endLine")
+                        }
+                        append(")")
+                    } else {
+                        append("Source: `$fileName`")
+                    }
                     if (startLine != null && endLine != null) {
                         append(" (lines $startLine-$endLine)")
                     }
@@ -86,9 +100,18 @@ class MetadataAwareContentInjector(
             CitationStyle.DETAILED -> {
                 // Full path and all available metadata
                 buildString {
-                    append("Source: `$fileName`")
-                    if (filePath != null && filePath != fileName) {
+                    if (filePath != null && useAbsolutePaths) {
+                        append("Source: [`$fileName`](file://$filePath")
+                        if (startLine != null && endLine != null) {
+                            append("#L$startLine-L$endLine")
+                        }
+                        append(")")
                         append("\nPath: `$filePath`")
+                    } else {
+                        append("Source: `$fileName`")
+                        if (filePath != null && filePath != fileName) {
+                            append("\nPath: `$filePath`")
+                        }
                     }
                     if (startLine != null && endLine != null) {
                         append("\nLines: $startLine-$endLine")
@@ -108,27 +131,79 @@ class MetadataAwareContentInjector(
                 |Question: {question}
         """.trimMargin()
 
-        CitationStyle.COMPACT -> """
+        CitationStyle.COMPACT -> if (useAbsolutePaths) {
+            """
                 |Answer the following question using the provided context.
-                |You may reference the source files when relevant.
+                |When referencing sources, include the exact markdown link format provided in the context naturally in your response.
+                |You can use varied phrases like:
+                |- "As mentioned in [`filename`](file://path#L10-L15)..."
+                |- "The [`filename`](file://path#L20-L30) shows..."
+                |- "Based on [`filename`](file://path#L40-L50)..."
+                |- "In [`filename`](file://path#L60-L70), we see..."
+                |Vary your phrasing to make citations feel natural.
                 |
                 |Context:
                 |{context}
                 |
                 |Question: {question}
-        """.trimMargin()
+            """.trimMargin()
+        } else {
+            """
+                |Answer the following question using the provided context.
+                |When referencing sources, mention the source filename and line numbers naturally in your response.
+                |You can use varied phrases like:
+                |- "As mentioned in `filename` (lines 10-15)..."
+                |- "The `filename` shows..."
+                |- "Based on `filename` (lines 20-30)..."
+                |- "In `filename`, we see..."
+                |Vary your phrasing to make citations feel natural.
+                |
+                |Context:
+                |{context}
+                |
+                |Question: {question}
+            """.trimMargin()
+        }
 
-        CitationStyle.DETAILED -> """
+        CitationStyle.DETAILED -> if (useAbsolutePaths) {
+            """
                 |Answer the following question using the provided context.
                 |
-                |When citing information, you can reference the source file and line numbers.
-                |For example: "According to `filename` (lines 10-15)..." or "As shown in `filename`..."
+                |When citing information, include the exact markdown link format provided in the context.
+                |Use varied, natural phrases such as:
+                |- "As mentioned in [`filename`](file://path#L10-L15)..."
+                |- "The [`filename`](file://path#L20-L30) indicates..."
+                |- "Based on [`filename`](file://path#L40-L50)..."
+                |- "Looking at [`filename`](file://path#L60-L70)..."
+                |- "The code in [`filename`](file://path#L80-L90) demonstrates..."
+                |
+                |This allows the user to click on the reference and jump directly to the source file.
+                |Avoid repeating the same citation phrase - vary your wording to make the response more natural.
                 |
                 |Context:
                 |{context}
                 |
                 |Question: {question}
-        """.trimMargin()
+            """.trimMargin()
+        } else {
+            """
+                |Answer the following question using the provided context.
+                |
+                |When citing information, mention the source file path and line numbers naturally.
+                |Use varied phrases such as:
+                |- "As mentioned in `filename` (lines 10-15)..."
+                |- "The `filename` indicates..."
+                |- "Based on `path/to/file`..."
+                |- "Looking at `filename` (lines 20-30)..."
+                |
+                |Vary your phrasing to make citations feel natural and avoid repetition.
+                |
+                |Context:
+                |{context}
+                |
+                |Question: {question}
+            """.trimMargin()
+        }
     }
 
     override fun inject(

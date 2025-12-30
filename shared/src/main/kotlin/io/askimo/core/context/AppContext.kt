@@ -7,6 +7,7 @@ package io.askimo.core.context
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
@@ -270,6 +271,8 @@ class AppContext(
         .builder()
         .contentRetriever(retriever)
         .contentInjector(
-            MetadataAwareContentInjector(),
+            MetadataAwareContentInjector(
+                useAbsolutePaths = AppConfig.rag.useAbsolutePathInCitations,
+            ),
         ).build()
 }
