@@ -10,7 +10,7 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
@@ -55,14 +55,12 @@ class ChatSessionServiceIT {
             val sessionMemoryRepository = databaseManager.getSessionMemoryRepository()
             val projectRepository = databaseManager.getProjectRepository()
 
-            val appContext = AppContextFactory.createAppContext()
-
             service = ChatSessionService(
                 sessionRepository = sessionRepository,
                 messageRepository = messageRepository,
                 sessionMemoryRepository = sessionMemoryRepository,
                 projectRepository = projectRepository,
-                appContext = appContext,
+                appContext = AppContext.getInstance(),
             )
         }
 

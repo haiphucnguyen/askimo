@@ -38,7 +38,6 @@ import io.askimo.core.VersionInfo
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextFactory
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
@@ -76,7 +75,7 @@ fun main(args: Array<String>) {
         else -> ExecutionMode.STATEFUL_MODE
     }
 
-    val appContext = AppContextFactory.createAppContext()
+    val appContext = AppContext.getInstance()
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =

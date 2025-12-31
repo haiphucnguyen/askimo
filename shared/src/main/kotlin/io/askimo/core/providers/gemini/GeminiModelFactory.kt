@@ -5,10 +5,14 @@
 package io.askimo.core.providers.gemini
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
-import dev.langchain4j.rag.RetrievalAugmentor
+import dev.langchain4j.rag.DefaultRetrievalAugmentor
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
@@ -19,6 +23,7 @@ import io.askimo.core.providers.ProviderModelUtils
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.rag.MetadataAwareContentInjector
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
@@ -51,7 +56,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         sessionId: String?,
         model: String,
         settings: GeminiSettings,
-        retrievalAugmentor: RetrievalAugmentor?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -124,8 +129,18 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                         model,
                     )
                 }
-        if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
+        if (retriever != null) {
+            val retrievalAugmentor = DefaultRetrievalAugmentor
+                .builder()
+                .queryTransformer(CompressingQueryTransformer(createSecondaryChatModel(settings)))
+                .contentRetriever(retriever)
+                .contentInjector(
+                    MetadataAwareContentInjector(
+                        useAbsolutePaths = AppConfig.rag.useAbsolutePathInCitations,
+                    ),
+                ).build()
+            builder.retrievalAugmentor(retrievalAugmentor)
+                .storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()
@@ -133,19 +148,15 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     private fun supportsSampling(model: String): Boolean = true
 
+    private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel = GoogleAiGeminiChatModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(UTILITY_MODEL)
+        .timeout(Duration.ofSeconds(10))
+        .build()
+
     override fun createUtilityClient(
         settings: GeminiSettings,
-        fallbackModel: String,
-    ): ChatClient {
-        // Simple client for classification - no tools, no transformers, no custom messages
-        val chatModel = GoogleAiGeminiChatModel.builder()
-            .apiKey(safeApiKey(settings.apiKey))
-            .modelName(UTILITY_MODEL)
-            .timeout(Duration.ofSeconds(10))
-            .build()
-
-        return AiServices.builder(ChatClient::class.java)
-            .chatModel(chatModel)
-            .build()
-    }
+    ): ChatClient = AiServices.builder(ChatClient::class.java)
+        .chatModel(createSecondaryChatModel(settings))
+        .build()
 }

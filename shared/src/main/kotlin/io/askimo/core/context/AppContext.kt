@@ -5,9 +5,7 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
-import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
@@ -18,7 +16,6 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.rag.MetadataAwareContentInjector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,14 +25,45 @@ import java.util.Locale
 
 /**
  * Application context holding session-specific parameters and state.
+ * Implemented as a singleton to ensure a single instance across the application.
  *
  * @param params The parameters defining the current application context.
  */
-class AppContext(
+class AppContext private constructor(
     val params: AppContextParams,
 ) {
     private val log = logger<AppContext>()
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    companion object {
+        @Volatile
+        private var instance: AppContext? = null
+
+        /**
+         * Gets the singleton instance of AppContext.
+         * If no instance exists, creates one with the provided params or loads from config.
+         *
+         * @param params Optional parameters to use for initialization. If not provided and no instance exists,
+         *               parameters will be loaded from AppContextConfigManager.
+         * @return The singleton AppContext instance
+         */
+        fun getInstance(params: AppContextParams? = null): AppContext = instance ?: synchronized(this) {
+            instance ?: run {
+                val contextParams = params ?: AppContextConfigManager.load()
+                AppContext(contextParams).also { instance = it }
+            }
+        }
+
+        /**
+         * Resets the singleton instance. Useful for testing or when configuration changes require a fresh instance.
+         * Note: This will invalidate any cached clients and event listeners in the previous instance.
+         */
+        fun reset() {
+            synchronized(this) {
+                instance = null
+            }
+        }
+    }
 
     /**
      * System directive for the AI, typically used for language instructions or global behavior.
@@ -148,16 +176,14 @@ class AppContext(
                 ?: error("No model factory registered for $provider")
 
             val settings = getOrCreateProviderSettings(provider)
-            val currentModel = params.model
 
             @Suppress("UNCHECKED_CAST")
             val client = (factory as ChatModelFactory<ProviderSettings>).createUtilityClient(
                 settings = settings,
-                currentModel,
             )
 
             cachedUtilityClient = client
-            log.debug("Created and cached utility client for provider {} with model {}", provider, currentModel)
+            log.debug("Created and cached utility client for provider {} with model {}", provider, params.model)
             return client
         }
     }
@@ -190,15 +216,13 @@ class AppContext(
         val settings = getOrCreateProviderSettings(provider)
         val modelName = params.model
 
-        val retrievalAugmentor = retriever?.let { buildRetrievalAugmentor(it) }
-
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
             sessionId = sessionId,
             model = modelName,
             settings = settings,
+            retriever = retriever,
             executionMode = executionMode,
-            retrievalAugmentor = retrievalAugmentor,
             chatMemory = memory,
         )
     }
@@ -262,17 +286,4 @@ class AppContext(
             }
         }
     }
-
-    /**
-     * Build a retrieval augmentor with custom prompt template for RAG.
-     * This configures how retrieved context is injected into the LLM prompt.
-     */
-    private fun buildRetrievalAugmentor(retriever: ContentRetriever) = DefaultRetrievalAugmentor
-        .builder()
-        .contentRetriever(retriever)
-        .contentInjector(
-            MetadataAwareContentInjector(
-                useAbsolutePaths = AppConfig.rag.useAbsolutePathInCitations,
-            ),
-        ).build()
 }

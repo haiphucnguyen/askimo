@@ -5,7 +5,7 @@
 package io.askimo.core.project
 
 import dev.langchain4j.data.segment.TextSegment
-import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
@@ -30,6 +30,9 @@ class EmbeddingModelFactoryOllamaTest {
     @Test
     @DisplayName("EmbeddingModelFactory auto-pulls missing Ollama embedding model and can embed text")
     fun autoPullsMissingModelAndEmbeds() {
+        // Reset singleton to ensure test gets a fresh instance with test-specific params
+        AppContext.reset()
+
         val ollama = SharedOllama.container
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
@@ -52,7 +55,7 @@ class EmbeddingModelFactoryOllamaTest {
             currentProvider = OLLAMA,
             providerSettings = mutableMapOf(OLLAMA to ollamaSettings as ProviderSettings),
         )
-        val session = AppContextFactory.createAppContext(
+        val session = AppContext.getInstance(
             params = params,
         )
 

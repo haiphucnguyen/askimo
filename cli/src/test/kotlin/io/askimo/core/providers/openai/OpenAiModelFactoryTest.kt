@@ -31,7 +31,7 @@ class OpenAiModelFactoryTest {
         return OpenAiModelFactory().create(
             model = "gpt-3.5-turbo",
             settings = settings,
-            retrievalAugmentor = null,
+            retriever = null,
             executionMode = ExecutionMode.STATELESS_MODE,
         )
     }

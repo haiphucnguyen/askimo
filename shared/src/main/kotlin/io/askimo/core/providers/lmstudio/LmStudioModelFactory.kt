@@ -6,10 +6,15 @@ package io.askimo.core.providers.lmstudio
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
-import dev.langchain4j.rag.RetrievalAugmentor
+import dev.langchain4j.rag.DefaultRetrievalAugmentor
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
@@ -20,6 +25,7 @@ import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ProviderModelUtils.hallucinatedToolHandler
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.providers.verbosityInstruction
+import io.askimo.core.rag.MetadataAwareContentInjector
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.fs.LocalFsTools
 import java.net.http.HttpClient
@@ -41,7 +47,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         sessionId: String?,
         model: String,
         settings: LmStudioSettings,
-        retrievalAugmentor: RetrievalAugmentor?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -106,32 +112,42 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                         model,
                     )
                 }
-        if (retrievalAugmentor != null) {
-            builder.retrievalAugmentor(retrievalAugmentor).storeRetrievedContentInChatMemory(false)
+        if (retriever != null) {
+            val retrievalAugmentor = DefaultRetrievalAugmentor
+                .builder()
+                .queryTransformer(CompressingQueryTransformer(createSecondaryChatModel(settings)))
+                .contentRetriever(retriever)
+                .contentInjector(
+                    MetadataAwareContentInjector(
+                        useAbsolutePaths = AppConfig.rag.useAbsolutePathInCitations,
+                    ),
+                ).build()
+            builder.retrievalAugmentor(retrievalAugmentor)
+                .storeRetrievedContentInChatMemory(false)
         }
 
         return builder.build()
     }
 
-    override fun createUtilityClient(
+    private fun createSecondaryChatModel(
         settings: LmStudioSettings,
-        fallbackModel: String,
-    ): ChatClient {
-        // Simple client for classification - no tools, no transformers, no custom messages
+    ): ChatModel {
         // LMStudio requires HTTP/1.1
         val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
-        val chatModel = OpenAiChatModel.builder()
+        return OpenAiChatModel.builder()
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
-            .modelName(fallbackModel)
+            .modelName(AppContext.getInstance().params.model)
             .timeout(Duration.ofSeconds(10))
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
-
-        return AiServices.builder(ChatClient::class.java)
-            .chatModel(chatModel)
-            .build()
     }
+
+    override fun createUtilityClient(
+        settings: LmStudioSettings,
+    ): ChatClient = AiServices.builder(ChatClient::class.java)
+        .chatModel(createSecondaryChatModel(settings))
+        .build()
 }

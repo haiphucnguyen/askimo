@@ -5,7 +5,7 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
-import dev.langchain4j.rag.RetrievalAugmentor
+import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.context.ExecutionMode
 
 /**
@@ -35,9 +35,9 @@ interface ChatModelFactory<T : ProviderSettings> {
      *
      * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
-     * @param retrievalAugmentor Optional retrieval-augmented generation (RAG) component.
-     * If provided, the created chat service will use it to fetch and inject relevant context
-     * into prompts during generation. Pass null to disable retrieval augmentation.
+     * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
+     * If provided, the factory will create a RetrievalAugmentor internally with appropriate
+     * configuration. Pass null to disable retrieval augmentation.
      * @param executionMode The execution mode indicating how the user is running the application.
      * Tools are disabled for DESKTOP mode.
      * @param chatMemory Optional chat memory for conversation context. If provided, memory will be
@@ -48,7 +48,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         sessionId: String? = null,
         model: String,
         settings: T,
-        retrievalAugmentor: RetrievalAugmentor? = null,
+        retriever: ContentRetriever? = null,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient
@@ -74,6 +74,5 @@ interface ChatModelFactory<T : ProviderSettings> {
      */
     fun createUtilityClient(
         settings: T,
-        fallbackModel: String,
     ): ChatClient
 }
