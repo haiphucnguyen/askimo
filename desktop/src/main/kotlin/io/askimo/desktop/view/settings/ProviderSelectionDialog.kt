@@ -433,7 +433,7 @@ fun providerSelectionDialog(
                                                         onClick = {
                                                             try {
                                                                 Desktop.getDesktop().browse(
-                                                                    URI("https://askimo.chat/blog/securing-user-data-in-askimo/"),
+                                                                    URI("https://askimo.chat/security"),
                                                                 )
                                                             } catch (_: Exception) {
                                                                 // Silently fail if browser cannot be opened
