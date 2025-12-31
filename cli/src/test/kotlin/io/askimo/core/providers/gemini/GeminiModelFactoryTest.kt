@@ -31,7 +31,7 @@ class GeminiModelFactoryTest {
         return GeminiModelFactory().create(
             model = "gemini-2.5-flash",
             settings = settings,
-            retrievalAugmentor = null,
+            retriever = null,
             executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )
     }

@@ -24,15 +24,7 @@ data class Project(
     val knowledgeSources: List<KnowledgeSourceConfig>,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
-) {
-    /**
-     * Backward compatibility property for old code that accesses indexedPaths.
-     * @deprecated Use knowledgeSources instead
-     */
-    @Deprecated("Use knowledgeSources instead", ReplaceWith("knowledgeSources"))
-    val indexedPaths: String
-        get() = KnowledgeSourceSerializer.serialize(knowledgeSources)
-}
+)
 
 /**
  * Exposed table definition for projects.

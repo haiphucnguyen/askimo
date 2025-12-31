@@ -2576,16 +2576,7 @@
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
-      { "name": "getAllExcludes", "parameterTypes": [] },
-      { "name": "getBinaryExtensions", "parameterTypes": [] },
-      { "name": "getCommonExcludes", "parameterTypes": [] },
-      { "name": "getConcurrentIndexingThreads", "parameterTypes": [] },
-      { "name": "getCustomExcludes", "parameterTypes": [] },
-      { "name": "getExcludeFileNames", "parameterTypes": [] },
-      { "name": "getFilters", "parameterTypes": [] },
-      { "name": "getMaxFileBytes", "parameterTypes": [] },
-      { "name": "getProjectTypes", "parameterTypes": [] },
-      { "name": "getSkipDirectoryNames", "parameterTypes": [] }
+      { "name": "getAllExcludes", "parameterTypes": [] }
     ]
   },
   {
@@ -2606,7 +2597,10 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["int", "double", "int", "int"] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["int", "double", "int", "int", "boolean"]
+      },
       {
         "name": "<init>",
         "parameterTypes": [
@@ -2614,6 +2608,7 @@
           "double",
           "int",
           "int",
+          "boolean",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2664,7 +2659,10 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["io.askimo.core.context.AppContextParams"]
+        "parameterTypes": [
+          "io.askimo.core.context.AppContextParams",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
       },
       { "name": "getParams", "parameterTypes": [] }
     ]
@@ -4386,7 +4384,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$rwxFnx3k",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$dqoIHOMe",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

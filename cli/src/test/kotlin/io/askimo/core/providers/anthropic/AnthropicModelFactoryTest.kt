@@ -34,7 +34,7 @@ class AnthropicModelFactoryTest {
             AnthropicModelFactory().create(
                 model = "claude-sonnet-4-5",
                 settings = settings,
-                retrievalAugmentor = null,
+                retriever = null,
                 executionMode = ExecutionMode.STATELESS_MODE,
             )
 

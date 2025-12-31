@@ -10,7 +10,7 @@ import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.request.ChatRequest
 import io.askimo.core.chat.repository.ChatDirectiveRepository
-import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
 
@@ -80,7 +80,7 @@ object ChatRequestTransformers {
 
         val newSystemMessages = mutableListOf<SystemMessage>()
 
-        val appSystemDirective = AppContextFactory.createAppContext().systemDirective
+        val appSystemDirective = AppContext.getInstance().systemDirective
         if (appSystemDirective != null && appSystemDirective !in existingSystemMessageTexts) {
             newSystemMessages.add(SystemMessage.from(appSystemDirective))
         }

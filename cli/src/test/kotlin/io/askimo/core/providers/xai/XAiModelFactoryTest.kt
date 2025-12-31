@@ -31,7 +31,7 @@ class XAiModelFactoryTest {
         return XAiModelFactory().create(
             model = "grok-4",
             settings = settings,
-            retrievalAugmentor = null,
+            retriever = null,
             executionMode = ExecutionMode.STATELESS_MODE,
         )
     }

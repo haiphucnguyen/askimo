@@ -44,7 +44,7 @@ class OllamaModelFactoryTest {
         return OllamaModelFactory().create(
             model = "qwen2.5:0.5b",
             settings = settings,
-            retrievalAugmentor = null,
+            retriever = null,
             executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )
     }

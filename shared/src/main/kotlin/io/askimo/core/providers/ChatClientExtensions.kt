@@ -4,7 +4,7 @@
  */
 package io.askimo.core.providers
 
-import io.askimo.core.context.AppContextFactory
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.util.JsonUtils.json
@@ -41,7 +41,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
     val log = logger<ChatClient>()
 
     // Get provider and model from AppContext
-    val appContext = AppContextFactory.createAppContext()
+    val appContext = AppContext.getInstance()
     val provider = appContext.getActiveProvider()
     val model = appContext.params.model
 
