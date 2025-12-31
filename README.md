@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/askimo-logo.svg">
-    <img alt="Askimo - AI toolkit for your workflows." src="public/askimo-logo-dark.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="public/github-logo-dark.svg">
+    <img alt="Askimo - AI toolkit for your workflows." src="public/github-logo-light.svg">
   </picture>
 </p>
 
@@ -66,6 +66,7 @@ Askimo is a provider-agnostic AI toolkit that gives developers, writers, and res
 * **⚡ CLI for Power Users** - Pipe logs, automate workflows, and integrate AI into your dev pipeline
 * **🔒 Privacy-First Architecture** - All chat history stored locally on your machine, not in the cloud
 * **📦 No Vendor Lock-In** - Works with any OpenAI-compatible API endpoint
+* **🧠 Built-in RAG** - Connect your knowledge folders to give AI context from your documents, code, and notes without uploading anything to the cloud
 * **🎨 Custom Directives & Prompts** - Build reusable prompt libraries and automation recipes
 * **💾 Smart History & Search** - Never lose an important conversation - search, star, and export everything
 
