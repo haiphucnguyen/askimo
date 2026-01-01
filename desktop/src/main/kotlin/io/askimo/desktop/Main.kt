@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -103,6 +104,7 @@ import io.askimo.desktop.view.components.eventLogWindow
 import io.askimo.desktop.view.components.exportSessionDialog
 import io.askimo.desktop.view.components.fileViewerDialog
 import io.askimo.desktop.view.components.footerBar
+import io.askimo.desktop.view.components.globalSearchDialog
 import io.askimo.desktop.view.components.navigationSidebar
 import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.renameSessionDialog
@@ -120,6 +122,7 @@ import io.askimo.desktop.viewmodel.SettingsViewModel
 import io.askimo.desktop.viewmodel.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image
@@ -128,6 +131,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
 import java.awt.Desktop
+import java.net.URI
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -269,6 +273,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
+    var showGlobalSearchDialog by remember { mutableStateOf(false) }
     var editingProjectId by remember { mutableStateOf<String?>(null) }
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorDialogTitle by remember { mutableStateOf("") }
@@ -424,6 +429,12 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     chatViewModel?.clearChat()
                     currentView = View.CHAT
                 },
+                onNewProject = {
+                    showNewProjectDialog = true
+                },
+                onSearchInSessions = {
+                    showGlobalSearchDialog = true
+                },
                 onShowSettings = {
                     currentView = View.SETTINGS
                 },
@@ -547,10 +558,18 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                                     currentView = View.CHAT
                                                     true
                                                 }
+                                                AppShortcut.CREATE_PROJECT -> {
+                                                    showNewProjectDialog = true
+                                                    true
+                                                }
                                                 AppShortcut.SEARCH_IN_CHAT -> {
                                                     if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
                                                         chatViewModel.enableSearchMode()
                                                     }
+                                                    true
+                                                }
+                                                AppShortcut.GLOBAL_SEARCH -> {
+                                                    showGlobalSearchDialog = true
                                                     true
                                                 }
                                                 AppShortcut.TOGGLE_CHAT_HISTORY -> {
@@ -1072,17 +1091,16 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             try {
                                 if (Desktop.isDesktopSupported()) {
                                     Desktop.getDesktop().browse(
-                                        java.net.URI("https://github.com/haiphucnguyen/askimo"),
+                                        URI("https://github.com/haiphucnguyen/askimo"),
                                     )
                                 }
                             } catch (e: Exception) {
-                                e.printStackTrace()
+                                log.error("Can not open the browser", e)
                             }
                         },
                     )
                 }
 
-                // Error Dialog (for indexing errors, etc.)
                 if (showErrorDialog) {
                     errorDialog(
                         title = errorDialogTitle,
@@ -1134,6 +1152,45 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                             },
                         )
                     }
+                }
+
+                if (showGlobalSearchDialog) {
+                    globalSearchDialog(
+                        onDismiss = { showGlobalSearchDialog = false },
+                        onNavigateToMessage = { sessionId, messageId ->
+                            log.debug("Navigate to message: sessionId='$sessionId', messageId='$messageId'")
+
+                            showGlobalSearchDialog = false
+
+                            if (currentView != View.CHAT) {
+                                log.debug("Switching from $currentView to CHAT view")
+                                currentView = View.CHAT
+                            }
+
+                            sessionManager.switchToSession(sessionId)
+
+                            scope.launch {
+                                val chatViewModel = sessionManager.getOrCreateChatViewModel(sessionId)
+
+                                snapshotFlow { chatViewModel.messages }
+                                    .first { messages ->
+                                        messages.isNotEmpty() && messages.any { it.id == messageId }
+                                    }
+
+                                val message = chatViewModel.messages.find { it.id == messageId }
+
+                                if (message != null && message.timestamp != null) {
+                                    log.debug(
+                                        "Messages loaded, jumping to message with timestamp: {}",
+                                        message.timestamp,
+                                    )
+                                    chatViewModel.jumpToMessage(messageId, message.timestamp!!)
+                                } else {
+                                    log.warn("Message not found or has no timestamp after loading: messageId='$messageId'")
+                                }
+                            }
+                        },
+                    )
                 }
 
                 // Event Log Window (Developer Mode - Detached)
@@ -1303,7 +1360,6 @@ fun mainContent(
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
-                        // Project not found, show error
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
@@ -1316,7 +1372,6 @@ fun mainContent(
                         }
                     }
                 } else {
-                    // No project selected, show error
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,

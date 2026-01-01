@@ -6,6 +6,7 @@ package io.askimo.desktop.view.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -187,9 +188,7 @@ fun chatView(
                 }
             }
 
-            // Subscribe to future indexing events for this project
             EventBus.userEvents.collect { event ->
-                // Only process events for this project
                 val eventProjectId = when (event) {
                     is IndexingStartedEvent -> event.projectId
                     is IndexingInProgressEvent -> event.projectId
@@ -240,10 +239,15 @@ fun chatView(
     // Focus requester for input field
     val inputFocusRequester = remember { FocusRequester() }
 
+    // Focus requester for the main ChatView container
+    val chatViewFocusRequester = remember { FocusRequester() }
+
     // Focus search field when search mode is activated
     LaunchedEffect(isSearchMode) {
         if (isSearchMode) {
             searchFocusRequester.requestFocus()
+        } else {
+            chatViewFocusRequester.requestFocus()
         }
     }
 
@@ -252,6 +256,10 @@ fun chatView(
         if (editingMessage != null) {
             inputFocusRequester.requestFocus()
         }
+    }
+
+    LaunchedEffect(Unit) {
+        chatViewFocusRequester.requestFocus()
     }
 
     // Load avatar paths
@@ -282,10 +290,20 @@ fun chatView(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .focusRequester(chatViewFocusRequester)
+            .focusable()
             .onPreviewKeyEvent { keyEvent ->
                 val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
                 when (shortcut) {
+                    AppShortcut.SEARCH_IN_CHAT -> {
+                        if (!isSearchMode) {
+                            onSearch("")
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     AppShortcut.CLOSE_SEARCH -> {
                         if (isSearchMode) {
                             onClearSearch()
@@ -349,14 +367,12 @@ fun chatView(
                                             modifier = Modifier.padding(12.dp),
                                             verticalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            // Project name
                                             Text(
                                                 text = project.name,
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold,
                                             )
 
-                                            // Description
                                             project.description?.let { description ->
                                                 if (description.isNotBlank()) {
                                                     Text(
@@ -367,7 +383,6 @@ fun chatView(
                                                 }
                                             }
 
-                                            // Knowledge sources
                                             if (project.knowledgeSources.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(

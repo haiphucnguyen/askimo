@@ -701,7 +701,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1996,7 +1997,6 @@
         "name": "should automatically delete attachments when message is deleted via CASCADE",
         "parameterTypes": []
       },
-      { "name": "should count messages correctly", "parameterTypes": [] },
       {
         "name": "should delete all messages for a session",
         "parameterTypes": []
@@ -3063,6 +3063,73 @@
   },
   {
     "name": "io.askimo.core.recipes.ToolRegistryTestKt",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.search.SessionSearchServiceIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "should combine multiple filters", "parameterTypes": [] },
+      {
+        "name": "should distinguish between user and assistant messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should filter by date range - LAST_7_DAYS",
+        "parameterTypes": []
+      },
+      { "name": "should filter by date range - TODAY", "parameterTypes": [] },
+      { "name": "should filter by project", "parameterTypes": [] },
+      {
+        "name": "should find messages matching search query",
+        "parameterTypes": []
+      },
+      { "name": "should find partial word matches", "parameterTypes": [] },
+      {
+        "name": "should handle empty database gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle multiple sessions with same search term",
+        "parameterTypes": []
+      },
+      {
+        "name": "should include session metadata in results",
+        "parameterTypes": []
+      },
+      { "name": "should respect limit parameter", "parameterTypes": [] },
+      {
+        "name": "should return empty results for blank query",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return empty results for non-matching query",
+        "parameterTypes": []
+      },
+      { "name": "should search case-insensitively", "parameterTypes": [] },
+      {
+        "name": "should sort by DATE_ASC - oldest first",
+        "parameterTypes": []
+      },
+      {
+        "name": "should sort by DATE_DESC - newest first",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.search.SessionSearchServiceIT$Companion",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -4384,7 +4451,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$dqoIHOMe",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$zK49DRve",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

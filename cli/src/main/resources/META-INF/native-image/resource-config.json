@@ -20,6 +20,9 @@
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.internal.spi.OpenAiClientBuilderFactory\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiChatModelBuilderFactory\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiStreamingChatModelBuilderFactory\\E"
       },
       {

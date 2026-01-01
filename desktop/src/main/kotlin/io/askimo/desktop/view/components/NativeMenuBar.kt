@@ -28,6 +28,8 @@ object NativeMenuBar {
         frameWindowScope: FrameWindowScope,
         onShowAbout: () -> Unit,
         onNewChat: () -> Unit,
+        onNewProject: () -> Unit,
+        onSearchInSessions: () -> Unit,
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
         onCheckForUpdates: () -> Unit,
@@ -35,7 +37,7 @@ object NativeMenuBar {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onShowSettings, onShowEventLog, onCheckForUpdates)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -62,6 +64,8 @@ object NativeMenuBar {
         window: Window,
         onShowAbout: () -> Unit,
         onNewChat: () -> Unit,
+        onNewProject: () -> Unit,
+        onSearchInSessions: () -> Unit,
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
         onCheckForUpdates: () -> Unit,
@@ -82,6 +86,30 @@ object NativeMenuBar {
                 },
             )
             fileMenu.add(newChatItem)
+
+            val newProjectItem = MenuItem(
+                LocalizationManager.getString("menu.new.project"),
+                MenuShortcut(KeyEvent.VK_N, true), // Shift+Ctrl+N (or Shift+Cmd+N on Mac)
+            )
+            newProjectItem.addActionListener(
+                ActionListener {
+                    onNewProject()
+                },
+            )
+            fileMenu.add(newProjectItem)
+
+            fileMenu.addSeparator()
+
+            val searchSessionsItem = MenuItem(
+                LocalizationManager.getString("menu.search.sessions"),
+                MenuShortcut(KeyEvent.VK_F, true), // Shift+Ctrl+F (or Shift+Cmd+F on Mac)
+            )
+            searchSessionsItem.addActionListener(
+                ActionListener {
+                    onSearchInSessions()
+                },
+            )
+            fileMenu.add(searchSessionsItem)
 
             fileMenu.addSeparator()
 

@@ -266,4 +266,21 @@ class ChatSessionRepository internal constructor(
             it[updatedAt] = LocalDateTime.now()
         } > 0
     }
+
+    /**
+     * Get multiple sessions by their IDs.
+     *
+     * @param sessionIds List of session IDs to retrieve
+     * @return List of sessions matching the IDs
+     */
+    fun getSessionsByIds(sessionIds: List<String>): List<ChatSession> {
+        if (sessionIds.isEmpty()) return emptyList()
+
+        return transaction(database) {
+            ChatSessionsTable
+                .selectAll()
+                .where { ChatSessionsTable.id inList sessionIds }
+                .map { it.toChatSession() }
+        }
+    }
 }

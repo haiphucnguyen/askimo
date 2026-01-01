@@ -7,6 +7,7 @@ package io.askimo.core.chat.repository
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatMessageAttachmentsTable
 import io.askimo.core.chat.domain.ChatMessagesTable
+import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.AbstractSQLiteRepository
@@ -23,12 +24,22 @@ import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import java.time.Instant
 import java.time.LocalDateTime
 import java.util.UUID
 
 enum class PaginationDirection {
     FORWARD,
     BACKWARD,
+}
+
+/**
+ * Sort options for search results.
+ */
+enum class SearchSortBy {
+    DATE_DESC, // Newest first (default)
+    DATE_ASC, // Oldest first
+    RELEVANCE, // For future use if relevance scoring is added
 }
 
 /**
@@ -244,7 +255,77 @@ class ChatMessageRepository internal constructor(
         Pair(messagesWithAttachments, nextCursor)
     }
 
-    fun getMessageCount(sessionId: String): Int = transaction(database) {
+    /**
+     * Search for messages across all sessions.
+     *
+     * @param query Search query string (case-insensitive)
+     * @param startTime Optional start time filter (inclusive)
+     * @param endTime Optional end time filter (inclusive)
+     * @param projectId Optional project ID to filter by
+     * @param sortBy Sort order for results (default: DATE_DESC)
+     * @param limit Maximum number of results
+     * @return List of messages matching the search criteria
+     */
+    fun searchMessages(
+        query: String,
+        startTime: Instant? = null,
+        endTime: Instant? = null,
+        projectId: String? = null,
+        sortBy: SearchSortBy = SearchSortBy.DATE_DESC,
+        limit: Int = 100,
+    ): List<ChatMessage> = transaction(database) {
+        // Escape special SQL LIKE characters
+        val escapedQuery = query.lowercase()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+
+        var selectQuery = ChatMessagesTable
+            .selectAll()
+            .where { ChatMessagesTable.content.lowerCase() like "%$escapedQuery%" }
+
+        // Apply time filters if provided
+        if (startTime != null) {
+            val startDateTime = LocalDateTime.ofInstant(startTime, java.time.ZoneId.systemDefault())
+            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt greater startDateTime }
+        }
+        if (endTime != null) {
+            val endDateTime = LocalDateTime.ofInstant(endTime, java.time.ZoneId.systemDefault())
+            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt less endDateTime }
+        }
+
+        // Apply project filter if provided
+        if (projectId != null) {
+            val sessionIds = ChatSessionsTable
+                .selectAll()
+                .where { ChatSessionsTable.projectId eq projectId }
+                .map { it[ChatSessionsTable.id] }
+
+            if (sessionIds.isEmpty()) {
+                return@transaction emptyList()
+            }
+
+            selectQuery = selectQuery.andWhere { ChatMessagesTable.sessionId inList sessionIds }
+        }
+
+        // Apply sorting at database level - Exposed supports this natively!
+        selectQuery = when (sortBy) {
+            SearchSortBy.DATE_DESC -> selectQuery.orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
+            SearchSortBy.DATE_ASC -> selectQuery.orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
+            SearchSortBy.RELEVANCE -> {
+                // For now, fall back to DATE_DESC
+                // In future, could add SQL CASE WHEN for relevance scoring
+                selectQuery.orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
+            }
+        }
+
+        // Limit results and return
+        selectQuery
+            .limit(limit)
+            .map { it.toChatMessage() }
+    }
+
+    fun deleteAllMessagesForSession(sessionId: String) = transaction(database) {
         ChatMessagesTable
             .selectAll()
             .where { ChatMessagesTable.sessionId eq sessionId }
