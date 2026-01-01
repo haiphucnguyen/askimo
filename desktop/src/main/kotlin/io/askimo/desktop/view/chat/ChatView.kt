@@ -353,6 +353,7 @@ fun chatView(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false),
                     ) {
                         // Project indicator badge
                         if (project != null) {
@@ -516,7 +517,9 @@ fun chatView(
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .padding(end = 8.dp),
                         )
                     }
 
