@@ -347,7 +347,9 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     ).id
                 },
                 {
-                    // Callback when rename completes - sessions will auto-refresh via events
+                    sessionManager.activeSessionId?.let { sessionId ->
+                        sessionManager.getOrCreateChatViewModel(sessionId).refreshSessionTitle()
+                    }
                 },
             )
         }
