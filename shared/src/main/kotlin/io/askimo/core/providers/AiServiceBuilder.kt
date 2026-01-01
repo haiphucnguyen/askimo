@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
+package io.askimo.core.providers
+
+import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
+import dev.langchain4j.rag.DefaultRetrievalAugmentor
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer
+import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
+import io.askimo.core.context.ExecutionMode
+import io.askimo.core.rag.MetadataAwareContentInjector
+import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.tools.fs.LocalFsTools
+
+/**
+ * Shared builder for creating ChatClient instances across all provider model factories.
+ * Centralizes common AI service configuration to reduce code duplication.
+ */
+object AiServiceBuilder {
+
+    /**
+     * Builds a ChatClient with common configuration applied.
+     *
+     * @param sessionId Optional session ID for the chat
+     * @param model The model name being used
+     * @param provider The model provider (OpenAI, Ollama, etc.)
+     * @param chatModel The streaming chat model instance
+     * @param secondaryChatModel The chat model used for query compression in RAG
+     * @param verbosity The verbosity level for responses
+     * @param chatMemory Optional chat memory for conversation context
+     * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation)
+     * @param executionMode The execution mode (determines if tools are enabled)
+     * @param toolInstructions Custom tool response format instructions (defaults to standard format)
+     * @return Configured ChatClient instance
+     */
+    fun buildChatClient(
+        sessionId: String?,
+        model: String,
+        provider: ModelProvider,
+        chatModel: StreamingChatModel,
+        secondaryChatModel: ChatModel,
+        verbosity: Verbosity,
+        chatMemory: ChatMemory?,
+        retriever: ContentRetriever?,
+        executionMode: ExecutionMode,
+        toolInstructions: String = defaultToolResponseFormatInstructions(),
+    ): ChatClient {
+        val builder = AiServices
+            .builder(ChatClient::class.java)
+            .streamingChatModel(chatModel)
+            .apply {
+                if (chatMemory != null) {
+                    chatMemory(chatMemory)
+                }
+                if (executionMode.isToolEnabled()) {
+                    tools(LocalFsTools)
+                }
+            }
+            .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
+            .systemMessageProvider {
+                systemMessage(
+                    toolInstructions,
+                    verbosityInstruction(verbosity),
+                )
+            }
+            .chatRequestTransformer { chatRequest, memoryId ->
+                ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                    sessionId,
+                    chatRequest,
+                    memoryId,
+                    provider,
+                    model,
+                )
+            }
+
+        if (retriever != null) {
+            val retrievalAugmentor = DefaultRetrievalAugmentor
+                .builder()
+                .queryTransformer(CompressingQueryTransformer(secondaryChatModel))
+                .contentRetriever(retriever)
+                .contentInjector(
+                    MetadataAwareContentInjector(
+                        useAbsolutePaths = AppConfig.rag.useAbsolutePathInCitations,
+                    ),
+                )
+                .build()
+
+            builder.retrievalAugmentor(retrievalAugmentor)
+                .storeRetrievedContentInChatMemory(false)
+        }
+
+        return builder.build()
+    }
+
+    /**
+     * Default tool response format instructions used across all providers.
+     * Can be overridden by passing custom instructions to buildChatClient.
+     */
+    fun defaultToolResponseFormatInstructions(): String = """
+        Tool response format:
+        • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
+        • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data
+        • success=false: Tool failed, check "error" for reason
+        • Always check the "success" field before using "output"
+        • If success=false, inform the user about the error from the "error" field
+        • When success=true, extract data from "metadata" field for detailed information
+
+        Tool execution guidelines:
+        • Parse the tool response JSON before responding to user
+        • If success=true: Use the output and metadata to answer user's question
+        • If success=false: Explain what went wrong using the error message
+        • Never assume tool success without checking the response
+    """.trimIndent()
+}

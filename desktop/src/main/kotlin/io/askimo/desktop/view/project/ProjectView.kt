@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.FileAttachmentDTO
-import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectReIndexEvent
@@ -69,7 +68,6 @@ private val log = logger("ProjectView")
 @Composable
 fun projectView(
     project: Project,
-    appContext: AppContext,
     onStartChat: (projectId: String, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (sessionId: String, projectId: String) -> Unit,

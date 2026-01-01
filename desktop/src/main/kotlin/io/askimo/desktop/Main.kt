@@ -1262,7 +1262,6 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            appContext = appContext,
                             onStartChat = { projId, message, attachments ->
                                 // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(

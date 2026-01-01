@@ -199,24 +199,28 @@ fun ChatClient.getSummary(conversationText: String): ConversationSummary {
     val log = logger<ChatClient>()
 
     val prompt = """
-        Analyze the following conversation and provide a structured summary in JSON format.
-        Extract key facts, main topics, and recent context.
+        Analyze this conversation and create a HIGH-QUALITY structured summary.
 
-        Conversation:
+        CONVERSATION:
         $conversationText
 
-        Respond with valid JSON only (no markdown, no newlines in string values):
-        {
-            "keyFacts": {"fact_name": "fact_value"},
-            "mainTopics": ["topic1", "topic2"],
-            "recentContext": "brief summary of the most recent discussion"
-        }
+        INSTRUCTIONS:
+        1. Extract only meaningful, actionable facts (ignore greetings, confirmations, filler)
+        2. Identify concrete topics and user goals (not generic labels)
+        3. Capture decisions, preferences, and important context
+        4. Keep recentContext focused on latest user intent and progress
+        5. Omit redundant or trivial information
 
-        IMPORTANT: Ensure all JSON is on a single line with no newlines inside string values.
+        Respond with valid JSON only (no markdown, single line):
+        {
+            "keyFacts": {"specific_fact_name": "concrete_value"},
+            "mainTopics": ["specific_topic_1", "specific_topic_2"],
+            "recentContext": "concise summary of current state and user's immediate goal"
+        }
     """.trimIndent()
 
     try {
-        var jsonText = this.sendStreamingMessageWithCallback(prompt)
+        var jsonText = this.sendMessage(prompt)
 
         // Remove markdown code blocks
         jsonText = jsonText
