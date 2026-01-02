@@ -71,27 +71,11 @@ Unlike ChatGPT Desktop (OpenAI-only) or LM Studio (local-only), **Askimo gives y
 
 
 ## Supported Providers
-### Cloud
 
-* OpenAI
+**Cloud:** OpenAI · Claude · Gemini · Grok  
+**Local:** Ollama · LM Studio · LocalAI · Docker AI
 
-* Anthropic Claude
-
-* Google Gemini
-
-* X AI (Grok)
-
-### Local
-
-* Ollama
-
-* LM Studio
-
-* LocalAI
-
-* Docker AI
-
-Askimo works with any OpenAI-compatible API endpoint.
+*Works with any OpenAI-compatible endpoint.*
 
 ## 🚀 Quick Start
 
@@ -103,7 +87,7 @@ Download the installer for your operating system:
 
 Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) for all available versions.
 
-**After installation:** Open Askimo, add your API keys (or connect to Ollama for local models), and start chatting.
+**After installation:** Open Askimo, add your API keys (or connect to Ollama for local models), and start chatting. [**Setup guide →**](https://askimo.chat/docs/desktop/ai-providers/)
 
 ---
 
@@ -111,22 +95,21 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 **The AI chat client that doesn't lock you in.** Most desktop AI tools force you to choose: cloud-only (ChatGPT) or local-only (LM Studio). Askimo is the only chat client that gives you **both** — plus private RAG, full search, and optional CLI automation.
 
-| Feature | **Askimo** | **LM Studio** | **Ollama Desktop GUIs** | **ChatGPT Desktop** |
-|--------|-------------|----------------|--------------------------|----------------------|
-| Works with multiple providers | ✅ | ❌ (Local only) | ❌ (Local only) | ❌ (OpenAI only) |
-| Works with local models | ✅ | ✅ | ✅ | ❌ |
-| Works with cloud models (OpenAI, Claude, Gemini, etc.) | ✅ | ❌ | ❌ | ✅ |
-| Desktop application | ✅ | ✅ | ✅ | ✅ |
-| Command-line interface (CLI) | ✅ | ✅ (API server) | ✅ (CLI only) | ❌ |
-| Automation / scripting support | ✅ | ✅ (via API) | ✅ (via CLI) | ❌ |
-| RAG (Retrieval-Augmented Generation) | ✅ Desktop (Single folder) | ❌ | ❌ | ✅ (File upload) |
-| Searchable chat history | ✅ | ✅ | Varies | ✅ |
-| Star/favorite conversations | ✅ | ❌ | ❌ | ✅ (Pinned) |
-| Custom directives / prompt profiles | ✅ | ✅ (System prompt) | ❌ | ✅ (Custom instructions) |
-| Export conversations | ✅ | ❌ | ❌ | ✅ |
-| Privacy (local storage) | ✅ | ✅ | ✅ | ❌ (Cloud sync) |
-| Multi-workspace organization | ✅ (Projects) | ❌ | ❌ | ✅ (Projects + Memory) |
-| Works offline (local models) | ✅ | ✅ | ✅ | ❌ |
+| Feature | **Askimo** | **LM Studio** | **Ollama GUIs** | **ChatGPT Desktop** |
+|--------|-------------|----------------|------------------|----------------------|
+| **Multi-provider support** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
+| **Local model support** | ✅ Via Ollama | ✅ Native | ✅ Native | ❌ |
+| **Cloud model support** | ✅ OpenAI, Claude, Gemini, Grok | ❌ | ❌ | ✅ OpenAI |
+| **Desktop app** | ✅ | ✅ | ✅ | ✅ |
+| **CLI for automation** | ✅ | ✅ API server | ✅ Ollama CLI | ❌ |
+| **RAG / Document context** | ✅ Folder-based | ❌ | ❌ | ✅ File upload |
+| **Searchable history** | ✅ Full-text | ✅ | Varies by GUI | ✅ |
+| **Organize conversations** | ✅ Star + Projects | ❌ | ❌ | ✅ Pin + Projects |
+| **Custom prompts/directives** | ✅ | ✅ System prompt | ❌ | ✅ Custom instructions |
+| **Export conversations** | ✅ JSON/MD/HTML | ❌ | ❌ | ✅ |
+| **Privacy (local-only storage)** | ✅ | ✅ | ✅ | ⚠️ Optional cloud sync |
+| **Works offline** | ✅ With local models | ✅ | ✅ | ❌ |
+| **Free & open source** | ✅ Apache 2.0 | ✅ Free (proprietary) | ✅ Varies | ❌ Subscription |
 
 
 
@@ -138,10 +121,10 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 - **100% Local Storage** - All chat history stored on your machine, never in the cloud
 - **RAG (Retrieval-Augmented Generation)** - Connect a knowledge folder to give AI context from your documents, code, and notes
 - **Smart Organization** - Star important conversations, search across all chats, create collections
-- **Rich Markdown Support** - Code syntax highlighting, tables, images, and formatted text
+- **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text
 - **Custom Directives** - Save reusable prompts and system messages for different tasks
 - **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search
-- **Export Anywhere** - Download conversations in JSON, Markdown, or plain text
+- **Export Anywhere** - Download conversations in JSON, Markdown, or HTML
 
 ### 💡 Perfect For
 
