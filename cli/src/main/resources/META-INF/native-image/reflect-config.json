@@ -3082,11 +3082,7 @@
         "name": "should distinguish between user and assistant messages",
         "parameterTypes": []
       },
-      {
-        "name": "should filter by date range - LAST_7_DAYS",
-        "parameterTypes": []
-      },
-      { "name": "should filter by date range - TODAY", "parameterTypes": [] },
+      { "name": "should filter by date range", "parameterTypes": [] },
       { "name": "should filter by project", "parameterTypes": [] },
       {
         "name": "should find messages matching search query",
@@ -4450,7 +4446,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$aZ65zK5H",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$SIA4Govd",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -60,7 +60,7 @@ class ChatSessionServiceIT {
                 messageRepository = messageRepository,
                 sessionMemoryRepository = sessionMemoryRepository,
                 projectRepository = projectRepository,
-                appContext = AppContext.getInstance(),
+                appContext = AppContext.initialize(ExecutionMode.STATELESS_MODE),
             )
         }
 
