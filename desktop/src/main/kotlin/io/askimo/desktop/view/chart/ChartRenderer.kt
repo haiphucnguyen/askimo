@@ -39,11 +39,13 @@ import androidx.compose.ui.unit.dp
 import io.askimo.tools.chart.AreaChartData
 import io.askimo.tools.chart.BarChartData
 import io.askimo.tools.chart.BoxPlotData
+import io.askimo.tools.chart.CandlestickChartData
 import io.askimo.tools.chart.ChartData
 import io.askimo.tools.chart.HistogramData
 import io.askimo.tools.chart.LineChartData
 import io.askimo.tools.chart.PieChartData
 import io.askimo.tools.chart.ScatterChartData
+import io.askimo.tools.chart.WaterfallChartData
 import org.jetbrains.skia.Font
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.PaintMode
@@ -66,6 +68,8 @@ fun chartRenderer(
         is AreaChartData -> areaChart(data = chartData, modifier = modifier)
         is HistogramData -> histogramChart(data = chartData, modifier = modifier)
         is BoxPlotData -> boxPlotChart(data = chartData, modifier = modifier)
+        is CandlestickChartData -> candlestickChart(data = chartData, modifier = modifier)
+        is WaterfallChartData -> waterfallChart(data = chartData, modifier = modifier)
     }
 }
 
@@ -174,6 +178,36 @@ fun lineChart(
                     val label = String.format("%.1f", value)
                     val textLine = TextLine.make(label, font)
                     drawTextLine(textLine, padding - textLine.width - 8f, y + 4f, labelPaint)
+                }
+            }
+
+            // Draw X-axis value labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 14f)
+
+                // Draw labels at regular intervals
+                for (i in 0..4) {
+                    val value = minX + (xRange / 4) * i
+                    val x = padding + (chartWidth / 4) * i
+
+                    // Use custom label if provided, otherwise format numeric value
+                    val label = data.xLabels?.get(value) ?: run {
+                        if (value % 1 == 0f) {
+                            // Integer values (like years)
+                            String.format("%.0f", value)
+                        } else {
+                            // Decimal values
+                            String.format("%.1f", value)
+                        }
+                    }
+
+                    val textLine = TextLine.make(label, font)
+                    // Center the text under the position
+                    drawTextLine(textLine, x - textLine.width / 2, size.height - padding + 20f, labelPaint)
                 }
             }
 
@@ -725,6 +759,32 @@ fun scatterChart(
                 }
             }
 
+            // Draw X-axis value labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 14f)
+
+                for (i in 0..4) {
+                    val value = minX + (xRange / 4) * i
+                    val x = padding + (chartWidth / 4) * i
+
+                    // Use custom label if provided, otherwise format numeric value
+                    val label = data.xLabels?.get(value) ?: run {
+                        if (value % 1 == 0f) {
+                            String.format("%.0f", value)
+                        } else {
+                            String.format("%.1f", value)
+                        }
+                    }
+
+                    val textLine = TextLine.make(label, font)
+                    drawTextLine(textLine, x - textLine.width / 2, size.height - padding + 20f, labelPaint)
+                }
+            }
+
             // Draw axis labels (larger font)
             drawContext.canvas.nativeCanvas.apply {
                 val labelPaint = Paint().apply {
@@ -932,6 +992,32 @@ fun areaChart(
                     val label = String.format("%.1f", value)
                     val textLine = TextLine.make(label, font)
                     drawTextLine(textLine, padding - textLine.width - 8f, y + 4f, labelPaint)
+                }
+            }
+
+            // Draw X-axis value labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 14f)
+
+                for (i in 0..4) {
+                    val value = minX + (xRange / 4) * i
+                    val x = padding + (chartWidth / 4) * i
+
+                    // Use custom label if provided, otherwise format numeric value
+                    val label = data.xLabels?.get(value) ?: run {
+                        if (value % 1 == 0f) {
+                            String.format("%.0f", value)
+                        } else {
+                            String.format("%.1f", value)
+                        }
+                    }
+
+                    val textLine = TextLine.make(label, font)
+                    drawTextLine(textLine, x - textLine.width / 2, size.height - padding + 20f, labelPaint)
                 }
             }
 
@@ -1444,6 +1530,460 @@ fun boxPlotChart(
                 onClick = {
                     scale = (scale * 0.8f).coerceIn(0.5f, 5f)
                 },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
+            }
+        }
+    }
+}
+
+/**
+ * Render a candlestick chart for OHLC (Open, High, Low, Close) financial data.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun candlestickChart(
+    data: CandlestickChartData,
+    modifier: Modifier = Modifier,
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val axisColor = MaterialTheme.colorScheme.outline
+
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                    }
+                }
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY,
+                ),
+        ) {
+            val padding = 80f
+            val chartWidth = size.width - padding * 2
+            val chartHeight = size.height - padding * 2
+
+            if (data.candles.isEmpty()) {
+                return@Canvas
+            }
+
+            // Find price range
+            val allPrices = data.candles.flatMap { listOf(it.high, it.low) }
+            val minPrice = allPrices.minOrNull() ?: 0f
+            val maxPrice = allPrices.maxOrNull() ?: 100f
+            val priceRange = maxPrice - minPrice
+            val yPadding = priceRange * 0.1f
+
+            // Helper function to convert price to Y coordinate
+            fun priceToY(price: Float): Float = padding + chartHeight * (1 - (price - minPrice + yPadding) / (priceRange + yPadding * 2))
+
+            // Draw grid lines
+            for (i in 0..4) {
+                val y = padding + (chartHeight / 4) * i
+                drawLine(
+                    color = gridColor,
+                    start = Offset(padding, y),
+                    end = Offset(size.width - padding, y),
+                    strokeWidth = 1f,
+                )
+            }
+
+            // Draw axes
+            drawLine(
+                color = axisColor,
+                start = Offset(padding, padding),
+                end = Offset(padding, size.height - padding),
+                strokeWidth = 2f,
+            )
+            drawLine(
+                color = axisColor,
+                start = Offset(padding, size.height - padding),
+                end = Offset(size.width - padding, size.height - padding),
+                strokeWidth = 2f,
+            )
+
+            // Draw title
+            drawContext.canvas.nativeCanvas.apply {
+                val titlePaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 20f)
+                val title = TextLine.make(data.title, font)
+                drawTextLine(title, (size.width - title.width) / 2, 30f, titlePaint)
+            }
+
+            // Calculate candlestick width
+            val candleWidth = (chartWidth / data.candles.size) * 0.6f
+
+            // Draw candlesticks
+            data.candles.forEachIndexed { index, candle ->
+                val x = padding + (chartWidth / data.candles.size) * (index + 0.5f)
+
+                val highY = priceToY(candle.high)
+                val lowY = priceToY(candle.low)
+                val openY = priceToY(candle.open)
+                val closeY = priceToY(candle.close)
+
+                val isBullish = candle.close >= candle.open
+                val candleColor = Color(if (isBullish) candle.colorUp else candle.colorDown)
+
+                // Draw high-low line (wick)
+                drawLine(
+                    color = candleColor,
+                    start = Offset(x, highY),
+                    end = Offset(x, lowY),
+                    strokeWidth = 1.5f,
+                )
+
+                // Draw open-close rectangle (body)
+                val bodyTop = kotlin.math.min(openY, closeY)
+                val bodyBottom = kotlin.math.max(openY, closeY)
+                val bodyHeight = bodyBottom - bodyTop
+
+                if (isBullish) {
+                    // Hollow rectangle for bullish (close > open)
+                    drawRect(
+                        color = candleColor,
+                        topLeft = Offset(x - candleWidth / 2, bodyTop),
+                        size = androidx.compose.ui.geometry.Size(candleWidth, bodyHeight),
+                        style = Stroke(width = 2f),
+                    )
+                } else {
+                    // Filled rectangle for bearish (close < open)
+                    drawRect(
+                        color = candleColor,
+                        topLeft = Offset(x - candleWidth / 2, bodyTop),
+                        size = androidx.compose.ui.geometry.Size(candleWidth, bodyHeight),
+                    )
+                }
+            }
+
+            // Draw X-axis labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 14f)
+
+                data.candles.forEachIndexed { index, candle ->
+                    if (index % kotlin.math.max(1, data.candles.size / 10) == 0 || index == data.candles.size - 1) {
+                        val x = padding + (chartWidth / data.candles.size) * (index + 0.5f)
+                        val label = data.xLabels?.get(candle.x) ?: candle.x.toInt().toString()
+                        val textLine = TextLine.make(label, font)
+                        drawTextLine(textLine, x - textLine.width / 2, size.height - padding + 20f, labelPaint)
+                    }
+                }
+            }
+
+            // Draw Y-axis labels (prices)
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 16f)
+
+                for (i in 0..4) {
+                    val price = maxPrice + yPadding - ((maxPrice - minPrice + yPadding * 2) / 4) * i
+                    val y = padding + (chartHeight / 4) * i
+                    val label = String.format("%.2f", price)
+                    val textLine = TextLine.make(label, font)
+                    drawTextLine(textLine, padding - textLine.width - 8f, y + 4f, labelPaint)
+                }
+            }
+
+            // Draw axis labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 18f)
+
+                val xLabel = TextLine.make(data.xAxisLabel, font)
+                drawTextLine(xLabel, (size.width - xLabel.width) / 2, size.height - 10f, labelPaint)
+
+                val yLabel = TextLine.make(data.yAxisLabel, font)
+                drawTextLine(yLabel, 10f, padding - 10f, labelPaint)
+            }
+        }
+
+        // Zoom controls
+        Column(
+            modifier = Modifier
+                .align(androidx.compose.ui.Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            SmallFloatingActionButton(
+                onClick = { scale = (scale * 1.2f).coerceIn(0.5f, 5f) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Zoom In")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallFloatingActionButton(
+                onClick = { scale = (scale * 0.8f).coerceIn(0.5f, 5f) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
+            }
+        }
+    }
+}
+
+/**
+ * Render a waterfall chart showing cumulative effect of sequential values.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun waterfallChart(
+    data: WaterfallChartData,
+    modifier: Modifier = Modifier,
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val axisColor = MaterialTheme.colorScheme.outline
+
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                    }
+                }
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY,
+                ),
+        ) {
+            val padding = 100f
+            val chartWidth = size.width - padding * 2
+            val chartHeight = size.height - padding * 2
+
+            if (data.items.isEmpty()) {
+                return@Canvas
+            }
+
+            // Calculate cumulative values
+            val cumulativeValues = mutableListOf<Float>()
+            var cumulative = 0f
+            data.items.forEach { item ->
+                if (!item.isTotal) {
+                    cumulative += item.value
+                }
+                cumulativeValues.add(cumulative)
+            }
+
+            // Find value range
+            val allValues = cumulativeValues + listOf(0f)
+            val minValue = allValues.minOrNull() ?: 0f
+            val maxValue = allValues.maxOrNull() ?: 100f
+            val valueRange = maxValue - minValue
+            val yPadding = valueRange * 0.1f
+
+            // Helper function to convert value to Y coordinate
+            fun valueToY(value: Float): Float = padding + chartHeight * (1 - (value - minValue + yPadding) / (valueRange + yPadding * 2))
+
+            val zeroY = valueToY(0f)
+
+            // Draw grid lines
+            for (i in 0..4) {
+                val y = padding + (chartHeight / 4) * i
+                drawLine(
+                    color = gridColor,
+                    start = Offset(padding, y),
+                    end = Offset(size.width - padding, y),
+                    strokeWidth = 1f,
+                )
+            }
+
+            // Draw axes
+            drawLine(
+                color = axisColor,
+                start = Offset(padding, padding),
+                end = Offset(padding, size.height - padding),
+                strokeWidth = 2f,
+            )
+            drawLine(
+                color = axisColor,
+                start = Offset(padding, size.height - padding),
+                end = Offset(size.width - padding, size.height - padding),
+                strokeWidth = 2f,
+            )
+
+            // Draw zero line (baseline)
+            drawLine(
+                color = axisColor.copy(alpha = 0.5f),
+                start = Offset(padding, zeroY),
+                end = Offset(size.width - padding, zeroY),
+                strokeWidth = 1.5f,
+            )
+
+            // Draw title
+            drawContext.canvas.nativeCanvas.apply {
+                val titlePaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 20f)
+                val title = TextLine.make(data.title, font)
+                drawTextLine(title, (size.width - title.width) / 2, 30f, titlePaint)
+            }
+
+            // Calculate bar width
+            val barWidth = (chartWidth / data.items.size) * 0.7f
+            val barSpacing = chartWidth / data.items.size
+
+            // Track previous cumulative for drawing connectors
+            var previousCumulative = 0f
+
+            // Draw waterfall bars
+            data.items.forEachIndexed { index, item ->
+                val x = padding + barSpacing * (index + 0.5f)
+                val currentCumulative = cumulativeValues[index]
+
+                val barColor = when {
+                    item.isTotal -> Color(item.colorTotal)
+                    item.value > 0 -> Color(item.colorPositive)
+                    else -> Color(item.colorNegative)
+                }
+
+                if (item.isTotal) {
+                    // Total bar: from zero to cumulative
+                    val barTop = valueToY(currentCumulative)
+                    val barHeight = zeroY - barTop
+
+                    drawRect(
+                        color = barColor,
+                        topLeft = Offset(x - barWidth / 2, barTop),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                    )
+                } else {
+                    // Regular bar: show the change
+                    val startValue = previousCumulative
+                    val endValue = currentCumulative
+
+                    val barTop = valueToY(kotlin.math.max(startValue, endValue))
+                    val barBottom = valueToY(kotlin.math.min(startValue, endValue))
+                    val barHeight = barBottom - barTop
+
+                    // Draw connecting line from previous bar
+                    if (index > 0) {
+                        val prevX = padding + barSpacing * (index - 0.5f)
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(prevX + barWidth / 2, valueToY(startValue)),
+                            end = Offset(x - barWidth / 2, valueToY(startValue)),
+                            strokeWidth = 1.5f,
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5f, 5f)),
+                        )
+                    }
+
+                    drawRect(
+                        color = barColor,
+                        topLeft = Offset(x - barWidth / 2, barTop),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                    )
+                }
+
+                previousCumulative = currentCumulative
+            }
+
+            // Draw X-axis labels (item names)
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 12f)
+
+                data.items.forEachIndexed { index, item ->
+                    val x = padding + barSpacing * (index + 0.5f)
+                    val textLine = TextLine.make(item.label, font)
+
+                    // Rotate labels for better readability
+                    save()
+                    translate(x, size.height - padding + 15f)
+                    rotate(-45f)
+                    drawTextLine(textLine, 0f, 0f, labelPaint)
+                    restore()
+                }
+            }
+
+            // Draw Y-axis labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 16f)
+
+                for (i in 0..4) {
+                    val value = maxValue + yPadding - ((maxValue - minValue + yPadding * 2) / 4) * i
+                    val y = padding + (chartHeight / 4) * i
+                    val label = String.format("%.1f", value)
+                    val textLine = TextLine.make(label, font)
+                    drawTextLine(textLine, padding - textLine.width - 8f, y + 4f, labelPaint)
+                }
+            }
+
+            // Draw axis labels
+            drawContext.canvas.nativeCanvas.apply {
+                val labelPaint = Paint().apply {
+                    color = textColor.toArgb()
+                    mode = PaintMode.FILL
+                }
+                val font = Font(null, 18f)
+
+                val xLabel = TextLine.make(data.xAxisLabel.ifEmpty { "Categories" }, font)
+                drawTextLine(xLabel, (size.width - xLabel.width) / 2, size.height - 10f, labelPaint)
+
+                val yLabel = TextLine.make(data.yAxisLabel, font)
+                drawTextLine(yLabel, 10f, padding - 10f, labelPaint)
+            }
+        }
+
+        // Zoom controls
+        Column(
+            modifier = Modifier
+                .align(androidx.compose.ui.Alignment.BottomEnd)
+                .padding(16.dp),
+        ) {
+            SmallFloatingActionButton(
+                onClick = { scale = (scale * 1.2f).coerceIn(0.5f, 5f) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Zoom In")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallFloatingActionButton(
+                onClick = { scale = (scale * 0.8f).coerceIn(0.5f, 5f) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(Icons.Default.Remove, contentDescription = "Zoom Out")

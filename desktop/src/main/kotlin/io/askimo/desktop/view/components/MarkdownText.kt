@@ -74,10 +74,12 @@ import io.askimo.desktop.view.components.CodeHighlighter
 import io.askimo.tools.chart.AreaChartData
 import io.askimo.tools.chart.BarChartData
 import io.askimo.tools.chart.BoxPlotData
+import io.askimo.tools.chart.CandlestickChartData
 import io.askimo.tools.chart.HistogramData
 import io.askimo.tools.chart.LineChartData
 import io.askimo.tools.chart.PieChartData
 import io.askimo.tools.chart.ScatterChartData
+import io.askimo.tools.chart.WaterfallChartData
 import kotlinx.serialization.Serializable
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.tables.TableBlock
@@ -1295,8 +1297,46 @@ private fun parseChartData(code: String, language: String?): io.askimo.tools.cha
     }
 
     return try {
+        // Try to parse as candlestick chart
+        if (cleanedCode.contains("\"candlesData\"")) {
+            @Serializable
+            data class CandlestickChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val candlesData: List<CandlestickChartData.Candle>,
+                val xLabels: Map<Float, String>? = null,
+            )
+
+            val spec = json.decodeFromString<CandlestickChartSpec>(cleanedCode)
+            CandlestickChartData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                candles = spec.candlesData,
+                xLabels = spec.xLabels,
+            )
+        }
+        // Try to parse as waterfall chart
+        else if (cleanedCode.contains("\"itemsData\"")) {
+            @Serializable
+            data class WaterfallChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val itemsData: List<WaterfallChartData.WaterfallItem>,
+            )
+
+            val spec = json.decodeFromString<WaterfallChartSpec>(cleanedCode)
+            WaterfallChartData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                items = spec.itemsData,
+            )
+        }
         // Try to parse as bar chart
-        if (cleanedCode.contains("\"barsData\"")) {
+        else if (cleanedCode.contains("\"barsData\"")) {
             @Serializable
             data class BarChartSpec(
                 val title: String,

@@ -287,11 +287,11 @@ class ChatMessageRepository internal constructor(
         // Apply time filters if provided
         if (startTime != null) {
             val startDateTime = LocalDateTime.ofInstant(startTime, java.time.ZoneId.systemDefault())
-            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt greater startDateTime }
+            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt greaterEq startDateTime }
         }
         if (endTime != null) {
             val endDateTime = LocalDateTime.ofInstant(endTime, java.time.ZoneId.systemDefault())
-            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt less endDateTime }
+            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt lessEq endDateTime }
         }
 
         // Apply project filter if provided

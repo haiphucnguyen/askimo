@@ -197,8 +197,8 @@ fun main() {
         val isMaximized = ThemePreferences.isWindowMaximized()
 
         val windowState = rememberWindowState(
-            width = if (savedWidth > 0) savedWidth.dp else 800.dp,
-            height = if (savedHeight > 0) savedHeight.dp else 600.dp,
+            width = 1280.dp,
+            height = 720.dp,
             position = if (savedX >= 0 && savedY >= 0) {
                 WindowPosition(savedX.dp, savedY.dp)
             } else {

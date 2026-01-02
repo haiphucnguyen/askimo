@@ -168,7 +168,11 @@ askimo -p "Hello, AI!"
 
 **Think of it as:** Your personal AI workbench - one app to rule all AI providers.
 
-[![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/desktop)
+<p align="center">
+  <video src="https://github.com/haiphucnguyen/askimo/raw/main/public/desktop_demo.mp4" width="100%" controls autoplay loop muted>
+    Your browser does not support the video tag.
+  </video>
+</p>
 
 A native desktop application that brings all your AI conversations into one beautiful, searchable interface with complete privacy and control.
 

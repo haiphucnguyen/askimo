@@ -67,7 +67,13 @@ object ChartTools {
               ],
               "color": 4284513675
             }
-          ]
+          ],
+          "xLabels": {
+            "1": "Q1",
+            "2": "Q2",
+            "3": "Q3",
+            "4": "Q4"
+          }
         }
         ```
 
@@ -75,6 +81,12 @@ object ChartTools {
         - name: Series name displayed in legend (string)
         - points: Array of coordinate objects with x and y values (numbers)
         - color: ARGB color value (optional, defaults to blue 4284513675)
+
+        Optional xLabels for categorical X-axis:
+        - xLabels: Map of numeric x values to custom string labels (optional)
+        - Use when X-axis represents categories (months, products, etc.) instead of pure numbers
+        - Example: {"1": "Jan", "2": "Feb", "3": "Mar"} or {"1": "Q1 2024", "2": "Q2 2024"}
+        - If omitted, numeric values will be displayed (e.g., years like 2015, 2016)
 
         Supports multiple series for comparison on the same chart.
 
@@ -345,7 +357,12 @@ object ChartTools {
               ],
               "color": 4284513675
             }
-          ]
+          ],
+          "xLabels": {
+            "10": "Budget",
+            "20": "Mid-range",
+            "30": "Premium"
+          }
         }
         ```
 
@@ -353,6 +370,12 @@ object ChartTools {
         - name: Series name shown in legend (string)
         - points: Array of coordinate objects with x and y values (numbers)
         - color: ARGB color value (optional, defaults to blue 4284513675)
+
+        Optional xLabels for categorical X-axis:
+        - xLabels: Map of numeric x values to custom string labels (optional)
+        - Use when X-axis represents categories or custom groupings
+        - Example: {"1": "Small", "2": "Medium", "3": "Large"}
+        - If omitted, numeric values will be displayed
 
         Supports multiple series to show different datasets or categories on the same plot.
         Points are displayed as circles without connecting lines.
@@ -419,18 +442,40 @@ object ChartTools {
         Return the chart specification as a JSON code block in markdown format:
         ```json
         {
-          "title": "Chart Title",
-          "xAxisLabel": "X Label",
-          "yAxisLabel": "Y Label",
+          "title": "Monthly Revenue Volume",
+          "xAxisLabel": "Month",
+          "yAxisLabel": "Revenue (thousands)",
           "seriesData": [
             {
-              "name": "Series Name",
-              "points": [{"x": 1, "y": 100}, {"x": 2, "y": 150}],
+              "name": "Revenue",
+              "points": [
+                {"x": 1, "y": 100},
+                {"x": 2, "y": 150},
+                {"x": 3, "y": 180}
+              ],
               "color": 4284513675
             }
-          ]
+          ],
+          "xLabels": {
+            "1": "Jan",
+            "2": "Feb",
+            "3": "Mar"
+          }
         }
         ```
+
+        Each series object contains:
+        - name: Series name displayed in legend (string)
+        - points: Array of coordinate objects with x and y values (numbers)
+        - color: ARGB color value (optional, defaults to blue 4284513675)
+
+        Optional xLabels for categorical X-axis:
+        - xLabels: Map of numeric x values to custom string labels (optional)
+        - Use when X-axis represents time periods (months, quarters) or categories
+        - Example: {"1": "January", "2": "February"} or {"1": "Q1", "2": "Q2"}
+        - If omitted, numeric values will be displayed
+
+        Standard colors: Blue=4284513675, Red=4294901760, Green=4278255360, Orange=4294951424
         """,
     )
     fun generateAreaChart(
@@ -636,6 +681,257 @@ object ChartTools {
     } catch (e: Exception) {
         ToolResponseBuilder.failure(
             error = "Failed to generate box plot: ${e.message}",
+            metadata = mapOf(
+                "title" to title,
+                "exception" to (e::class.simpleName ?: "Exception"),
+            ),
+        )
+    }
+
+    /**
+     * Generate a candlestick chart for financial OHLC (Open, High, Low, Close) data.
+     *
+     * @param title Chart title
+     * @param xAxisLabel Label for X-axis (typically "Date" or "Time Period")
+     * @param yAxisLabel Label for Y-axis (typically "Price")
+     * @param candlesData JSON string containing candle data
+     * @return JSON response with chart data
+     *
+     * @usage
+     * ```
+     * generateCandlestickChart(
+     *   title = "AAPL Stock Price - Jan 2026",
+     *   xAxisLabel = "Date",
+     *   yAxisLabel = "Price ($)",
+     *   candlesData = '[{"x":1,"open":150,"high":155,"low":148,"close":152},{"x":2,"open":152,"high":158,"low":151,"close":157}]'
+     * )
+     * ```
+     */
+    @Tool(
+        """
+        Generate a candlestick chart to visualize financial OHLC (Open, High, Low, Close) data.
+        Use this for stock prices, forex trading data, or any financial time series with OHLC values.
+        Candlestick charts show price movements and help identify trading patterns.
+
+        Return the chart specification as a JSON code block in markdown format:
+        ```json
+        {
+          "title": "AAPL Stock Price - January 2026",
+          "xAxisLabel": "Date",
+          "yAxisLabel": "Price ($)",
+          "candlesData": [
+            {
+              "x": 1,
+              "open": 150.00,
+              "high": 155.50,
+              "low": 148.00,
+              "close": 152.00,
+              "volume": 1000000,
+              "colorUp": 4278255360,
+              "colorDown": 4294901760
+            },
+            {
+              "x": 2,
+              "open": 152.00,
+              "high": 158.00,
+              "low": 151.00,
+              "close": 157.00,
+              "volume": 1200000
+            }
+          ],
+          "xLabels": {
+            "1": "Jan 1",
+            "2": "Jan 2",
+            "3": "Jan 3"
+          }
+        }
+        ```
+
+        Each candle object contains:
+        - x: Time period position (number)
+        - open: Opening price (number)
+        - high: Highest price in period (number)
+        - low: Lowest price in period (number)
+        - close: Closing price (number)
+        - volume: Trading volume (optional, number)
+        - colorUp: Color when close > open (optional, default green 4278255360)
+        - colorDown: Color when close < open (optional, default red 4294901760)
+
+        Optional xLabels for date/time labels:
+        - xLabels: Map of numeric x values to date strings
+        - Example: {"1": "Jan 1", "2": "Jan 2"} or {"1": "2026-01-01", "2": "2026-01-02"}
+
+        Green candles (close > open) indicate price increase (bullish).
+        Red candles (close < open) indicate price decrease (bearish).
+
+        Standard colors: Green=4278255360, Red=4294901760
+        """,
+    )
+    fun generateCandlestickChart(
+        title: String,
+        xAxisLabel: String,
+        yAxisLabel: String,
+        candlesData: String,
+    ): String = try {
+        val candles = json.decodeFromString<List<CandlestickChartData.Candle>>(candlesData)
+
+        val chartData = CandlestickChartData(
+            title = title,
+            xAxisLabel = xAxisLabel,
+            yAxisLabel = yAxisLabel,
+            candles = candles,
+        )
+
+        val chartJson = json.encodeToJsonElement(chartData).jsonObject
+
+        ToolResponseBuilder.successWithData(
+            output = "Generated candlestick chart: '$title' with ${candles.size} candles",
+            data = mapOf(
+                "chartData" to chartJson.toString(),
+                "type" to "candlestick",
+                "candleCount" to candles.size,
+                "priceRange" to "${candles.minOfOrNull { it.low } ?: 0} - ${candles.maxOfOrNull { it.high } ?: 0}",
+            ),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to generate candlestick chart: ${e.message}",
+            metadata = mapOf(
+                "title" to title,
+                "exception" to (e::class.simpleName ?: "Exception"),
+            ),
+        )
+    }
+
+    /**
+     * Generate a waterfall chart to show cumulative effect of sequential values.
+     *
+     * @param title Chart title
+     * @param xAxisLabel Label for X-axis (typically empty for category labels)
+     * @param yAxisLabel Label for Y-axis (typically currency or value unit)
+     * @param itemsData JSON string containing waterfall items
+     * @return JSON response with chart data
+     *
+     * @usage
+     * ```
+     * generateWaterfallChart(
+     *   title = "Q4 2025 Profit & Loss",
+     *   xAxisLabel = "",
+     *   yAxisLabel = "Amount ($M)",
+     *   itemsData = '[{"label":"Revenue","value":100,"isTotal":false},{"label":"COGS","value":-40,"isTotal":false},{"label":"Gross Profit","value":0,"isTotal":true}]'
+     * )
+     * ```
+     */
+    @Tool(
+        """
+        Generate a waterfall chart to visualize cumulative effects of sequential positive and negative values.
+        Use this for profit & loss statements, budget variance analysis, cash flow analysis, or any breakdown
+        showing how an initial value changes through a series of positive/negative adjustments.
+
+        Return the chart specification as a JSON code block in markdown format:
+        ```json
+        {
+          "title": "Q4 2025 Profit & Loss Statement",
+          "xAxisLabel": "",
+          "yAxisLabel": "Amount ($ millions)",
+          "itemsData": [
+            {
+              "label": "Revenue",
+              "value": 100.0,
+              "isTotal": false,
+              "colorPositive": 4278255360,
+              "colorNegative": 4294901760,
+              "colorTotal": 4284513675
+            },
+            {
+              "label": "Cost of Goods Sold",
+              "value": -40.0,
+              "isTotal": false
+            },
+            {
+              "label": "Gross Profit",
+              "value": 0,
+              "isTotal": true
+            },
+            {
+              "label": "Operating Expenses",
+              "value": -25.0,
+              "isTotal": false
+            },
+            {
+              "label": "Operating Income",
+              "value": 0,
+              "isTotal": true
+            },
+            {
+              "label": "Taxes",
+              "value": -10.5,
+              "isTotal": false
+            },
+            {
+              "label": "Net Income",
+              "value": 0,
+              "isTotal": true
+            }
+          ]
+        }
+        ```
+
+        Each item object contains:
+        - label: Category or line item name (string)
+        - value: Positive or negative change amount (number). Use 0 for total/subtotal items.
+        - isTotal: true for total/subtotal bars, false for regular changes (boolean)
+        - colorPositive: Color for positive values (optional, default green 4278255360)
+        - colorNegative: Color for negative values (optional, default red 4294901760)
+        - colorTotal: Color for total bars (optional, default blue 4284513675)
+
+        Important:
+        - Regular items (isTotal=false) show the change amount in 'value'
+        - Total items (isTotal=true) should have value=0; the chart will calculate cumulative totals
+        - Positive values are shown as upward bars (green)
+        - Negative values are shown as downward bars (red)
+        - Total bars are shown in a distinct color (blue) and span from baseline to cumulative total
+
+        Common use cases:
+        - Financial P&L: Start with revenue, subtract costs, show profit
+        - Budget variance: Start with budget, add/subtract variances, show actual
+        - Cash flow: Start with opening balance, add inflows, subtract outflows, show closing balance
+
+        Standard colors: Green=4278255360, Red=4294901760, Blue=4284513675
+        """,
+    )
+    fun generateWaterfallChart(
+        title: String,
+        xAxisLabel: String,
+        yAxisLabel: String,
+        itemsData: String,
+    ): String = try {
+        val items = json.decodeFromString<List<WaterfallChartData.WaterfallItem>>(itemsData)
+
+        val chartData = WaterfallChartData(
+            title = title,
+            xAxisLabel = xAxisLabel,
+            yAxisLabel = yAxisLabel,
+            items = items,
+        )
+
+        val chartJson = json.encodeToJsonElement(chartData).jsonObject
+
+        val totalChange = items.filter { !it.isTotal }.sumOf { it.value.toDouble() }
+
+        ToolResponseBuilder.successWithData(
+            output = "Generated waterfall chart: '$title' with ${items.size} items (total change: $totalChange)",
+            data = mapOf(
+                "chartData" to chartJson.toString(),
+                "type" to "waterfall",
+                "itemCount" to items.size,
+                "totalChange" to totalChange,
+                "totalItems" to items.count { it.isTotal },
+            ),
+        )
+    } catch (e: Exception) {
+        ToolResponseBuilder.failure(
+            error = "Failed to generate waterfall chart: ${e.message}",
             metadata = mapOf(
                 "title" to title,
                 "exception" to (e::class.simpleName ?: "Exception"),

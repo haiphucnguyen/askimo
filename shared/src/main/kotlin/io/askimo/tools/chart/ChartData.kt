@@ -27,6 +27,7 @@ data class LineChartData(
     override val xAxisLabel: String,
     override val yAxisLabel: String,
     val series: List<Series>,
+    val xLabels: Map<Float, String>? = null, // Optional: Custom labels for X-axis values (e.g., 1.0 -> "Jan", 2.0 -> "Feb")
 ) : ChartData {
     @Serializable
     data class Series(
@@ -98,6 +99,7 @@ data class ScatterChartData(
     override val xAxisLabel: String,
     override val yAxisLabel: String,
     val series: List<LineChartData.Series>,
+    val xLabels: Map<Float, String>? = null, // Optional: Custom labels for X-axis values
 ) : ChartData
 
 /**
@@ -110,6 +112,7 @@ data class AreaChartData(
     override val xAxisLabel: String,
     override val yAxisLabel: String,
     val series: List<LineChartData.Series>,
+    val xLabels: Map<Float, String>? = null, // Optional: Custom labels for X-axis values
 ) : ChartData
 
 /**
@@ -161,5 +164,66 @@ data class BoxPlotData(
 
     companion object {
         const val DEFAULT_BLUE = 0xFF2196F3L
+    }
+}
+
+/**
+ * Data for candlestick charts (OHLC - Open, High, Low, Close).
+ * Used for financial data visualization, particularly stock prices.
+ */
+@Serializable
+@SerialName("candlestick")
+data class CandlestickChartData(
+    override val title: String,
+    override val xAxisLabel: String,
+    override val yAxisLabel: String,
+    val candles: List<Candle>,
+    val xLabels: Map<Float, String>? = null, // Optional: Custom labels for X-axis (e.g., dates)
+) : ChartData {
+    @Serializable
+    data class Candle(
+        val x: Float, // Time period position
+        val open: Float,
+        val high: Float,
+        val low: Float,
+        val close: Float,
+        val volume: Float? = null, // Optional: Trading volume
+        val colorUp: Long = DEFAULT_GREEN, // Color when close > open (bullish)
+        val colorDown: Long = DEFAULT_RED, // Color when close < open (bearish)
+    )
+
+    companion object {
+        const val DEFAULT_GREEN = 0xFF4CAF50L // Bullish (gains)
+        const val DEFAULT_RED = 0xFFF44336L // Bearish (losses)
+    }
+}
+
+/**
+ * Data for waterfall charts.
+ * Used to show cumulative effect of sequential positive and negative values.
+ * Perfect for financial variance analysis, profit/loss breakdown.
+ */
+@Serializable
+@SerialName("waterfall")
+data class WaterfallChartData(
+    override val title: String,
+    override val xAxisLabel: String,
+    override val yAxisLabel: String,
+    val items: List<WaterfallItem>,
+) : ChartData {
+    @Serializable
+    data class WaterfallItem(
+        val label: String,
+        val value: Float, // Positive or negative change
+        val isTotal: Boolean = false, // True for total/subtotal bars
+        val colorPositive: Long = DEFAULT_GREEN,
+        val colorNegative: Long = DEFAULT_RED,
+        val colorTotal: Long = DEFAULT_BLUE,
+    )
+
+    companion object {
+        const val DEFAULT_GREEN = 0xFF4CAF50L // Positive changes
+        const val DEFAULT_RED = 0xFFF44336L // Negative changes
+        const val DEFAULT_BLUE = 0xFF2196F3L // Totals
     }
 }
