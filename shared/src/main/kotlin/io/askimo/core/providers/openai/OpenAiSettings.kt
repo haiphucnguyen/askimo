@@ -19,7 +19,7 @@ import kotlinx.serialization.Serializable
 data class OpenAiSettings(
     override var apiKey: String = "",
     override val defaultModel: String = "gpt-5.1",
-    override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
+    override var presets: Presets = Presets(Style.CREATIVE, Verbosity.LONG),
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

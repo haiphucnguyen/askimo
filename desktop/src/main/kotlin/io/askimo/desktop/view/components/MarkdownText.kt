@@ -66,8 +66,21 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import io.askimo.core.logging.logger
+import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
+import io.askimo.desktop.view.chart.chartRenderer
 import io.askimo.desktop.view.components.CodeHighlighter
+import io.askimo.tools.chart.AreaChartData
+import io.askimo.tools.chart.BarChartData
+import io.askimo.tools.chart.BoxPlotData
+import io.askimo.tools.chart.CandlestickChartData
+import io.askimo.tools.chart.HistogramData
+import io.askimo.tools.chart.LineChartData
+import io.askimo.tools.chart.PieChartData
+import io.askimo.tools.chart.ScatterChartData
+import io.askimo.tools.chart.WaterfallChartData
+import kotlinx.serialization.Serializable
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
@@ -92,6 +105,8 @@ import org.commonmark.node.SoftLineBreak
 import org.commonmark.node.StrongEmphasis
 import org.commonmark.parser.Parser
 import org.commonmark.node.Text as MarkdownText
+
+private val log = logger("markdownText")
 
 /**
  * Simple Markdown renderer for Compose.
@@ -491,6 +506,35 @@ private fun renderListItem(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null) {
+    val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
+    val code = codeBlock.literal
+
+    // Try to parse as chart data before rendering
+    val chartData = remember(code, language) {
+        parseChartData(code, language)
+    }
+
+    // If we successfully parsed chart data, render it as a chart
+    if (chartData != null) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp)
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            chartRenderer(
+                chartData = chartData,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+        return
+    }
+
+    // Render as regular code block
     val backgroundColor = MaterialTheme.colorScheme.surface
     val isDark = backgroundColor.luminance() < 0.5
     val clipboardManager = LocalClipboardManager.current
@@ -499,10 +543,9 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     var codeBlockBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var codeBlockPositionInRoot by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
 
-    val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
     val theme = if (isDark) CodeHighlighter.darkTheme() else CodeHighlighter.lightTheme()
     val highlightedCode = CodeHighlighter.highlight(
-        code = codeBlock.literal,
+        code = code,
         language = language,
         theme = theme,
     )
@@ -1216,4 +1259,215 @@ private fun extractVideoUrl(paragraph: Paragraph): String? {
     }
 
     return if (!hasOtherContent && linkFound != null) linkFound else null
+}
+
+/**
+ * Parse chart data from JSON code block.
+ * Returns ChartData if the JSON is a valid chart specification, null otherwise.
+ */
+private fun parseChartData(code: String, language: String?): io.askimo.tools.chart.ChartData? {
+    if (language != "json") return null
+
+    // Clean and normalize the JSON
+    val cleanedCode = code.trim()
+        .replace("```json", "")
+        .replace("```", "")
+        .trim()
+
+    // Skip if the JSON looks incomplete or malformed
+    if (cleanedCode.isEmpty() || cleanedCode.length < 20) {
+        return null
+    }
+
+    // Check if JSON is complete by counting braces
+    val openBraces = cleanedCode.count { it == '{' }
+    val closeBraces = cleanedCode.count { it == '}' }
+    val openBrackets = cleanedCode.count { it == '[' }
+    val closeBrackets = cleanedCode.count { it == ']' }
+
+    // If braces/brackets don't match, JSON is incomplete (still streaming)
+    if (openBraces != closeBraces || openBrackets != closeBrackets) {
+        log.debug("JSON incomplete - braces: $openBraces/$closeBraces, brackets: $openBrackets/$closeBrackets")
+        return null
+    }
+
+    // Also check if it starts with { and ends with }
+    if (!cleanedCode.startsWith("{") || !cleanedCode.endsWith("}")) {
+        return null
+    }
+
+    return try {
+        // Try to parse as candlestick chart
+        if (cleanedCode.contains("\"candlesData\"")) {
+            @Serializable
+            data class CandlestickChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val candlesData: List<CandlestickChartData.Candle>,
+                val xLabels: Map<Float, String>? = null,
+            )
+
+            val spec = json.decodeFromString<CandlestickChartSpec>(cleanedCode)
+            CandlestickChartData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                candles = spec.candlesData,
+                xLabels = spec.xLabels,
+            )
+        }
+        // Try to parse as waterfall chart
+        else if (cleanedCode.contains("\"itemsData\"")) {
+            @Serializable
+            data class WaterfallChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val itemsData: List<WaterfallChartData.WaterfallItem>,
+            )
+
+            val spec = json.decodeFromString<WaterfallChartSpec>(cleanedCode)
+            WaterfallChartData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                items = spec.itemsData,
+            )
+        }
+        // Try to parse as bar chart
+        else if (cleanedCode.contains("\"barsData\"")) {
+            @Serializable
+            data class BarChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val barsData: List<BarChartData.Bar>,
+            )
+
+            val spec = json.decodeFromString<BarChartSpec>(cleanedCode)
+            BarChartData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                bars = spec.barsData,
+            )
+        }
+        // Try to parse as pie chart (AI returns "slicesData")
+        else if (cleanedCode.contains("\"slicesData\"")) {
+            @Serializable
+            data class PieChartSpec(
+                val title: String,
+                val slicesData: List<PieChartData.Slice>,
+            )
+
+            val spec = json.decodeFromString<PieChartSpec>(cleanedCode)
+            PieChartData(
+                title = spec.title,
+                slices = spec.slicesData,
+            )
+        }
+        // Try to parse as histogram (has "binsData")
+        else if (cleanedCode.contains("\"binsData\"")) {
+            @Serializable
+            data class HistogramSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val binsData: List<HistogramData.Bin>,
+                val color: Long = HistogramData.DEFAULT_BLUE,
+            )
+
+            val spec = json.decodeFromString<HistogramSpec>(cleanedCode)
+            HistogramData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                bins = spec.binsData,
+                color = spec.color,
+            )
+        }
+        // Try to parse as box plot (has "boxesData")
+        else if (cleanedCode.contains("\"boxesData\"")) {
+            @Serializable
+            data class BoxPlotSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val boxesData: List<BoxPlotData.Box>,
+            )
+
+            val spec = json.decodeFromString<BoxPlotSpec>(cleanedCode)
+            BoxPlotData(
+                title = spec.title,
+                xAxisLabel = spec.xAxisLabel,
+                yAxisLabel = spec.yAxisLabel,
+                boxes = spec.boxesData,
+            )
+        }
+        // Check for area chart based on title or explicit type
+        else if (cleanedCode.contains("\"seriesData\"")) {
+            @Serializable
+            data class SeriesChartSpec(
+                val title: String,
+                val xAxisLabel: String,
+                val yAxisLabel: String,
+                val seriesData: List<LineChartData.Series>,
+            )
+
+            val spec = json.decodeFromString<SeriesChartSpec>(cleanedCode)
+
+            // Determine chart type based on title keywords
+            val titleLower = spec.title.lowercase()
+            when {
+                titleLower.contains("area chart") ||
+                    titleLower.contains("area:") ||
+                    titleLower.contains("cumulative") ||
+                    titleLower.contains("volume") -> {
+                    // Parse as area chart
+                    AreaChartData(
+                        title = spec.title,
+                        xAxisLabel = spec.xAxisLabel,
+                        yAxisLabel = spec.yAxisLabel,
+                        series = spec.seriesData,
+                    )
+                }
+                titleLower.contains("scatter") ||
+                    titleLower.contains("scatter chart") ||
+                    titleLower.contains("scatter plot") -> {
+                    // Parse as scatter chart
+                    ScatterChartData(
+                        title = spec.title,
+                        xAxisLabel = spec.xAxisLabel,
+                        yAxisLabel = spec.yAxisLabel,
+                        series = spec.seriesData,
+                    )
+                }
+                else -> {
+                    // Default to line chart
+                    LineChartData(
+                        title = spec.title,
+                        xAxisLabel = spec.xAxisLabel,
+                        yAxisLabel = spec.yAxisLabel,
+                        series = spec.seriesData,
+                    )
+                }
+            }
+        }
+        // Try to parse as line/scatter chart (correct field name "series")
+        else if (cleanedCode.contains("\"series\"") && !cleanedCode.contains("\"slices\"")) {
+            val lineChart = json.decodeFromString<LineChartData>(cleanedCode)
+            lineChart
+        }
+        // Try to parse as pie chart (correct field name)
+        else if (cleanedCode.contains("\"slices\"")) {
+            val pieChart = json.decodeFromString<PieChartData>(cleanedCode)
+            pieChart
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        log.error("Failed to parse chart data. JSON length: ${cleanedCode.length}, preview: ${cleanedCode.take(200)}...", e)
+        null
+    }
 }

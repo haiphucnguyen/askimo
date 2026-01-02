@@ -164,7 +164,7 @@ class SessionManager(
             runBlocking {
                 withContext(Dispatchers.IO) {
                     chatSessionService.createSession(
-                        ExecutionMode.STATEFUL_MODE,
+                        ExecutionMode.STATEFUL_CHARTS_MODE,
                         ChatSession(
                             id = sessionId,
                             title = userMessage,

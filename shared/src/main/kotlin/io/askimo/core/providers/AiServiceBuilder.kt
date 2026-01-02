@@ -15,6 +15,7 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.rag.MetadataAwareContentInjector
 import io.askimo.core.util.SystemPrompts.systemMessage
+import io.askimo.tools.chart.ChartTools
 import io.askimo.tools.fs.LocalFsTools
 
 /**
@@ -59,6 +60,9 @@ object AiServiceBuilder {
                 }
                 if (executionMode.isToolEnabled()) {
                     tools(LocalFsTools)
+                }
+                if (executionMode.isChartEnabled()) {
+                    tools(ChartTools)
                 }
             }
             .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
