@@ -8,7 +8,7 @@ import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
-import io.askimo.desktop.di.allDesktopModules
+import io.askimo.core.context.ExecutionMode
 import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.viewmodel.SessionManager
 import io.askimo.desktop.viewmodel.SessionsViewModel
@@ -16,6 +16,7 @@ import io.askimo.desktop.viewmodel.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -35,17 +36,28 @@ import kotlin.test.assertNotNull
  */
 class DesktopModuleTest : KoinTest {
 
+    @BeforeEach
+    fun setUp() {
+        // Reset AppContext before each test
+        AppContext.reset()
+    }
+
     @AfterEach
     fun tearDown() {
         stopKoin()
+        // Clean up AppContext after each test
+        AppContext.reset()
     }
 
     @Test
     fun `verify all services can be instantiated`() {
+        AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)
+
         val koin = startKoin {
             modules(allDesktopModules)
         }.koin
 
+        // Verify services can be retrieved
         assertNotNull(koin.get<AppContext>())
         assertNotNull(koin.get<SystemResourceMonitor>())
         assertNotNull(koin.get<SessionManager>())
@@ -56,6 +68,8 @@ class DesktopModuleTest : KoinTest {
 
     @Test
     fun `verify ViewModels can be instantiated with parameters`() {
+        AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)
+
         val koin = startKoin {
             modules(allDesktopModules)
         }.koin

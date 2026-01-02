@@ -75,8 +75,7 @@ fun main(args: Array<String>) {
         else -> ExecutionMode.STATEFUL_MODE
     }
 
-    AppContext.initialize(mode)
-    val appContext = AppContext.getInstance()
+    val appContext = AppContext.initialize(mode)
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =
@@ -124,7 +123,7 @@ fun main(args: Array<String>) {
 
             // Check if command takes arguments
             val flagArgs = NonInteractiveCommandParser.extractFlagArguments(args, flag)
-            if (flagArgs != null && flagArgs.isNotEmpty()) {
+            if (!flagArgs.isNullOrEmpty()) {
                 // Command with arguments
                 val parsedLine = NonInteractiveCommandParser.createParameterizedParsedLine(handler.keyword, *flagArgs.toTypedArray())
                 handler.handle(parsedLine)
