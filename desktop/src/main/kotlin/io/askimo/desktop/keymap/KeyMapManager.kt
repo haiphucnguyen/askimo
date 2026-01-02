@@ -39,10 +39,14 @@ object KeyMapManager {
         // Global shortcuts
         NEW_CHAT("shortcut.new.chat", Key.N, requiresPrimaryModifier = true),
         SEARCH_IN_CHAT("shortcut.search.in.chat", Key.F, requiresPrimaryModifier = true),
+        GLOBAL_SEARCH("shortcut.global.search", Key.F, requiresPrimaryModifier = true, requiresShift = true),
         TOGGLE_CHAT_HISTORY("shortcut.toggle.chat.history", Key.H, requiresPrimaryModifier = true),
         OPEN_SETTINGS("shortcut.open.settings", Key.Comma, requiresPrimaryModifier = true),
         STOP_AI_RESPONSE("shortcut.stop.ai.response", Key.S, requiresPrimaryModifier = true),
         QUIT_APPLICATION("shortcut.quit.application", Key.Q, requiresPrimaryModifier = true),
+
+        // Project shortcuts
+        CREATE_PROJECT("shortcut.create.project", Key.N, requiresPrimaryModifier = true, requiresShift = true),
 
         // Search shortcuts (platform-specific)
         CLOSE_SEARCH("shortcut.close.search", Key.Escape),
@@ -119,10 +123,14 @@ object KeyMapManager {
         LocalizationManager.getString("shortcut.category.global") to listOf(
             AppShortcut.NEW_CHAT,
             AppShortcut.SEARCH_IN_CHAT,
+            AppShortcut.GLOBAL_SEARCH,
             AppShortcut.TOGGLE_CHAT_HISTORY,
             AppShortcut.OPEN_SETTINGS,
             AppShortcut.STOP_AI_RESPONSE,
             AppShortcut.QUIT_APPLICATION,
+        ),
+        LocalizationManager.getString("shortcut.category.project") to listOf(
+            AppShortcut.CREATE_PROJECT,
         ),
         LocalizationManager.getString("shortcut.category.search") to listOf(
             AppShortcut.CLOSE_SEARCH,

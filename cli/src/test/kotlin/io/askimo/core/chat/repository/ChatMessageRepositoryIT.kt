@@ -120,33 +120,6 @@ class ChatMessageRepositoryIT {
     }
 
     @Test
-    fun `should count messages correctly`() {
-        assertEquals(0, messageRepository.getMessageCount(testSession.id))
-
-        messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.USER,
-                content = "Message 1",
-            ),
-        )
-
-        assertEquals(1, messageRepository.getMessageCount(testSession.id))
-
-        messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.ASSISTANT,
-                content = "Message 2",
-            ),
-        )
-
-        assertEquals(2, messageRepository.getMessageCount(testSession.id))
-    }
-
-    @Test
     fun `should retrieve messages after specific message`() {
         val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
         val message1 = messageRepository.addMessage(

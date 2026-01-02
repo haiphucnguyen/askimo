@@ -199,19 +199,41 @@ fun ChatClient.getSummary(conversationText: String): ConversationSummary {
     val log = logger<ChatClient>()
 
     val prompt = """
-        Analyze this conversation and create a HIGH-QUALITY structured summary.
+        Analyze this conversation and create a HIGH-QUALITY structured summary. Focus on extracting meaningful information while preserving essential context.
 
         CONVERSATION:
         $conversationText
 
-        INSTRUCTIONS:
-        1. Extract only meaningful, actionable facts (ignore greetings, confirmations, filler)
-        2. Identify concrete topics and user goals (not generic labels)
-        3. Capture decisions, preferences, and important context
-        4. Keep recentContext focused on latest user intent and progress
-        5. Omit redundant or trivial information
+        CRITICAL INSTRUCTIONS:
+        1. Extract ONLY meaningful, actionable facts - ignore:
+           - Greetings and pleasantries (hello, thanks, etc.)
+           - Simple confirmations (ok, yes, got it)
+           - Filler words and transitional phrases
+           - Repetitive information already captured
 
-        Respond with valid JSON only (no markdown, single line):
+        2. Identify CONCRETE topics and user goals:
+           - Use specific terms, not generic labels (e.g., "Python error handling" not "coding")
+           - Capture the user's actual objectives and problems
+           - Note technical details, file names, or specific requirements
+
+        3. Preserve ESSENTIAL context:
+           - Important decisions made during the conversation
+           - User preferences and constraints
+           - Critical information needed for future interactions
+           - Any unresolved issues or pending tasks
+
+        4. For recentContext:
+           - Summarize the LATEST state of the conversation
+           - What is the user currently working on or asking about?
+           - What is the immediate next step or goal?
+           - Keep it concise (1-3 sentences)
+
+        5. Quality over quantity:
+           - Better to have fewer high-quality facts than many trivial ones
+           - Each fact should be actionable or informative
+           - Avoid redundancy across keyFacts, mainTopics, and recentContext
+
+        Respond with valid JSON only (no markdown, no code blocks, single line):
         {
             "keyFacts": {"specific_fact_name": "concrete_value"},
             "mainTopics": ["specific_topic_1", "specific_topic_2"],
