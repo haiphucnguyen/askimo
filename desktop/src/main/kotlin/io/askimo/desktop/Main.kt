@@ -168,6 +168,8 @@ fun detectMacOSDarkMode(): Boolean {
 private val log = logger("Main")
 
 fun main() {
+    AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)
+
     startKoin {
         modules(allDesktopModules)
     }

@@ -75,6 +75,7 @@ fun main(args: Array<String>) {
         else -> ExecutionMode.STATEFUL_MODE
     }
 
+    AppContext.initialize(mode)
     val appContext = AppContext.getInstance()
 
     // Shared command handlers available in both modes

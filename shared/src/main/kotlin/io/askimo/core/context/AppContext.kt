@@ -39,20 +39,41 @@ class AppContext private constructor(
         @Volatile
         private var instance: AppContext? = null
 
+        private var executionMode: ExecutionMode = ExecutionMode.STATELESS_MODE
+
         /**
-         * Gets the singleton instance of AppContext.
-         * If no instance exists, creates one with the provided params or loads from config.
+         * Initialize the AppContext with execution mode.
+         * Must be called once at application startup before getInstance().
          *
-         * @param params Optional parameters to use for initialization. If not provided and no instance exists,
+         * @param mode The execution mode for the application
+         * @param params Optional parameters to use for initialization. If not provided,
          *               parameters will be loaded from AppContextConfigManager.
-         * @return The singleton AppContext instance
+         * @return The initialized AppContext instance
          */
-        fun getInstance(params: AppContextParams? = null): AppContext = instance ?: synchronized(this) {
-            instance ?: run {
+        fun initialize(mode: ExecutionMode, params: AppContextParams? = null): AppContext {
+            require(instance == null) { "AppContext already initialized" }
+            executionMode = mode
+            synchronized(this) {
                 val contextParams = params ?: AppContextConfigManager.load()
-                AppContext(contextParams).also { instance = it }
+                return AppContext(contextParams).also { instance = it }
             }
         }
+
+        /**
+         * Gets the singleton instance of AppContext.
+         * Must be called after initialize() has been invoked.
+         *
+         * @return The singleton AppContext instance
+         * @throws IllegalStateException if AppContext has not been initialized
+         */
+        fun getInstance(): AppContext = instance ?: error("AppContext not initialized. Call AppContext.initialize() first.")
+
+        /**
+         * Gets the execution mode for the application.
+         *
+         * @return The current execution mode
+         */
+        fun getExecutionMode(): ExecutionMode = executionMode
 
         /**
          * Resets the singleton instance. Useful for testing or when configuration changes require a fresh instance.
@@ -61,6 +82,7 @@ class AppContext private constructor(
         fun reset() {
             synchronized(this) {
                 instance = null
+                executionMode = ExecutionMode.STATELESS_MODE
             }
         }
     }

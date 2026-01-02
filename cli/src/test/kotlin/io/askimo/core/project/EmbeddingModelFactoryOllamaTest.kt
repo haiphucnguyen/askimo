@@ -7,6 +7,7 @@ package io.askimo.core.project
 import dev.langchain4j.data.segment.TextSegment
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextParams
+import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
@@ -55,7 +56,8 @@ class EmbeddingModelFactoryOllamaTest {
             currentProvider = OLLAMA,
             providerSettings = mutableMapOf(OLLAMA to ollamaSettings as ProviderSettings),
         )
-        val session = AppContext.getInstance(
+        val session = AppContext.initialize(
+            mode = ExecutionMode.STATELESS_MODE,
             params = params,
         )
 
