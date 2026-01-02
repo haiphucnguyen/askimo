@@ -338,7 +338,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 sessionManager,
                 {
                     chatSessionService.createSession(
-                        ExecutionMode.STATEFUL_MODE,
+                        ExecutionMode.STATEFUL_CHARTS_MODE,
                         ChatSession(
                             id = "",
                             title = "New Chat",

@@ -491,18 +491,25 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        // Convert ChatMessage to serializable format
-        val serializableMessages = state.messages.map { msg ->
-            SerializableMessage(
-                type = when (msg) {
-                    is UserMessage -> "user"
-                    is AiMessage -> "assistant"
-                    is SystemMessage -> "system"
-                    else -> "unknown"
-                },
-                content = msg.getTextContent(),
-            )
-        }
+        // Convert ChatMessage to serializable format, filtering out blank messages
+        val serializableMessages = state.messages
+            .mapNotNull { msg ->
+                val content = msg.getTextContent()
+                if (content.isBlank()) {
+                    log.warn("Skipping blank message of type ${msg.javaClass.simpleName} during serialization")
+                    null
+                } else {
+                    SerializableMessage(
+                        type = when (msg) {
+                            is UserMessage -> "user"
+                            is AiMessage -> "assistant"
+                            is SystemMessage -> "system"
+                            else -> "unknown"
+                        },
+                        content = content,
+                    )
+                }
+            }
 
         val messagesJson = json.encodeToString(
             ListSerializer(SerializableMessage.serializer()),
@@ -535,15 +542,22 @@ class TokenAwareSummarizingMemory(
             sessionMemory.memoryMessages,
         )
 
-        // Convert back to ChatMessage
-        val messages = serializableMessages.map { msg ->
-            when (msg.type) {
-                "user" -> UserMessage.from(msg.content)
-                "assistant" -> AiMessage.from(msg.content)
-                "system" -> SystemMessage.from(msg.content)
-                else -> UserMessage.from(msg.content) // fallback
+        // Convert back to ChatMessage, filtering out any blank messages
+        val messages = serializableMessages
+            .filter { it.content.isNotBlank() }
+            .mapNotNull { msg ->
+                try {
+                    when (msg.type) {
+                        "user" -> UserMessage.from(msg.content)
+                        "assistant" -> AiMessage.from(msg.content)
+                        "system" -> SystemMessage.from(msg.content)
+                        else -> UserMessage.from(msg.content) // fallback
+                    }
+                } catch (e: Exception) {
+                    log.warn("Failed to deserialize message of type ${msg.type}, skipping: ${e.message}")
+                    null
+                }
             }
-        }
 
         return MemoryState(messages = messages, summary = summary)
     }

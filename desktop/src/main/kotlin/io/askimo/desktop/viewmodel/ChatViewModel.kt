@@ -564,7 +564,7 @@ class ChatViewModel(
 
                 val result = withContext(Dispatchers.IO) {
                     chatSessionService.resumeSessionPaginated(
-                        ExecutionMode.STATEFUL_MODE,
+                        ExecutionMode.STATEFUL_CHARTS_MODE,
                         sessionId,
                         MESSAGE_PAGE_SIZE,
                     )
