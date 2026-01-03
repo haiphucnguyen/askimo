@@ -25,6 +25,10 @@ import java.time.Duration
 class XAiModelFactory : ChatModelFactory<XAiSettings> {
     private val log = logger<XAiModelFactory>()
 
+    companion object {
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
+    }
+
     override fun availableModels(settings: XAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
         val url = "${settings.baseUrl.trimEnd('/')}/models"
@@ -78,7 +82,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey(safeApiKey(settings.apiKey))
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(

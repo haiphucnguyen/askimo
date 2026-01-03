@@ -26,6 +26,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
     companion object {
         private const val UTILITY_MODEL = "gpt-3.5-turbo"
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
     }
 
     override fun availableModels(settings: OpenAiSettings): List<String> {
@@ -87,7 +88,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel = OpenAiChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
         .modelName(UTILITY_MODEL)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(

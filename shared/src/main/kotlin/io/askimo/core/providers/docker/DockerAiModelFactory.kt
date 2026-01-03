@@ -25,6 +25,10 @@ import java.time.Duration
 class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     private val log = logger<DockerAiModelFactory>()
 
+    companion object {
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
+    }
+
     override fun availableModels(settings: DockerAiSettings): List<String> = try {
         val process =
             ProcessBuilderExt("docker", "model", "ls", "--openai")
@@ -101,7 +105,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey("docker-ai")
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(
