@@ -24,6 +24,10 @@ import java.time.Duration
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     private val log = logger<OllamaModelFactory>()
 
+    companion object {
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
+    }
+
     override fun availableModels(settings: OllamaSettings): List<String> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
 
@@ -84,7 +88,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey("ollama")
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .build()

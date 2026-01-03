@@ -27,6 +27,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     companion object {
         private const val UTILITY_MODEL = "gemini-1.5-flash"
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
     }
 
     override fun availableModels(settings: GeminiSettings): List<String> {
@@ -115,7 +116,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel = GoogleAiGeminiChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
         .modelName(UTILITY_MODEL)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(

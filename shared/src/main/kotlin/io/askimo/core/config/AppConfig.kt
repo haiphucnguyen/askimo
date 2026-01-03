@@ -206,6 +206,7 @@ data class ChatConfig(
     val maxTokens: Int = 8000,
     val summarizationThreshold: Double = 0.75,
     val enableAsyncSummarization: Boolean = true,
+    val summarizationTimeoutSeconds: Long = 60,
 )
 
 /**

@@ -54,7 +54,7 @@ data class ConversationSummary(
  * @param tokenEstimator Function to estimate token count for a message (default: words * 1.3)
  * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization, default 0.6
  * @param asyncSummarization Whether to run summarization asynchronously, default true
- * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 30
+ * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 60
  */
 class TokenAwareSummarizingMemory(
     private val appContext: AppContext,
@@ -63,7 +63,7 @@ class TokenAwareSummarizingMemory(
     private val tokenEstimator: (ChatMessage) -> Int = defaultTokenEstimator(),
     private val summarizationThreshold: Double = 0.6,
     asyncSummarization: Boolean = true,
-    private val summarizationTimeoutSeconds: Long = 30,
+    private val summarizationTimeoutSeconds: Long = 60,
 ) : ChatMemory,
     AutoCloseable {
 
@@ -214,17 +214,44 @@ class TokenAwareSummarizingMemory(
             return
         }
 
+        summarizationInProgress = true
+
         CompletableFuture.runAsync({
             try {
-                summarizationInProgress = true
                 summarizeAndPrune()
             } catch (e: Exception) {
                 log.error("Async summarization failed", e)
+                // On any error, fall back to basic summary to ensure memory is managed
+                try {
+                    val conversationMessages = synchronized(messages) {
+                        messages.filterNot { it is SystemMessage }
+                    }
+                    if (conversationMessages.isNotEmpty()) {
+                        val messagesToSummarizeCount = (conversationMessages.size * 0.45).toInt().coerceAtLeast(1)
+                        val messagesToSummarize = conversationMessages.take(messagesToSummarizeCount)
+                        generateBasicSummary(messagesToSummarize)
+
+                        // Remove the summarized messages
+                        synchronized(messages) {
+                            var removed = 0
+                            val iterator = messages.iterator()
+                            while (iterator.hasNext() && removed < messagesToSummarizeCount) {
+                                val msg = iterator.next()
+                                if (msg !is SystemMessage) {
+                                    iterator.remove()
+                                    removed++
+                                }
+                            }
+                        }
+                        persistToDatabase()
+                        log.info("Fallback basic summarization complete. Remaining: ${messages.size}")
+                    }
+                } catch (fallbackError: Exception) {
+                    log.error("Fallback summarization also failed", fallbackError)
+                }
             } finally {
                 summarizationInProgress = false
-                if (summarizationLock.isHeldByCurrentThread) {
-                    summarizationLock.unlock()
-                }
+                summarizationLock.unlock()
             }
         }, executorService)
             .orTimeout(summarizationTimeoutSeconds, TimeUnit.SECONDS)
@@ -232,9 +259,14 @@ class TokenAwareSummarizingMemory(
                 log.error("Summarization timed out or failed", throwable)
                 // Ensure cleanup on timeout
                 summarizationInProgress = false
-                // Only unlock if current thread owns the lock
-                if (summarizationLock.isHeldByCurrentThread) {
-                    summarizationLock.unlock()
+                // The lock was acquired by the main thread before starting async task
+                // We need to ensure it's unlocked even on timeout
+                try {
+                    if (summarizationLock.isLocked) {
+                        summarizationLock.unlock()
+                    }
+                } catch (_: IllegalMonitorStateException) {
+                    // Lock was already released, ignore
                 }
                 null
             }

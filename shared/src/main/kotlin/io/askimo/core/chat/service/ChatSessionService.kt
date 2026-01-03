@@ -20,7 +20,7 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
-import io.askimo.core.chat.util.constructMessageWithAttachments
+import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
@@ -144,6 +144,7 @@ class ChatSessionService(
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
             asyncSummarization = true,
+            summarizationTimeoutSeconds = AppConfig.chat.summarizationTimeoutSeconds,
         )
 
         // Create content retriever if project has indexed paths
@@ -547,7 +548,7 @@ class ChatSessionService(
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
     /**
-     * Prepares user message with attachments and returns combined prompt including any active directive.
+     * Prepares user message with attachments and URL contents, returns combined prompt including any active directive.
      *
      * The directive (system instructions + session-specific directive) is prepended to the user message
      * to act as system-level instructions. While ideally these would be separate system messages,
@@ -564,10 +565,11 @@ class ChatSessionService(
      *
      * ---
      *
-     * [User Message with Attachments]
+     * [User Message with Attachments and URL Contents]
      * ```
      *
      * If attachments are present, they will be included inline in the message using file:// format.
+     * If URLs are detected in the message, their content will be extracted and appended using url:// format.
      *
      * @return The complete prompt string ready to send to the AI (directive prepended if present)
      */
@@ -576,6 +578,16 @@ class ChatSessionService(
         userMessage: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
     ): String {
+        val urls = UrlContentExtractor.extractUrls(userMessage)
+        val urlContents = urls.mapNotNull { url ->
+            try {
+                UrlContentExtractor.extractContent(url)
+            } catch (e: Exception) {
+                log.warn("Failed to fetch URL content for $url: ${e.message}", e)
+                null
+            }
+        }
+
         messageRepository.addMessage(
             ChatMessage(
                 id = "",
@@ -590,11 +602,16 @@ class ChatSessionService(
         // Generate title only if session doesn't have one yet
         val session = sessionRepository.getSession(sessionId)
         if (session?.title.isNullOrBlank()) {
-            val titlePrompt = if (attachments.isNotEmpty()) {
-                val fileNames = attachments.joinToString(", ") { it.fileName }
-                "$userMessage [Attached: $fileNames]"
-            } else {
-                userMessage
+            val titlePrompt = buildString {
+                append(userMessage)
+                if (attachments.isNotEmpty()) {
+                    val fileNames = attachments.joinToString(", ") { it.fileName }
+                    append(" [Attached: $fileNames]")
+                }
+                if (urlContents.isNotEmpty()) {
+                    val urlTitles = urlContents.joinToString(", ") { it.title ?: "URL" }
+                    append(" [URLs: $urlTitles]")
+                }
             }
             val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
 
@@ -608,7 +625,46 @@ class ChatSessionService(
             }
         }
 
-        return constructMessageWithAttachments(userMessage, attachments)
+        return constructMessageWithAttachmentsAndUrls(userMessage, attachments, urlContents)
+    }
+
+    /**
+     * Constructs a formatted message with both file attachments and extracted URL contents.
+     *
+     * @param userMessage The original user message
+     * @param attachments List of file attachments
+     * @param urlContents List of extracted URL contents
+     * @return Formatted message with attachments and URL contents appended
+     */
+    private fun constructMessageWithAttachmentsAndUrls(
+        userMessage: String,
+        attachments: List<FileAttachmentDTO>,
+        urlContents: List<io.askimo.core.chat.util.ExtractedUrlContent>,
+    ): String = buildString {
+        append(userMessage)
+
+        if (attachments.isNotEmpty()) {
+            append("\n\n")
+            attachments.forEach { attachment ->
+                append("file://")
+                append(attachment.fileName)
+                append("\n")
+                append(attachment.content)
+                append("\n\n")
+            }
+        }
+
+        // Add URL contents if present
+        if (urlContents.isNotEmpty()) {
+            append("\n\n")
+            urlContents.forEach { content ->
+                append("url://")
+                append(content.title ?: content.url)
+                append("\n")
+                append(content.content)
+                append("\n\n")
+            }
+        }
     }
 }
 

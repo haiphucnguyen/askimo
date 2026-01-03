@@ -22,6 +22,10 @@ import java.time.Duration
 
 class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
+    companion object {
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
+    }
+
     override fun availableModels(settings: LocalAiSettings): List<String> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
 
@@ -71,7 +75,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey("localai")
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(

@@ -27,6 +27,10 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     private val log = logger<LmStudioModelFactory>()
 
+    companion object {
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
+    }
+
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
         url = "${settings.baseUrl}/v1/models",
@@ -87,7 +91,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
             .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(10))
+            .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }

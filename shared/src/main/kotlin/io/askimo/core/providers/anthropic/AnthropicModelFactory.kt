@@ -25,6 +25,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     companion object {
         private const val UTILITY_MODEL = "claude-3-haiku-20240307"
+        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
     }
 
     override fun availableModels(settings: AnthropicSettings): List<String> = listOf(
@@ -73,7 +74,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         .apiKey(safeApiKey(settings.apiKey))
         .modelName(UTILITY_MODEL)
         .baseUrl(settings.baseUrl)
-        .timeout(Duration.ofSeconds(10))
+        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
         .build()
 
     override fun createUtilityClient(
