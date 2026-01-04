@@ -5,6 +5,7 @@
 package io.askimo.desktop.view.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,11 +17,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,7 +45,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
@@ -56,34 +58,24 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
-
-/**
- * Validation result for folder path
- */
-sealed class FolderValidationResult {
-    data object Valid : FolderValidationResult()
-    data object Empty : FolderValidationResult()
-    data object NotExists : FolderValidationResult()
-    data object NotAFolder : FolderValidationResult()
-    data object NotReadable : FolderValidationResult()
-}
+import java.util.UUID
 
 private object NewProjectDialog
 private val log = logger<NewProjectDialog>()
 
 /**
- * Dialog for creating a new project with name, description, and optional folder path.
+ * Dialog for creating a new project with name, description, and optional knowledge sources.
  */
 @Composable
 fun newProjectDialog(
     onDismiss: () -> Unit,
-    onCreateProject: (name: String, description: String?, folderPath: String?) -> Unit,
+    onCreateProject: (name: String, description: String?) -> Unit,
 ) {
     var projectName by remember { mutableStateOf("") }
     var projectDescription by remember { mutableStateOf("") }
-    var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var knowledgeSources by remember { mutableStateOf<List<KnowledgeSourceItem>>(emptyList()) }
+    var showAddSourceMenu by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
-    var folderError by remember { mutableStateOf<String?>(null) }
     var showSuccess by remember { mutableStateOf(false) }
     var createdProjectName by remember { mutableStateOf("") }
     var countdown by remember { mutableStateOf(5) }
@@ -92,10 +84,8 @@ fun newProjectDialog(
 
     // Retrieve string resources in composable scope
     val errorEmptyName = stringResource("project.new.dialog.error.empty.name")
-    val errorFolderNotExists = stringResource("project.new.dialog.error.folder.notexists")
-    val errorFolderNotFolder = stringResource("project.new.dialog.error.folder.notfolder")
-    val errorFolderNotReadable = stringResource("project.new.dialog.error.folder.notreadable")
     val browseFolderTitle = stringResource("project.new.dialog.folder.browse")
+    val browseFileTitle = stringResource("project.new.dialog.file.browse")
 
     // Countdown and auto-dismiss when success is shown
     LaunchedEffect(showSuccess) {
@@ -109,42 +99,45 @@ fun newProjectDialog(
         }
     }
 
-    // Validate folder path
-    fun validateFolder(path: String?): FolderValidationResult {
-        if (path.isNullOrBlank()) return FolderValidationResult.Empty
-
-        val folder = File(path)
-        return when {
-            !folder.exists() -> FolderValidationResult.NotExists
-            !folder.isDirectory -> FolderValidationResult.NotAFolder
-            !folder.canRead() -> FolderValidationResult.NotReadable
-            else -> FolderValidationResult.Valid
-        }
-    }
-
     // Browse for folder using FileDialog
     fun browseForFolder() {
         val dialog = FileDialog(null as Frame?, browseFolderTitle, FileDialog.LOAD)
 
         // macOS: Enable folder selection
         System.setProperty("apple.awt.fileDialogForDirectories", "true")
-
         dialog.isVisible = true
-
         System.setProperty("apple.awt.fileDialogForDirectories", "false")
 
         if (dialog.file != null) {
             val folderPath = File(dialog.directory, dialog.file).absolutePath
-            selectedFolder = folderPath
+            knowledgeSources = knowledgeSources + KnowledgeSourceItem.Folder(
+                id = UUID.randomUUID().toString(),
+                path = folderPath,
+                isValid = validateFolder(folderPath),
+            )
+        }
+    }
 
-            // Validate selected folder
-            when (validateFolder(folderPath)) {
-                FolderValidationResult.Valid -> folderError = null
-                FolderValidationResult.NotExists -> folderError = errorFolderNotExists
-                FolderValidationResult.NotAFolder -> folderError = errorFolderNotFolder
-                FolderValidationResult.NotReadable -> folderError = errorFolderNotReadable
-                FolderValidationResult.Empty -> folderError = null
-            }
+    // Browse for files using FileDialog
+    fun browseForFiles() {
+        val dialog = FileDialog(null as Frame?, browseFileTitle, FileDialog.LOAD)
+        dialog.isMultipleMode = true
+        dialog.isVisible = true
+
+        dialog.files?.forEach { file ->
+            knowledgeSources = knowledgeSources + KnowledgeSourceItem.File(
+                id = UUID.randomUUID().toString(),
+                path = file.absolutePath,
+                isValid = validateFile(file.absolutePath),
+            )
+        }
+    }
+
+    // Handle adding a source based on type
+    fun handleAddSource(type: KnowledgeSourceType) {
+        when (type) {
+            KnowledgeSourceType.FOLDER -> browseForFolder()
+            KnowledgeSourceType.FILE -> browseForFiles()
         }
     }
 
@@ -156,48 +149,20 @@ fun newProjectDialog(
             return
         }
 
-        // Validate folder if provided
-        if (selectedFolder != null) {
-            when (validateFolder(selectedFolder)) {
-                FolderValidationResult.Valid -> {
-                    // Valid, proceed
-                }
-                FolderValidationResult.Empty -> {
-                    selectedFolder = null // Clear if empty
-                }
-                FolderValidationResult.NotExists -> {
-                    folderError = errorFolderNotExists
-                    return
-                }
-                FolderValidationResult.NotAFolder -> {
-                    folderError = errorFolderNotFolder
-                    return
-                }
-                FolderValidationResult.NotReadable -> {
-                    folderError = errorFolderNotReadable
-                    return
-                }
-            }
-        }
-
         // Save project to database
         scope.launch {
             try {
                 val projectRepository = DatabaseManager.getInstance().getProjectRepository()
 
-                // Create knowledge source configuration
-                val knowledgeSources = if (selectedFolder != null) {
-                    listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf(selectedFolder!!)))
-                } else {
-                    emptyList()
-                }
+                // Build knowledge source configurations from UI items
+                val knowledgeSourceConfigs = buildKnowledgeSourceConfigs(knowledgeSources)
 
                 // Create project
                 val project = Project(
                     id = "",
                     name = projectName.trim(),
                     description = projectDescription.takeIf { it.isNotBlank() },
-                    knowledgeSources = knowledgeSources,
+                    knowledgeSources = knowledgeSourceConfigs,
                     createdAt = LocalDateTime.now(),
                     updatedAt = LocalDateTime.now(),
                 )
@@ -219,11 +184,10 @@ fun newProjectDialog(
                 createdProjectName = projectName.trim()
                 showSuccess = true
 
-                // Call callback
+                // Call callback with project info
                 onCreateProject(
                     projectName.trim(),
                     projectDescription.takeIf { it.isNotBlank() },
-                    selectedFolder,
                 )
             } catch (e: Exception) {
                 log.error("Failed to create project", e)
@@ -328,60 +292,58 @@ fun newProjectDialog(
                         keyboardActions = KeyboardActions(onDone = { handleCreate() }),
                     )
 
-                    // Folder Selection
+                    // Knowledge Sources Section
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = stringResource("project.new.dialog.folder.label"),
+                            text = stringResource("project.new.dialog.sources.label"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
 
-                        // Selected folder display
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                value = selectedFolder ?: "",
-                                onValueChange = { },
-                                placeholder = { Text(stringResource("project.new.dialog.folder.placeholder")) },
-                                readOnly = true,
-                                isError = folderError != null,
-                                supportingText = folderError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
-                                trailingIcon = {
-                                    if (selectedFolder != null) {
-                                        val validationResult = validateFolder(selectedFolder)
-                                        when (validationResult) {
-                                            FolderValidationResult.Valid -> Icon(
-                                                Icons.Default.CheckCircle,
-                                                contentDescription = "Valid",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                            else -> Icon(
-                                                Icons.Default.Error,
-                                                contentDescription = "Invalid",
-                                                tint = MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ComponentColors.outlinedTextFieldColors(),
+                        // List of existing sources
+                        knowledgeSources.forEach { source ->
+                            knowledgeSourceRow(
+                                source = source,
+                                onRemove = { knowledgeSources = knowledgeSources - source },
                             )
+                        }
 
+                        // Add Source Button with Dropdown
+                        Box {
                             OutlinedButton(
-                                onClick = { browseForFolder() },
+                                onClick = { showAddSourceMenu = true },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
-                                Icon(
-                                    Icons.Default.FolderOpen,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp),
-                                )
-                                Text(stringResource("project.new.dialog.folder.browse"))
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource("project.new.dialog.sources.add"))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+
+                            DropdownMenu(
+                                expanded = showAddSourceMenu,
+                                onDismissRequest = { showAddSourceMenu = false },
+                            ) {
+                                KnowledgeSourceType.entries.forEach { type ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    type.icon,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.padding(end = 8.dp).size(20.dp),
+                                                )
+                                                Text(type.displayName)
+                                            }
+                                        },
+                                        onClick = {
+                                            showAddSourceMenu = false
+                                            handleAddSource(type)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

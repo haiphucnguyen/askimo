@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -397,6 +398,25 @@ fun chatView(
                                                 ) {
                                                     project.knowledgeSources.forEach { source ->
                                                         when (source) {
+                                                            is LocalFoldersKnowledgeSourceConfig -> {
+                                                                source.resourceIdentifiers.forEach { path ->
+                                                                    Row(
+                                                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                    ) {
+                                                                        Text(
+                                                                            text = "•",
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                        )
+                                                                        Text(
+                                                                            text = path,
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis,
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
                                                             is LocalFilesKnowledgeSourceConfig -> {
                                                                 source.resourceIdentifiers.forEach { path ->
                                                                     Row(

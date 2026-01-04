@@ -62,7 +62,7 @@ object KnowledgeSourceSerializer {
             log.error("Failed to deserialize indexed paths: ${e.message}", e)
             // Fallback: treat as single file path
             listOf(
-                LocalFilesKnowledgeSourceConfig(
+                LocalFoldersKnowledgeSourceConfig(
                     resourceIdentifiers = listOf(indexedPaths),
                 ),
             )
@@ -75,7 +75,7 @@ object KnowledgeSourceSerializer {
     private fun deserializeLegacyFormat(jsonStr: String): List<KnowledgeSourceConfig> {
         val paths = json.decodeFromString<List<String>>(jsonStr)
         return listOf(
-            LocalFilesKnowledgeSourceConfig(
+            LocalFoldersKnowledgeSourceConfig(
                 resourceIdentifiers = paths,
             ),
         )
@@ -99,7 +99,7 @@ object KnowledgeSourceSerializer {
      * Deserialize single path string (no JSON structure)
      */
     private fun deserializeSinglePath(path: String): List<KnowledgeSourceConfig> = listOf(
-        LocalFilesKnowledgeSourceConfig(
+        LocalFoldersKnowledgeSourceConfig(
             resourceIdentifiers = listOf(path),
         ),
     )
@@ -109,10 +109,10 @@ object KnowledgeSourceSerializer {
      *
      * Use legacy format if:
      * - Single knowledge source
-     * - Type is LocalFilesKnowledgeSourceConfig
+     * - Type is LocalFoldersKnowledgeSourceConfig
      * - No custom config options
      */
     private fun shouldUseLegacyFormat(sources: List<KnowledgeSourceConfig>): Boolean = sources.size == 1 &&
-        sources[0] is LocalFilesKnowledgeSourceConfig &&
+        sources[0] is LocalFoldersKnowledgeSourceConfig &&
         sources[0].config.isEmpty()
 }

@@ -81,6 +81,7 @@ class LocalFilesIndexingCoordinator(
             try {
                 absolutePath.startsWith(root.toAbsolutePath())
             } catch (e: Exception) {
+                log.warn("Failed to check if path $absolutePath starts with project root $root: ${e.message}", e)
                 false
             }
         }

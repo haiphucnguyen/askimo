@@ -8,7 +8,7 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
-import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.context.AppContext
 import java.nio.file.Paths
 
@@ -37,16 +37,14 @@ object IndexingCoordinatorFactory {
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
     ): IndexingCoordinator {
-        // For now, only handle LocalFiles
-        // Future: support other knowledge source types
-        val localFilesSources = knowledgeSources.filterIsInstance<LocalFilesKnowledgeSourceConfig>()
+        val localFoldersSources = knowledgeSources.filterIsInstance<LocalFoldersKnowledgeSourceConfig>()
 
-        if (localFilesSources.isEmpty()) {
+        if (localFoldersSources.isEmpty()) {
             throw IllegalArgumentException("No supported knowledge sources found for project $projectId")
         }
 
         // Collect all paths from all local files sources
-        val allPaths = localFilesSources
+        val allPaths = localFoldersSources
             .flatMap { it.resourceIdentifiers }
             .map { Paths.get(it) }
 

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (c) 2025 Hai Nguyen
+ * Copyright (c) 2026 Hai Nguyen
  */
 package io.askimo.testcontainers
 

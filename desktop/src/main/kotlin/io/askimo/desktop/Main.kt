@@ -1131,7 +1131,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 if (showNewProjectDialog) {
                     newProjectDialog(
                         onDismiss = { showNewProjectDialog = false },
-                        onCreateProject = { _, _, _ ->
+                        onCreateProject = { _, _ ->
                             projectsViewModel.refresh()
                         },
                     )

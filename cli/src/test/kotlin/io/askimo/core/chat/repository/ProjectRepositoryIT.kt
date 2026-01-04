@@ -6,7 +6,7 @@ package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
-import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.context.MessageRole
@@ -85,7 +85,7 @@ class ProjectRepositoryIT {
         assertNotNull(project.id)
         assertEquals("Test Project", project.name)
         assertEquals("Test Description", project.description)
-        assertEquals(emptyList<LocalFilesKnowledgeSourceConfig>(), project.knowledgeSources)
+        assertEquals(emptyList<LocalFoldersKnowledgeSourceConfig>(), project.knowledgeSources)
         assertNotNull(project.createdAt)
         assertNotNull(project.updatedAt)
     }
@@ -107,7 +107,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 2",
                 description = "Description 2",
-                knowledgeSources = listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf("/path/to/folder"))),
+                knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifiers = listOf("/path/to/folder"))),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -146,7 +146,7 @@ class ProjectRepositoryIT {
             projectId = project.id,
             name = "Updated Name",
             description = "Updated Description",
-            knowledgeSources = listOf(LocalFilesKnowledgeSourceConfig(resourceIdentifiers = listOf("/new/path"))),
+            knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifiers = listOf("/new/path"))),
         )
 
         assertTrue(updated)
@@ -157,7 +157,7 @@ class ProjectRepositoryIT {
         assertEquals("Updated Name", updatedProject!!.name)
         assertEquals("Updated Description", updatedProject.description)
         assertEquals(1, updatedProject.knowledgeSources.size)
-        assertEquals(listOf("/new/path"), (updatedProject.knowledgeSources[0] as LocalFilesKnowledgeSourceConfig).resourceIdentifiers)
+        assertEquals(listOf("/new/path"), (updatedProject.knowledgeSources[0] as LocalFoldersKnowledgeSourceConfig).resourceIdentifiers)
         assertTrue(updatedProject.updatedAt.isAfter(project.updatedAt))
     }
 
@@ -284,7 +284,7 @@ class ProjectRepositoryIT {
     @Test
     fun `should create project with indexed paths`() {
         val knowledgeSources = listOf(
-            LocalFilesKnowledgeSourceConfig(
+            LocalFoldersKnowledgeSourceConfig(
                 resourceIdentifiers = listOf("/path/to/folder1", "/path/to/folder2"),
             ),
         )
