@@ -24,6 +24,9 @@ import io.askimo.core.rag.state.IndexStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -32,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Manager for project indexing with RAG (Retrieval-Augmented Generation).
+ * Each project can have multiple coordinators - one per knowledge source.
  */
 class ProjectIndexer(
     private val appContext: AppContext,
@@ -40,7 +44,8 @@ class ProjectIndexer(
     private val log = logger<ProjectIndexer>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val coordinators = ConcurrentHashMap<String, IndexingCoordinator>()
+    // Map of projectId -> List of coordinators (one per knowledge source)
+    private val coordinators = ConcurrentHashMap<String, List<IndexingCoordinator>>()
     init {
         scope.launch {
             EventBus.internalEvents
@@ -76,7 +81,7 @@ class ProjectIndexer(
      * @param deleteIndexFiles If true, also delete the index files from disk
      */
     fun removeCoordinator(projectId: String, deleteIndexFiles: Boolean = false) {
-        coordinators.remove(projectId)?.close() // Coordinator handles cleanup including file watcher
+        coordinators.remove(projectId)?.forEach { it.close() } // Close all coordinators for this project
 
         LuceneIndexer.removeInstance(projectId)
 
@@ -114,29 +119,43 @@ class ProjectIndexer(
             return
         }
 
-        // Create coordinator using factory with typed knowledge sources
-        val coordinator = try {
-            IndexingCoordinatorFactory.createCoordinator(
-                projectId = projectId,
-                projectName = project.name,
-                knowledgeSources = project.knowledgeSources,
-                embeddingStore = embeddingStore,
-                embeddingModel = embeddingModel,
-                appContext = appContext,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create indexing coordinator for project $projectId", e)
+        if (project.knowledgeSources.isEmpty()) {
+            log.warn("Project $projectId has no knowledge sources, skipping indexing")
             EventBus.emit(
-                IndexingFailedEvent(
+                IndexingCompletedEvent(
                     projectId = projectId,
                     projectName = project.name,
-                    errorMessage = e.message ?: "Failed to create indexing coordinator",
+                    filesIndexed = 0,
                 ),
             )
             return
         }
 
-        coordinators[projectId] = coordinator
+        // Create one coordinator per knowledge source using factory
+        val projectCoordinators = try {
+            project.knowledgeSources.map { source ->
+                IndexingCoordinatorFactory.createCoordinator(
+                    projectId = projectId,
+                    projectName = project.name,
+                    knowledgeSource = source,
+                    embeddingStore = embeddingStore,
+                    embeddingModel = embeddingModel,
+                    appContext = appContext,
+                )
+            }
+        } catch (e: Exception) {
+            log.error("Failed to create indexing coordinators for project $projectId", e)
+            EventBus.emit(
+                IndexingFailedEvent(
+                    projectId = projectId,
+                    projectName = project.name,
+                    errorMessage = e.message ?: "Failed to create indexing coordinators",
+                ),
+            )
+            return
+        }
+
+        coordinators[projectId] = projectCoordinators
 
         EventBus.emit(
             IndexingStartedEvent(
@@ -145,32 +164,63 @@ class ProjectIndexer(
             ),
         )
 
-        val success = coordinator.startIndexing()
+        // Index all sources in parallel
+        val results = coroutineScope {
+            projectCoordinators.map { coordinator ->
+                async {
+                    try {
+                        coordinator.startIndexing()
+                    } catch (e: Exception) {
+                        log.error("Failed to index knowledge source for project $projectId", e)
+                        false
+                    }
+                }
+            }.awaitAll()
+        }
+
+        val success = results.all { it }
 
         if (success) {
             if (watchForChanges) {
-                coordinator.startWatching(scope)
+                projectCoordinators.forEach { coordinator ->
+                    try {
+                        coordinator.startWatching(scope)
+                    } catch (e: Exception) {
+                        log.error("Failed to start watching for project $projectId", e)
+                    }
+                }
             }
+
+            // Sum up total files indexed across all coordinators
+            val totalFilesIndexed = projectCoordinators.sumOf { it.progress.value.processedFiles }
 
             EventBus.emit(
                 IndexingCompletedEvent(
                     projectId = projectId,
                     projectName = project.name,
-                    filesIndexed = coordinator.progress.value.processedFiles,
+                    filesIndexed = totalFilesIndexed,
                 ),
             )
         } else {
-            val error = coordinator.progress.value.error ?: "Unknown error"
+            // Collect errors from failed coordinators
+            val errors = projectCoordinators
+                .mapNotNull { it.progress.value.error }
+                .joinToString("; ")
+                .takeIf { it.isNotEmpty() } ?: "Unknown error"
+
             EventBus.emit(
                 IndexingFailedEvent(
                     projectId = projectId,
                     projectName = project.name,
-                    errorMessage = error,
+                    errorMessage = errors,
                 ),
             )
         }
 
-        log.info("Indexing ${if (success) "completed" else "failed"} for project $projectId")
+        log.info(
+            "Indexing ${if (success) "completed" else "failed"} for project $projectId " +
+                "(${projectCoordinators.size} knowledge source(s))",
+        )
     }
 
     /**
@@ -180,20 +230,20 @@ class ProjectIndexer(
         try {
             val projectId = event.projectId
 
-            val existingCoordinator = coordinators[projectId]
+            val existingCoordinators = coordinators[projectId]
 
-            if (existingCoordinator != null && existingCoordinator.progress.value.isComplete) {
+            if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
                 log.debug("Project $projectId already indexed, removing and re-indexing")
                 removeCoordinator(projectId, deleteIndexFiles = true)
             }
 
-            if (existingCoordinator != null && existingCoordinator.progress.value.status == IndexStatus.INDEXING) {
+            if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
                 log.debug("Project $projectId is currently being indexed, skipping duplicate re-index request")
                 return
             }
 
             removeCoordinator(projectId, deleteIndexFiles = true)
-            log.info("Removed existing coordinator and deleted index files for project $projectId")
+            log.info("Removed existing coordinators and deleted index files for project $projectId")
 
             // Create new embedding components for re-indexing
             val embeddingModel = getEmbeddingModel(appContext)
@@ -225,14 +275,14 @@ class ProjectIndexer(
             val projectId = event.projectId
 
             // Check for duplicate/in-progress indexing (same as handleReIndexRequest)
-            val existingCoordinator = coordinators[projectId]
+            val existingCoordinators = coordinators[projectId]
 
-            if (existingCoordinator != null && existingCoordinator.progress.value.isComplete) {
+            if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
                 log.debug("Project $projectId already indexed, skipping duplicate request")
                 return
             }
 
-            if (existingCoordinator != null && existingCoordinator.progress.value.status == IndexStatus.INDEXING) {
+            if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
                 log.debug("Project $projectId is currently being indexed, skipping duplicate request")
                 return
             }
@@ -273,9 +323,9 @@ class ProjectIndexer(
      * @return true if the project has a valid index, false otherwise
      */
     fun isProjectIndexed(projectId: String): Boolean {
-        // Check if coordinator exists and indexing is complete
-        val coordinator = coordinators[projectId]
-        if (coordinator != null && coordinator.progress.value.isComplete) {
+        // Check if coordinators exist and all indexing is complete
+        val projectCoordinators = coordinators[projectId]
+        if (projectCoordinators != null && projectCoordinators.all { it.progress.value.isComplete }) {
             return true
         }
 
@@ -296,9 +346,18 @@ class ProjectIndexer(
      * @return IndexStatus (NOT_STARTED, INDEXING, READY, WATCHING, FAILED)
      */
     fun getProjectIndexStatus(projectId: String): IndexStatus {
-        val coordinator = coordinators[projectId]
-        if (coordinator != null) {
-            return coordinator.progress.value.status
+        val projectCoordinators = coordinators[projectId]
+        if (projectCoordinators != null) {
+            // If any coordinator is still indexing, return INDEXING
+            if (projectCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
+                return IndexStatus.INDEXING
+            }
+            // If any coordinator failed, return FAILED
+            if (projectCoordinators.any { it.progress.value.status == IndexStatus.FAILED }) {
+                return IndexStatus.FAILED
+            }
+            // If all coordinators are complete, return the most advanced status
+            return projectCoordinators.maxOf { it.progress.value.status }
         }
 
         // Check disk if no active coordinator
@@ -329,8 +388,10 @@ class ProjectIndexer(
     }
 
     override fun close() {
-        log.info("Closing ProjectIndexer, cleaning up ${coordinators.size} coordinators")
-        coordinators.values.forEach { it.close() }
+        log.info("Closing ProjectIndexer, cleaning up ${coordinators.size} projects")
+        coordinators.values.forEach { coordinatorList ->
+            coordinatorList.forEach { it.close() }
+        }
         coordinators.clear()
     }
 
