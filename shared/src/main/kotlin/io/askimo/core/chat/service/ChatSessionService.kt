@@ -20,6 +20,7 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.chat.util.ExtractedUrlContent
 import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
@@ -639,7 +640,7 @@ class ChatSessionService(
     private fun constructMessageWithAttachmentsAndUrls(
         userMessage: String,
         attachments: List<FileAttachmentDTO>,
-        urlContents: List<io.askimo.core.chat.util.ExtractedUrlContent>,
+        urlContents: List<ExtractedUrlContent>,
     ): String = buildString {
         append(userMessage)
 
