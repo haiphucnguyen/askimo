@@ -50,8 +50,15 @@ object IndexingCoordinatorFactory {
             )
         }
         is LocalFilesKnowledgeSourceConfig -> {
-            // TODO: Implement LocalFilesIndexingCoordinator
-            throw IllegalArgumentException("LocalFilesKnowledgeSourceConfig not yet implemented")
+            val filePaths = knowledgeSource.resourceIdentifiers.map { Paths.get(it) }
+            LocalFilesIndexingCoordinator(
+                projectId = projectId,
+                projectName = projectName,
+                filePaths = filePaths,
+                embeddingStore = embeddingStore,
+                embeddingModel = embeddingModel,
+                appContext = appContext,
+            )
         }
     }
 }
