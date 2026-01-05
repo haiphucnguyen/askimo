@@ -20,6 +20,8 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.chat.util.ExtractedUrlContent
+import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
@@ -37,11 +39,13 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.core.rag.getEmbeddingStore
+import io.askimo.core.util.formatFileSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
@@ -602,18 +606,7 @@ class ChatSessionService(
         // Generate title only if session doesn't have one yet
         val session = sessionRepository.getSession(sessionId)
         if (session?.title.isNullOrBlank()) {
-            val titlePrompt = buildString {
-                append(userMessage)
-                if (attachments.isNotEmpty()) {
-                    val fileNames = attachments.joinToString(", ") { it.fileName }
-                    append(" [Attached: $fileNames]")
-                }
-                if (urlContents.isNotEmpty()) {
-                    val urlTitles = urlContents.joinToString(", ") { it.title ?: "URL" }
-                    append(" [URLs: $urlTitles]")
-                }
-            }
-            val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, titlePrompt)
+            val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, userMessage)
 
             eventScope.launch {
                 EventBus.emit(
@@ -639,32 +632,62 @@ class ChatSessionService(
     private fun constructMessageWithAttachmentsAndUrls(
         userMessage: String,
         attachments: List<FileAttachmentDTO>,
-        urlContents: List<io.askimo.core.chat.util.ExtractedUrlContent>,
+        urlContents: List<ExtractedUrlContent>,
     ): String = buildString {
-        append(userMessage)
+        // First include attachments if present
+        attachments.forEach { attachment ->
+            appendLine("---")
+            appendLine("Attached file: ${attachment.fileName}")
+            appendLine("File size: ${formatFileSize(attachment.size)}")
+            appendLine()
 
-        if (attachments.isNotEmpty()) {
-            append("\n\n")
-            attachments.forEach { attachment ->
-                append("file://")
-                append(attachment.fileName)
-                append("\n")
-                append(attachment.content)
-                append("\n\n")
+            val content = when {
+                attachment.content != null -> attachment.content
+                attachment.filePath != null -> {
+                    try {
+                        val file = File(attachment.filePath)
+                        if (!file.exists()) {
+                            log.error("File not found: ${attachment.filePath}")
+                            "[Error: File not found]"
+                        } else if (!FileContentExtractor.isSupported(file)) {
+                            log.warn("Unsupported file type: ${attachment.fileName}")
+                            "[${FileContentExtractor.getUnsupportedMessage(file)}]"
+                        } else {
+                            FileContentExtractor.extractContent(file)
+                        }
+                    } catch (e: Exception) {
+                        log.error("Failed to extract content from ${attachment.fileName}: ${e.message}", e)
+                        "[Error: Could not read file - ${e.message}]"
+                    }
+                }
+                else -> {
+                    log.error("Attachment has neither content nor filePath: ${attachment.fileName}")
+                    "[Error: No content available]"
+                }
             }
+
+            appendLine(content)
+            appendLine("---")
+            appendLine()
         }
 
         // Add URL contents if present
         if (urlContents.isNotEmpty()) {
-            append("\n\n")
             urlContents.forEach { content ->
-                append("url://")
-                append(content.title ?: content.url)
-                append("\n")
-                append(content.content)
-                append("\n\n")
+                appendLine("---")
+                appendLine("URL: ${content.url}")
+                if (content.title != null) {
+                    appendLine("Title: ${content.title}")
+                }
+                appendLine()
+                appendLine(content.content)
+                appendLine("---")
+                appendLine()
             }
         }
+
+        // Then include user's message/question at the end
+        appendLine(userMessage)
     }
 }
 

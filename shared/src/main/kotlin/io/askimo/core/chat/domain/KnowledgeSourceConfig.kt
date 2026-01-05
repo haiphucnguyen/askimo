@@ -21,13 +21,28 @@ sealed class KnowledgeSourceConfig {
 }
 
 /**
- * Configuration for local file system knowledge sources.
+ * Configuration for local folder knowledge sources.
+ * Folders are watched for changes.
  *
- * @property resourceIdentifiers File paths (e.g., "/path/to/folder", "/path/to/file.txt")
+ * @property resourceIdentifiers Folder paths (e.g., "/path/to/folder")
  * @property config Configuration options:
  *   - watchForChanges: "true" or "false"
  *   - fileExtensions: ".kt,.java,.md" (comma-separated)
  *   - excludePatterns: "node_modules,build,.git" (comma-separated)
+ */
+@Serializable
+@SerialName("local_folders")
+data class LocalFoldersKnowledgeSourceConfig(
+    override val resourceIdentifiers: List<String>,
+    override val config: Map<String, String> = emptyMap(),
+) : KnowledgeSourceConfig()
+
+/**
+ * Configuration for individual files as knowledge sources.
+ * Unlike folders, files are NOT watched for changes.
+ *
+ * @property resourceIdentifiers File paths (e.g., "/path/to/document.pdf")
+ * @property config Configuration options (currently unused)
  */
 @Serializable
 @SerialName("local_files")

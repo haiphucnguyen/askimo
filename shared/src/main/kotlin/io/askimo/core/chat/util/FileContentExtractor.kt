@@ -135,32 +135,15 @@ object FileContentExtractor {
      */
     fun isTextFile(file: File): Boolean {
         val mimeType = detectMimeType(file)
-        val extension = file.extension.lowercase()
 
-        // Check if it's a binary format that we extract text from
-        if (extension in SUPPORTED_BINARY_EXTENSIONS) {
-            return false
-        }
-
-        // Check if MIME type indicates a binary document format
-        if (mimeType.startsWith("application/pdf") ||
-            mimeType.contains("word") || mimeType.contains("wordprocessingml") || mimeType.contains("msword") ||
-            mimeType.contains("spreadsheet") || mimeType.contains("excel") || mimeType.contains("ms-excel") ||
-            mimeType.contains("presentation") || mimeType.contains("powerpoint") || mimeType.contains("ms-powerpoint") ||
-            mimeType.startsWith("application/vnd.oasis.opendocument") ||
-            mimeType.contains("message/rfc822") || mimeType.contains("application/vnd.ms-outlook") ||
-            mimeType.contains("rtf")
-        ) {
-            return false
-        }
-
-        // Text files
+        // Text files based on MIME type
         if (mimeType.startsWith("text/") || mimeType in SUPPORTED_APPLICATION_TYPES) {
             return true
         }
 
         // Fallback to extension check for files Tika misdetects
         if (mimeType == "application/octet-stream" || mimeType.startsWith("application/x-")) {
+            val extension = file.extension.lowercase()
             return extension in SUPPORTED_TEXT_EXTENSIONS
         }
 
@@ -222,7 +205,7 @@ object FileContentExtractor {
     )
 
     // Fallback for extension-based check when file doesn't exist
-    private val SUPPORTED_TEXT_EXTENSIONS = setOf(
+    val SUPPORTED_TEXT_EXTENSIONS = setOf(
         // Plain text
         "txt", "text",
         // Markdown
@@ -263,7 +246,7 @@ object FileContentExtractor {
         "sql", "log", "properties", "env", "lock", "iml",
     )
 
-    private val SUPPORTED_BINARY_EXTENSIONS = setOf(
+    val SUPPORTED_BINARY_EXTENSIONS = setOf(
         // PDF
         "pdf",
         // Microsoft Office
@@ -277,4 +260,9 @@ object FileContentExtractor {
         // Rich Text
         "rtf",
     )
+
+    /**
+     * Get all supported file extensions (both text and binary).
+     */
+    val ALL_SUPPORTED_EXTENSIONS: Set<String> = SUPPORTED_TEXT_EXTENSIONS + SUPPORTED_BINARY_EXTENSIONS
 }

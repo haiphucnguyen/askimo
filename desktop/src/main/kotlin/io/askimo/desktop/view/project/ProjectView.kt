@@ -398,8 +398,8 @@ private fun sessionCard(
                 showNewProjectDialog = false
                 sessionIdToMove = null
             },
-            onCreateProject = { name, description, folderPath ->
-                // Project is already created in the dialog, now associate session with it
+            onCreateProject = { name, description ->
+                // Project is already created in the dialog with all knowledge sources
                 val createdProject = projectRepository.findProjectByName(name)
 
                 if (createdProject != null) {

@@ -17,7 +17,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
-import java.util.UUID
 
 /**
  * Coordinates hybrid indexing of text segments into both:
@@ -177,12 +176,13 @@ class HybridIndexer(
         }
     }
 
-    /**
-     * Generate a unique segment ID
-     */
     private fun generateSegmentId(segment: TextSegment): String {
         val filePath = segment.metadata().getString("file_path") ?: "unknown"
         val chunkIndex = segment.metadata().getInteger("chunk_index") ?: 0
-        return "$projectId:$filePath:$chunkIndex:${UUID.randomUUID()}"
+
+        // Hash the file path to a fixed 8-character hex string for compact, deterministic IDs
+        val fileHash = filePath.hashCode().toString(16).padStart(8, '0')
+
+        return "$projectId:$fileHash:$chunkIndex"
     }
 }
