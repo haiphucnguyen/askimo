@@ -48,7 +48,7 @@ object IndexingCoordinatorFactory {
             .flatMap { it.resourceIdentifiers }
             .map { Paths.get(it) }
 
-        return LocalFilesIndexingCoordinator(
+        return LocalFoldersIndexingCoordinator(
             projectId = projectId,
             projectName = projectName,
             paths = allPaths,

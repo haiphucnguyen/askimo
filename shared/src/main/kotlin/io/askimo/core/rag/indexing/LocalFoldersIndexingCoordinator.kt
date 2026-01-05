@@ -39,7 +39,7 @@ import kotlin.io.path.listDirectoryEntries
  * Implements IndexingCoordinator to provide lifecycle management including
  * indexing and file watching.
  */
-class LocalFilesIndexingCoordinator(
+class LocalFoldersIndexingCoordinator(
     private val projectId: String,
     private val projectName: String,
     private val paths: List<Path>,
@@ -47,7 +47,7 @@ class LocalFilesIndexingCoordinator(
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
 ) : IndexingCoordinator {
-    private val log = logger<LocalFilesIndexingCoordinator>()
+    private val log = logger<LocalFoldersIndexingCoordinator>()
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val stateManager = IndexStateManager(projectId)
@@ -430,6 +430,6 @@ class LocalFilesIndexingCoordinator(
      */
     override fun close() {
         stopWatching()
-        log.debug("Closed LocalFilesIndexingCoordinator for project $projectId")
+        log.debug("Closed LocalFoldersIndexingCoordinator for project $projectId")
     }
 }
