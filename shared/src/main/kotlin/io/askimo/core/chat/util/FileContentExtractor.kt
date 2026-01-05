@@ -205,7 +205,7 @@ object FileContentExtractor {
     )
 
     // Fallback for extension-based check when file doesn't exist
-    private val SUPPORTED_TEXT_EXTENSIONS = setOf(
+    val SUPPORTED_TEXT_EXTENSIONS = setOf(
         // Plain text
         "txt", "text",
         // Markdown
@@ -246,7 +246,7 @@ object FileContentExtractor {
         "sql", "log", "properties", "env", "lock", "iml",
     )
 
-    private val SUPPORTED_BINARY_EXTENSIONS = setOf(
+    val SUPPORTED_BINARY_EXTENSIONS = setOf(
         // PDF
         "pdf",
         // Microsoft Office
@@ -260,4 +260,9 @@ object FileContentExtractor {
         // Rich Text
         "rtf",
     )
+
+    /**
+     * Get all supported file extensions (both text and binary).
+     */
+    val ALL_SUPPORTED_EXTENSIONS: Set<String> = SUPPORTED_TEXT_EXTENSIONS + SUPPORTED_BINARY_EXTENSIONS
 }

@@ -46,6 +46,7 @@ import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.theme.ComponentColors
+import io.askimo.desktop.util.FileDialogUtils
 import io.askimo.desktop.util.Platform
 import java.awt.FileDialog
 import java.awt.Frame
@@ -104,6 +105,7 @@ fun chatInputField(
     val openFileDialog = {
         val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
         fileChooser.isMultipleMode = true
+        fileChooser.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
         fileChooser.isVisible = true
         val selectedFiles = fileChooser.files
         if (selectedFiles != null && selectedFiles.isNotEmpty()) {

@@ -52,6 +52,7 @@ import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
+import io.askimo.desktop.util.FileDialogUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
@@ -122,6 +123,7 @@ fun newProjectDialog(
     fun browseForFiles() {
         val dialog = FileDialog(null as Frame?, browseFileTitle, FileDialog.LOAD)
         dialog.isMultipleMode = true
+        dialog.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
         dialog.isVisible = true
 
         dialog.files?.forEach { file ->

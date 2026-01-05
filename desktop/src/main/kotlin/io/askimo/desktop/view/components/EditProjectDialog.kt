@@ -55,6 +55,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
+import io.askimo.desktop.util.FileDialogUtils
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -109,6 +110,7 @@ fun editProjectDialog(
     fun browseForFiles() {
         val dialog = FileDialog(null as Frame?, browseFileTitle, FileDialog.LOAD)
         dialog.isMultipleMode = true
+        dialog.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
         dialog.isVisible = true
 
         dialog.files?.forEach { file ->
