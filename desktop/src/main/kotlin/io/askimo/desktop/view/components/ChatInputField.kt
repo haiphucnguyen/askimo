@@ -49,7 +49,6 @@ import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
 import java.awt.FileDialog
 import java.awt.Frame
-import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -104,26 +103,27 @@ fun chatInputField(
     val selectFileTitle = stringResource("chat.select.file")
     val openFileDialog = {
         val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
+        fileChooser.isMultipleMode = true
         fileChooser.isVisible = true
-        val selectedFile = fileChooser.file
-        val selectedDir = fileChooser.directory
-        if (selectedFile != null && selectedDir != null) {
-            val file = File(selectedDir, selectedFile)
+        val selectedFiles = fileChooser.files
+        if (selectedFiles != null && selectedFiles.isNotEmpty()) {
             try {
-                val attachment = FileAttachmentDTO(
-                    id = UUID.randomUUID().toString(),
-                    messageId = "",
-                    sessionId = sessionId ?: "",
-                    fileName = file.name,
-                    mimeType = file.extension,
-                    size = file.length(),
-                    createdAt = LocalDateTime.now(),
-                    content = null,
-                    filePath = file.absolutePath,
-                )
-                onAttachmentsChange(attachments + attachment)
+                val newAttachments = selectedFiles.map { file ->
+                    FileAttachmentDTO(
+                        id = UUID.randomUUID().toString(),
+                        messageId = "",
+                        sessionId = sessionId ?: "",
+                        fileName = file.name,
+                        mimeType = file.extension,
+                        size = file.length(),
+                        createdAt = LocalDateTime.now(),
+                        content = null,
+                        filePath = file.absolutePath,
+                    )
+                }
+                onAttachmentsChange(attachments + newAttachments)
             } catch (e: Exception) {
-                log.error("Error adding file attachment: ${e.message}", e)
+                log.error("Error adding file attachments: ${e.message}", e)
             }
         }
     }
