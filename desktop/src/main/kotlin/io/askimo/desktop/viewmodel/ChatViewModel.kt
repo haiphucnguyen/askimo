@@ -13,7 +13,6 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTO
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
@@ -564,7 +563,6 @@ class ChatViewModel(
 
                 val result = withContext(Dispatchers.IO) {
                     chatSessionService.resumeSessionPaginated(
-                        ExecutionMode.STATEFUL_CHARTS_MODE,
                         sessionId,
                         MESSAGE_PAGE_SIZE,
                     )

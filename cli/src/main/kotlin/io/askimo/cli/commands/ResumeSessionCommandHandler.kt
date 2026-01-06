@@ -6,7 +6,6 @@ package io.askimo.cli.commands
 
 import io.askimo.cli.context.CliInteractiveContext
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import org.jline.reader.ParsedLine
@@ -30,7 +29,7 @@ class ResumeSessionCommandHandler(private val sessionService: ChatSessionService
             return
         } else {
             CliInteractiveContext.setCurrentSession(session)
-            val result = sessionService.resumeSession(ExecutionMode.STATEFUL_TOOLS_MODE, sessionId)
+            val result = sessionService.resumeSession(sessionId)
             if (result.success) {
                 log.display("✅ Resumed chat session: $sessionId")
                 if (result.messages.isNotEmpty()) {

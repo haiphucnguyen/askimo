@@ -4,10 +4,12 @@
  */
 package io.askimo.core.providers.ollama
 
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -23,6 +25,12 @@ import kotlin.test.assertTrue
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
 class OllamaModelFactoryTest {
+
+    @BeforeEach
+    fun setUp() {
+        AppContext.reset()
+        AppContext.initialize(mode = ExecutionMode.STATELESS_MODE)
+    }
 
     private fun setupOllamaContainer(): String {
         val ollama = SharedOllama.container

@@ -2448,13 +2448,17 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["int", "double", "boolean"] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["int", "double", "boolean", "long"]
+      },
       {
         "name": "<init>",
         "parameterTypes": [
           "int",
           "double",
           "boolean",
+          "long",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -2696,7 +2700,8 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
-      { "name": "autoPullsMissingModelAndEmbeds", "parameterTypes": [] }
+      { "name": "autoPullsMissingModelAndEmbeds", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -2828,7 +2833,8 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
-      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] }
+      { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -3440,6 +3446,12 @@
   },
   {
     "name": "io.askimo.testcontainers.SharedOllama",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.testcontainers.TestContainersConfig",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -4446,7 +4458,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$SIA4Govd",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$H27aXEsW",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

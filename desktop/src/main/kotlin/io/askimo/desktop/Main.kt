@@ -168,7 +168,7 @@ fun detectMacOSDarkMode(): Boolean {
 private val log = logger("Main")
 
 fun main() {
-    AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)
+    AppContext.initialize(ExecutionMode.STATEFUL_CHARTS_MODE)
 
     startKoin {
         modules(allDesktopModules)
@@ -340,7 +340,6 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 sessionManager,
                 {
                     chatSessionService.createSession(
-                        ExecutionMode.STATEFUL_CHARTS_MODE,
                         ChatSession(
                             id = "",
                             title = "New Chat",

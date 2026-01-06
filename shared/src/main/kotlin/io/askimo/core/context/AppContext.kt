@@ -228,7 +228,6 @@ class AppContext private constructor(
      */
     fun createStatefulChatSession(
         sessionId: String,
-        executionMode: ExecutionMode,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
     ): ChatClient {

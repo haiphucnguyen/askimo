@@ -14,6 +14,7 @@ import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -28,18 +29,21 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
 class EmbeddingModelFactoryOllamaTest {
-    @Test
-    @DisplayName("EmbeddingModelFactory auto-pulls missing Ollama embedding model and can embed text")
-    fun autoPullsMissingModelAndEmbeds() {
-        // Reset singleton to ensure test gets a fresh instance with test-specific params
+
+    private lateinit var baseUrl: String
+    private lateinit var embedModel: String
+    private lateinit var appContext: AppContext
+
+    @BeforeEach
+    fun setUp() {
         AppContext.reset()
 
         val ollama = SharedOllama.container
         val host = ollama.host
         val port = ollama.getMappedPort(11434)
-        val baseUrl = "http://$host:$port/v1"
+        baseUrl = "http://$host:$port/v1"
 
-        val embedModel = "jina/jina-embeddings-v2-small-en:latest"
+        embedModel = "jina/jina-embeddings-v2-small-en:latest"
 
         try {
             ollama.execInContainer("ollama", "rm", embedModel)
@@ -56,12 +60,16 @@ class EmbeddingModelFactoryOllamaTest {
             currentProvider = OLLAMA,
             providerSettings = mutableMapOf(OLLAMA to ollamaSettings as ProviderSettings),
         )
-        val session = AppContext.initialize(
+        appContext = AppContext.initialize(
             mode = ExecutionMode.STATELESS_MODE,
             params = params,
         )
+    }
 
-        val model = getEmbeddingModel(session)
+    @Test
+    @DisplayName("EmbeddingModelFactory auto-pulls missing Ollama embedding model and can embed text")
+    fun autoPullsMissingModelAndEmbeds() {
+        val model = getEmbeddingModel(appContext)
 
         val segment = TextSegment.from("hello world")
         val embedding = model.embed(segment).content().vector()

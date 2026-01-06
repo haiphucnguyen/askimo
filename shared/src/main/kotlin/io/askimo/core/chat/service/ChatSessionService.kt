@@ -25,7 +25,6 @@ import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.ExecutionMode
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
@@ -139,7 +138,7 @@ class ChatSessionService(
      * - Memory automatically saves to database when messages are added/summarized
      * - Caches the client for reuse
      */
-    fun getOrCreateClientForSession(executionMode: ExecutionMode, sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
+    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Create self-managing memory that handles its own persistence
@@ -159,7 +158,7 @@ class ChatSessionService(
             null
         }
 
-        appContext.createStatefulChatSession(sessionId = sessionId, executionMode = executionMode, retriever = retriever, memory = memory)
+        appContext.createStatefulChatSession(sessionId = sessionId, retriever = retriever, memory = memory)
     }
 
     /**
@@ -279,10 +278,10 @@ class ChatSessionService(
      * @param session The session to create
      * @return The created session with generated ID (if not provided)
      */
-    fun createSession(executionMode: ExecutionMode, session: ChatSession): ChatSession {
+    fun createSession(session: ChatSession): ChatSession {
         val createdSession = sessionRepository.createSession(session)
 
-        getOrCreateClientForSession(executionMode, createdSession.id)
+        getOrCreateClientForSession(createdSession.id)
 
         eventScope.launch {
             EventBus.emit(
@@ -426,13 +425,13 @@ class ChatSessionService(
      * @param sessionId The ID of the session to resume
      * @return ResumeSessionResult containing success status, messages, and any error
      */
-    fun resumeSession(executionMode: ExecutionMode, sessionId: String): ResumeSessionResult {
+    fun resumeSession(sessionId: String): ResumeSessionResult {
         // Try to pre-create/cache the chat client for this session
         // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
         try {
-            getOrCreateClientForSession(executionMode, sessionId)
+            getOrCreateClientForSession(sessionId)
         } catch (e: Exception) {
-            log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
+            log.debug("Could not pre-create chat client for session $sessionId: ${e.message}", e)
         }
 
         val messages = messageRepository.getMessages(sessionId)
@@ -446,19 +445,18 @@ class ChatSessionService(
     /**
      * Resume a chat session by ID with paginated messages.
      *
-     * @param appContext The current Session instance to resume into
      * @param sessionId The ID of the session to resume
      * @param limit The number of messages to load
      * @return ResumeSessionPaginatedResult containing success status, messages, cursor, and any error
      */
-    fun resumeSessionPaginated(executionMode: ExecutionMode, sessionId: String, limit: Int): ResumeSessionPaginatedResult {
+    fun resumeSessionPaginated(sessionId: String, limit: Int): ResumeSessionPaginatedResult {
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
             // Try to pre-create/cache the chat client for this session
             // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
             try {
-                getOrCreateClientForSession(executionMode, sessionId)
+                getOrCreateClientForSession(sessionId)
             } catch (e: Exception) {
                 log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
             }
