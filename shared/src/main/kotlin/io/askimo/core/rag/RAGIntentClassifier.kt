@@ -76,7 +76,7 @@ class RAGIntentClassifier(
         }
 
         return """
-            Does this user message need technical documentation lookup (RAG)?
+            Does this user message need to search the knowledge base (RAG)?
 
             Recent conversation:
             $recentContext
@@ -86,11 +86,14 @@ class RAGIntentClassifier(
             Respond ONLY with "YES" or "NO":
 
             YES - If the message is:
-            - A NEW technical question
+            - A NEW question requiring knowledge base lookup
+            - Asking "who", "what", "where" about specific entities, people, or concepts
             - Asking "how to" do something
-            - Requesting code examples
-            - Looking up API/library documentation
+            - Requesting code examples or documentation
+            - Looking up API/library/feature information
             - Asking about features, configuration, or implementation details
+            - Asking about people, projects, or domain-specific concepts
+            - Any factual query that might be in the knowledge base
 
             NO - If the message is:
             - A follow-up clarification ("explain more", "what about X?")

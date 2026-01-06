@@ -10,9 +10,11 @@ import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer
 import dev.langchain4j.service.AiServices
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.logger
 import io.askimo.core.rag.MetadataAwareContentInjector
 import io.askimo.core.util.SystemPrompts.systemMessage
 import io.askimo.tools.chart.ChartTools
@@ -24,7 +26,7 @@ import io.askimo.tools.fs.LocalFsTools
  */
 object AiServiceBuilder {
 
-    private val log = io.askimo.core.logging.logger<AiServiceBuilder>()
+    private val log = logger<AiServiceBuilder>()
 
     /**
      * In-memory cache for tool support detection.
@@ -209,7 +211,7 @@ object AiServiceBuilder {
         if (retriever != null) {
             val retrievalAugmentor = DefaultRetrievalAugmentor
                 .builder()
-//                .queryTransformer(CompressingQueryTransformer(secondaryChatModel))
+                .queryTransformer(CompressingQueryTransformer(secondaryChatModel))
                 .contentRetriever(retriever)
                 .contentInjector(
                     MetadataAwareContentInjector(
