@@ -69,7 +69,6 @@ interface ChatModelFactory<T : ProviderSettings> {
      * For local providers: returns the current model (no extra overhead)
      *
      * @param settings Provider-specific settings
-     * @param fallbackModel The model currently selected by the user (used by local providers)
      * @return ChatClient configured with a classification model
      */
     fun createUtilityClient(

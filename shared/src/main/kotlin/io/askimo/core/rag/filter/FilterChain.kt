@@ -254,5 +254,18 @@ class FilterChain(filters: List<IndexingFilter>) {
             )
             FilterChain(filters)
         }
+
+        /**
+         * Filter chain for local files indexing.
+         * Only checks if file extension is supported, without project-based filters.
+         * Use this when indexing user-selected files rather than entire folders.
+         */
+        val LOCAL_FILES: FilterChain by lazy {
+            val filters = listOf(
+                SupportedExtensionFilter(),
+                FileSizeFilter(),
+            )
+            FilterChain(filters)
+        }
     }
 }

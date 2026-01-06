@@ -45,7 +45,8 @@ class LocalFilesIndexingCoordinator(
     private val _progress = MutableStateFlow(IndexProgress())
     override val progress: StateFlow<IndexProgress> = _progress
 
-    private val filterChain: FilterChain = FilterChain.DEFAULT
+    // Use LOCAL_FILES filter chain which only checks supported extensions
+    private val filterChain: FilterChain = FilterChain.LOCAL_FILES
 
     private val processedFilesCounter = AtomicInteger(0)
     private val totalFilesCounter = AtomicInteger(0)

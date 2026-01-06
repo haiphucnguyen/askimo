@@ -77,7 +77,7 @@ class HybridContentRetriever(
         // Merge using Reciprocal Rank Fusion
         val merged = reciprocalRankFusion(vectorResults, keywordResults)
 
-        log.info("Hybrid retrieval merged ${vectorResults.size} vector + ${keywordResults.size} keyword → ${merged.size} results")
+        log.debug("Hybrid retrieval merged ${vectorResults.size} vector + ${keywordResults.size} keyword → ${merged.size} results")
 
         return merged.take(maxResults)
     }
