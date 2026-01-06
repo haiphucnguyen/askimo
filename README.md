@@ -67,23 +67,15 @@ Use GPT-4 for complex reasoning, Claude for writing, and local models for privac
 
 ## Why Askimo?
 
-**The only desktop AI client that supports both cloud and local models.** Most tools force you to choose: cloud-only or local-only. Askimo gives you both, plus private RAG, full-text search, and optional CLI automation.
+**The only desktop AI client that supports both cloud and local models.** Most tools force you to choose one or the other.
 
 | Feature | **Askimo** | **LM Studio** | **Ollama GUIs** | **ChatGPT Desktop** |
-|--------|-------------|----------------|------------------|----------------------|
-| **Multi-provider support** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
-| **Local model support** | ✅ Via Ollama | ✅ Native | ✅ Native | ❌ |
-| **Cloud model support** | ✅ OpenAI, Claude, Gemini, Grok | ❌ | ❌ | ✅ OpenAI |
-| **Desktop app** | ✅ | ✅ | ✅ | ✅ |
-| **CLI for automation** | ✅ | ✅ API server | ✅ Ollama CLI | ❌ |
-| **RAG / Document context** | ✅ Folder-based | ❌ | ❌ | ✅ File upload |
-| **Searchable history** | ✅ Full-text | ✅ | Varies by GUI | ✅ |
-| **Organize conversations** | ✅ Star + Projects | ❌ | ❌ | ✅ Pin + Projects |
-| **Custom prompts/directives** | ✅ | ✅ System prompt | ❌ | ✅ Custom instructions |
-| **Export conversations** | ✅ JSON/MD/HTML | ❌ | ❌ | ✅ |
-| **Privacy (local-only storage)** | ✅ | ✅ | ✅ | ⚠️ Optional cloud sync |
-| **Works offline** | ✅ With local models | ✅ | ✅ | ❌ |
-| **Free & open source** | ✅ Apache 2.0 | ✅ Free (proprietary) | ✅ Varies | ❌ Subscription |
+|---------|------------|---------------|-----------------|---------------------|
+| **Multi-provider** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
+| **RAG / Codebase context** | ✅ Folder-based | ❌ | ❌ | ⚠️ File upload only |
+| **CLI automation** | ✅ Built-in | ✅ API server | ✅ Ollama CLI | ❌ |
+| **Privacy** | ✅ Local storage | ✅ | ✅ | ⚠️ Optional cloud sync |
+| **Open source** | ✅ Apache 2.0 | ⚠️ Free (proprietary) | ✅ Varies | ❌ Subscription |
 
 ---
 
