@@ -72,11 +72,11 @@ class HybridIndexer(
             return true
         }
 
-        return try {
-            val segments = segmentBatch.map { it.first }
-            val filePaths = segmentBatch.map { it.second }
-            segmentBatch.clear()
+        val segments = segmentBatch.map { it.first }
+        val filePaths = segmentBatch.map { it.second }
+        segmentBatch.clear()
 
+        return try {
             withContext(Dispatchers.IO) {
                 val embeddings = embeddingModel.embedAll(segments).content()
 
@@ -105,7 +105,27 @@ class HybridIndexer(
 
             true
         } catch (e: Exception) {
-            log.error("Failed to flush segment batch for project {}: {}", projectId, e.message, e)
+            // Find the largest segment in the batch to help debug token limit errors
+            val maxSegmentChars = segments.maxOfOrNull { it.text().length } ?: 0
+            val largestSegmentIndex = segments.indexOfFirst { it.text().length == maxSegmentChars }
+            val largestSegment = if (largestSegmentIndex >= 0) segments[largestSegmentIndex] else null
+
+            log.error(
+                "Failed to flush segment batch for project {}: {} - " +
+                    "Batch size: {} segments, " +
+                    "Largest segment: {} chars ({} est. tokens), " +
+                    "File: {}, Chunk: {}, Index in batch: {}",
+                projectId,
+                e.message,
+                segments.size,
+                maxSegmentChars,
+                maxSegmentChars / 2,
+                largestSegment?.metadata()?.getString("file_name") ?: "unknown",
+                largestSegment?.metadata()?.getInteger("chunk_index") ?: 0,
+                largestSegmentIndex,
+                e,
+            )
+
             false
         }
     }

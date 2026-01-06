@@ -26,7 +26,7 @@ private object AppConfigObject
 private val log = logger<AppConfigObject>()
 
 data class EmbeddingConfig(
-    val maxCharsPerChunk: Int = 4000,
+    val maxCharsPerChunk: Int = 3000,
     val chunkOverlap: Int = 100,
     val preferredDim: Int? = null,
 )

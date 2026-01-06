@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.user.IndexingInProgressEvent
@@ -15,28 +16,38 @@ import io.askimo.core.rag.filter.FilterChain
 import io.askimo.core.rag.state.IndexProgress
 import io.askimo.core.rag.state.IndexStateManager
 import io.askimo.core.rag.state.IndexStatus
+import io.askimo.core.rag.watching.FileChangeHandler
+import io.askimo.core.rag.watching.FileWatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 
 /**
- * Coordinates the indexing process for specific local files.
- * Simplified version of LocalFoldersIndexingCoordinator that only indexes
- * individual files without directory traversal.
+ * Coordinates the indexing process for local files.
+ * Implements IndexingCoordinator to provide lifecycle management including
+ * indexing and file watching.
  */
-class LocalFilesIndexingCoordinator(
+class LocalFoldersIndexingCoordinator(
     private val projectId: String,
     private val projectName: String,
-    private val filePaths: List<Path>,
+    private val paths: List<Path>,
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
 ) : IndexingCoordinator {
-    private val log = logger<LocalFilesIndexingCoordinator>()
+    private val log = logger<LocalFoldersIndexingCoordinator>()
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val stateManager = IndexStateManager(projectId)
@@ -45,26 +56,62 @@ class LocalFilesIndexingCoordinator(
     private val _progress = MutableStateFlow(IndexProgress())
     override val progress: StateFlow<IndexProgress> = _progress
 
-    // Use LOCAL_FILES filter chain which only checks supported extensions
-    private val filterChain: FilterChain = FilterChain.LOCAL_FILES
+    private val filterChain: FilterChain = FilterChain.DEFAULT
+
+    private val projectRoots = mutableListOf<Path>()
+
+    private val maxConcurrentFiles = AppConfig.indexing.concurrentIndexingThreads
+    private val fileSemaphore = Semaphore(maxConcurrentFiles)
 
     private val processedFilesCounter = AtomicInteger(0)
     private val totalFilesCounter = AtomicInteger(0)
 
-    /**
-     * Check if a file should be excluded from indexing using the filter chain.
-     */
-    private fun shouldExcludeFile(path: Path): Boolean = filterChain.shouldExcludePath(path)
+    // File watcher is owned by this coordinator
+    private var fileWatcher: FileWatcher? = null
 
     /**
-     * Index files with progress tracking.
+     * Check if a path should be excluded from indexing using the filter chain.
+     * Uses the appropriate project root for context.
+     */
+    private fun shouldExcludePath(path: Path): Boolean {
+        val absolutePath = path.toAbsolutePath()
+
+        // Find the appropriate project root for this path
+        val rootPath = projectRoots.firstOrNull { root ->
+            try {
+                absolutePath.startsWith(root.toAbsolutePath())
+            } catch (e: Exception) {
+                log.warn("Failed to check if path $absolutePath starts with project root $root: ${e.message}", e)
+                false
+            }
+        }
+
+        // Never exclude the project root itself
+        if (rootPath != null && absolutePath == rootPath.toAbsolutePath()) {
+            return false
+        }
+
+        return if (rootPath != null) {
+            filterChain.shouldExclude(path, rootPath)
+        } else {
+            filterChain.shouldExcludePath(path)
+        }
+    }
+
+    /**
+     * Index paths with progress tracking.
+     * Uses parallel processing for better performance.
      * Uses incremental indexing - only indexes new or modified files.
      * Detects and removes deleted files from the index.
      */
-    private suspend fun indexFilesWithProgress(
+    suspend fun indexPathsWithProgress(
         paths: List<Path>,
     ): Boolean {
         _progress.value = IndexProgress(status = IndexStatus.INDEXING)
+
+        // Store project roots for filtering context
+        projectRoots.clear()
+        projectRoots.addAll(paths.map { it.toAbsolutePath() })
 
         // Reset counters
         processedFilesCounter.set(0)
@@ -74,33 +121,29 @@ class LocalFilesIndexingCoordinator(
             val previousState = stateManager.loadPersistedState()
             val previousHashes: Map<String, String> = previousState?.fileHashes ?: emptyMap()
 
-            log.info("Starting indexing for project $projectId with ${paths.size} files")
+            log.info("Starting parallel indexing for project $projectId with $maxConcurrentFiles concurrent threads")
 
             val fileHashes = ConcurrentHashMap<String, String>()
 
-            // Filter valid files
-            val validFiles = paths.filter { path ->
-                when {
-                    !path.isRegularFile() -> {
-                        log.warn("Skipping non-file path: $path")
-                        false
-                    }
-                    shouldExcludeFile(path) -> {
-                        log.debug("Skipping excluded file: $path")
-                        false
-                    }
-                    else -> true
-                }
+            // Collect all files first
+            val allFiles = mutableListOf<Path>()
+            for (path in paths) {
+                collectIndexableFiles(path, allFiles)
             }
 
-            totalFilesCounter.set(validFiles.size)
-            _progress.value = _progress.value.copy(totalFiles = validFiles.size)
+            totalFilesCounter.set(allFiles.size)
+            _progress.value = _progress.value.copy(totalFiles = allFiles.size)
 
-            log.info("Found ${validFiles.size} indexable files")
+            log.info("Found ${allFiles.size} indexable files")
 
-            // Process files sequentially (simpler for file-only indexing)
-            for (filePath in validFiles) {
-                indexFile(filePath, fileHashes, previousHashes)
+            coroutineScope {
+                allFiles.map { filePath ->
+                    async(Dispatchers.IO) {
+                        fileSemaphore.withPermit {
+                            indexFile(filePath, fileHashes, previousHashes)
+                        }
+                    }
+                }.awaitAll()
             }
 
             // Detect and remove deleted files
@@ -150,6 +193,29 @@ class LocalFilesIndexingCoordinator(
     }
 
     /**
+     * Collect all indexable files without processing them (fast).
+     * This replaces the expensive countIndexableFiles that calculated hashes.
+     */
+    private fun collectIndexableFiles(path: Path, result: MutableList<Path>) {
+        if (shouldExcludePath(path)) {
+            return
+        }
+
+        when {
+            path.isRegularFile() -> result.add(path)
+            path.isDirectory() -> {
+                try {
+                    path.listDirectoryEntries().forEach { entry ->
+                        collectIndexableFiles(entry, result)
+                    }
+                } catch (e: Exception) {
+                    log.warn("Failed to list directory ${path.fileName}: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /**
      * Detect files that were previously indexed but are now deleted.
      * Returns list of absolute file paths that no longer exist.
      */
@@ -188,7 +254,7 @@ class LocalFilesIndexingCoordinator(
     }
 
     /**
-     * Index a single file.
+     * Index a single file (optimized for parallel processing).
      * Returns true if file was processed successfully (indexed or skipped), false on error.
      */
     private suspend fun indexFile(
@@ -319,28 +385,51 @@ class LocalFilesIndexingCoordinator(
     // ========== IndexingCoordinator Interface Implementation ==========
 
     /**
-     * Start indexing using the file paths provided at construction.
+     * Start indexing using the paths provided at construction.
      */
-    override suspend fun startIndexing(): Boolean = indexFilesWithProgress(filePaths)
+    override suspend fun startIndexing(): Boolean = indexPathsWithProgress(paths)
 
     /**
-     * File-level indexing doesn't support watching (no directory to watch).
+     * Start watching for file changes.
      */
     override fun startWatching(scope: CoroutineScope) {
-        log.debug("File watching not supported for file-level indexing (project $projectId)")
+        if (fileWatcher != null) {
+            log.debug("File watcher already active for project $projectId")
+            return
+        }
+
+        val changeHandler = FileChangeHandler(
+            projectId = projectId,
+            embeddingStore = embeddingStore,
+            embeddingModel = embeddingModel,
+            appContext = appContext,
+        )
+
+        fileWatcher = FileWatcher(
+            projectId = projectId,
+            onFileChange = { path, kind ->
+                changeHandler.handleFileChange(path, kind)
+            },
+        )
+
+        fileWatcher?.startWatching(paths, scope)
+        log.info("Started file watching for project $projectId")
     }
 
     /**
-     * File-level indexing doesn't support watching.
+     * Stop watching for file changes.
      */
     override fun stopWatching() {
-        // No-op
+        fileWatcher?.stopWatching()
+        fileWatcher = null
+        log.info("Stopped file watching for project $projectId")
     }
 
     /**
      * Close coordinator and cleanup resources.
      */
     override fun close() {
-        log.debug("Closed LocalFilesIndexingCoordinator for project $projectId")
+        stopWatching()
+        log.debug("Closed LocalFoldersIndexingCoordinator for project $projectId")
     }
 }

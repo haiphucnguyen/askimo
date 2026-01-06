@@ -50,7 +50,7 @@ data class Sampling(
 )
 
 fun samplingFor(s: Style) = when (s) {
-    Style.PRECISE -> Sampling(0.2, 1.0)
-    Style.BALANCED -> Sampling(0.7, 1.0)
-    Style.CREATIVE -> Sampling(1.1, 1.0)
+    Style.PRECISE -> Sampling(0.2, 0.9)
+    Style.BALANCED -> Sampling(0.7, 0.95)
+    Style.CREATIVE -> Sampling(0.9, 1.0)
 }
