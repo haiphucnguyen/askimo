@@ -5,14 +5,9 @@
 package io.askimo.core.providers.anthropic
 
 import io.askimo.core.providers.HasApiKey
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.SettingField
-import io.askimo.core.providers.Style
-import io.askimo.core.providers.Verbosity
-import io.askimo.core.providers.createCommonPresetFields
-import io.askimo.core.providers.updatePresetField
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -20,7 +15,6 @@ data class AnthropicSettings(
     val baseUrl: String = "https://api.anthropic.com/v1",
     override var apiKey: String = "default",
     override val defaultModel: String = "claude-sonnet-4-5",
-    override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
     val enableAiSummarization: Boolean = true,
     val summarizerModel: String = "claude-3-5-haiku-20241022", // Fast and cheap model for summarization
 ) : ProviderSettings,
@@ -28,10 +22,9 @@ data class AnthropicSettings(
     override fun describe(): List<String> = listOf(
         "apiKey:  ${maskApiKey()}",
         "baseUrl: $baseUrl",
-        "presets: $presets",
     )
 
-    override fun toString(): String = "AnthropicSettings(baseUrl=$baseUrl, apiKey=${maskApiKey()}, presets=$presets)"
+    override fun toString(): String = "AnthropicSettings(baseUrl=$baseUrl, apiKey=${maskApiKey()})"
 
     override fun getFields(): List<SettingField> = listOf(
         SettingField.TextField(
@@ -47,16 +40,12 @@ data class AnthropicSettings(
             description = "Anthropic API base URL",
             value = baseUrl,
         ),
-    ) + createCommonPresetFields(presets)
+    )
 
-    override fun updateField(fieldName: String, value: String): ProviderSettings {
-        updatePresetField(presets, fieldName, value)?.let { return copy(presets = it) }
-
-        return when (fieldName) {
-            SettingField.API_KEY -> copy(apiKey = value)
-            SettingField.BASE_URL -> copy(baseUrl = value)
-            else -> this
-        }
+    override fun updateField(fieldName: String, value: String): ProviderSettings = when (fieldName) {
+        SettingField.API_KEY -> copy(apiKey = value)
+        SettingField.BASE_URL -> copy(baseUrl = value)
+        else -> this
     }
 
     override fun validate(): Boolean = apiKey.isNotBlank()

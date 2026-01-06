@@ -168,6 +168,7 @@ class AppContext private constructor(
         return (factory as ChatModelFactory<ProviderSettings>).create(
             model = modelName,
             settings = settings,
+            presets = params.presets,
             executionMode = ExecutionMode.STATELESS_MODE,
         )
     }
@@ -242,6 +243,7 @@ class AppContext private constructor(
             sessionId = sessionId,
             model = modelName,
             settings = settings,
+            presets = params.presets,
             retriever = retriever,
             executionMode = executionMode,
             chatMemory = memory,

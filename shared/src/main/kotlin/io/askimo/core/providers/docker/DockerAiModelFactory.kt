@@ -18,6 +18,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.Presets
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.util.ProcessBuilderExt
 import java.time.Duration
@@ -70,6 +71,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         sessionId: String?,
         model: String,
         settings: DockerAiSettings,
+        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -83,7 +85,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .logRequests(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .apply {
-                    val s = samplingFor(settings.presets.style)
+                    val s = samplingFor(presets.style)
                     temperature(s.temperature)
                     topP(s.topP)
                 }.build()
@@ -94,7 +96,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             provider = ModelProvider.DOCKER,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = settings.presets.verbosity,
+            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

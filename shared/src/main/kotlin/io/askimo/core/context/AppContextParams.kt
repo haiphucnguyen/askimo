@@ -5,7 +5,10 @@
 package io.askimo.core.context
 
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.Style
+import io.askimo.core.providers.Verbosity
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -22,6 +25,10 @@ data class AppContextParams(
      * Maps each provider to its settings (e.g., API key, temperature, base URL).
      */
     var providerSettings: MutableMap<ModelProvider, ProviderSettings> = mutableMapOf(),
+    /**
+     * Global presets that control style and verbosity, independent of provider.
+     */
+    var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
 ) {
     companion object {
         fun noOp(): AppContextParams = AppContextParams()

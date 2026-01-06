@@ -33,7 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.i18n.LocalizationManager
+import io.askimo.core.providers.Style
+import io.askimo.core.providers.Verbosity
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
@@ -61,6 +65,9 @@ fun generalSettingsSection() {
 
         // Font Settings
         fontSettingsCard()
+
+        // Conversation Presets
+        conversationPresetsCard()
     }
 }
 
@@ -300,6 +307,210 @@ private fun fontSettingsCard() {
                                     fontSizeDropdownExpanded = false
                                 },
                                 leadingIcon = if (fontSize == currentFontSettings.fontSize) {
+                                    {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun conversationPresetsCard() {
+    val appContext = AppContext.getInstance()
+    var currentPresets by remember { mutableStateOf(appContext.params.presets) }
+    var styleDropdownExpanded by remember { mutableStateOf(false) }
+    var verbosityDropdownExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Style Setting
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource("settings.conversation.style"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource("settings.conversation.style.description"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableCard { styleDropdownExpanded = true },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column {
+                                Text(
+                                    text = currentPresets.style.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = currentPresets.style.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Change style",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+
+                    ComponentColors.themedDropdownMenu(
+                        expanded = styleDropdownExpanded,
+                        onDismissRequest = { styleDropdownExpanded = false },
+                    ) {
+                        Style.entries.forEach { style ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = style.displayName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        Text(
+                                            text = style.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    val newPresets = currentPresets.copy(style = style)
+                                    appContext.params.presets = newPresets
+                                    AppContextConfigManager.save(appContext.params)
+                                    currentPresets = newPresets
+                                    styleDropdownExpanded = false
+                                },
+                                leadingIcon = if (style == currentPresets.style) {
+                                    {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // Verbosity Setting
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource("settings.conversation.verbosity"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource("settings.conversation.verbosity.description"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickableCard { verbosityDropdownExpanded = true },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column {
+                                Text(
+                                    text = currentPresets.verbosity.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = currentPresets.verbosity.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Change verbosity",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+
+                    ComponentColors.themedDropdownMenu(
+                        expanded = verbosityDropdownExpanded,
+                        onDismissRequest = { verbosityDropdownExpanded = false },
+                    ) {
+                        Verbosity.entries.forEach { verbosity ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = verbosity.displayName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        Text(
+                                            text = verbosity.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    val newPresets = currentPresets.copy(verbosity = verbosity)
+                                    appContext.params.presets = newPresets
+                                    AppContextConfigManager.save(appContext.params)
+                                    currentPresets = newPresets
+                                    verbosityDropdownExpanded = false
+                                },
+                                leadingIcon = if (verbosity == currentPresets.verbosity) {
                                     {
                                         Icon(
                                             Icons.Default.Check,

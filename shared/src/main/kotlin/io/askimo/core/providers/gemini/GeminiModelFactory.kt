@@ -16,6 +16,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.GEMINI
+import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
@@ -49,6 +50,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         sessionId: String?,
         model: String,
         settings: GeminiSettings,
+        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -62,7 +64,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .logRequests(log.isDebugEnabled)
                 .apply {
                     if (supportsSampling(model)) {
-                        val s = samplingFor(settings.presets.style)
+                        val s = samplingFor(presets.style)
                         temperature(s.temperature).topP(s.topP)
                     }
                 }.build()
@@ -73,7 +75,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             provider = GEMINI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = settings.presets.verbosity,
+            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

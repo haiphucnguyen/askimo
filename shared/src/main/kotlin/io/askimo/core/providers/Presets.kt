@@ -7,10 +7,18 @@ package io.askimo.core.providers
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class Style { PRECISE, BALANCED, CREATIVE }
+enum class Style(val displayName: String, val description: String) {
+    PRECISE("Precise", "Focused, deterministic responses"),
+    BALANCED("Balanced", "Natural, varied responses (recommended)"),
+    CREATIVE("Creative", "Imaginative, exploratory responses"),
+}
 
 @Serializable
-enum class Verbosity { SHORT, NORMAL, LONG }
+enum class Verbosity(val displayName: String, val description: String) {
+    SHORT("Brief", "Concise, 1-2 sentence answers"),
+    NORMAL("Normal", "Clear, complete explanations"),
+    LONG("Detailed", "In-depth, comprehensive responses"),
+}
 
 /**
  * Configuration class that combines style and verbosity settings for chat model responses.

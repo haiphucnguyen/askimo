@@ -7,6 +7,9 @@ package io.askimo.core.providers.ollama
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.Presets
+import io.askimo.core.providers.Style
+import io.askimo.core.providers.Verbosity
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.BeforeEach
@@ -54,6 +57,7 @@ class OllamaModelFactoryTest {
             settings = settings,
             retriever = null,
             executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
+            presets = Presets(Style.BALANCED, Verbosity.NORMAL),
         )
     }
 

@@ -6,6 +6,9 @@ package io.askimo.core.providers.openai
 
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.Presets
+import io.askimo.core.providers.Style
+import io.askimo.core.providers.Verbosity
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -33,6 +36,7 @@ class OpenAiModelFactoryTest {
             settings = settings,
             retriever = null,
             executionMode = ExecutionMode.STATELESS_MODE,
+            presets = Presets(Style.BALANCED, Verbosity.NORMAL),
         )
     }
 
