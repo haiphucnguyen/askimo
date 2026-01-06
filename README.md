@@ -48,18 +48,44 @@
   <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" alt="DockerAI">
 </p>
 
----
-
-**[Why Askimo?](#why-askimo)** · **[Supported Providers](#supported-providers)** · **[Quick Start](#-quick-start)** · **[Comparisons](#askimo-vs-other-ai-clients)**
+<p align="center">
+  <a href="https://github.com/haiphucnguyen/askimo/releases/latest"><strong>📥 Download</strong></a> •
+  <a href="https://askimo.chat/docs"><strong>📖 Documentation</strong></a> •
+  <a href="https://github.com/haiphucnguyen/askimo/discussions"><strong>💬 Discussions</strong></a> •
+  <a href="https://github.com/haiphucnguyen/askimo/stargazers"><strong>⭐ Star on GitHub</strong></a>
+</p>
 
 ---
 
 ## 🚀 What is Askimo?
 
-**Askimo is a native chat client designed to give you flexibility in choosing AI models.** Use OpenAI, Claude, Gemini, or local models via Ollama, all from one application with your privacy in mind.
+**Askimo is a privacy-focused desktop chat client that works with any AI model.** Switch between OpenAI, Claude, Gemini, and local models like Ollama—all in one app with complete data privacy.
 
-We built Askimo to help you switch between different AI providers easily, keeping all your conversations searchable and stored securely on your own machine. Whether you prefer cloud-based models or want to run everything locally, Askimo supports both approaches.
+Use GPT-4 for complex reasoning, Claude for writing, and local models for privacy—without changing apps or losing conversation context. All your chat history stays on your machine, fully searchable and organized.
 
+---
+
+## Why Askimo?
+
+**The only desktop AI client that supports both cloud and local models.** Most tools force you to choose: cloud-only or local-only. Askimo gives you both, plus private RAG, full-text search, and optional CLI automation.
+
+| Feature | **Askimo** | **LM Studio** | **Ollama GUIs** | **ChatGPT Desktop** |
+|--------|-------------|----------------|------------------|----------------------|
+| **Multi-provider support** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
+| **Local model support** | ✅ Via Ollama | ✅ Native | ✅ Native | ❌ |
+| **Cloud model support** | ✅ OpenAI, Claude, Gemini, Grok | ❌ | ❌ | ✅ OpenAI |
+| **Desktop app** | ✅ | ✅ | ✅ | ✅ |
+| **CLI for automation** | ✅ | ✅ API server | ✅ Ollama CLI | ❌ |
+| **RAG / Document context** | ✅ Folder-based | ❌ | ❌ | ✅ File upload |
+| **Searchable history** | ✅ Full-text | ✅ | Varies by GUI | ✅ |
+| **Organize conversations** | ✅ Star + Projects | ❌ | ❌ | ✅ Pin + Projects |
+| **Custom prompts/directives** | ✅ | ✅ System prompt | ❌ | ✅ Custom instructions |
+| **Export conversations** | ✅ JSON/MD/HTML | ❌ | ❌ | ✅ |
+| **Privacy (local-only storage)** | ✅ | ✅ | ✅ | ⚠️ Optional cloud sync |
+| **Works offline** | ✅ With local models | ✅ | ✅ | ❌ |
+| **Free & open source** | ✅ Apache 2.0 | ✅ Free (proprietary) | ✅ Varies | ❌ Subscription |
+
+---
 
 ## Supported Providers
 
@@ -80,51 +106,31 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 **After installation:** Open Askimo, add your API keys (or connect to Ollama for local models), and start chatting. [**Setup guide →**](https://askimo.chat/docs/desktop/ai-providers/)
 
+### System Requirements
+
+- **Memory**: 50-300 MB for Askimo itself (AI models require additional memory)
+- **Operating System**: 
+  - macOS 11.0 (Big Sur) or later
+  - Windows 10 or later
+  - Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+, or compatible)
+- **Disk Space**: 200 MB for application
+- **Internet**: Required for cloud providers, optional for local models
+
 ---
-
-## Why Askimo?
-
-**The AI chat client that doesn't lock you in.** Most desktop AI tools force you to choose: cloud-only (ChatGPT) or local-only (LM Studio). Askimo is the only chat client that gives you **both** — plus private RAG, full search, and optional CLI automation.
-
-| Feature | **Askimo** | **LM Studio** | **Ollama GUIs** | **ChatGPT Desktop** |
-|--------|-------------|----------------|------------------|----------------------|
-| **Multi-provider support** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
-| **Local model support** | ✅ Via Ollama | ✅ Native | ✅ Native | ❌ |
-| **Cloud model support** | ✅ OpenAI, Claude, Gemini, Grok | ❌ | ❌ | ✅ OpenAI |
-| **Desktop app** | ✅ | ✅ | ✅ | ✅ |
-| **CLI for automation** | ✅ | ✅ API server | ✅ Ollama CLI | ❌ |
-| **RAG / Document context** | ✅ Folder-based | ❌ | ❌ | ✅ File upload |
-| **Searchable history** | ✅ Full-text | ✅ | Varies by GUI | ✅ |
-| **Organize conversations** | ✅ Star + Projects | ❌ | ❌ | ✅ Pin + Projects |
-| **Custom prompts/directives** | ✅ | ✅ System prompt | ❌ | ✅ Custom instructions |
-| **Export conversations** | ✅ JSON/MD/HTML | ❌ | ❌ | ✅ |
-| **Privacy (local-only storage)** | ✅ | ✅ | ✅ | ⚠️ Optional cloud sync |
-| **Works offline** | ✅ With local models | ✅ | ✅ | ❌ |
-| **Free & open source** | ✅ Apache 2.0 | ✅ Free (proprietary) | ✅ Varies | ❌ Subscription |
-
-
 
 [![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/desktop)
 
 ### 🎯 What You Get
 
-- 🖥️ **Native Desktop Application** - Keep long conversations in one session without worrying about browser crashes or tab closures
+- 🖥️ **Native Desktop Application** - Maintain conversations with 200+ messages without browser crashes or tab closures. Your work stays intact across restarts
 - 🔄 **Multi-Provider Support** - Switch between OpenAI, Claude, Gemini, X AI, LMStudio, LocalAI, Ollama, DockerAI and their models to utilize each model's strengths and optimize costs. Use expensive models for complex tasks, cheaper ones for simple queries
-- 🔒 **100% Local Storage** - All chat history stored on your machine, never in the cloud
-- 🧠 **RAG (Retrieval-Augmented Generation)** - Connect multiple folders and files to give AI context from your documents, code, and notes. Uses hybrid search combining vector embeddings (JVector) and keyword search (Lucene) for highly accurate information retrieval
-- ⭐ **Smart Organization** - Star important conversations, search across all chats, create collections
-- 📊 **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text
-- 🎯 **Custom Directives** - Save reusable prompts and system messages for different tasks
-- ⚡ **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search
-- 💾 **Export Anywhere** - Download conversations in JSON, Markdown, or HTML
-
-### 💡 Perfect For
-
-- 💬 Daily AI conversations without context loss
-- 📝 Writing and content creation with consistent AI assistance
-- 🔍 Research that requires comparing responses from different models
-- 🎨 Creative work with saved prompt templates
-- 📚 Working with AI on your private knowledge base and documentation
+- 🔒 **100% Local Storage** - All chat history stored on your machine, never in the cloud. Full privacy and control over your data
+- 🧠 **RAG (Retrieval-Augmented Generation)** - Connect your project folders and ask questions like "How does our authentication work?" to get answers from your actual codebase. Uses hybrid search combining vector embeddings (JVector) and keyword search (Lucene) for highly accurate information retrieval
+- ⭐ **Smart Organization** - Star important conversations, full-text search across all chats, organize by projects
+- 📊 **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text. Export-ready output
+- 🎯 **Custom Directives** - Save reusable prompts and system messages. One-click access to your favorite AI personalities and workflows
+- ⚡ **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search. Built for productivity
+- 💾 **Export Anywhere** - Download conversations in JSON, Markdown, or HTML. Take your data wherever you need it
 
 
 **Screenshots:**
@@ -188,7 +194,31 @@ Askimo Desktop is fully localized into:
 
 More languages coming soon.
 
+---
+
+## 🤝 Community & Support
+
+### Get Help
+
+- 📖 **[Documentation](https://askimo.chat/docs)** - Comprehensive guides and tutorials
+- 💬 **[GitHub Discussions](https://github.com/haiphucnguyen/askimo/discussions)** - Ask questions, share tips, and connect with other users
+- 🐛 **[Issue Tracker](https://github.com/haiphucnguyen/askimo/issues)** - Report bugs or request features
+- 📧 **Email Support** - For private inquiries: support@askimo.chat
+
+### Contributing
+
+We welcome contributions! Here's how you can help:
+
+- 🐛 **Report bugs** - Found an issue? [Open a bug report](https://github.com/haiphucnguyen/askimo/issues/new?template=bug_report.md)
+- 💡 **Suggest features** - Have ideas? [Share them here](https://github.com/haiphucnguyen/askimo/issues/new?template=feature_request.md)
+- 🌍 **Translate** - Help localize Askimo to your language
+- 💻 **Submit PRs** - Check our [Contributing Guide](./CONTRIBUTING.md) to get started
+- 📝 **Improve docs** - Documentation improvements are always appreciated
+
+---
+
 ## Support
+
 If you enjoy this project, here are a few simple ways to show support:
 
 * Star the repo - A quick ⭐️ at the top helps a lot and keeps the project growing.
