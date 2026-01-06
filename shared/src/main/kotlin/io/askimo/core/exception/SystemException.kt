@@ -18,6 +18,6 @@ class SystemException(
     override fun getMessageKey() = "error.system"
 
     override fun getMessageArgs() = mapOf(
-        "errorCode" to (message?.take(50) ?: "Unknown error"),
+        "errorCode" to (message ?: "Unknown error"),
     )
 }

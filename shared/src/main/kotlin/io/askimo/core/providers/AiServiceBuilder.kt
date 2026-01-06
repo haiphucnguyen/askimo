@@ -43,7 +43,6 @@ object AiServiceBuilder {
      * @param provider The model provider (OpenAI, Ollama, etc.)
      * @param chatModel The streaming chat model instance
      * @param secondaryChatModel The chat model used for query compression in RAG
-     * @param verbosity The verbosity level for responses
      * @param chatMemory Optional chat memory for conversation context
      * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation)
      * @param executionMode The execution mode (determines if tools are enabled)
@@ -56,7 +55,6 @@ object AiServiceBuilder {
         provider: ModelProvider,
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
-        verbosity: Verbosity,
         chatMemory: ChatMemory?,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
@@ -88,7 +86,6 @@ object AiServiceBuilder {
             provider = provider,
             chatModel = chatModel,
             secondaryChatModel = secondaryChatModel,
-            verbosity = verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = finalExecutionMode,
@@ -168,7 +165,6 @@ object AiServiceBuilder {
         provider: ModelProvider,
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
-        verbosity: Verbosity,
         chatMemory: ChatMemory?,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
@@ -193,10 +189,7 @@ object AiServiceBuilder {
             }
             .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
             .systemMessageProvider {
-                systemMessage(
-                    toolInstructions,
-                    verbosityInstruction(verbosity),
-                )
+                systemMessage(toolInstructions)
             }
             .chatRequestTransformer { chatRequest, memoryId ->
                 ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(

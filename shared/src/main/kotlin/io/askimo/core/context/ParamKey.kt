@@ -8,7 +8,6 @@ import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.Style
-import io.askimo.core.providers.Verbosity
 
 enum class ParamKey(
     val key: String,
@@ -34,11 +33,11 @@ enum class ParamKey(
         type = "Enum(precise|balanced|creative)",
         description = "Output style (determinism vs. creativity)",
         isSupported = { true },
-        getValue = { _, settings ->
-            settings.presets.style.name
+        getValue = { params, _ ->
+            params.presets.style.name
                 .lowercase()
         },
-        setValue = { _, settings, v ->
+        setValue = { params, _, v ->
             val style =
                 when (v.trim().lowercase()) {
                     "precise" -> Style.PRECISE
@@ -46,31 +45,9 @@ enum class ParamKey(
                     "creative" -> Style.CREATIVE
                     else -> throw IllegalArgumentException("Use: precise | balanced | creative")
                 }
-            settings.presets = settings.presets.copy(style = style)
+            params.presets = params.presets.copy(style = style)
         },
         suggestions = listOf("precise", "balanced", "creative"),
-    ),
-
-    VERBOSITY(
-        key = "verbosity",
-        type = "Enum(short|normal|long)",
-        description = "Controls response length/cost",
-        isSupported = { true },
-        getValue = { _, settings ->
-            settings.presets.verbosity.name
-                .lowercase()
-        },
-        setValue = { _, settings, v ->
-            val vb =
-                when (v.trim().lowercase()) {
-                    "short" -> Verbosity.SHORT
-                    "normal" -> Verbosity.NORMAL
-                    "long" -> Verbosity.LONG
-                    else -> throw IllegalArgumentException("Use: short | normal | long")
-                }
-            settings.presets = settings.presets.copy(verbosity = vb)
-        },
-        suggestions = listOf("short", "normal", "long"),
     ),
 
     API_KEY(

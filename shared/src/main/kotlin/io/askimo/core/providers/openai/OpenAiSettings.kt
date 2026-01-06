@@ -5,29 +5,22 @@
 package io.askimo.core.providers.openai
 
 import io.askimo.core.providers.HasApiKey
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.SettingField
-import io.askimo.core.providers.Style
-import io.askimo.core.providers.Verbosity
-import io.askimo.core.providers.createCommonPresetFields
-import io.askimo.core.providers.updatePresetField
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class OpenAiSettings(
     override var apiKey: String = "",
-    override val defaultModel: String = "gpt-5.1",
-    override var presets: Presets = Presets(Style.CREATIVE, Verbosity.LONG),
+    override val defaultModel: String = "gpt-4o",
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(
         "apiKey:  ${maskApiKey()}",
-        "presets: $presets",
     )
 
-    override fun toString(): String = "OpenAiSettings(apiKey=${maskApiKey()}, presets=$presets)"
+    override fun toString(): String = "OpenAiSettings(apiKey=${maskApiKey()})"
 
     override fun getFields(): List<SettingField> = listOf(
         SettingField.TextField(
@@ -37,15 +30,11 @@ data class OpenAiSettings(
             value = apiKey,
             isPassword = true,
         ),
-    ) + createCommonPresetFields(presets)
+    )
 
-    override fun updateField(fieldName: String, value: String): ProviderSettings {
-        updatePresetField(presets, fieldName, value)?.let { return copy(presets = it) }
-
-        return when (fieldName) {
-            SettingField.API_KEY -> copy(apiKey = value)
-            else -> this
-        }
+    override fun updateField(fieldName: String, value: String): ProviderSettings = when (fieldName) {
+        SettingField.API_KEY -> copy(apiKey = value)
+        else -> this
     }
 
     override fun validate(): Boolean = apiKey.isNotBlank()

@@ -7,32 +7,24 @@ package io.askimo.core.providers
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class Style { PRECISE, BALANCED, CREATIVE }
-
-@Serializable
-enum class Verbosity { SHORT, NORMAL, LONG }
+enum class Style(val displayName: String, val description: String) {
+    PRECISE("Precise", "Focused, deterministic responses"),
+    BALANCED("Balanced", "Natural, varied responses (recommended)"),
+    CREATIVE("Creative", "Imaginative, exploratory responses"),
+}
 
 /**
- * Configuration class that combines style and verbosity settings for chat model responses.
+ * Configuration class for chat model response style.
  *
- * This class is used to configure how chat models generate responses by specifying:
- * - The creative style of the response (precise, balanced, or creative)
- * - The verbosity level that controls response length
+ * This class is used to configure how chat models generate responses by specifying
+ * the creative style of the response (precise, balanced, or creative).
  *
  * @property style The style setting that affects the creativity and determinism of responses
- * @property verbosity The verbosity setting that controls the length of generated responses
  */
 @Serializable
 data class Presets(
     val style: Style,
-    val verbosity: Verbosity,
 )
-
-fun verbosityInstruction(v: Verbosity) = when (v) {
-    Verbosity.SHORT -> "You are a concise assistant. Respond in 1–2 sentences."
-    Verbosity.NORMAL -> "You are a helpful assistant. Respond with a moderate amount of detail."
-    Verbosity.LONG -> "You are a detailed assistant. Respond with extended explanations."
-}
 
 /**
  * Configuration class for language model generation parameters.

@@ -16,6 +16,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
+import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
@@ -54,6 +55,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         sessionId: String?,
         model: String,
         settings: OpenAiSettings,
+        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -67,7 +69,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .logRequests(log.isDebugEnabled)
                 .apply {
                     if (supportsSampling(model)) {
-                        val s = samplingFor(settings.presets.style)
+                        val s = samplingFor(presets.style)
                         temperature(s.temperature).topP(s.topP)
                     }
                 }.build()
@@ -78,7 +80,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
             provider = OPENAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = settings.presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

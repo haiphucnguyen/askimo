@@ -16,6 +16,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.LOCALAI
+import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
 import java.time.Duration
@@ -42,11 +43,12 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         sessionId: String?,
         model: String,
         settings: LocalAiSettings,
+        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
-        val s = samplingFor(settings.presets.style)
+        val s = samplingFor(presets.style)
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -64,7 +66,6 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             provider = LOCALAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = settings.presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

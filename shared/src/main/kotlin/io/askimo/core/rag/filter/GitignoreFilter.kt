@@ -158,8 +158,10 @@ class GitignoreParser(private val rootPath: Path) {
             line.startsWith("/") -> "^${regexPattern.substring(1)}(/.*|\$)"
             // Pattern contains / - match from current directory down
             pattern.contains("/") -> "^$regexPattern(/.*|\$)"
-            // Simple pattern without / - match at any level relative to .gitignore directory
-            else -> "(^|.*/)$regexPattern(/.*|\$)"
+            // Pattern contains wildcards (* or ?) - match at any level
+            pattern.contains("*") || pattern.contains("?") -> "(^|.*/)$regexPattern(/.*|\$)"
+            // Simple literal pattern without / or wildcards - match only at the .gitignore directory level
+            else -> "^$regexPattern(/.*|\$)"
         }
 
         val gitignorePattern = GitignorePattern(

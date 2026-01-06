@@ -16,11 +16,6 @@ interface ProviderSettings {
     val defaultModel: String
 
     /**
-     * Provider-wide presets that control style and verbosity.
-     */
-    var presets: Presets
-
-    /**
      * Returns a human-readable description of the provider settings.
      *
      * This method returns a list of strings where each string represents

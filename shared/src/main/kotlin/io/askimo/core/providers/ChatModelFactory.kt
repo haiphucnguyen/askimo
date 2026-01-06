@@ -35,6 +35,7 @@ interface ChatModelFactory<T : ProviderSettings> {
      *
      * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
+     * @param presets Global presets controlling style, independent of provider
      * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
      * If provided, the factory will create a RetrievalAugmentor internally with appropriate
      * configuration. Pass null to disable retrieval augmentation.
@@ -48,6 +49,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         sessionId: String? = null,
         model: String,
         settings: T,
+        presets: Presets,
         retriever: ContentRetriever? = null,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,

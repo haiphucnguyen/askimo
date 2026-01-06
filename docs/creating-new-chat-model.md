@@ -79,7 +79,7 @@ Create a settings class that implements `ProviderSettings`. Use marker interface
 data class YourProviderSettings(
     override var apiKey: String = "",                   // Use HasApiKey interface
     override val defaultModel: String = "model-name",   // Your provider's default model
-    override var presets: Presets = Presets(Style.BALANCED, Verbosity.NORMAL),
+    override var presets: Presets = Presets(Style.BALANCED),
 ) : ProviderSettings, HasApiKey {
     
     override fun describe(): List<String> {
@@ -196,8 +196,7 @@ class YourProviderModelFactory : ChatModelFactory<YourProviderSettings> {
                     • Parse the tool response JSON before responding
                     • Check the "success" field before using "output"
                     • Explain errors from the "error" field
-                    """.trimIndent(),
-                    verbosityInstruction(settings.presets.verbosity),
+                    """.trimIndent()
                 )
             }
         

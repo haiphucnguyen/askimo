@@ -2684,6 +2684,7 @@
           "java.util.Map",
           "io.askimo.core.providers.ModelProvider",
           "java.util.Map",
+          "io.askimo.core.providers.Presets",
           "kotlinx.serialization.internal.SerializationConstructorMarker"
         ]
       },
@@ -3358,12 +3359,6 @@
     ]
   },
   {
-    "name": "io.askimo.core.security.TestModelProvider",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.askimo.core.security.TestProviderSettings",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
@@ -3470,6 +3465,15 @@
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
+        "name": "runCommand",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.lang.Boolean"
+        ]
+      },
+      {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
       }
@@ -3529,8 +3533,7 @@
     "name": "java.io.Serializable",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.AutoCloseable",
@@ -3579,9 +3582,7 @@
   },
   {
     "name": "java.lang.Comparable",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.Double",
@@ -3591,9 +3592,7 @@
   },
   {
     "name": "java.lang.Enum",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.FunctionalInterface"
@@ -3745,9 +3744,7 @@
   },
   {
     "name": "java.lang.constant.Constable",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.lang.constant.ConstantDesc",
@@ -4458,7 +4455,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$H27aXEsW",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$knqOSclq",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -158,7 +158,7 @@ object ExceptionMapper {
             else -> {
                 log.error("Unmapped exception chain: ${rootCause::class.simpleName}", rootCause)
                 SystemException(
-                    message = "${rootCause::class.simpleName}: ${rootCause.message?.take(100) ?: "Unknown"}",
+                    message = "${rootCause::class.simpleName}: ${rootCause.message ?: "Unknown"}",
                     cause = rootCause,
                 )
             }

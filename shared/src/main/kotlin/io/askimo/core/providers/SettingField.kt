@@ -16,7 +16,6 @@ sealed class SettingField {
         const val API_KEY = "apiKey"
         const val BASE_URL = "baseUrl"
         const val STYLE = "style"
-        const val VERBOSITY = "verbosity"
     }
 
     data class TextField(
