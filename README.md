@@ -56,18 +56,9 @@
 
 ## 🚀 What is Askimo?
 
-**Askimo is your freedom from AI vendor lock-in.** A beautiful native chat client that lets you use **any AI model** — OpenAI, Claude, Gemini, local models via Ollama — all in one place, with complete privacy.
+**Askimo is a native chat client designed to give you flexibility in choosing AI models.** Use OpenAI, Claude, Gemini, or local models via Ollama, all from one application with your privacy in mind.
 
-Unlike ChatGPT Desktop (OpenAI-only) or LM Studio (local-only), **Askimo gives you the flexibility to switch providers instantly** while keeping all your conversations searchable and secure on your machine.
-
-### ✨ Core Features
-
-- 🔁 **Multi-provider freedom** — Switch between cloud and local AI models without leaving the app
-- 🧠 **Built-in RAG** — Connect local folders for private, context-aware AI conversations
-- 🔒 **100% local storage** — Your data stays on your machine, no cloud sync required
-- 🔍 **Never lose context** — Search all conversations, star favorites, organize by project
-- ⚡ **Plus: Optional CLI** — For automation and scripting workflows
-
+We built Askimo to help you switch between different AI providers easily, keeping all your conversations searchable and stored securely on your own machine. Whether you prefer cloud-based models or want to run everything locally, Askimo supports both approaches.
 
 
 ## Supported Providers
@@ -117,14 +108,15 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 ### 🎯 What You Get
 
-- **Multi-Provider Support** - Switch between OpenAI, Claude, Gemini, X AI, and Ollama without leaving the app
-- **100% Local Storage** - All chat history stored on your machine, never in the cloud
-- **RAG (Retrieval-Augmented Generation)** - Connect a knowledge folder to give AI context from your documents, code, and notes
-- **Smart Organization** - Star important conversations, search across all chats, create collections
-- **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text
-- **Custom Directives** - Save reusable prompts and system messages for different tasks
-- **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search
-- **Export Anywhere** - Download conversations in JSON, Markdown, or HTML
+- 🖥️ **Native Desktop Application** - Keep long conversations in one session without worrying about browser crashes or tab closures
+- 🔄 **Multi-Provider Support** - Switch between OpenAI, Claude, Gemini, X AI, LMStudio, LocalAI, Ollama, DockerAI and their models to utilize each model's strengths and optimize costs. Use expensive models for complex tasks, cheaper ones for simple queries
+- 🔒 **100% Local Storage** - All chat history stored on your machine, never in the cloud
+- 🧠 **RAG (Retrieval-Augmented Generation)** - Connect multiple folders and files to give AI context from your documents, code, and notes. Uses hybrid search combining vector embeddings (JVector) and keyword search (Lucene) for highly accurate information retrieval
+- ⭐ **Smart Organization** - Star important conversations, search across all chats, create collections
+- 📊 **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text
+- 🎯 **Custom Directives** - Save reusable prompts and system messages for different tasks
+- ⚡ **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search
+- 💾 **Export Anywhere** - Download conversations in JSON, Markdown, or HTML
 
 ### 💡 Perfect For
 
