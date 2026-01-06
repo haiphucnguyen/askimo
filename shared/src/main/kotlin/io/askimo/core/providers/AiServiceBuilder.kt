@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.exception.InvalidRequestException
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.chat.StreamingChatModel
@@ -23,6 +24,15 @@ import io.askimo.tools.fs.LocalFsTools
  * Centralizes common AI service configuration to reduce code duplication.
  */
 object AiServiceBuilder {
+
+    private val log = io.askimo.core.logging.logger<AiServiceBuilder>()
+
+    /**
+     * In-memory cache for tool support detection.
+     * Key: model name, Value: whether the model supports tools
+     * This is NOT persisted to avoid issues when models are updated by providers.
+     */
+    private val toolSupportCache = mutableMapOf<String, Boolean>()
 
     /**
      * Builds a ChatClient with common configuration applied.
@@ -51,6 +61,119 @@ object AiServiceBuilder {
         executionMode: ExecutionMode,
         toolInstructions: String = defaultToolResponseFormatInstructions(),
     ): ChatClient {
+        val toolsOrChartsRequested = executionMode.isToolEnabled() || executionMode.isChartEnabled()
+
+        val toolsSupported = if (toolsOrChartsRequested) {
+            toolSupportCache.getOrPut(model) {
+                testToolSupport(model, chatModel, executionMode)
+            }
+        } else {
+            false
+        }
+
+        val finalExecutionMode = if (toolsSupported) {
+            executionMode // Keep original execution mode with tools
+        } else if (toolsOrChartsRequested) {
+            // Tools were requested but not supported - create new mode without tool flags
+            executionMode - ExecutionMode(ExecutionMode.TOOL_ENABLED or ExecutionMode.CHART_ENABLED)
+        } else {
+            // Tools were never requested
+            executionMode
+        }
+
+        return buildChatClientInternal(
+            sessionId = sessionId,
+            model = model,
+            provider = provider,
+            chatModel = chatModel,
+            secondaryChatModel = secondaryChatModel,
+            verbosity = verbosity,
+            chatMemory = chatMemory,
+            retriever = retriever,
+            executionMode = finalExecutionMode,
+            toolInstructions = toolInstructions,
+            enableTools = toolsSupported,
+        )
+    }
+
+    /**
+     * Test if the model supports tools by creating a minimal streaming client and sending a test message.
+     *
+     * @param model The model name for logging and debugging
+     * @param chatModel The streaming chat model to test (the actual model that will be used)
+     * @param executionMode The execution mode to determine which tools to test
+     * @return true if the model supports tools, false otherwise
+     */
+    private fun testToolSupport(
+        model: String,
+        chatModel: StreamingChatModel,
+        executionMode: ExecutionMode,
+    ): Boolean = try {
+        // Create minimal test client with the actual streaming model and tools
+        val testClientBuilder = AiServices.builder(ChatClient::class.java)
+            .streamingChatModel(chatModel)
+
+        if (executionMode.isToolEnabled()) {
+            testClientBuilder.tools(LocalFsTools)
+        }
+        if (executionMode.isChartEnabled()) {
+            testClientBuilder.tools(ChartTools)
+        }
+
+        val testClient = testClientBuilder.build()
+
+        // Send a simple test message using the ChatClient.sendMessage method
+        testClient.sendStreamingMessageWithCallback("do you support tools? Answer yes or no only")
+
+        true
+    } catch (e: Exception) {
+        val errorMessage = e.message?.lowercase() ?: ""
+        val causeMessage = e.cause?.message?.lowercase() ?: ""
+
+        // Check for tool-related errors through multiple indicators
+        val isToolUnsupportedError =
+            // Direct error messages
+            errorMessage.contains("does not support tool") ||
+                errorMessage.contains("tool") && (
+                    errorMessage.contains("not supported") ||
+                        errorMessage.contains("unsupported") ||
+                        errorMessage.contains("not available") ||
+                        errorMessage.contains("unavailable")
+                    ) ||
+                causeMessage.contains("does not support tool") ||
+                causeMessage.contains("tool") && (
+                    causeMessage.contains("not supported") ||
+                        causeMessage.contains("unsupported")
+                    ) ||
+                e is InvalidRequestException ||
+                e.cause is InvalidRequestException
+
+        if (isToolUnsupportedError) {
+            log.warn("Model '$model' does not support tool calling: ${e.message}. Tools will be disabled - result cached")
+            false
+        } else {
+            // Unknown error - safest to assume tools are NOT supported to avoid crashes
+            log.warn("Error testing tool support for model '$model': ${e.message}. Assuming tools are NOT supported to avoid crashes - result cached", e)
+            false
+        }
+    }
+
+    /**
+     * Internal method that actually builds the ChatClient with full configuration.
+     */
+    private fun buildChatClientInternal(
+        sessionId: String?,
+        model: String,
+        provider: ModelProvider,
+        chatModel: StreamingChatModel,
+        secondaryChatModel: ChatModel,
+        verbosity: Verbosity,
+        chatMemory: ChatMemory?,
+        retriever: ContentRetriever?,
+        executionMode: ExecutionMode,
+        toolInstructions: String,
+        enableTools: Boolean,
+    ): ChatClient {
         val builder = AiServices
             .builder(ChatClient::class.java)
             .streamingChatModel(chatModel)
@@ -58,11 +181,13 @@ object AiServiceBuilder {
                 if (chatMemory != null) {
                     chatMemory(chatMemory)
                 }
-                if (executionMode.isToolEnabled()) {
-                    tools(LocalFsTools)
-                }
-                if (executionMode.isChartEnabled()) {
-                    tools(ChartTools)
+                if (enableTools) {
+                    if (executionMode.isToolEnabled()) {
+                        tools(LocalFsTools)
+                    }
+                    if (executionMode.isChartEnabled()) {
+                        tools(ChartTools)
+                    }
                 }
             }
             .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)

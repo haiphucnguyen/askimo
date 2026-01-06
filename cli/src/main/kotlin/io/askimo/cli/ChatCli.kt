@@ -291,7 +291,7 @@ fun main(args: Array<String>) {
                 }
             } else {
                 val prompt = parsedLine.line()
-                val output = sendChatMessage(mode, prompt, reader.terminal, chatSessionService)
+                val output = sendChatMessage(prompt, reader.terminal, chatSessionService)
                 CliInteractiveContext.setLastResponse(output)
                 reader.terminal.writer().println()
                 reader.terminal.writer().flush()
@@ -311,7 +311,6 @@ private fun sendNonInteractiveChatMessage(
 ): String = streamChatResponse(chatClient, prompt, terminal)
 
 private fun sendChatMessage(
-    mode: ExecutionMode,
     prompt: String,
     terminal: Terminal,
     chatSessionService: ChatSessionService,
@@ -319,7 +318,6 @@ private fun sendChatMessage(
     var currentSession = CliInteractiveContext.currentChatSession
     if (currentSession == null) {
         val session = chatSessionService.createSession(
-            mode,
             ChatSession(
                 id = "",
                 title = "New Chat",
@@ -329,7 +327,7 @@ private fun sendChatMessage(
         currentSession = session
     }
     val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId = currentSession.id, userMessage = prompt)
-    val chatClient = chatSessionService.getOrCreateClientForSession(mode, currentSession.id)
+    val chatClient = chatSessionService.getOrCreateClientForSession(currentSession.id)
     val output = streamChatResponse(chatClient, promptWithContext, terminal)
     chatSessionService.saveAiResponse(currentSession.id, output)
     return output
