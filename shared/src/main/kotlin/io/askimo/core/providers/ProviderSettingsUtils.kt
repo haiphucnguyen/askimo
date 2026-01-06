@@ -5,7 +5,7 @@
 package io.askimo.core.providers
 
 /**
- * Creates common preset fields for style and verbosity.
+ * Creates common preset field for style.
  */
 internal fun createCommonPresetFields(presets: Presets): List<SettingField> = listOf(
     SettingField.EnumField(
@@ -15,21 +15,13 @@ internal fun createCommonPresetFields(presets: Presets): List<SettingField> = li
         value = presets.style.name,
         options = getStyleOptions(),
     ),
-    SettingField.EnumField(
-        name = SettingField.VERBOSITY,
-        label = "Verbosity",
-        description = "Response length preference",
-        value = presets.verbosity.name,
-        options = getVerbosityOptions(),
-    ),
 )
 
 /**
- * Updates a preset field (style or verbosity) and returns the new presets, or null if the field is not a preset field.
+ * Updates a preset field (style) and returns the new presets, or null if the field is not a preset field.
  */
 internal fun updatePresetField(presets: Presets, fieldName: String, value: String): Presets? = when (fieldName) {
     SettingField.STYLE -> presets.copy(style = Style.valueOf(value))
-    SettingField.VERBOSITY -> presets.copy(verbosity = Verbosity.valueOf(value))
     else -> null
 }
 
@@ -37,10 +29,4 @@ private fun getStyleOptions() = listOf(
     SettingField.EnumOption("PRECISE", "Precise", "Focused, deterministic responses with minimal creativity"),
     SettingField.EnumOption("BALANCED", "Balanced", "Moderate creativity with good coherence"),
     SettingField.EnumOption("CREATIVE", "Creative", "More varied and creative responses"),
-)
-
-private fun getVerbosityOptions() = listOf(
-    SettingField.EnumOption("SHORT", "Short", "Concise, brief responses"),
-    SettingField.EnumOption("NORMAL", "Normal", "Standard response length"),
-    SettingField.EnumOption("LONG", "Long", "Detailed, comprehensive responses"),
 )

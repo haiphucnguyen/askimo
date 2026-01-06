@@ -75,7 +75,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             provider = GEMINI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

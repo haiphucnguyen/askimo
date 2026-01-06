@@ -20,6 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -29,7 +34,11 @@ fun errorDialog(
     title: String,
     message: String,
     onDismiss: () -> Unit,
+    linkText: String? = null,
+    linkUrl: String? = null,
 ) {
+    val linkColor = MaterialTheme.colorScheme.primary
+
     ComponentColors.themedAlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -53,10 +62,37 @@ fun errorDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(vertical = 8.dp),
             ) {
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                if (linkText != null && linkUrl != null) {
+                    val annotatedString = buildAnnotatedString {
+                        append(message)
+                        append("\n\n")
+
+                        withLink(
+                            LinkAnnotation.Url(
+                                url = linkUrl,
+                                styles = androidx.compose.ui.text.TextLinkStyles(
+                                    style = SpanStyle(
+                                        color = linkColor,
+                                        textDecoration = TextDecoration.Underline,
+                                    ),
+                                ),
+                            ),
+                        ) {
+                            append(linkText)
+                        }
+                    }
+
+                    Text(
+                        text = annotatedString,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    )
+                } else {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
         confirmButton = {

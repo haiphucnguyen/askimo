@@ -75,7 +75,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             provider = ModelProvider.LMSTUDIO,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

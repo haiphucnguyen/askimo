@@ -13,6 +13,8 @@ import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
@@ -293,24 +295,45 @@ private fun ensureModelAvailable(
         }
 
         is ModelAvailabilityResult.ProviderUnreachable -> {
-            log.displayError(
-                """
+            val errorMessage = """
                 ❌ ${result.error}
 
                 Please ensure ${provider.name} is running and accessible at: $baseUrl
-                """.trimIndent(),
+            """.trimIndent()
+
+            log.displayError(errorMessage)
+
+            EventBus.post(
+                ModelNotAvailableEvent(
+                    provider = provider,
+                    modelName = modelName,
+                    isEmbedding = true,
+                    reason = "${provider.name} not reachable at $baseUrl",
+                ),
             )
+
             error("${provider.name} not reachable at $baseUrl")
         }
 
         is ModelAvailabilityResult.NotAvailable -> {
-            log.displayError(
-                """
-                    ❌ ${result.reason}
+            val errorMessage = """
+                ❌ ${result.reason}
 
-                    Please ensure the model is available in ${provider.name} at: $baseUrl
-                """.trimIndent(),
+                Please ensure the model is available in ${provider.name} at: $baseUrl
+            """.trimIndent()
+
+            log.displayError(errorMessage)
+
+            // Emit error event for UI to handle
+            EventBus.post(
+                ModelNotAvailableEvent(
+                    provider = provider,
+                    modelName = modelName,
+                    isEmbedding = true,
+                    reason = result.reason,
+                ),
             )
+
             error("Model '$modelName' not available in ${provider.name}")
         }
     }

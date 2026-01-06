@@ -96,7 +96,6 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             provider = ModelProvider.DOCKER,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

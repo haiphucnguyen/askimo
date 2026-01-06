@@ -3465,6 +3465,15 @@
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
+        "name": "runCommand",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.lang.Boolean"
+        ]
+      },
+      {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
       }
@@ -4446,7 +4455,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$MS8sj89L",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$knqOSclq",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

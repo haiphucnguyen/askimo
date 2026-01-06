@@ -65,7 +65,6 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             provider = ModelProvider.ANTHROPIC,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

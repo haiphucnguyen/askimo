@@ -71,6 +71,7 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.event.internal.IndexingErrorEvent
 import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
@@ -280,6 +281,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorDialogTitle by remember { mutableStateOf("") }
     var errorDialogMessage by remember { mutableStateOf("") }
+    var errorDialogLinkText by remember { mutableStateOf<String?>(null) }
+    var errorDialogLinkUrl by remember { mutableStateOf<String?>(null) }
     var showFileViewerDialog by remember { mutableStateOf(false) }
     var fileViewerPath by remember { mutableStateOf("") }
     var fileViewerContent by remember { mutableStateOf("") }
@@ -300,26 +303,54 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     // Listen for indexing errors
     LaunchedEffect(Unit) {
-        EventBus.internalEvents.collect { event ->
-            if (event is IndexingErrorEvent) {
-                when (event.errorType) {
-                    IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND -> {
-                        val modelName = event.details["modelName"] ?: "unknown"
-                        val provider = event.details["provider"] ?: "AI provider"
-                        errorDialogTitle = "Embedding Model Not Found"
-                        errorDialogMessage = "The embedding model '$modelName' was not found. Please pull or enable this embedding model from $provider before indexing."
-                        showErrorDialog = true
+        EventBus.errorEvents.collect { event ->
+            when (event) {
+                is IndexingErrorEvent -> {
+                    when (event.errorType) {
+                        IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND -> {
+                            val modelName = event.details["modelName"] ?: "unknown"
+                            val provider = event.details["provider"] ?: "AI provider"
+                            errorDialogTitle = LocalizationManager.getString("error.indexing.model_not_found.title")
+                            errorDialogMessage = LocalizationManager.getString("error.indexing.model_not_found.message", modelName, provider)
+                            errorDialogLinkText = null
+                            errorDialogLinkUrl = null
+                            showErrorDialog = true
+                        }
+                        IndexingErrorType.IO_ERROR -> {
+                            errorDialogTitle = LocalizationManager.getString("error.indexing.io_error.title")
+                            errorDialogMessage = event.details["message"] ?: LocalizationManager.getString("error.indexing.io_error.message")
+                            errorDialogLinkText = null
+                            errorDialogLinkUrl = null
+                            showErrorDialog = true
+                        }
+                        IndexingErrorType.UNKNOWN_ERROR -> {
+                            errorDialogTitle = LocalizationManager.getString("error.indexing.unknown.title")
+                            errorDialogMessage = event.details["message"] ?: LocalizationManager.getString("error.indexing.unknown.message")
+                            errorDialogLinkText = null
+                            errorDialogLinkUrl = null
+                            showErrorDialog = true
+                        }
                     }
-                    IndexingErrorType.IO_ERROR -> {
-                        errorDialogTitle = "IO Error"
-                        errorDialogMessage = event.details["message"] ?: "An IO error occurred during indexing"
-                        showErrorDialog = true
+                }
+                is ModelNotAvailableEvent -> {
+                    errorDialogTitle = if (event.isEmbedding) {
+                        LocalizationManager.getString("error.model.not_available.title.embedding")
+                    } else {
+                        LocalizationManager.getString("error.model.not_available.title.chat")
                     }
-                    IndexingErrorType.UNKNOWN_ERROR -> {
-                        errorDialogTitle = "Indexing Error"
-                        errorDialogMessage = event.details["message"] ?: "An unknown error occurred during indexing"
-                        showErrorDialog = true
+                    errorDialogMessage = if (event.isEmbedding) {
+                        LocalizationManager.getString("error.model.not_available.message.embedding", event.modelName)
+                    } else {
+                        LocalizationManager.getString("error.model.not_available.message.chat", event.modelName)
                     }
+                    if (event.isEmbedding) {
+                        errorDialogLinkText = LocalizationManager.getString("error.model.not_available.config_link")
+                        errorDialogLinkUrl = LocalizationManager.getString("error.model.not_available.config_url")
+                    } else {
+                        errorDialogLinkText = null
+                        errorDialogLinkUrl = null
+                    }
+                    showErrorDialog = true
                 }
             }
         }
@@ -1108,8 +1139,12 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                     errorDialog(
                         title = errorDialogTitle,
                         message = errorDialogMessage,
+                        linkText = errorDialogLinkText,
+                        linkUrl = errorDialogLinkUrl,
                         onDismiss = {
                             showErrorDialog = false
+                            errorDialogLinkText = null
+                            errorDialogLinkUrl = null
                         },
                     )
                 }

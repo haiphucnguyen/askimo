@@ -20,7 +20,7 @@ data class IndexingErrorEvent(
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
-    override val type = EventType.INTERNAL
+    override val type = EventType.ERROR
 
     override fun getDetails(): String = "Indexing error for project $projectId: ${errorType.name} - $details"
 }

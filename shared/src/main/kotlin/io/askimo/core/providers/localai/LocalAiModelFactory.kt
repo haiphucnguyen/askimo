@@ -66,7 +66,6 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             provider = LOCALAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

@@ -37,6 +37,12 @@ object EventBus {
         extraBufferCapacity = 200,
     )
 
+    // Error events (critical errors that need user attention)
+    private val _errorEvents = MutableSharedFlow<Event>(
+        replay = 0,
+        extraBufferCapacity = 100,
+    )
+
     /**
      * Developer-only events (requires developer mode enabled)
      * Subscribe to this for debugging/development tools
@@ -56,6 +62,12 @@ object EventBus {
     val internalEvents: SharedFlow<Event> = _internalEvents.asSharedFlow()
 
     /**
+     * Error events (critical errors that need user attention)
+     * Subscribe to this for displaying error dialogs and notifications
+     */
+    val errorEvents: SharedFlow<Event> = _errorEvents.asSharedFlow()
+
+    /**
      * Emit an event - automatically routes to the appropriate channel
      * based on event.type property
      */
@@ -64,6 +76,7 @@ object EventBus {
             EventType.DEVELOPER -> _developerEvents.emit(event)
             EventType.INTERNAL -> _internalEvents.emit(event)
             EventType.USER -> _userEvents.emit(event)
+            EventType.ERROR -> _errorEvents.emit(event)
         }
     }
 

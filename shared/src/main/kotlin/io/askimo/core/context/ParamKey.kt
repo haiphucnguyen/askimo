@@ -8,7 +8,6 @@ import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.Style
-import io.askimo.core.providers.Verbosity
 
 enum class ParamKey(
     val key: String,
@@ -49,28 +48,6 @@ enum class ParamKey(
             params.presets = params.presets.copy(style = style)
         },
         suggestions = listOf("precise", "balanced", "creative"),
-    ),
-
-    VERBOSITY(
-        key = "verbosity",
-        type = "Enum(short|normal|long)",
-        description = "Controls response length/cost",
-        isSupported = { true },
-        getValue = { params, _ ->
-            params.presets.verbosity.name
-                .lowercase()
-        },
-        setValue = { params, _, v ->
-            val vb =
-                when (v.trim().lowercase()) {
-                    "short" -> Verbosity.SHORT
-                    "normal" -> Verbosity.NORMAL
-                    "long" -> Verbosity.LONG
-                    else -> throw IllegalArgumentException("Use: short | normal | long")
-                }
-            params.presets = params.presets.copy(verbosity = vb)
-        },
-        suggestions = listOf("short", "normal", "long"),
     ),
 
     API_KEY(

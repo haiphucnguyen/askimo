@@ -79,7 +79,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             provider = ModelProvider.OLLAMA,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,

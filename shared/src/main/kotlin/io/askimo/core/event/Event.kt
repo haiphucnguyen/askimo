@@ -25,6 +25,11 @@ enum class EventType {
      * Events for debugging and development tools (shown only in dev mode)
      */
     DEVELOPER,
+
+    /**
+     * Error events that need user attention (shown as error dialogs/notifications)
+     */
+    ERROR,
 }
 
 /**

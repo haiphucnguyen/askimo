@@ -73,7 +73,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             provider = XAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
-            verbosity = presets.verbosity,
             chatMemory = chatMemory,
             retriever = retriever,
             executionMode = executionMode,
