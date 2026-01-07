@@ -10,6 +10,7 @@ import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.query.Query
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.telemetry.TelemetryCollector
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -27,10 +28,12 @@ import kotlinx.coroutines.runBlocking
  * - chatMemory: The conversation history
  *
  * @property delegate The wrapped retriever (e.g., HybridContentRetriever)
+ * @property telemetry Optional telemetry collector for metrics tracking
  */
 class RAGContentProcessor(
     private val delegate: ContentRetriever,
     private val classifierChatClient: ChatClient,
+    private val telemetry: TelemetryCollector? = null,
 ) : ContentRetriever {
 
     private val log = logger<RAGContentProcessor>()
@@ -64,13 +67,28 @@ class RAGContentProcessor(
                 "(${conversationHistory.size} conversation messages)",
         )
 
+        // Measure classification time
+        val classificationStartTime = System.currentTimeMillis()
         val shouldUseRAG = runBlocking {
             classifier.shouldUseRAG(userMessage, conversationHistory)
         }
+        val classificationDuration = System.currentTimeMillis() - classificationStartTime
+
+        // Record classification metrics
+        telemetry?.recordRAGClassification(shouldUseRAG, classificationDuration)
 
         return if (shouldUseRAG) {
             log.info("RAG triggered - retrieving context for query")
-            delegate.retrieve(query)
+
+            // Measure retrieval time
+            val retrievalStartTime = System.currentTimeMillis()
+            val results = delegate.retrieve(query)
+            val retrievalDuration = System.currentTimeMillis() - retrievalStartTime
+
+            // Record retrieval metrics
+            telemetry?.recordRAGRetrieval(results.size, retrievalDuration)
+
+            results
         } else {
             log.info("RAG skipped - direct chat without retrieval")
             emptyList()

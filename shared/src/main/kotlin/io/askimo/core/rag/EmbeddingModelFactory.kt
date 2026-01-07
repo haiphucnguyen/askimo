@@ -351,6 +351,8 @@ fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): Embedd
 
 fun enrichContentRetrieverWithLucene(classifierChatClient: ChatClient, projectId: String, retriever: ContentRetriever): ContentRetriever {
     val ragConfig = AppConfig.rag
+    val telemetry = AppContext.getInstance().telemetry
+
     return RAGContentProcessor(
         HybridContentRetriever(
             vectorRetriever = retriever,
@@ -359,5 +361,6 @@ fun enrichContentRetrieverWithLucene(classifierChatClient: ChatClient, projectId
             k = ragConfig.rankFusionConstant,
         ),
         classifierChatClient,
+        telemetry,
     )
 }

@@ -10,6 +10,7 @@ import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
@@ -17,6 +18,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.Presets
+import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
 
@@ -49,6 +51,8 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
+        val telemetry = AppContext.getInstance().telemetry
+
         val chatModel =
             AnthropicStreamingChatModel
                 .builder()
@@ -56,6 +60,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.ANTHROPIC.name.lowercase())))
                 .baseUrl(settings.baseUrl)
                 .build()
 

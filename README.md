@@ -105,7 +105,7 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
   - macOS 11.0 (Big Sur) or later
   - Windows 10 or later
   - Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+, or compatible)
-- **Disk Space**: 200 MB for application
+- **Disk Space**: 250 MB for application
 - **Internet**: Required for cloud providers, optional for local models
 
 ---
@@ -122,6 +122,7 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 - 📊 **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text. Export-ready output
 - 🎯 **Custom Directives** - Save reusable prompts and system messages. One-click access to your favorite AI personalities and workflows
 - ⚡ **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search. Built for productivity
+- 📈 **Usage Telemetry** - Track your AI usage with detailed metrics on token consumption, response times, and costs. Monitor RAG operations including classification decisions, retrieval performance, and chunks retrieved. All data stays local on your machine
 - 💾 **Export Anywhere** - Download conversations in JSON, Markdown, or HTML. Take your data wherever you need it
 
 

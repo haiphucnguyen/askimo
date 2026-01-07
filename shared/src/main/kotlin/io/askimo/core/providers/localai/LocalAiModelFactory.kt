@@ -19,6 +19,7 @@ import io.askimo.core.providers.ModelProvider.LOCALAI
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
+import io.askimo.core.telemetry.TelemetryChatModelListener
 import java.time.Duration
 
 class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
@@ -48,6 +49,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
+        val telemetry = AppContext.getInstance().telemetry
         val s = samplingFor(presets.style)
         val chatModel =
             OpenAiStreamingChatModel
@@ -58,6 +60,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .temperature(s.temperature)
                 .topP(s.topP)
+                .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase())))
                 .build()
 
         return AiServiceBuilder.buildChatClient(

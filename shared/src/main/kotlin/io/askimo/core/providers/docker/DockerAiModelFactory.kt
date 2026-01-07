@@ -20,6 +20,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.samplingFor
+import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ProcessBuilderExt
 import java.time.Duration
 
@@ -76,6 +77,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
+        val telemetry = AppContext.getInstance().telemetry
+
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -84,6 +87,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
+                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
                 .apply {
                     val s = samplingFor(presets.style)
                     temperature(s.temperature)
