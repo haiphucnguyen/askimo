@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.core.event.internal
+package io.askimo.core.event.error
 
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventSource

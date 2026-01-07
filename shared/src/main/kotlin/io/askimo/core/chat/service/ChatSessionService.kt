@@ -453,14 +453,7 @@ class ChatSessionService(
         val existingSession = sessionRepository.getSession(sessionId)
 
         return if (existingSession != null) {
-            // Try to pre-create/cache the chat client for this session
-            // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
-            try {
-                getOrCreateClientForSession(sessionId)
-            } catch (e: Exception) {
-                log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
-            }
-
+            // Load messages first for fast UI rendering
             val (messages, cursor) = messageRepository.getMessagesPaginated(
                 sessionId = sessionId,
                 limit = limit,
@@ -471,6 +464,18 @@ class ChatSessionService(
             // Fetch project if session belongs to one
             val project = existingSession.projectId?.let { projectId ->
                 projectRepository.getProject(projectId)
+            }
+
+            // Pre-create/cache the chat client for this session asynchronously in the background
+            // This is optional and doesn't block message rendering - if it fails (e.g., no model configured in tests),
+            // we can still show messages. The client will be created on-demand when user sends a message.
+            eventScope.launch {
+                try {
+                    getOrCreateClientForSession(sessionId)
+                    log.debug("Pre-created chat client for session $sessionId in background")
+                } catch (e: Exception) {
+                    log.debug("Could not pre-create chat client for session $sessionId: ${e.message}")
+                }
             }
 
             ResumeSessionPaginatedResult(

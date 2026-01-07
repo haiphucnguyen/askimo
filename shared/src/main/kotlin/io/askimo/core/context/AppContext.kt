@@ -16,6 +16,7 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.telemetry.TelemetryCollector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -92,6 +93,12 @@ class AppContext private constructor(
      * This can be updated when the user changes locale or wants to modify AI's behavior.
      */
     var systemDirective: String? = null
+
+    /**
+     * Telemetry collector for tracking RAG and LLM metrics.
+     * Shared across all chat clients in this context.
+     */
+    val telemetry = TelemetryCollector()
 
     /**
      * Cached utility client for lightweight operations (classification, intent detection).

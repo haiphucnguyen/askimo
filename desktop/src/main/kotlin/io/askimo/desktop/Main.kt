@@ -71,9 +71,9 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.IndexingErrorEvent
+import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
-import io.askimo.core.event.internal.IndexingErrorEvent
-import io.askimo.core.event.internal.IndexingErrorType
 import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator

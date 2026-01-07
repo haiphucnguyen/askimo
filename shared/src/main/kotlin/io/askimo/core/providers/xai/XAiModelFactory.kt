@@ -20,6 +20,7 @@ import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.samplingFor
+import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
 
@@ -52,6 +53,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
+        val telemetry = AppContext.getInstance().telemetry
+
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
@@ -60,6 +63,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
                 .apply {
                     if (supportsSampling(model)) {
                         val s = samplingFor(presets.style)
