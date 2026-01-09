@@ -4,7 +4,7 @@
  */
 package io.askimo.desktop.util
 
-import org.slf4j.LoggerFactory
+import io.askimo.core.logging.logger
 
 /**
  * Utility for handling errors with user-friendly messages and proper logging.
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
  * error messages while logging the full technical details for debugging.
  */
 object ErrorHandler {
-    private val logger = LoggerFactory.getLogger(ErrorHandler::class.java)
+    private val log = logger<ErrorHandler>()
 
     /**
      * Get a user-friendly error message for an exception and log the technical details.
@@ -23,7 +23,7 @@ object ErrorHandler {
      * @return A user-friendly error message suitable for display to end users
      */
     fun getUserFriendlyError(exception: Throwable, context: String): String {
-        logger.error("Error during $context", exception)
+        log.error("Error during $context", exception)
 
         // Return user-friendly message based on exception type
         return when (exception) {
@@ -58,7 +58,7 @@ object ErrorHandler {
      * @return A user-friendly error message
      */
     fun getUserFriendlyError(exception: Throwable, context: String, fallbackMessage: String): String {
-        logger.error("Error during $context", exception)
+        log.error("Error during $context", exception)
 
         // Try to get a specific message first
         val specificMessage = when (exception) {
@@ -71,9 +71,4 @@ object ErrorHandler {
 
         return specificMessage ?: fallbackMessage
     }
-
-    /**
-     * Format a cancellation message.
-     */
-    fun getCancellationMessage(): String = "Operation was cancelled."
 }

@@ -226,7 +226,9 @@ fun footerBar(
                 ) {
                     IconButton(
                         onClick = { telemetryExpanded = !telemetryExpanded },
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier
+                            .size(28.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ShowChart,

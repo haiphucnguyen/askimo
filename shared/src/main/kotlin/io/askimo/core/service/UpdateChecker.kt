@@ -6,7 +6,7 @@ package io.askimo.core.service
 
 import io.askimo.core.VersionInfo
 import io.askimo.core.logging.logger
-import kotlinx.serialization.json.Json
+import io.askimo.core.util.JsonUtils.json
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -48,11 +48,6 @@ class UpdateChecker(
     private val httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
         .build()
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
 
     /**
      * Check for updates from GitHub releases.

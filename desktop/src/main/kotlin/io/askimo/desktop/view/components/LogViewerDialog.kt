@@ -47,15 +47,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.askimo.core.logging.LoggingService
+import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.slf4j.LoggerFactory
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+
+private val log = logger("LogViewerDialog")
 
 /**
  * Dialog for viewing application log files.
@@ -369,7 +371,7 @@ private fun copyToClipboard(text: String) {
         val selection = StringSelection(text)
         clipboard.setContents(selection, selection)
     } catch (e: Exception) {
-        LoggerFactory.getLogger("LogViewerDialog")
+        log
             .error("Failed to copy to clipboard", e)
     }
 }

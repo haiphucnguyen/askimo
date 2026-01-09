@@ -4,7 +4,7 @@
  */
 package io.askimo.tools
 
-import kotlinx.serialization.json.Json
+import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -18,7 +18,6 @@ import kotlinx.serialization.json.putJsonObject
  * All tools should use this to ensure consistent response format for AI parsing.
  */
 object ToolResponseBuilder {
-    private val json = Json { prettyPrint = false }
 
     /**
      * Create a success response with output.
