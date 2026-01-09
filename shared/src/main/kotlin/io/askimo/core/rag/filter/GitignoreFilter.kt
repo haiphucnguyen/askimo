@@ -5,6 +5,7 @@
 package io.askimo.core.rag.filter
 
 import io.askimo.core.logging.logger
+import io.askimo.core.util.ProcessBuilderExt
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.asSequence
@@ -40,7 +41,7 @@ class GitignoreParser(private val rootPath: Path) {
 
         // Try to get from git config
         try {
-            val process = ProcessBuilder("git", "config", "--global", "core.excludesfile")
+            val process = ProcessBuilderExt("git", "config", "--global", "core.excludesfile")
                 .redirectErrorStream(true)
                 .start()
 

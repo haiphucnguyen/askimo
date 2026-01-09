@@ -426,19 +426,13 @@ class ChatSessionService(
      * @return ResumeSessionResult containing success status, messages, and any error
      */
     fun resumeSession(sessionId: String): ResumeSessionResult {
-        // Try to pre-create/cache the chat client for this session
-        // This is optional - if it fails (e.g., no model configured in tests), we can still load messages
-        try {
-            getOrCreateClientForSession(sessionId)
-        } catch (e: Exception) {
-            log.debug("Could not pre-create chat client for session $sessionId: ${e.message}", e)
-        }
+        val paginatedResult = resumeSessionPaginated(sessionId, limit = Int.MAX_VALUE)
 
-        val messages = messageRepository.getMessages(sessionId)
         return ResumeSessionResult(
-            success = true,
-            sessionId = sessionId,
-            messages = messages.toDTOs(),
+            success = paginatedResult.success,
+            sessionId = paginatedResult.sessionId,
+            messages = paginatedResult.messages,
+            errorMessage = paginatedResult.errorMessage,
         )
     }
 
@@ -555,6 +549,68 @@ class ChatSessionService(
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
     /**
+     * Determines if URL content should be extracted based on explicit user intent.
+     *
+     * Following the pattern used by ChatGPT, Claude, and other AI services,
+     * we only extract URL content when the user explicitly requests it through:
+     * - Action verbs: "summarize", "analyze", "explain", "read"
+     * - Questions about URL: "what does", "what's on", "what is"
+     * - URL followed by a question or request
+     *
+     * @param userMessage The user's message
+     * @param url The URL to check
+     * @return true if URL content should be extracted, false otherwise
+     */
+    internal fun shouldExtractUrlContent(userMessage: String, url: String): Boolean {
+        val message = userMessage.lowercase()
+        val urlLower = url.lowercase()
+
+        // Find the position of the URL in the message
+        val urlIndex = message.indexOf(urlLower)
+        if (urlIndex == -1) return false
+
+        // Get text before and after the URL (within reasonable distance)
+        val beforeUrl = message.substring(0, urlIndex).takeLast(100) // Look at last 100 chars before URL
+        val afterUrl = message.substring(urlIndex + urlLower.length).take(100) // Look at first 100 chars after URL
+
+        // Patterns to check in text BEFORE the URL (action verb before URL)
+        val beforePatterns = listOf(
+            "\\b(summarize|summarise)\\s+[^.!?]*$", // Action verb not separated by sentence boundary
+            "\\banalyze\\s+[^.!?]*$",
+            "\\banalyse\\s+[^.!?]*$",
+            "\\bexplain\\s+[^.!?]*$",
+            "\\bread\\s+[^.!?]*$",
+            "\\breview\\s+[^.!?]*$",
+            "\\bexamine\\s+[^.!?]*$",
+            "\\bcheck\\s+(what|what's|whats|the\\s+content|this)[^.!?]*$",
+            // Questions about URL
+            "what\\s+does[^.!?]*$",
+            "what\\s+is[^.!?]*$",
+            "what'?s?\\s+(on|in|at)[^.!?]*$",
+            "what[^.!?]*$", // Generic "what" question before URL
+        )
+
+        // Patterns to check in text AFTER the URL (URL followed by request)
+        val afterPatterns = listOf(
+            "^[^.!?]*\\?", // URL followed by question mark (same sentence)
+            "^[^.!?]*(tell|show)\\s+me", // URL followed by "tell me" or "show me"
+            "^[^.!?]*(summarize|summarise|analyze|analyse|explain|review)", // URL followed by action
+        )
+
+        // Check if any before pattern matches
+        val hasBeforeMatch = beforePatterns.any { pattern ->
+            Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(beforeUrl)
+        }
+
+        // Check if any after pattern matches
+        val hasAfterMatch = afterPatterns.any { pattern ->
+            Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(afterUrl)
+        }
+
+        return hasBeforeMatch || hasAfterMatch
+    }
+
+    /**
      * Prepares user message with attachments and URL contents, returns combined prompt including any active directive.
      *
      * The directive (system instructions + session-specific directive) is prepended to the user message
@@ -576,7 +632,7 @@ class ChatSessionService(
      * ```
      *
      * If attachments are present, they will be included inline in the message using file:// format.
-     * If URLs are detected in the message, their content will be extracted and appended using url:// format.
+     * If URLs are detected in the message with explicit intent, their content will be extracted and appended.
      *
      * @return The complete prompt string ready to send to the AI (directive prepended if present)
      */
@@ -587,6 +643,13 @@ class ChatSessionService(
     ): String {
         val urls = UrlContentExtractor.extractUrls(userMessage)
         val urlContents = urls.mapNotNull { url ->
+            // Only extract if user explicitly requested it
+            if (!shouldExtractUrlContent(userMessage, url)) {
+                log.debug("Skipping URL content extraction for: $url (no explicit intent detected)")
+                return@mapNotNull null
+            }
+
+            log.info("Extracting URL content for: $url (explicit user intent detected)")
             try {
                 UrlContentExtractor.extractContent(url)
             } catch (e: Exception) {

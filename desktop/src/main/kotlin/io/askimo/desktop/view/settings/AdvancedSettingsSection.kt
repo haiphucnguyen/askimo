@@ -47,15 +47,17 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
+import io.askimo.core.logging.logger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
 import io.askimo.desktop.view.components.clickableCard
-import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.io.File
+
+private val log = logger("AdvancedSettingsSection")
 
 @Composable
 fun advancedSettingsSection() {
@@ -302,8 +304,7 @@ private fun openInFileManager(file: File) {
             }
         }
     } catch (e: Exception) {
-        LoggerFactory.getLogger("AdvancedSettingsSection")
-            .error("Failed to open log directory: ${file.absolutePath}", e)
+        log.error("Failed to open log directory: ${file.absolutePath}", e)
     }
 }
 
