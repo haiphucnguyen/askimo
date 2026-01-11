@@ -63,7 +63,6 @@ import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
-import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
@@ -85,7 +84,6 @@ import io.askimo.desktop.view.components.newDirectiveDialog
 import io.askimo.desktop.view.components.sessionActionsMenu
 import io.askimo.desktop.view.components.sessionMemoryDialog
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import java.awt.FileDialog
@@ -159,7 +157,7 @@ fun chatView(
 
     // Session memory dialog state
     var showSessionMemoryDialog by remember { mutableStateOf(false) }
-    var sessionMemory by remember { mutableStateOf<SessionMemory?>(null) }
+    var sessionMemorySessionId by remember { mutableStateOf<String?>(null) }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     // RAG indexing status state
@@ -785,15 +783,8 @@ fun chatView(
                                 onExportSession = onExportSession,
                                 onDeleteSession = onDeleteSession,
                                 onShowSessionSummary = { sid ->
-                                    // Query session memory from repository
-                                    coroutineScope.launch {
-                                        val memory = withContext(Dispatchers.IO) {
-                                            val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
-                                            repository.getBySessionId(sid)
-                                        }
-                                        sessionMemory = memory
-                                        showSessionMemoryDialog = true
-                                    }
+                                    sessionMemorySessionId = sid
+                                    showSessionMemoryDialog = true
                                 },
                             )
                         }
@@ -1060,10 +1051,15 @@ fun chatView(
     // Session memory dialog
     if (showSessionMemoryDialog) {
         sessionMemoryDialog(
-            sessionMemory = sessionMemory,
+            sessionId = sessionMemorySessionId,
+            onLoadMemory = { sid ->
+                withContext(Dispatchers.IO) {
+                    DatabaseManager.getInstance().getSessionMemoryRepository().getBySessionId(sid)
+                }
+            },
             onDismiss = {
                 showSessionMemoryDialog = false
-                sessionMemory = null
+                sessionMemorySessionId = null
             },
         )
     }

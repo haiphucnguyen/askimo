@@ -53,8 +53,11 @@ class TelemetryChatModelListener(
         )
 
         log.debug(
-            "LLM response from $provider:$model in ${duration}ms, " +
-                "tokens=${tokenUsage?.totalTokenCount() ?: "unknown"}",
+            "LLM response from {}:{} in {}ms, tokens={}",
+            provider,
+            model,
+            duration,
+            tokenUsage?.totalTokenCount() ?: "unknown",
         )
     }
 

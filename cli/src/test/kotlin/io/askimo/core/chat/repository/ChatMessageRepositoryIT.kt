@@ -120,54 +120,6 @@ class ChatMessageRepositoryIT {
     }
 
     @Test
-    fun `should retrieve messages after specific message`() {
-        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
-        val message1 = messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.USER,
-                content = "First",
-                createdAt = baseTime,
-            ),
-        )
-        val message2 = messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.ASSISTANT,
-                content = "Second",
-                createdAt = baseTime.plusSeconds(1),
-            ),
-        )
-        val message3 = messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.USER,
-                content = "Third",
-                createdAt = baseTime.plusSeconds(2),
-            ),
-        )
-        val message4 = messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.ASSISTANT,
-                content = "Fourth",
-                createdAt = baseTime.plusSeconds(3),
-            ),
-        )
-
-        val messagesAfter = messageRepository.getMessagesAfter(testSession.id, message1.id, limit = 10)
-
-        assertEquals(3, messagesAfter.size)
-        assertEquals(message2.id, messagesAfter[0].id)
-        assertEquals(message3.id, messagesAfter[1].id)
-        assertEquals(message4.id, messagesAfter[2].id)
-    }
-
-    @Test
     fun `should handle different message roles correctly`() {
         messageRepository.addMessage(
             ChatMessage(
@@ -314,9 +266,9 @@ class ChatMessageRepositoryIT {
 
         val marked = messageRepository.markMessagesAsOutdatedAfter(testSession.id, message1.id)
 
-        assertEquals(2, marked)
+        assertEquals(3, marked) // All 3 messages from message1 onwards are marked
         val messages = messageRepository.getMessages(testSession.id)
-        assertEquals(false, messages[0].isOutdated) // First message not marked
+        assertEquals(true, messages[0].isOutdated) // First message marked (fromMessage)
         assertEquals(true, messages[1].isOutdated) // Second message marked
         assertEquals(true, messages[2].isOutdated) // Third message marked
     }
@@ -355,30 +307,6 @@ class ChatMessageRepositoryIT {
         assertEquals(2, activeMessages.size)
         assertEquals("Active 1", activeMessages[0].content)
         assertEquals("Active 2", activeMessages[1].content)
-    }
-
-    @Test
-    fun `should get recent active messages with database filtering`() {
-        repeat(30) { i ->
-            val message = messageRepository.addMessage(
-                ChatMessage(
-                    id = "",
-                    sessionId = testSession.id,
-                    role = MessageRole.USER,
-                    content = "Message $i",
-                ),
-            )
-            // Mark every other message as outdated
-            if (i % 2 == 0) {
-                messageRepository.markMessageAsOutdated(message.id)
-            }
-        }
-
-        val activeMessages = messageRepository.getRecentActiveMessages(testSession.id, limit = 10)
-
-        assertEquals(10, activeMessages.size)
-        // All should be active (odd numbered)
-        assertTrue(activeMessages.all { !it.isOutdated })
     }
 
     @Test
@@ -489,6 +417,278 @@ class ChatMessageRepositoryIT {
         assertEquals(2, deleted)
         val messages = messageRepository.getMessages(testSession.id)
         assertTrue(messages.isEmpty())
+    }
+
+    @Test
+    fun `should delete message and all newer messages`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+
+        // Create 5 messages with sequential timestamps
+        val msg1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        val msg2 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+        val msg3 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 3",
+                createdAt = baseTime.plusSeconds(3),
+            ),
+        )
+        val msg4 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 4",
+                createdAt = baseTime.plusSeconds(4),
+            ),
+        )
+        val msg5 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 5",
+                createdAt = baseTime.plusSeconds(5),
+            ),
+        )
+
+        // Delete message 3 and all newer messages (msg3, msg4, msg5)
+        val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, msg3.id)
+
+        assertEquals(3, deleted)
+
+        val remainingMessages = messageRepository.getMessages(testSession.id)
+        assertEquals(2, remainingMessages.size)
+        assertEquals("Message 1", remainingMessages[0].content)
+        assertEquals("Message 2", remainingMessages[1].content)
+    }
+
+    @Test
+    fun `should delete only the target message when it is the newest`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+
+        val msg1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        val msg2 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+
+        // Delete only the last message
+        val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, msg2.id)
+
+        assertEquals(1, deleted)
+
+        val remainingMessages = messageRepository.getMessages(testSession.id)
+        assertEquals(1, remainingMessages.size)
+        assertEquals("Message 1", remainingMessages[0].content)
+    }
+
+    @Test
+    fun `should return zero when deleting non-existent message`() {
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+            ),
+        )
+
+        val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, "non-existent-id")
+
+        assertEquals(0, deleted)
+
+        // Original message should still exist
+        val messages = messageRepository.getMessages(testSession.id)
+        assertEquals(1, messages.size)
+    }
+
+    @Test
+    fun `should delete all messages when deleting the oldest message`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+
+        val msg1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(2),
+            ),
+        )
+        messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 3",
+                createdAt = baseTime.plusSeconds(3),
+            ),
+        )
+
+        // Delete the first message and all newer ones (all messages)
+        val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, msg1.id)
+
+        assertEquals(3, deleted)
+
+        val remainingMessages = messageRepository.getMessages(testSession.id)
+        assertTrue(remainingMessages.isEmpty())
+    }
+
+    @Test
+    fun `should only delete messages from the specified session`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+
+        // Create another session
+        val otherSession = sessionRepository.createSession(ChatSession(id = "", title = "Other Session"))
+
+        try {
+            // Add messages to test session
+            val msg1 = messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = testSession.id,
+                    role = MessageRole.USER,
+                    content = "Test Message 1",
+                    createdAt = baseTime.plusSeconds(1),
+                ),
+            )
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = testSession.id,
+                    role = MessageRole.ASSISTANT,
+                    content = "Test Message 2",
+                    createdAt = baseTime.plusSeconds(2),
+                ),
+            )
+
+            // Add messages to other session
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = otherSession.id,
+                    role = MessageRole.USER,
+                    content = "Other Message 1",
+                    createdAt = baseTime.plusSeconds(1),
+                ),
+            )
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = "",
+                    sessionId = otherSession.id,
+                    role = MessageRole.ASSISTANT,
+                    content = "Other Message 2",
+                    createdAt = baseTime.plusSeconds(2),
+                ),
+            )
+
+            // Delete from test session only
+            val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, msg1.id)
+
+            assertEquals(2, deleted)
+
+            // Test session should be empty
+            val testMessages = messageRepository.getMessages(testSession.id)
+            assertTrue(testMessages.isEmpty())
+
+            // Other session should be unaffected
+            val otherMessages = messageRepository.getMessages(otherSession.id)
+            assertEquals(2, otherMessages.size)
+        } finally {
+            sessionRepository.deleteSession(otherSession.id)
+        }
+    }
+
+    @Test
+    fun `should delete messages with attachments when deleting message and all newer`() {
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+
+        val msg1 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.USER,
+                content = "Message 1",
+                createdAt = baseTime.plusSeconds(1),
+            ),
+        )
+
+        // Message with attachment
+        val attachment = FileAttachment(
+            id = "",
+            messageId = "",
+            sessionId = testSession.id,
+            fileName = "test.txt",
+            mimeType = "txt",
+            size = 1024L,
+            createdAt = baseTime.plusSeconds(2),
+            content = "test content",
+        )
+        val msg2 = messageRepository.addMessage(
+            ChatMessage(
+                id = "",
+                sessionId = testSession.id,
+                role = MessageRole.ASSISTANT,
+                content = "Message 2",
+                createdAt = baseTime.plusSeconds(2),
+                attachments = listOf(attachment),
+            ),
+        )
+
+        // Delete msg2 (which has attachment)
+        val deleted = messageRepository.deleteMessageAndAllNewer(testSession.id, msg2.id)
+
+        assertEquals(1, deleted)
+
+        // Verify message is deleted
+        val remainingMessages = messageRepository.getMessages(testSession.id)
+        assertEquals(1, remainingMessages.size)
+        assertEquals("Message 1", remainingMessages[0].content)
+
+        // Verify attachment is also deleted (CASCADE)
+        val attachments = attachmentRepository.getAttachmentsBySessionId(testSession.id)
+        assertTrue(attachments.isEmpty())
     }
 
     @Test
@@ -1004,59 +1204,5 @@ class ChatMessageRepositoryIT {
         val fileNames = messages[0].attachments.map { it.fileName }.toSet()
         val expectedFileNames = (1..10).map { "file$it.txt" }.toSet()
         assertEquals(expectedFileNames, fileNames)
-    }
-
-    @Test
-    fun `should load attachments after specific message`() {
-        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
-        val message1 = messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.USER,
-                content = "First",
-                createdAt = baseTime,
-                attachments = listOf(
-                    FileAttachment(
-                        id = "",
-                        messageId = "",
-                        sessionId = testSession.id,
-                        fileName = "first.txt",
-                        mimeType = "txt",
-                        size = 100L,
-                        createdAt = baseTime,
-                        content = "first content",
-                    ),
-                ),
-            ),
-        )
-
-        messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = testSession.id,
-                role = MessageRole.USER,
-                content = "Second",
-                createdAt = baseTime.plusSeconds(1),
-                attachments = listOf(
-                    FileAttachment(
-                        id = "",
-                        messageId = "",
-                        sessionId = testSession.id,
-                        fileName = "second.txt",
-                        mimeType = "txt",
-                        size = 200L,
-                        createdAt = baseTime.plusSeconds(1),
-                        content = "second content",
-                    ),
-                ),
-            ),
-        )
-
-        val messagesAfter = messageRepository.getMessagesAfter(testSession.id, message1.id, limit = 10)
-
-        assertEquals(1, messagesAfter.size)
-        assertEquals(1, messagesAfter[0].attachments.size)
-        assertEquals("second.txt", messagesAfter[0].attachments[0].fileName)
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.event.EventBus
@@ -154,9 +155,8 @@ class SessionManager(
      */
     fun sendMessage(
         sessionId: String,
-        userMessage: String,
-        attachments: List<FileAttachmentDTO> = emptyList(),
-        onChunkReceived: (String) -> Unit = {},
+        userMessage: ChatMessageDTO,
+        willSaveUserMessage: Boolean,
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -165,7 +165,7 @@ class SessionManager(
                     chatSessionService.createSession(
                         ChatSession(
                             id = sessionId,
-                            title = userMessage,
+                            title = userMessage.content,
                             createdAt = LocalDateTime.now(),
                             updatedAt = LocalDateTime.now(),
                         ),
@@ -205,7 +205,7 @@ class SessionManager(
         log.debug("Streaming thread $threadId for session $sessionId started. Active streams: ${activeThreads.size}")
 
         // Prepare context and save user message to DB
-        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, attachments)
+        val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, willSaveUserMessage)
         log.debug("Saved prompt for session $sessionId: $promptWithContext")
 
         // Start streaming in background
@@ -216,8 +216,6 @@ class SessionManager(
                     .sendStreamingMessageWithCallback(promptWithContext) { token ->
                         streamingScope.launch {
                             thread.appendChunk(token)
-                            val currentContent = thread.getCurrentContent()
-                            onChunkReceived(currentContent)
                         }
                     }
 

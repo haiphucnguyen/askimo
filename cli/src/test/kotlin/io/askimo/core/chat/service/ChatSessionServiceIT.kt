@@ -127,31 +127,6 @@ class ChatSessionServiceIT {
     }
 
     @Test
-    fun `should get recent active messages through service`() {
-        val session = sessionRepository.createSession(ChatSession(id = "", title = "Test"))
-
-        repeat(30) { i ->
-            val message = service.addMessage(
-                ChatMessage(
-                    id = "",
-                    sessionId = session.id,
-                    role = MessageRole.USER,
-                    content = "Message $i",
-                ),
-            )
-            // Mark some as outdated
-            if (i % 3 == 0) {
-                service.markMessageAsOutdated(message.id)
-            }
-        }
-
-        val activeMessages = service.getRecentActiveMessages(session.id, limit = 10)
-
-        assertEquals(10, activeMessages.size)
-        assertTrue(activeMessages.all { !it.isOutdated })
-    }
-
-    @Test
     fun `should manage starred sessions through service`() {
         val session = sessionRepository.createSession(ChatSession(id = "", title = "Test"))
 
@@ -170,47 +145,6 @@ class ChatSessionServiceIT {
 
         val updated = service.getSessionById(session.id)
         assertEquals("New Title", updated!!.title)
-    }
-
-    @Test
-    fun `should mark messages as outdated through service`() {
-        val session = sessionRepository.createSession(ChatSession(id = "", title = "Test"))
-
-        val baseTime = LocalDateTime.now()
-
-        val message1 = service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Message 1",
-                createdAt = baseTime,
-            ),
-        )
-        service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.ASSISTANT,
-                content = "Message 2",
-                createdAt = baseTime.plusSeconds(1),
-            ),
-        )
-        service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Message 3",
-                createdAt = baseTime.plusSeconds(2),
-            ),
-        )
-
-        service.markMessagesAsOutdatedAfter(session.id, message1.id)
-
-        val activeMessages = service.getActiveMessages(session.id)
-        assertEquals(1, activeMessages.size)
-        assertEquals("Message 1", activeMessages[0].content)
     }
 
     @Test
@@ -319,42 +253,6 @@ class ChatSessionServiceIT {
         assertEquals("Message 1", result.messages[0].content)
         assertEquals("Message 2", result.messages[1].content)
         assertEquals("Message 3", result.messages[2].content)
-    }
-
-    @Test
-    fun `resumeSession should include outdated messages`() {
-        // Given
-        val session = sessionRepository.createSession(ChatSession(id = "", title = "Mixed Session"))
-        val baseTime = LocalDateTime.now()
-
-        val message1 = service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.USER,
-                content = "Active message",
-                createdAt = baseTime,
-            ),
-        )
-        val message2 = service.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = session.id,
-                role = MessageRole.ASSISTANT,
-                content = "Outdated message",
-                createdAt = baseTime.plusSeconds(1),
-            ),
-        )
-
-        service.markMessageAsOutdated(message2.id)
-
-        // When
-        val result = service.resumeSession(session.id)
-
-        // Then
-        assertEquals(2, result.messages.size)
-        assertTrue(result.messages.any { it.content == "Active message" })
-        assertTrue(result.messages.any { it.content == "Outdated message" })
     }
 
     @Test

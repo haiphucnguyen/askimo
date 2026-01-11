@@ -12,12 +12,19 @@ import dev.langchain4j.memory.ChatMemory
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.context.AppContext
+import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelContextSizeCache
 import io.askimo.core.providers.getSummary
 import io.askimo.core.util.JsonUtils.json
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.time.LocalDateTime
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
@@ -35,6 +42,24 @@ data class ConversationSummary(
     val keyFacts: Map<String, String> = emptyMap(),
     val mainTopics: List<String> = emptyList(),
     val recentContext: String = "",
+)
+
+object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: LocalDateTime) {
+        encoder.encodeString(value.toString())
+    }
+
+    override fun deserialize(decoder: Decoder): LocalDateTime = LocalDateTime.parse(decoder.decodeString())
+}
+
+@Serializable
+data class MemoryMessage(
+    val content: String,
+    val type: String,
+    @Serializable(with = LocalDateTimeSerializer::class)
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 )
 
 /**
@@ -78,7 +103,7 @@ class TokenAwareSummarizingMemory(
     } else {
         Executors.newSingleThreadExecutor()
     }
-    private val messages = Collections.synchronizedList(mutableListOf<ChatMessage>())
+    private val messages = Collections.synchronizedList(mutableListOf<MemoryMessage>())
 
     @Volatile private var structuredSummary: ConversationSummary? = null
 
@@ -120,20 +145,18 @@ class TokenAwareSummarizingMemory(
             modelKey,
         )
 
-        // Ensure a minimum threshold for safety, even with very small models
-        return memoryAllocation.coerceAtLeast(2000)
+        return memoryAllocation
     }
 
     override fun id(): Any = this.hashCode()
 
-    /**
-     * Add message to memory. Non-blocking - triggers async summarization if needed.
-     * Automatically persists to database if configured with sessionId and repository.
-     */
-    override fun add(message: ChatMessage) {
+    fun add(message: MemoryMessage) {
         messages.add(message)
-        log.debug("Added message. Total messages: ${messages.size}")
 
+        if (message.content.isBlank()) {
+            return
+        }
+        log.debug("Added message {}, type {}. Total messages: {}", message.content.take(100), message.type, messages.size)
         // Persist to database after adding message
         persistToDatabase()
 
@@ -146,6 +169,14 @@ class TokenAwareSummarizingMemory(
             log.info("Token count ($totalTokens) exceeded threshold ($threshold). Triggering async summarization.")
             triggerAsyncSummarization()
         }
+    }
+
+    /**
+     * Add message to memory. Non-blocking - triggers async summarization if needed.
+     * Automatically persists to database if configured with sessionId and repository.
+     */
+    override fun add(message: ChatMessage) {
+        add(MemoryMessage(content = message.getTextContent(), type = message.getRoleName(), createdAt = LocalDateTime.now()))
     }
 
     override fun messages(): List<ChatMessage> = buildList {
@@ -165,7 +196,10 @@ class TokenAwareSummarizingMemory(
         }
 
         synchronized(messages) {
-            addAll(messages)
+            val chatMessages = messages
+                .filter { it.content.isNotBlank() }
+                .map { it.toChatMessage() }
+            addAll(chatMessages)
         }
     }
 
@@ -175,6 +209,54 @@ class TokenAwareSummarizingMemory(
             messages.clear()
             structuredSummary = null
             basicSummary = null
+        }
+    }
+
+    /**
+     * Load messages from filtered memory list (used after message deletion/retry).
+     * Implements token limit guardrails like add() but optimized for batch processing.
+     * If messages exceed token threshold, triggers summarization before persisting.
+     *
+     * @param filteredMessages List of MemoryMessage to load
+     */
+    fun loadFromFilteredMemory(filteredMessages: List<MemoryMessage>) {
+        summarizationLock.withLock {
+            log.debug("Loading {} filtered memory messages for session: {}", filteredMessages.size, sessionId)
+
+            messages.clear()
+            structuredSummary = null
+            basicSummary = null
+
+            val validMessages = filteredMessages.filter { it.content.isNotBlank() }
+
+            messages.addAll(validMessages)
+
+            log.debug(
+                "Loaded {} valid messages from filtered memory (filtered out {} blank messages)",
+                validMessages.size,
+                filteredMessages.size - validMessages.size,
+            )
+
+            val totalTokens = estimateTotalTokens()
+            val threshold = (maxTokens * summarizationThreshold).toInt()
+
+            log.debug(
+                "After batch load - Total tokens: {}, Threshold: {}, Max: {}",
+                totalTokens,
+                threshold,
+                maxTokens,
+            )
+
+            persistToDatabase()
+
+            if (totalTokens > threshold && !summarizationInProgress) {
+                log.info(
+                    "Token count ({}) exceeded threshold ({}) after batch load. Triggering async summarization.",
+                    totalTokens,
+                    threshold,
+                )
+                triggerAsyncSummarization()
+            }
         }
     }
 
@@ -200,9 +282,11 @@ class TokenAwareSummarizingMemory(
      * Estimates total token count of all messages in memory (thread-safe)
      */
     private fun estimateTotalTokens(): Int = synchronized(messages) {
-        messages.sumOf { message ->
-            tokenEstimator(message)
-        }
+        messages
+            .filter { it.content.isNotBlank() }
+            .sumOf { message ->
+                tokenEstimator(message.toChatMessage())
+            }
     }
 
     /**
@@ -224,7 +308,7 @@ class TokenAwareSummarizingMemory(
                 // On any error, fall back to basic summary to ensure memory is managed
                 try {
                     val conversationMessages = synchronized(messages) {
-                        messages.filterNot { it is SystemMessage }
+                        messages.filterNot { it.type == MessageRole.SYSTEM.value }
                     }
                     if (conversationMessages.isNotEmpty()) {
                         val messagesToSummarizeCount = (conversationMessages.size * 0.45).toInt().coerceAtLeast(1)
@@ -237,7 +321,7 @@ class TokenAwareSummarizingMemory(
                             val iterator = messages.iterator()
                             while (iterator.hasNext() && removed < messagesToSummarizeCount) {
                                 val msg = iterator.next()
-                                if (msg !is SystemMessage) {
+                                if (msg.type != MessageRole.SYSTEM.value) {
                                     iterator.remove()
                                     removed++
                                 }
@@ -282,7 +366,7 @@ class TokenAwareSummarizingMemory(
     private fun summarizeAndPrune() {
         // Get only user and AI messages (exclude system messages from conversation)
         val conversationMessages = synchronized(messages) {
-            messages.filterNot { it is SystemMessage }
+            messages.filterNot { it.type == MessageRole.SYSTEM.value }
         }
 
         if (conversationMessages.isEmpty()) return
@@ -308,7 +392,7 @@ class TokenAwareSummarizingMemory(
             val iterator = messages.iterator()
             while (iterator.hasNext() && removed < messagesToSummarizeCount) {
                 val msg = iterator.next()
-                if (msg !is SystemMessage) {
+                if (msg.type != MessageRole.SYSTEM.value) {
                     iterator.remove()
                     removed++
                 }
@@ -323,7 +407,7 @@ class TokenAwareSummarizingMemory(
     /**
      * Generate structured summary using the provided summarizer function
      */
-    private fun generateStructuredSummary(messagesToSummarize: List<ChatMessage>) {
+    private fun generateStructuredSummary(messagesToSummarize: List<MemoryMessage>) {
         val conversationText = buildConversationText(messagesToSummarize)
         val newSummary = chatClient.getSummary(conversationText)
 
@@ -347,7 +431,7 @@ class TokenAwareSummarizingMemory(
     /**
      * Generate basic extractive summary (no AI required)
      */
-    private fun generateBasicSummary(messagesToSummarize: List<ChatMessage>) {
+    private fun generateBasicSummary(messagesToSummarize: List<MemoryMessage>) {
         val newSummary = buildString {
             append("Earlier conversation (${messagesToSummarize.size} messages):\n")
 
@@ -359,14 +443,14 @@ class TokenAwareSummarizingMemory(
             }
 
             keyMessages.forEach { message ->
-                val text = message.getTextContent()
+                val text = message.content
                 // Truncate long messages
                 val truncated = if (text.length > 150) {
                     text.take(150) + "..."
                 } else {
                     text
                 }
-                appendLine("• ${message.getRoleName()}: $truncated")
+                appendLine("• ${message.type}: $truncated")
             }
 
             if (messagesToSummarize.size > 6) {
@@ -388,12 +472,22 @@ class TokenAwareSummarizingMemory(
     }
 
     /**
+     * Map MemoryMessage to LangChain4j ChatMessage
+     */
+    private fun MemoryMessage.toChatMessage(): ChatMessage = when (this.type) {
+        MessageRole.USER.value -> UserMessage.from(this.content)
+        MessageRole.ASSISTANT.value -> AiMessage.from(this.content)
+        MessageRole.SYSTEM.value -> SystemMessage.from(this.content)
+        else -> UserMessage.from(this.content) // fallback
+    }
+
+    /**
      * Extract role name from message
      */
     private fun ChatMessage.getRoleName(): String = when (this) {
-        is UserMessage -> "User"
-        is AiMessage -> "Assistant"
-        is SystemMessage -> "System"
+        is UserMessage -> MessageRole.USER.value
+        is AiMessage -> MessageRole.ASSISTANT.value
+        is SystemMessage -> MessageRole.SYSTEM.value
         else -> "Unknown"
     }
 
@@ -411,9 +505,9 @@ class TokenAwareSummarizingMemory(
      * Build conversation text from messages for AI summarization.
      * Only includes User and AI messages, excluding system messages as they are instructions.
      */
-    private fun buildConversationText(messages: List<ChatMessage>): String = buildString {
-        messages.filterNot { it is SystemMessage }.forEach { message ->
-            appendLine("${message.getRoleName()}: ${message.getTextContent()}")
+    private fun buildConversationText(messages: List<MemoryMessage>): String = buildString {
+        messages.filterNot { it.type == MessageRole.SYSTEM.value }.forEach { message ->
+            appendLine("${message.type}: ${message.content}")
             appendLine()
         }
     }
@@ -470,7 +564,7 @@ class TokenAwareSummarizingMemory(
      * Data class representing the complete memory state for persistence.
      */
     data class MemoryState(
-        val messages: List<ChatMessage>,
+        val messages: List<MemoryMessage>,
         val summary: ConversationSummary?,
     )
 
@@ -511,6 +605,7 @@ class TokenAwareSummarizingMemory(
 
     /**
      * Serialize memory state to SessionMemory domain object for database storage.
+     * System messages are excluded as they are instructions, not conversation history.
      */
     private fun serializeMemoryState(
         sessionId: String,
@@ -523,29 +618,11 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        // Convert ChatMessage to serializable format, filtering out blank messages
-        val serializableMessages = state.messages
-            .mapNotNull { msg ->
-                val content = msg.getTextContent()
-                if (content.isBlank()) {
-                    log.warn("Skipping blank message of type ${msg.javaClass.simpleName} during serialization")
-                    null
-                } else {
-                    SerializableMessage(
-                        type = when (msg) {
-                            is UserMessage -> "user"
-                            is AiMessage -> "assistant"
-                            is SystemMessage -> "system"
-                            else -> "unknown"
-                        },
-                        content = content,
-                    )
-                }
-            }
+        val conversationMessages = state.messages.filterNot { it.type == MessageRole.SYSTEM.value }
 
         val messagesJson = json.encodeToString(
-            ListSerializer(SerializableMessage.serializer()),
-            serializableMessages,
+            ListSerializer(MemoryMessage.serializer()),
+            conversationMessages,
         )
 
         return SessionMemory(
@@ -569,42 +646,16 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        val serializableMessages = json.decodeFromString(
-            ListSerializer(SerializableMessage.serializer()),
+        val messages = json.decodeFromString(
+            ListSerializer(MemoryMessage.serializer()),
             sessionMemory.memoryMessages,
         )
-
-        // Convert back to ChatMessage, filtering out any blank messages
-        val messages = serializableMessages
-            .filter { it.content.isNotBlank() }
-            .mapNotNull { msg ->
-                try {
-                    when (msg.type) {
-                        "user" -> UserMessage.from(msg.content)
-                        "assistant" -> AiMessage.from(msg.content)
-                        "system" -> SystemMessage.from(msg.content)
-                        else -> UserMessage.from(msg.content) // fallback
-                    }
-                } catch (e: Exception) {
-                    log.warn("Failed to deserialize message of type ${msg.type}, skipping: ${e.message}")
-                    null
-                }
-            }
 
         return MemoryState(messages = messages, summary = summary)
     }
 
-    /**
-     * Serializable representation of a chat message for database storage.
-     */
-    @Serializable
-    private data class SerializableMessage(
-        val type: String,
-        val content: String,
-    )
-
     companion object {
-        private const val MAX_SUMMARY_LENGTH = 500 // characters
+        private const val MAX_SUMMARY_LENGTH = 500
 
         /**
          * Default token estimator that approximates token count as word count * 1.3

@@ -35,9 +35,4 @@ interface ChatClient {
      * @return The complete response from the AI
      */
     fun sendMessage(@UserMessage prompt: String): String
-
-    /**
-     * Clear all memory from the current session.
-     */
-    fun clearMemory()
 }
