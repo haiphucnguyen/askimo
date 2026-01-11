@@ -153,11 +153,13 @@ class RetryUtilsTest {
     fun `STREAMING_ERRORS preset retries streaming-related exceptions`() {
         var callCount = 0
 
+        class StreamingException(message: String) : RuntimeException(message)
+
         val result =
             RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
                 callCount++
                 if (callCount == 1) {
-                    throw RuntimeException("Received empty response")
+                    throw StreamingException("Received empty response")
                 }
                 "success"
             }
