@@ -74,6 +74,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.IndexingErrorEvent
 import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
+import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
@@ -301,7 +302,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
         }
     }
 
-    // Listen for indexing errors
+    // Listen for errors
     LaunchedEffect(Unit) {
         EventBus.errorEvents.collect { event ->
             when (event) {
@@ -350,6 +351,14 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                         errorDialogLinkText = null
                         errorDialogLinkUrl = null
                     }
+                    showErrorDialog = true
+                }
+                is SendMessageErrorEvent -> {
+                    errorDialogTitle = LocalizationManager.getString("error.send_message.title")
+                    errorDialogMessage = event.throwable.message
+                        ?: LocalizationManager.getString("error.send_message.message")
+                    errorDialogLinkText = null
+                    errorDialogLinkUrl = null
                     showErrorDialog = true
                 }
             }
@@ -414,7 +423,7 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
 
     var showProviderSetupDialog by remember { mutableStateOf(false) }
     var showSessionMemoryDialog by remember { mutableStateOf(false) }
-    var sessionMemoryToShow by remember { mutableStateOf<io.askimo.core.chat.domain.SessionMemory?>(null) }
+    var sessionMemorySessionId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         if (appContext.getActiveProvider() == ModelProvider.UNKNOWN) {
@@ -683,15 +692,8 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                                     sessionsViewModel.exportSession(sessionId)
                                                 },
                                                 onShowSessionSummary = { sessionId ->
-                                                    // Query session memory from repository
-                                                    scope.launch {
-                                                        val memory = withContext(Dispatchers.IO) {
-                                                            val repository = DatabaseManager.getInstance().getSessionMemoryRepository()
-                                                            repository.getBySessionId(sessionId)
-                                                        }
-                                                        sessionMemoryToShow = memory
-                                                        showSessionMemoryDialog = true
-                                                    }
+                                                    sessionMemorySessionId = sessionId
+                                                    showSessionMemoryDialog = true
                                                 },
                                                 onNavigateToSettings = {
                                                     previousView = currentView
@@ -1104,10 +1106,15 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 // Session Memory Dialog (Developer Mode)
                 if (showSessionMemoryDialog) {
                     sessionMemoryDialog(
-                        sessionMemory = sessionMemoryToShow,
+                        sessionId = sessionMemorySessionId,
+                        onLoadMemory = { sid ->
+                            withContext(Dispatchers.IO) {
+                                DatabaseManager.getInstance().getSessionMemoryRepository().getBySessionId(sid)
+                            }
+                        },
                         onDismiss = {
                             showSessionMemoryDialog = false
-                            sessionMemoryToShow = null
+                            sessionMemorySessionId = null
                         },
                     )
                 }
@@ -1327,8 +1334,8 @@ fun mainContent(
                     onDeleteSession = { sessionId ->
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
                     },
-                    onRetryMessage = { failedMessageId ->
-                        chatViewModel.retryMessage(failedMessageId)
+                    onRetryMessage = { messageId ->
+                        chatViewModel.retryMessage(messageId)
                     },
                     modifier = Modifier.fillMaxSize(),
                 )

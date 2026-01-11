@@ -12,7 +12,6 @@ import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
-import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDomain
 import io.askimo.core.chat.repository.ChatMessageRepository
@@ -33,6 +32,7 @@ import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
+import io.askimo.core.memory.MemoryMessage
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.rag.enrichContentRetrieverWithLucene
@@ -48,6 +48,15 @@ import java.io.File
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
+
+/**
+ * Data class to hold both ChatClient and its associated memory for a session.
+ * This allows us to access and update memory directly when needed.
+ */
+data class SessionChatContext(
+    val chatClient: ChatClient,
+    val memory: TokenAwareSummarizingMemory,
+)
 
 /**
  * Result of resuming a chat session.
@@ -97,16 +106,16 @@ class ChatSessionService(
     private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
-     * Cache of session-specific ChatClient instances.
-     * Each session gets its own client with integrated memory.
+     * Cache of session contexts (ChatClient + TokenAwareSummarizingMemory).
+     * Each session gets its own context with integrated memory.
+     * Caffeine provides automatic eviction when memory is low or sessions are inactive.
      */
-    private val clientCache: Cache<String, ChatClient> = Caffeine.newBuilder()
+    private val sessionContextCache: Cache<String, SessionChatContext> = Caffeine.newBuilder()
         .maximumSize(10)
         .expireAfterAccess(30.minutes.toJavaDuration())
-        .removalListener<String, ChatClient> { sessionId, client, cause ->
-            if (client != null && sessionId != null) {
-                log.debug("Evicting ChatClient for session {} (cause: {})", sessionId, cause)
-                sessionMemoryRepository.deleteBySessionId(sessionId)
+        .removalListener<String, SessionChatContext> { sessionId, context, cause ->
+            if (context != null && sessionId != null) {
+                log.debug("Evicting session context for session {} (cause: {})", sessionId, cause)
             }
         }
         .build()
@@ -122,23 +131,21 @@ class ChatSessionService(
     }
 
     /**
-     * Handle model change event - clear all cached clients since they use the old model.
+     * Handle model change event - clear all cached contexts since they use the old model.
      */
     private fun handleModelChanged(event: ModelChangedEvent) {
-        log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached clients")
-        clientCache.invalidateAll()
+        log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached contexts")
+        sessionContextCache.invalidateAll()
     }
 
     /**
-     * Get or create a ChatClient for a specific session.
-     * - Creates a self-managing memory that handles its own persistence
-     * - Integrates memory directly into LangChain4j AI service
-     * - For sessions with a project: Creates a RAG-enabled client if project has indexed paths
-     * - Memory automatically loads from database on creation
-     * - Memory automatically saves to database when messages are added/summarized
-     * - Caches the client for reuse
+     * Get or create a chat context (client + memory) for a session.
+     * The context is cached and will be reused for subsequent requests.
+     *
+     * @param sessionId The session ID
+     * @return SessionChatContext containing the ChatClient and its associated memory
      */
-    fun getOrCreateClientForSession(sessionId: String): ChatClient = clientCache.get(sessionId) { _ ->
+    private fun getOrCreateContextForSession(sessionId: String): SessionChatContext = sessionContextCache.get(sessionId) { _ ->
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Create self-managing memory that handles its own persistence
@@ -158,8 +165,19 @@ class ChatSessionService(
             null
         }
 
-        appContext.createStatefulChatSession(sessionId = sessionId, retriever = retriever, memory = memory)
+        val chatClient = appContext.createStatefulChatSession(sessionId = sessionId, retriever = retriever, memory = memory)
+
+        SessionChatContext(chatClient, memory)
     }
+
+    /**
+     * Get or create a ChatClient for a session.
+     * This is a convenience method that returns just the client from the context.
+     *
+     * @param sessionId The session ID
+     * @return ChatClient for the session
+     */
+    fun getOrCreateClientForSession(sessionId: String): ChatClient = getOrCreateContextForSession(sessionId).chatClient
 
     /**
      * Create a content retriever for a project if it has indexed paths.
@@ -211,17 +229,6 @@ class ChatSessionService(
      * Get all sessions sorted by most recently updated first.
      */
     fun getAllSessionsSorted(): List<ChatSession> = sessionRepository.getAllSessions().sortedByDescending { it.createdAt }
-
-    /**
-     * Clear memory for a specific session.
-     * This removes all conversation history from memory but does not delete the session or messages from the database.
-     *
-     * @param sessionId The ID of the session to clear memory for
-     */
-    fun clearSessionMemory(sessionId: String) {
-        clientCache.getIfPresent(sessionId)?.clearMemory()
-        log.debug("Cleared memory for session: $sessionId")
-    }
 
     /**
      * Get all sessions without a project, sorted by star status and updated time.
@@ -303,7 +310,7 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
-        clientCache.invalidate(sessionId)
+        sessionContextCache.invalidate(sessionId)
 
         messageRepository.deleteMessagesBySession(sessionId)
         sessionMemoryRepository.deleteBySessionId(sessionId)
@@ -372,35 +379,52 @@ class ChatSessionService(
      */
     fun getMessages(sessionId: String): List<ChatMessageDTO> = messageRepository.getMessages(sessionId).toDTOs()
 
-    fun deleteMessage(messageId: String) {
-        messageRepository.deleteMessage(messageId)
-    }
-
     /**
-     * Get recent active (non-outdated) messages for a session.
-     *
-     * @param sessionId The session ID
-     * @param limit Number of active messages to retrieve
-     * @return List of recent active messages in chronological order
-     */
-    fun getRecentActiveMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = messageRepository.getRecentActiveMessages(sessionId, limit)
-
-    /**
-     * Mark a message as outdated.
-     *
-     * @param messageId The message ID
-     * @return Number of messages marked (should be 1)
-     */
-    fun markMessageAsOutdated(messageId: String): Int = messageRepository.markMessageAsOutdated(messageId)
-
-    /**
-     * Mark messages as outdated after a specific message.
+     * Mark messages as outdated after a specific message and update memory.
+     * Clears the session memory and reloads it with the most recent 50 active messages.
      *
      * @param sessionId The session ID
      * @param fromMessageId The message ID to start from (exclusive)
      * @return Number of messages marked as outdated
      */
-    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
+    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int {
+        val count = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
+
+        // Get cached context if session is active
+        val context = sessionContextCache.getIfPresent(sessionId)
+
+        if (context != null) {
+            // 1. Delete session memory from database
+            sessionMemoryRepository.deleteBySessionId(sessionId)
+
+            // 2. Get the most recent 50 active messages (sorted and limited in database)
+            val remainingMessages = messageRepository.getRecentActiveMessages(sessionId, limit = 50).drop(1)
+
+            // 3. Convert to MemoryMessage and reload memory
+            val memoryMessages = remainingMessages.map { msg ->
+                MemoryMessage(
+                    content = msg.content,
+                    type = when (msg.role) {
+                        MessageRole.USER -> MessageRole.USER.value
+                        MessageRole.ASSISTANT -> MessageRole.ASSISTANT.value
+                        MessageRole.SYSTEM -> MessageRole.SYSTEM.value
+                    },
+                    createdAt = msg.createdAt,
+                )
+            }
+
+            context.memory.loadFromFilteredMemory(memoryMessages)
+
+            log.debug(
+                "Cleared memory and reloaded {} active messages for session {} after marking {} messages as outdated",
+                memoryMessages.size,
+                sessionId,
+                count,
+            )
+        }
+
+        return count
+    }
 
     /**
      * Update the content of a message and mark it as edited.
@@ -410,14 +434,6 @@ class ChatSessionService(
      * @return Number of messages updated (should be 1)
      */
     fun updateMessageContent(messageId: String, newContent: String): Int = messageRepository.updateMessageContent(messageId, newContent)
-
-    /**
-     * Get only active (non-outdated) messages for a session.
-     *
-     * @param sessionId The session ID
-     * @return List of active messages in chronological order
-     */
-    fun getActiveMessages(sessionId: String): List<ChatMessage> = messageRepository.getActiveMessages(sessionId)
 
     /**
      * Resume a chat session by ID.
@@ -638,13 +654,13 @@ class ChatSessionService(
      */
     fun prepareContextAndGetPromptForChat(
         sessionId: String,
-        userMessage: String,
-        attachments: List<FileAttachmentDTO> = emptyList(),
+        userMessage: ChatMessageDTO,
+        willSaveUserMessage: Boolean,
     ): String {
-        val urls = UrlContentExtractor.extractUrls(userMessage)
+        val urls = UrlContentExtractor.extractUrls(userMessage.content)
         val urlContents = urls.mapNotNull { url ->
             // Only extract if user explicitly requested it
-            if (!shouldExtractUrlContent(userMessage, url)) {
+            if (!shouldExtractUrlContent(userMessage.content, url)) {
                 log.debug("Skipping URL content extraction for: $url (no explicit intent detected)")
                 return@mapNotNull null
             }
@@ -658,21 +674,24 @@ class ChatSessionService(
             }
         }
 
-        messageRepository.addMessage(
-            ChatMessage(
-                id = "",
-                sessionId = sessionId,
-                role = MessageRole.USER,
-                content = userMessage,
-                attachments = attachments.toDomain(sessionId),
-            ),
-        )
+        if (willSaveUserMessage) {
+            messageRepository.addMessage(
+                ChatMessage(
+                    id = userMessage.id!!,
+                    sessionId = sessionId,
+                    role = MessageRole.USER,
+                    content = userMessage.content,
+                    attachments = userMessage.attachments.toDomain(sessionId),
+                ),
+            )
+        }
+
         sessionRepository.touchSession(sessionId)
 
         // Generate title only if session doesn't have one yet
         val session = sessionRepository.getSession(sessionId)
         if (session?.title.isNullOrBlank()) {
-            val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, userMessage)
+            val generatedTitle = sessionRepository.generateAndUpdateTitle(sessionId, userMessage.content)
 
             eventScope.launch {
                 EventBus.emit(
@@ -684,7 +703,7 @@ class ChatSessionService(
             }
         }
 
-        return constructMessageWithAttachmentsAndUrls(userMessage, attachments, urlContents)
+        return constructMessageWithAttachmentsAndUrls(userMessage, urlContents)
     }
 
     /**
@@ -696,12 +715,11 @@ class ChatSessionService(
      * @return Formatted message with attachments and URL contents appended
      */
     private fun constructMessageWithAttachmentsAndUrls(
-        userMessage: String,
-        attachments: List<FileAttachmentDTO>,
+        userMessage: ChatMessageDTO,
         urlContents: List<ExtractedUrlContent>,
     ): String = buildString {
         // First include attachments if present
-        attachments.forEach { attachment ->
+        userMessage.attachments.forEach { attachment ->
             appendLine("---")
             appendLine("Attached file: ${attachment.fileName}")
             appendLine("File size: ${formatFileSize(attachment.size)}")
@@ -753,7 +771,7 @@ class ChatSessionService(
         }
 
         // Then include user's message/question at the end
-        appendLine(userMessage)
+        appendLine(userMessage.content)
     }
 }
 

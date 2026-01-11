@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,26 +43,44 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.askimo.core.chat.domain.SessionMemory
+import io.askimo.core.util.JsonUtils
+import io.askimo.core.util.JsonUtils.prettyJson
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 
 /**
  * Dialog to display session memory information including memory messages and summary.
  *
- * @param sessionMemory The session memory data to display
+ * @param sessionId The session ID to load memory for
+ * @param onLoadMemory Callback to load session memory from repository
  * @param onDismiss Callback when the dialog is dismissed
  */
 @Composable
 fun sessionMemoryDialog(
-    sessionMemory: SessionMemory?,
+    sessionId: String?,
+    onLoadMemory: suspend (String) -> SessionMemory?,
     onDismiss: () -> Unit,
 ) {
+    var sessionMemory by remember { mutableStateOf<SessionMemory?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(sessionId) {
+        isLoading = true
+        sessionMemory = if (sessionId != null) {
+            onLoadMemory(sessionId)
+        } else {
+            null
+        }
+        isLoading = false
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
-                .width(700.dp)
+                .width(800.dp)
                 .padding(16.dp),
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
@@ -70,7 +89,6 @@ fun sessionMemoryDialog(
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Header
                 Text(
                     text = stringResource("developer.session.memory.title"),
                     style = MaterialTheme.typography.headlineSmall,
@@ -78,8 +96,19 @@ fun sessionMemoryDialog(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                if (sessionMemory == null) {
-                    // No memory found
+                if (isLoading) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.surfaceVariantCardColors(),
+                    ) {
+                        Text(
+                            text = stringResource("developer.session.memory.loading"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                } else if (sessionMemory == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ComponentColors.surfaceVariantCardColors(),
@@ -92,6 +121,8 @@ fun sessionMemoryDialog(
                         )
                     }
                 } else {
+                    val memory = sessionMemory!!
+
                     // Memory Summary Section
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -111,7 +142,7 @@ fun sessionMemoryDialog(
                             Text(
                                 text = stringResource(
                                     "developer.session.memory.word.count",
-                                    countWords(sessionMemory.memorySummary ?: ""),
+                                    countWords(memory.memorySummary ?: ""),
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -130,7 +161,7 @@ fun sessionMemoryDialog(
                                 val scrollState = rememberScrollState()
                                 SelectionContainer {
                                     Text(
-                                        text = formatJson(sessionMemory.memorySummary ?: stringResource("developer.session.memory.empty")),
+                                        text = formatJson(memory.memorySummary ?: stringResource("developer.session.memory.empty")),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier
@@ -157,15 +188,15 @@ fun sessionMemoryDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // Parse messages and setup pagination - latest first
-                        val messages = remember(sessionMemory.memoryMessages) {
-                            parseMemoryMessages(sessionMemory.memoryMessages).reversed()
+                        val messages = remember(memory.memoryMessages) {
+                            parseMemoryMessages(memory.memoryMessages).reversed()
                         }
 
                         val pageSize = 5
                         val totalPages = remember(messages.size) {
                             if (messages.isEmpty()) 1 else (messages.size + pageSize - 1) / pageSize
                         }
-                        var currentPage by remember(sessionMemory.memoryMessages) { mutableStateOf(1) }
+                        var currentPage by remember(memory.memoryMessages) { mutableStateOf(1) }
 
                         val startIndex = (currentPage - 1) * pageSize
                         val endIndex = minOf(startIndex + pageSize, messages.size)
@@ -193,7 +224,7 @@ fun sessionMemoryDialog(
                                     Text(
                                         text = stringResource(
                                             "developer.session.memory.word.count",
-                                            countWords(sessionMemory.memoryMessages),
+                                            countWords(memory.memoryMessages),
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -239,7 +270,7 @@ fun sessionMemoryDialog(
                                 Text(
                                     text = stringResource(
                                         "developer.session.memory.word.count",
-                                        countWords(sessionMemory.memoryMessages),
+                                        countWords(memory.memoryMessages),
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -285,7 +316,6 @@ fun sessionMemoryDialog(
                     }
                 }
 
-                // Close button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -314,41 +344,21 @@ private fun countWords(text: String): Int {
 
 /**
  * Parse memory messages string into individual message items.
- * Attempts to parse as JSON array first, then falls back to splitting by common delimiters.
+ * The input is a JSON array of MemoryMessage objects.
  */
 private fun parseMemoryMessages(memoryMessages: String): List<String> {
     if (memoryMessages.isBlank()) return emptyList()
 
     return try {
-        // Try to parse as JSON array
-        val objectMapper = ObjectMapper()
-        val jsonNode = objectMapper.readTree(memoryMessages)
+        val jsonElement = JsonUtils.json.parseToJsonElement(memoryMessages)
 
-        if (jsonNode.isArray) {
-            // It's a JSON array - split into individual items
-            jsonNode.map { objectMapper.writeValueAsString(it) }
+        if (jsonElement is JsonArray) {
+            jsonElement.map { it.toString() }
         } else {
-            // Single JSON object
-            listOf(memoryMessages)
+            emptyList()
         }
     } catch (e: Exception) {
-        // Not JSON, try splitting by common patterns
-        when {
-            // Split by double newlines
-            memoryMessages.contains("\n\n") -> {
-                memoryMessages.split("\n\n").filter { it.isNotBlank() }
-            }
-            // Split by numbered list pattern (1., 2., etc.)
-            memoryMessages.contains(Regex("\\d+\\.\\s")) -> {
-                memoryMessages.split(Regex("(?=\\d+\\.\\s)")).filter { it.isNotBlank() }
-            }
-            // Split by bullet points
-            memoryMessages.contains(Regex("^[•\\-*]\\s", RegexOption.MULTILINE)) -> {
-                memoryMessages.split(Regex("(?=^[•\\-*]\\s)", RegexOption.MULTILINE)).filter { it.isNotBlank() }
-            }
-            // No clear delimiter - treat as single item
-            else -> listOf(memoryMessages)
-        }
+        emptyList()
     }
 }
 
@@ -360,9 +370,8 @@ private fun formatJson(text: String): String {
     if (text.isBlank()) return text
 
     return try {
-        val objectMapper = ObjectMapper()
-        val jsonNode = objectMapper.readTree(text)
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode)
+        val jsonElement = JsonUtils.json.parseToJsonElement(text)
+        prettyJson.encodeToString(JsonElement.serializer(), jsonElement)
     } catch (e: Exception) {
         // If it's not valid JSON, return as-is
         text

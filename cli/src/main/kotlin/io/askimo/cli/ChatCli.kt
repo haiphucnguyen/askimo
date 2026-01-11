@@ -36,6 +36,7 @@ import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
@@ -61,6 +62,8 @@ import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp
 import java.io.IOException
+import java.time.LocalDateTime
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 private object ChatCliLogger
@@ -326,7 +329,11 @@ private fun sendChatMessage(
         CliInteractiveContext.setCurrentSession(session)
         currentSession = session
     }
-    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId = currentSession.id, userMessage = prompt)
+    val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(
+        sessionId = currentSession.id,
+        userMessage = ChatMessageDTO(id = UUID.randomUUID().toString(), content = prompt, isUser = true, timestamp = LocalDateTime.now()),
+        willSaveUserMessage = true,
+    )
     val chatClient = chatSessionService.getOrCreateClientForSession(currentSession.id)
     val output = streamChatResponse(chatClient, promptWithContext, terminal)
     chatSessionService.saveAiResponse(currentSession.id, output)

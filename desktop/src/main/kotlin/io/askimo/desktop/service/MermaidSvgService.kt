@@ -96,7 +96,7 @@ class MermaidSvgService {
                     val available = exitCode == 0
 
                     if (available) {
-                        log.info("Mermaid CLI (mmdc) is available. Version: {}", output)
+                        log.debug("Mermaid CLI (mmdc) is available. Version: {}", output)
                     } else {
                         log.warn("Mermaid CLI (mmdc) check failed with exit code: {}. Output: {}", exitCode, output)
                     }
@@ -148,15 +148,13 @@ class MermaidSvgService {
                 .replace("\\t", "\t")
                 .replace("\\r", "\r")
 
-            val diagramWithTheme = "$normalizedDiagram"
+            Files.writeString(inputFile, normalizedDiagram, StandardOpenOption.CREATE)
 
-            Files.writeString(inputFile, diagramWithTheme, StandardOpenOption.CREATE)
-
-            // Run mmdc with command-line parameters instead of config file
             val process = ProcessBuilderExt(
                 "mmdc",
                 "-i", inputFile.toString(),
                 "-o", outputFile.toString(),
+                "-t", theme,
                 "-b", backgroundColor,
                 "-s", "2",
             ).redirectErrorStream(true)
@@ -176,7 +174,7 @@ class MermaidSvgService {
             }
 
             val pngData = Files.readAllBytes(outputFile)
-            log.debug("Successfully converted diagram to PNG (size: {} bytes)", pngData.size)
+            log.debug("Successfully converted diagram to PNG (size: {} bytes) with theme: {}", pngData.size, theme)
 
             pngData
         } catch (e: MermaidCliNotAvailableException) {
