@@ -59,23 +59,23 @@
 
 ## 🚀 What is Askimo?
 
-**Askimo is a privacy-focused desktop chat client that works with any AI model.** Switch between OpenAI, Claude, Gemini, and local models like Ollama—all in one app with complete data privacy.
+**Askimo is your personal AI assistant that works on your computer—not in your browser.** Chat with different AI models (like ChatGPT, Claude, or Gemini) all in one place, without worrying about losing your conversations when you close a tab.
 
-Use GPT-4 for complex reasoning, Claude for writing, and local models for privacy—without changing apps or losing conversation context. All your chat history stays on your machine, fully searchable and organized.
+Think of it as having multiple AI assistants in one app: use Claude for coding, ChatGPT for conversation, and a free local model for quick emails. Everything is saved on your machine—no cloud storage required.
 
 ---
 
-## Why Askimo?
+## Why Choose Askimo?
 
-**The only desktop AI client that supports both cloud and local models.** Most tools force you to choose one or the other.
+**All your AI assistants in one place.** Most apps lock you into a single AI provider, but Askimo lets you use them all.
 
-| Feature | **Askimo** | **LM Studio** | **Ollama GUIs** | **ChatGPT Desktop** |
-|---------|------------|---------------|-----------------|---------------------|
-| **Multi-provider** | ✅ Cloud + Local | ❌ Local only | ❌ Local only | ❌ OpenAI only |
-| **RAG / Codebase context** | ✅ Folder-based | ❌ | ❌ | ⚠️ File upload only |
-| **CLI automation** | ✅ Built-in | ✅ API server | ✅ Ollama CLI | ❌ |
-| **Privacy** | ✅ Local storage | ✅ | ✅ | ⚠️ Optional cloud sync |
-| **Open source** | ✅ Apache 2.0 | ⚠️ Free (proprietary) | ✅ Varies | ❌ Subscription |
+| What You Get | **Askimo**                                              | **Other Apps** |
+|---------|---------------------------------------------------------|---------------|
+| **Use multiple AI models** | ✅ Switch between ChatGPT, Claude, Gemini, Ollama & more | ❌ Usually locked to one |
+| **Ask questions about your files** | ✅ Connect folders, get answers from your documents      | ⚠️ Limited or not available |
+| **Automate tasks** | ✅ Works from command line for scripts                   | ⚠️ Varies by app |
+| **Your data stays private** | ✅ Everything saved on your computer                     | ⚠️ Some sync to cloud |
+| **Free & open source** | ✅ Free forever                                          | ⚠️ Often requires subscription |
 
 ---
 
@@ -106,7 +106,6 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
   - Windows 10 or later
   - Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+, or compatible)
 - **Disk Space**: 250 MB for application
-- **Internet**: Required for cloud providers, optional for local models
 
 ---
 
@@ -114,16 +113,16 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 ### 🎯 What You Get
 
-- 🖥️ **Native Desktop Application** - Maintain conversations with 200+ messages without browser crashes or tab closures. Your work stays intact across restarts
-- 🔄 **Multi-Provider Support** - Switch between OpenAI, Claude, Gemini, X AI, LMStudio, LocalAI, Ollama, DockerAI and their models to utilize each model's strengths and optimize costs. Use expensive models for complex tasks, cheaper ones for simple queries
-- 🔒 **100% Local Storage** - All chat history stored on your machine, never in the cloud. Full privacy and control over your data
-- 🧠 **RAG (Retrieval-Augmented Generation)** - Connect your project folders and ask questions like "How does our authentication work?" to get answers from your actual codebase. Uses hybrid search combining vector embeddings (JVector) and keyword search (Lucene) for highly accurate information retrieval
-- ⭐ **Smart Organization** - Star important conversations, full-text search across all chats, organize by projects
-- 📊 **Rich Markdown Support** - Code syntax highlighting, tables, charts, images, and formatted text. Export-ready output
-- 🎯 **Custom Directives** - Save reusable prompts and system messages. One-click access to your favorite AI personalities and workflows
-- ⚡ **Keyboard-First** - Quick shortcuts to create chats, switch providers, and search. Built for productivity
-- 📈 **Usage Telemetry** - Track your AI usage with detailed metrics on token consumption, response times, and costs. Monitor RAG operations including classification decisions, retrieval performance, and chunks retrieved. All data stays local on your machine
-- 💾 **Export Anywhere** - Download conversations in JSON, Markdown, or HTML. Take your data wherever you need it
+- 🖥️ **Never Lose Your Conversations** - Your chats stay open even after closing the app or restarting your computer. No more "lost tab" frustration
+- 🔄 **Use the Best AI for Each Task** - Need help with code? Use Claude. General questions? Try ChatGPT. Writing a quick email? Use a free local model. Switch instantly between different AIs
+- 🔒 **Complete Privacy** - Everything stays on your computer. Your conversations, your data, your control. Nothing is sent to the cloud unless you choose to ask an AI
+- 🧠 **Ask Questions About Your Files** - Point Askimo to a folder and ask "What does this project do?" or "How does the login work?" Get answers from your actual documents and code
+- ⭐ **Stay Organized** - Star your favorite conversations, search through everything you've ever asked, and keep work separate from personal chats
+- 📊 **Beautiful Formatting** - See code with syntax highlighting, tables, diagrams, and properly formatted text. Copy and paste ready to use
+- 🎯 **Save Your Favorite Prompts** - Create reusable templates for things you ask often. One click to use your "proofreader" or "code reviewer" assistant
+- ⚡ **Work Fast** - Keyboard shortcuts for everything. Create new chats, switch AIs, and search without touching your mouse
+- 📈 **Track Your Usage** - See how much you're using each AI model and what it costs. All displayed in easy-to-read charts
+- 💾 **Export Everything** - Download your conversations as documents. Share insights or keep backups however you want
 
 
 **Screenshots:**
@@ -136,16 +135,18 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 ---
 
-## ⚡ CLI for Automation
+## ⚡ Command Line Tool (Optional)
 
-Need to automate AI tasks in scripts or CI/CD? Askimo includes a command-line interface.
+**For advanced users:** Askimo also works from the command line, perfect for automating repetitive tasks.
 
 ```bash
-# Pipe directly from commands
+# Analyze log files automatically
 cat app.log | askimo -p "Find critical errors and suggest fixes"
+
+# Get code review suggestions
 git diff | askimo -p "Review this code for bugs and improvements"
 
-# Use recipes for repetitive tasks
+# Use saved templates
 askimo -r gitcommit
 ```
 
@@ -158,69 +159,57 @@ curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/inst
 iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex
 ```
 
-[**Learn more about CLI →**](https://askimo.chat/cli)
+[**Learn more about the command line tool →**](https://askimo.chat/cli)
 
 
-## 🌐 Language Support
+## 🌐 Available in Your Language
 
-Askimo Desktop is fully localized into:
+Askimo speaks your language! The entire app interface is available in:
 
-* English (en)
+🇺🇸 English • 🇨🇳 Chinese (Simplified & Traditional) • 🇯🇵 Japanese • 🇰🇷 Korean • 🇫🇷 French • 🇪🇸 Spanish • 🇩🇪 German • 🇧🇷 Portuguese • 🇻🇳 Vietnamese
 
-* Simplified Chinese (zh_CN)
-
-* Traditional Chinese (zh_TW)
-
-* Japanese (ja_JP)
-
-* Korean (ko_KR)
-
-* French (fr)
-
-* Spanish (es)
-
-* German (de)
-
-* Portuguese - Brazil (pt_BR)
-
-* Vietnamese (vi)
-
-More languages coming soon.
+More languages coming soon. Want to help translate? [Let us know!](https://github.com/haiphucnguyen/askimo/discussions)
 
 ---
 
-## 🤝 Community & Support
+## 🤝 Need Help or Want to Contribute?
 
 ### Get Help
 
-- 📖 **[Documentation](https://askimo.chat/docs)** - Comprehensive guides and tutorials
-- 💬 **[GitHub Discussions](https://github.com/haiphucnguyen/askimo/discussions)** - Ask questions, share tips, and connect with other users
-- 🐛 **[Issue Tracker](https://github.com/haiphucnguyen/askimo/issues)** - Report bugs or request features
-- 📧 **Email Support** - For private inquiries: support@askimo.chat
+- 📖 **[User Guide](https://askimo.chat/docs)** - Step-by-step instructions and tips
+- 💬 **[Community Forum](https://github.com/haiphucnguyen/askimo/discussions)** - Ask questions, share your experience, get help from other users
+- 🐛 **[Report a Problem](https://github.com/haiphucnguyen/askimo/issues)** - Something not working? Let us know
+- 📧 **Email Us** - Need private help? Contact support@askimo.chat
 
-### Contributing
+### Ways to Contribute
 
-We welcome contributions! Here's how you can help:
+We'd love your help making Askimo better! Here are some easy ways to get involved:
 
-- 🐛 **Report bugs** - Found an issue? [Open a bug report](https://github.com/haiphucnguyen/askimo/issues/new?template=bug_report.md)
-- 💡 **Suggest features** - Have ideas? [Share them here](https://github.com/haiphucnguyen/askimo/issues/new?template=feature_request.md)
-- 🌍 **Translate** - Help localize Askimo to your language
-- 💻 **Submit PRs** - Check our [Contributing Guide](./CONTRIBUTING.md) to get started
-- 📝 **Improve docs** - Documentation improvements are always appreciated
+- ⭐ **Star the repo** - A quick click at the top helps others discover Askimo
+- 🐛 **Report bugs** - Found something broken? [Tell us about it](https://github.com/haiphucnguyen/askimo/issues/new?template=bug_report.md)
+- 💡 **Share ideas** - Have a suggestion? [We want to hear it](https://github.com/haiphucnguyen/askimo/issues/new?template=feature_request.md)
+- 🌍 **Help translate** - Know another language? Help make Askimo available to more people
+- 💻 **Contribute code** - Comfortable with coding? Check our [Contributing Guide](./CONTRIBUTING.md)
+- 📝 **Improve documentation** - Spot a typo or confusing explanation? Fix it!
+
+No contribution is too small—we appreciate all help! 🙌
 
 ---
 
-## Support
+## ❤️ Enjoying Askimo?
 
-If you enjoy this project, here are a few simple ways to show support:
+If you find Askimo helpful, here are a few simple ways to show support:
 
-* Star the repo - A quick ⭐️ at the top helps a lot and keeps the project growing.
+* **Star the repo** - A quick ⭐️ at the top helps a lot and keeps the project growing.
 
-* Contribute - Spot a bug or want to improve something? Pull requests are always welcome.
+* **Contribute** - Spot a bug or want to improve something? Pull requests are always welcome.
 
-* Share feedback - Got ideas or suggestions? Feel free to open an issue or start a discussion.
+* **Share feedback** - Got ideas or suggestions? Feel free to open an issue or start a discussion.
 
 Thanks for being part of the journey! 🙌
-## License
+
+---
+
+## 📄 License
 
 Apache 2.0. See [LICENSE](./LICENSE).

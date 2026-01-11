@@ -110,8 +110,7 @@ object RetryPresets {
             initialDelayMs = 1000,
             delayIncrement = 500,
             retryCondition = { exception ->
-                exception.message?.contains("empty") == true ||
-                    exception.javaClass.name.contains("streaming", ignoreCase = true) ||
+                exception.javaClass.name.contains("streaming", ignoreCase = true) ||
                     exception.javaClass.name.startsWith("dev.langchain4j")
             },
             onRetry = { attempt, maxAttempts, exception, delayMs ->

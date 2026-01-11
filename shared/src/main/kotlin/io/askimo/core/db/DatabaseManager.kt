@@ -189,6 +189,22 @@ class DatabaseManager private constructor(
             } catch (e: Exception) {
                 // Column already exists, ignore the error
             }
+
+            // Create composite index for efficient session-based queries with time ordering
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_messages_session_created
+                ON chat_messages (session_id, created_at)
+                """,
+            )
+
+            // Create composite index for efficient active messages queries
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_messages_session_outdated_created
+                ON chat_messages (session_id, is_outdated, created_at)
+                """,
+            )
         }
     }
 

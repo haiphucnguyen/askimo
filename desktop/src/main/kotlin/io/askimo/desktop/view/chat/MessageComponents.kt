@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -99,6 +98,10 @@ fun messageList(
 ) {
     val scrollState = rememberScrollState()
 
+    // Retry confirmation dialog state
+    var showRetryConfirmDialog by remember { mutableStateOf(false) }
+    var retryMessageId by remember { mutableStateOf<String?>(null) }
+
     // Track if user has manually scrolled up during AI response
     var userScrolledUp by remember { mutableStateOf(false) }
 
@@ -170,7 +173,7 @@ fun messageList(
                         scrollableColumnBounds = coordinates.boundsInWindow()
                     }
                 },
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Show loading indicator when loading previous messages
             if (isLoadingPrevious) {
@@ -210,6 +213,11 @@ fun messageList(
                             onRetryMessage = onRetryMessage,
                             addTopPadding = isFirstMessage,
                             viewportTopY = scrollableColumnBounds?.top,
+                            allMessages = messages,
+                            onShowRetryConfirmDialog = { messageId ->
+                                retryMessageId = messageId
+                                showRetryConfirmDialog = true
+                            },
                         )
                         isFirstMessage = false
                         messageIndex++
@@ -255,6 +263,52 @@ fun messageList(
             ),
         )
     }
+
+    // Retry confirmation dialog
+    if (showRetryConfirmDialog) {
+        ComponentColors.themedAlertDialog(
+            onDismissRequest = {
+                showRetryConfirmDialog = false
+                retryMessageId = null
+            },
+            title = {
+                Text(stringResource("message.ai.try.again.confirm.title"))
+            },
+            text = {
+                Text(stringResource("message.ai.try.again.confirm.message"))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        retryMessageId?.let { messageId ->
+                            onRetryMessage?.invoke(messageId)
+                        }
+                        showRetryConfirmDialog = false
+                        retryMessageId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Text(stringResource("message.ai.try.again.confirm.confirm"))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showRetryConfirmDialog = false
+                        retryMessageId = null
+                    },
+                    colors = ComponentColors.primaryTextButtonColors(),
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Text(stringResource("message.ai.try.again.confirm.cancel"))
+                }
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -271,12 +325,14 @@ fun messageBubble(
     onRetryMessage: ((String) -> Unit)? = null,
     addTopPadding: Boolean = false,
     viewportTopY: Float? = null,
+    allMessages: List<ChatMessageDTO> = emptyList(),
+    onShowRetryConfirmDialog: ((String) -> Unit)? = null,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
     val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .then(
@@ -287,330 +343,386 @@ fun messageBubble(
                 },
             ),
     ) {
-        val maxBubbleWidth = when {
-            maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
-            maxWidth < 1200.dp -> (maxWidth * 0.75f).coerceAtMost(800.dp)
-            else -> (maxWidth * 0.65f).coerceAtMost(1000.dp)
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
-            verticalAlignment = Alignment.Top,
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                .onPointerEvent(PointerEventType.Exit) { isHovered = false },
         ) {
-            if (!message.isUser) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = CircleShape,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (aiAvatarPath != null) {
-                        io.askimo.desktop.view.components.asyncImage(
-                            imagePath = aiAvatarPath,
-                            contentDescription = "AI",
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.SmartToy,
-                            contentDescription = "AI",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+            val maxBubbleWidth = when {
+                maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
+                maxWidth < 1200.dp -> (maxWidth * 0.75f).coerceAtMost(800.dp)
+                else -> (maxWidth * 0.65f).coerceAtMost(1000.dp)
             }
 
-            Box(
-                modifier = Modifier
-                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
-                    .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start,
             ) {
-                Card(
-                    modifier = Modifier
-                        .widthIn(max = maxBubbleWidth)
-                        .then(
-                            if (isClickable) {
-                                Modifier
-                                    .clickable {
-                                        onMessageClick?.invoke(message.id!!, message.timestamp!!)
-                                    }
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                            } else {
-                                Modifier
-                            },
-                        ),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Column {
-                        // Show file attachments if any
-                        if (message.attachments.isNotEmpty()) {
-                            Column(
-                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                message.attachments.forEach { attachment ->
-                                    fileAttachmentChip(
-                                        attachment = attachment,
-                                        onDownload = onDownloadAttachment,
-                                    )
-                                }
-                            }
-                        }
-
-                        // Show message content
-                        if (message.isUser) {
-                            // User messages: plain text with selection enabled and optional highlighting
-                            SelectionContainer {
-                                if (searchQuery.isNotBlank()) {
-                                    Text(
-                                        text = highlightSearchText(
-                                            text = message.content,
-                                            query = searchQuery,
-                                            highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
-                                            isActiveResult = isActiveSearchResult,
-                                            activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
-                                        ),
-                                        modifier = Modifier.padding(12.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                } else {
-                                    Text(
-                                        text = message.content,
-                                        modifier = Modifier.padding(12.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-                            }
-                        } else {
-                            SelectionContainer {
-                                if (searchQuery.isNotBlank()) {
-                                    Text(
-                                        text = highlightSearchText(
-                                            text = message.content,
-                                            query = searchQuery,
-                                            highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
-                                            isActiveResult = isActiveSearchResult,
-                                            activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
-                                        ),
-                                        modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                } else {
-                                    markdownText(
-                                        markdown = message.content,
-                                        modifier = Modifier.padding(
-                                            start = 12.dp,
-                                            end = 48.dp,
-                                            top = 12.dp,
-                                            bottom = 12.dp,
-                                        ),
-                                        viewportTopY = viewportTopY,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (message.isUser && isHovered) {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-12).dp, y = (-12).dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    if (!message.isUser) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            // Copy button
-                            themedTooltip(
-                                text = stringResource("message.copy"),
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString(message.content))
-                                    },
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = stringResource("message.copy.description"),
-                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                }
-                            }
-
-                            themedTooltip(
-                                text = stringResource("message.edit"),
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        onEditMessage?.invoke(message)
-                                    },
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = stringResource("message.edit.description"),
-                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Copy and Edit button bar for AI messages (shown on hover)
-                if (!message.isUser && isHovered) {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-12).dp, y = (-12).dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Copy button
-                            themedTooltip(
-                                text = stringResource("message.copy"),
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString(message.content))
-                                    },
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = stringResource("message.copy.description"),
-                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                }
-                            }
-
-                            // Edit button for AI messages
-                            themedTooltip(
-                                text = stringResource("message.ai.edit"),
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        onEditMessage?.invoke(message)
-                                    },
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = stringResource("message.ai.edit.description"),
-                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Show retry icon for failed AI messages at bottom-right corner
-                if (message.isFailed && !message.isUser && message.id != null && onRetryMessage != null) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(bottom = 4.dp, end = 4.dp),
-                    ) {
-                        themedTooltip(
-                            text = stringResource("action.retry"),
-                        ) {
-                            IconButton(
-                                onClick = { onRetryMessage(message.id!!) },
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                            ) {
+                            if (aiAvatarPath != null) {
+                                io.askimo.desktop.view.components.asyncImage(
+                                    imagePath = aiAvatarPath,
+                                    contentDescription = "AI",
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape),
+                                )
+                            } else {
                                 Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = stringResource("action.retry"),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.error,
+                                    imageVector = Icons.Default.SmartToy,
+                                    contentDescription = "AI",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    Box {
+                        Card(
+                            modifier = Modifier
+                                .widthIn(max = maxBubbleWidth)
+                                .then(
+                                    if (isClickable) {
+                                        Modifier
+                                            .clickable {
+                                                onMessageClick?.invoke(message.id!!, message.timestamp!!)
+                                            }
+                                            .pointerHoverIcon(PointerIcon.Hand)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        ) {
+                            Column {
+                                // Show file attachments if any
+                                if (message.attachments.isNotEmpty()) {
+                                    Column(
+                                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        message.attachments.forEach { attachment ->
+                                            fileAttachmentChip(
+                                                attachment = attachment,
+                                                onDownload = onDownloadAttachment,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Show message content
+                                if (message.isUser) {
+                                    // User messages: plain text with selection enabled and optional highlighting
+                                    SelectionContainer {
+                                        if (searchQuery.isNotBlank()) {
+                                            Text(
+                                                text = highlightSearchText(
+                                                    text = message.content,
+                                                    query = searchQuery,
+                                                    highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
+                                                    isActiveResult = isActiveSearchResult,
+                                                    activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
+                                                ),
+                                                modifier = Modifier.padding(12.dp),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        } else {
+                                            Text(
+                                                text = message.content,
+                                                modifier = Modifier.padding(12.dp),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    SelectionContainer {
+                                        if (searchQuery.isNotBlank()) {
+                                            Text(
+                                                text = highlightSearchText(
+                                                    text = message.content,
+                                                    query = searchQuery,
+                                                    highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
+                                                    isActiveResult = isActiveSearchResult,
+                                                    activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
+                                                ),
+                                                modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        } else {
+                                            markdownText(
+                                                markdown = message.content,
+                                                modifier = Modifier.padding(
+                                                    start = 12.dp,
+                                                    end = 48.dp,
+                                                    top = 12.dp,
+                                                    bottom = 12.dp,
+                                                ),
+                                                viewportTopY = viewportTopY,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Show retry icon for failed AI messages at bottom-right corner
+                        if (message.isFailed && !message.isUser && message.id != null && onRetryMessage != null) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(bottom = 4.dp, end = 4.dp),
+                            ) {
+                                themedTooltip(
+                                    text = stringResource("action.retry"),
+                                ) {
+                                    IconButton(
+                                        onClick = { onRetryMessage(message.id!!) },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = stringResource("action.retry"),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (message.isUser) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (userAvatarPath != null) {
+                                io.askimo.desktop.view.components.asyncImage(
+                                    imagePath = userAvatarPath,
+                                    contentDescription = "User",
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "User",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            if (message.isUser) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (userAvatarPath != null) {
-                        io.askimo.desktop.view.components.asyncImage(
-                            imagePath = userAvatarPath,
-                            contentDescription = "User",
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "User",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp),
+                // AI message action controls - positioned in the gap below the message, always visible
+                if (!message.isUser) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                    ) {
+                        // Add padding to align with AI message bubble (icon 32dp + spacer 8dp)
+                        Spacer(modifier = Modifier.width(40.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Copy button
+                                themedTooltip(
+                                    text = stringResource("message.copy"),
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            clipboardManager.setText(AnnotatedString(message.content))
+                                        },
+                                        modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = stringResource("message.copy.description"),
+                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+
+                                // Edit button for AI messages
+                                themedTooltip(
+                                    text = stringResource("message.ai.edit"),
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            onEditMessage?.invoke(message)
+                                        },
+                                        modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = stringResource("message.ai.edit.description"),
+                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+
+                                // Try again button for AI messages
+                                themedTooltip(
+                                    text = stringResource("message.ai.try.again"),
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            message.id?.let { messageId ->
+                                                // Check if this is the latest AI message
+                                                val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
+
+                                                if (isLatestMessage) {
+                                                    // Directly retry for latest message
+                                                    onRetryMessage?.invoke(messageId)
+                                                } else {
+                                                    // Show confirmation dialog for mid-conversation retry
+                                                    onShowRetryConfirmDialog?.invoke(messageId)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = stringResource("message.ai.try.again.description"),
+                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // User message action controls - reserve space, show controls on hover
+                if (message.isUser) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Box(
+                            modifier = Modifier.height(40.dp), // Always reserve this space
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isHovered) {
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        // Copy button
+                                        themedTooltip(
+                                            text = stringResource("message.copy"),
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    clipboardManager.setText(AnnotatedString(message.content))
+                                                },
+                                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = stringResource("message.copy.description"),
+                                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                )
+                                            }
+                                        }
+
+                                        themedTooltip(
+                                            text = stringResource("message.edit"),
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    onEditMessage?.invoke(message)
+                                                },
+                                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = stringResource("message.edit.description"),
+                                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Add padding to align with user message bubble (avatar 32dp + spacer 8dp)
+                        Spacer(modifier = Modifier.width(40.dp))
+                    }
+                }
+
+                // Show edited indicator if message has been edited
+                if (message.isEdited && !message.isUser) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                    ) {
+                        Text(
+                            text = stringResource("message.edited.indicator"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 12.dp, top = 2.dp),
                         )
                     }
                 }
-            }
-        }
-
-        // Show edited indicator if message has been edited
-        if (message.isEdited && !message.isUser) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-            ) {
-                Text(
-                    text = stringResource("message.edited.indicator"),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 12.dp, top = 2.dp),
-                )
-            }
-        }
-    }
+            } // Close Column
+        } // Close BoxWithConstraints
+    } // Close outer hover-tracking Box
 }
 
 @OptIn(ExperimentalComposeUiApi::class)

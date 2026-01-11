@@ -13,6 +13,8 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTO
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.logging.logger
 import io.askimo.desktop.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.text.get
 
 /**
  * ViewModel for managing chat state and interactions.
@@ -321,51 +324,49 @@ class ChatViewModel(
     }
 
     /**
-     * Retry sending a failed message.
-     * Removes the failed AI response and resends the user message WITHOUT creating a duplicate user message.
-     * Works for any failed message in the chat history, not just the most recent one.
-     * The new response will be inserted at the same position as the failed message to maintain order.
+     * Retry an AI message by regenerating the response.
+     * Deletes the AI message and all newer messages, then resends the previous user message.
      *
-     * @param failedMessageId The ID of the failed AI message to remove
+     * @param messageId The AI message ID to retry
      */
-    fun retryMessage(failedMessageId: String) {
+    fun retryMessage(messageId: String) {
         scope.launch {
             try {
-                val failedMessage = messages.find { it.id == failedMessageId }
-                if (failedMessage == null || failedMessage.isUser) {
-                    log.error("Cannot retry: message not found or is user message")
+                // 1. Find the AI message to retry
+                val aiMessageIndex = messages.indexOfFirst { it.id == messageId }
+                if (aiMessageIndex == -1) {
+                    log.error("Cannot retry: message not found")
                     errorMessage = "Cannot retry: message not found"
                     return@launch
                 }
 
-                // Store the position where we'll insert the retry response
-                val failedMessageIndex = messages.indexOf(failedMessage)
-                retryInsertPosition = failedMessageIndex
-
-                // Find the user message that came before this failed AI message
-                val userMessage = if (failedMessageIndex > 0) {
-                    messages[failedMessageIndex - 1]
-                } else {
-                    null
-                }
-
-                if (userMessage == null || !userMessage.isUser) {
-                    log.error("Cannot retry: no user message found before failed AI response")
-                    errorMessage = "Cannot retry: no user message found"
-                    retryInsertPosition = null
+                val aiMessage = messages[aiMessageIndex]
+                if (aiMessage.isUser) {
+                    log.error("Cannot retry: message is not an AI message")
+                    errorMessage = "Cannot retry: not an AI message"
                     return@launch
                 }
 
-                // Remove the failed AI message from the database and local state
-                withContext(Dispatchers.IO) {
-                    chatSessionService.deleteMessage(failedMessageId)
+                // 2. Find the last user message before the AI message
+                val userMessageIndex = messages.take(aiMessageIndex)
+                    .indexOfLast { it.isUser }
+                if (userMessageIndex == -1) {
+                    log.error("Cannot retry: no user message found before AI message")
+                    errorMessage = "Cannot retry: no user message found"
+                    return@launch
                 }
 
-                // Remove from local state
-                messages = messages.filterNot { it.id == failedMessageId }
+                val userMessage = messages[userMessageIndex]
 
                 // Get session ID
                 val sessionId = currentSessionId.value ?: return@launch
+
+                // 3. Remove the AI message and all newer messages from UI
+                messages = messages.take(userMessageIndex)
+
+                // Cancel any ongoing requests
+                currentJob?.cancel()
+                currentJob = null
 
                 // Clear any previous error
                 errorMessage = null
@@ -376,21 +377,28 @@ class ChatViewModel(
 
                 startThinkingTimer()
 
-                // Resend to AI WITHOUT adding a new user message (it already exists in the chat)
+                // 4. Delete from database and 5. Resend the user message
                 currentJob = scope.launch {
                     try {
+                        // Delete the AI message and all newer messages from database
+                        withContext(Dispatchers.IO) {
+                            chatSessionService.deleteMessageAndAllNewer(sessionId, userMessage.id!!)
+                        }
+
+                        val userMessage = ChatMessageDTO(id = userMessage.id, content = userMessage.content, isUser = true, timestamp = userMessage.timestamp, attachments = userMessage.attachments)
+                        messages += userMessage
+
+                        // Resend the user message
                         val threadId = sessionManager.sendMessage(
                             sessionId = sessionId,
-                            userMessage = userMessage.content,
-                            attachments = userMessage.attachments,
+                            userMessage = userMessage,
                         )
 
                         if (threadId == null) {
-                            errorMessage = "Please wait for the current response to complete before asking another question."
+                            errorMessage = "Please wait for the current response to complete before retrying."
                             isLoading = false
                             isThinking = false
                             stopThinkingTimer()
-                            retryInsertPosition = null
                             return@launch
                         }
 
@@ -401,7 +409,6 @@ class ChatViewModel(
                             isLoading = false
                             isThinking = false
                             stopThinkingTimer()
-                            retryInsertPosition = null
                         }
                     }
                 }
@@ -412,7 +419,6 @@ class ChatViewModel(
                     "retrying message",
                     "Failed to retry message. Please try again.",
                 )
-                retryInsertPosition = null
             }
         }
     }
@@ -428,8 +434,7 @@ class ChatViewModel(
 
         // Session ID must be set by this point (from resumeSession)
         val sessionId = currentSessionId.value ?: run {
-            val newSessionId = UUID.randomUUID().toString()
-            newSessionId
+            UUID.randomUUID().toString()
         }
 
         currentJob?.cancel()
@@ -442,13 +447,15 @@ class ChatViewModel(
         isThinking = true
         thinkingElapsedSeconds = 0
 
-        messages = messages + ChatMessageDTO(
+        val userMessage = ChatMessageDTO(
             content = message,
             isUser = true,
-            id = null,
-            timestamp = null,
+            id = UUID.randomUUID().toString(),
+            timestamp = LocalDateTime.now(),
             attachments = attachments,
         )
+
+        messages = messages + userMessage
 
         if (messages.size > MESSAGE_BUFFER_THRESHOLD) {
             messages = messages.takeLast(MESSAGE_PAGE_SIZE)
@@ -462,15 +469,11 @@ class ChatViewModel(
             try {
                 val threadId = sessionManager.sendMessage(
                     sessionId = sessionId,
-                    userMessage = message,
-                    attachments = attachments,
+                    userMessage,
                 )
 
                 if (threadId == null) {
                     errorMessage = "Please wait for the current response to complete before asking another question."
-                    isLoading = false
-                    isThinking = false
-                    stopThinkingTimer()
                     return@launch
                 }
 
@@ -482,10 +485,13 @@ class ChatViewModel(
             } catch (e: Exception) {
                 if (currentSessionId.value == sessionId) {
                     errorMessage = ErrorHandler.getUserFriendlyError(e, "sending message")
-                    isLoading = false
-                    isThinking = false
-                    stopThinkingTimer()
+                } else {
+                    EventBus.emit(SendMessageErrorEvent(e))
                 }
+            } finally {
+                isLoading = false
+                isThinking = false
+                stopThinkingTimer()
             }
         }
     }

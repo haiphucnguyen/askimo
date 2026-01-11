@@ -1003,7 +1003,66 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 5: Journey/Pie/Gantt Title Fixes
+    // STEP 5: ER Diagram Fixes
+    // ========================================
+
+    if (sanitized.contains(Regex("""^erDiagram\b""", RegexOption.MULTILINE))) {
+        // Fix attribute syntax: convert "* id : integer" to "int id PK"
+        // and "name : string" to "string name"
+        val lines = sanitized.lines().toMutableList()
+        var inEntity = false
+        var entityIndent = ""
+
+        for (i in lines.indices) {
+            val line = lines[i]
+            val trimmed = line.trim()
+
+            // Detect entity definition start (entity name followed by {)
+            if (trimmed.matches(Regex("""^\w+\s*\{"""))) {
+                inEntity = true
+                entityIndent = line.takeWhile { it.isWhitespace() }
+                continue
+            }
+
+            // Detect entity definition end
+            if (inEntity && trimmed == "}") {
+                inEntity = false
+                continue
+            }
+
+            // Fix attribute lines inside entity
+            if (inEntity && trimmed.isNotEmpty()) {
+                // Pattern: "* attribute : type" or "attribute : type"
+                val attrMatch = Regex("""^(\*?)\s*(\w+)\s*:\s*(\w+)\s*(.*)$""").find(trimmed)
+                if (attrMatch != null) {
+                    val isPK = attrMatch.groupValues[1] == "*"
+                    val attrName = attrMatch.groupValues[2]
+                    val attrType = attrMatch.groupValues[3]
+                    val rest = attrMatch.groupValues[4].trim()
+
+                    // Convert type names to Mermaid-compatible format
+                    val mermaidType = when (attrType.lowercase()) {
+                        "integer", "int" -> "int"
+                        "string", "varchar", "text" -> "string"
+                        "decimal", "float", "double", "number" -> "decimal"
+                        "date", "datetime", "timestamp" -> "date"
+                        "boolean", "bool" -> "boolean"
+                        else -> attrType
+                    }
+
+                    // Build the corrected attribute line
+                    val pkMarker = if (isPK) " PK" else ""
+                    val fkMarker = if (rest.contains("FK", ignoreCase = true)) " FK" else ""
+                    lines[i] = "$entityIndent    $mermaidType $attrName$pkMarker$fkMarker"
+                }
+            }
+        }
+
+        sanitized = lines.joinToString("\n")
+    }
+
+    // ========================================
+    // STEP 6: Journey/Pie/Gantt Title Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^(journey|pie|gantt)\b""", RegexOption.MULTILINE))) {
@@ -1017,7 +1076,7 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 6: Pie Chart Fixes
+    // STEP 7: Pie Chart Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^pie\b""", RegexOption.MULTILINE))) {
@@ -1032,7 +1091,7 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 7: RequirementDiagram Fixes
+    // STEP 8: RequirementDiagram Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^requirementDiagram\b""", RegexOption.MULTILINE))) {
@@ -1071,7 +1130,7 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 8: Treemap Fixes
+    // STEP 9: Treemap Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^treemap\b""", RegexOption.MULTILINE))) {
@@ -1103,7 +1162,7 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 9: Architecture-Beta Fixes
+    // STEP 10: Architecture-Beta Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^architecture-beta\b""", RegexOption.MULTILINE))) {
@@ -1129,7 +1188,7 @@ internal fun sanitizeMermaidDiagram(diagram: String): String {
     }
 
     // ========================================
-    // STEP 10: Sankey Diagram Fixes
+    // STEP 11: Sankey Diagram Fixes
     // ========================================
 
     if (sanitized.contains(Regex("""^sankeyDiagram\b""", RegexOption.MULTILINE))) {
