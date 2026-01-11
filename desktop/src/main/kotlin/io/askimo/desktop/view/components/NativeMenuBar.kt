@@ -6,6 +6,8 @@ package io.askimo.desktop.view.components
 
 import androidx.compose.ui.window.FrameWindowScope
 import io.askimo.core.i18n.LocalizationManager
+import io.askimo.desktop.preferences.ThemePreferences
+import io.askimo.desktop.theme.ThemeMode
 import io.askimo.desktop.util.Platform
 import java.awt.Desktop
 import java.awt.Frame
@@ -24,6 +26,12 @@ import java.net.URI
  * - Windows/Linux: Uses AWT MenuBar with native look and feel
  */
 object NativeMenuBar {
+    private var updateSidebarMenuItem: ((Boolean) -> Unit)? = null
+
+    fun updateSidebarMenuLabel(isSidebarExpanded: Boolean) {
+        updateSidebarMenuItem?.invoke(isSidebarExpanded)
+    }
+
     fun setup(
         frameWindowScope: FrameWindowScope,
         onShowAbout: () -> Unit,
@@ -33,11 +41,14 @@ object NativeMenuBar {
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
         onCheckForUpdates: () -> Unit,
+        onEnterFullScreen: () -> Unit,
+        onNavigateToSessions: () -> Unit,
+        onToggleSidebar: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onToggleSidebar)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -69,6 +80,9 @@ object NativeMenuBar {
         onShowSettings: () -> Unit,
         onShowEventLog: () -> Unit,
         onCheckForUpdates: () -> Unit,
+        onEnterFullScreen: () -> Unit,
+        onNavigateToSessions: () -> Unit,
+        onToggleSidebar: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -126,6 +140,105 @@ object NativeMenuBar {
 
             menuBar.add(fileMenu)
 
+            val viewMenu = Menu(LocalizationManager.getString("menu.view"))
+
+            val appearanceMenu = Menu(LocalizationManager.getString("menu.view.appearance"))
+
+            val systemThemeItem = MenuItem("")
+            val lightThemeItem = MenuItem("")
+            val darkThemeItem = MenuItem("")
+
+            // Helper function to update all theme menu items
+            fun updateThemeMenuItems() {
+                val currentTheme = ThemePreferences.themeMode.value
+                systemThemeItem.label = (if (currentTheme == ThemeMode.SYSTEM) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.system")
+                lightThemeItem.label = (if (currentTheme == ThemeMode.LIGHT) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.light")
+                darkThemeItem.label = (if (currentTheme == ThemeMode.DARK) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.dark")
+            }
+
+            // Initialize labels
+            updateThemeMenuItems()
+
+            systemThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.SYSTEM)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(systemThemeItem)
+
+            lightThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.LIGHT)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(lightThemeItem)
+
+            darkThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.DARK)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(darkThemeItem)
+
+            viewMenu.add(appearanceMenu)
+
+            // Separator after Appearance group
+            viewMenu.addSeparator()
+
+            // Session View
+            val sessionViewItem = MenuItem(
+                LocalizationManager.getString("menu.view.session"),
+                MenuShortcut(KeyEvent.VK_E), // Ctrl+E (or Cmd+E on Mac)
+            )
+            sessionViewItem.addActionListener(
+                ActionListener {
+                    onNavigateToSessions()
+                },
+            )
+            viewMenu.add(sessionViewItem)
+
+            viewMenu.addSeparator()
+
+            val toggleSidebarItem = MenuItem("")
+
+            val updateSidebarMenuItemFunc: (Boolean) -> Unit = { isSidebarExpanded ->
+                toggleSidebarItem.label = if (isSidebarExpanded) {
+                    LocalizationManager.getString("menu.view.hide.sidebar")
+                } else {
+                    LocalizationManager.getString("menu.view.show.sidebar")
+                }
+            }
+
+            updateSidebarMenuItem = updateSidebarMenuItemFunc
+
+            updateSidebarMenuItemFunc(true)
+
+            toggleSidebarItem.addActionListener(
+                ActionListener {
+                    onToggleSidebar()
+                },
+            )
+            viewMenu.add(toggleSidebarItem)
+
+            val fullScreenItem = MenuItem(
+                LocalizationManager.getString("menu.view.fullscreen"),
+                MenuShortcut(KeyEvent.VK_F, true), // Ctrl+Cmd+F on Mac, Ctrl+F on others
+            )
+            fullScreenItem.addActionListener(
+                ActionListener {
+                    onEnterFullScreen()
+                },
+            )
+            viewMenu.add(fullScreenItem)
+
+            menuBar.add(viewMenu)
+
             // Help Menu
             val helpMenu = Menu(LocalizationManager.getString("menu.help"))
 
@@ -142,6 +255,21 @@ object NativeMenuBar {
                 },
             )
             helpMenu.add(docsItem)
+
+            // Release Notes
+            val releaseNotesItem = MenuItem(LocalizationManager.getString("menu.help.release.notes"))
+            releaseNotesItem.addActionListener(
+                ActionListener {
+                    try {
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().browse(URI("https://askimo.chat/docs/changelogs/"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
+            )
+            helpMenu.add(releaseNotesItem)
 
             // Star on GitHub
             val starGitHubText = LocalizationManager.getString("menu.help.star.github")

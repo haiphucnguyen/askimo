@@ -70,6 +70,7 @@ fun sessionsView(
                 text = stringResource("sessions.title"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             IconButton(
                 onClick = { viewModel.refresh() },
@@ -78,6 +79,7 @@ fun sessionsView(
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh sessions",
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -332,12 +334,14 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronLeft,
                 contentDescription = stringResource("sessions.page.previous"),
+                tint = if (hasPrevious) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
 
         Text(
             text = stringResource("sessions.page", currentPage, totalPages),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -349,6 +353,7 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = stringResource("sessions.page.next"),
+                tint = if (hasNext) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
     }
