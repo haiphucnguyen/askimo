@@ -266,9 +266,9 @@ class ChatMessageRepositoryIT {
 
         val marked = messageRepository.markMessagesAsOutdatedAfter(testSession.id, message1.id)
 
-        assertEquals(2, marked)
+        assertEquals(3, marked) // All 3 messages from message1 onwards are marked
         val messages = messageRepository.getMessages(testSession.id)
-        assertEquals(false, messages[0].isOutdated) // First message not marked
+        assertEquals(true, messages[0].isOutdated) // First message marked (fromMessage)
         assertEquals(true, messages[1].isOutdated) // Second message marked
         assertEquals(true, messages[2].isOutdated) // Third message marked
     }
