@@ -114,6 +114,7 @@ import io.askimo.desktop.view.components.renameSessionDialog
 import io.askimo.desktop.view.components.sessionMemoryDialog
 import io.askimo.desktop.view.components.starPromptDialog
 import io.askimo.desktop.view.project.projectView
+import io.askimo.desktop.view.project.projectsView
 import io.askimo.desktop.view.sessions.sessionsView
 import io.askimo.desktop.view.settings.providerSelectionDialog
 import io.askimo.desktop.view.settings.settingsViewWithSidebar
@@ -497,6 +498,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onNavigateToSessions = {
                     currentView = View.SESSIONS
                 },
+                onNavigateToProjects = {
+                    currentView = View.PROJECTS
+                },
                 onToggleSidebar = {
                     isSidebarExpanded = !isSidebarExpanded
                     NativeMenuBar.updateSidebarMenuLabel(isSidebarExpanded)
@@ -667,6 +671,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     currentView = View.SESSIONS
                                                     true
                                                 }
+                                                AppShortcut.NAVIGATE_TO_PROJECTS -> {
+                                                    currentView = View.PROJECTS
+                                                    true
+                                                }
                                                 else -> false
                                             }
                                         },
@@ -796,6 +804,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                 },
                                                 onNavigateToSessions = {
                                                     currentView = View.SESSIONS
+                                                },
+                                                onSelectProject = { projectId ->
+                                                    selectedProjectId = projectId
+                                                    currentView = View.PROJECT_DETAIL
                                                 },
                                                 onEditProject = { projectId ->
                                                     editingProjectId = projectId
@@ -1296,6 +1308,7 @@ fun mainContent(
     onResumeSession: (String) -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
+    onSelectProject: (String) -> Unit,
     onEditProject: (String) -> Unit,
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
@@ -1376,18 +1389,12 @@ fun mainContent(
                 onResumeSession = onResumeSession,
                 modifier = Modifier.fillMaxSize(),
             )
-            View.PROJECTS -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource("chat.no.active.session"),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            View.PROJECTS -> projectsView(
+                viewModel = projectsViewModel,
+                onSelectProject = onSelectProject,
+                onEditProject = onEditProject,
+                modifier = Modifier.fillMaxSize(),
+            )
             View.PROJECT_DETAIL -> {
                 val projectId = selectedProjectId
                 if (projectId != null) {

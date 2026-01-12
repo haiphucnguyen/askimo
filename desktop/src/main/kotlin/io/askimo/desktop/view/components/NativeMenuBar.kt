@@ -43,12 +43,13 @@ object NativeMenuBar {
         onCheckForUpdates: () -> Unit,
         onEnterFullScreen: () -> Unit,
         onNavigateToSessions: () -> Unit,
+        onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onToggleSidebar)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -82,6 +83,7 @@ object NativeMenuBar {
         onCheckForUpdates: () -> Unit,
         onEnterFullScreen: () -> Unit,
         onNavigateToSessions: () -> Unit,
+        onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
     ) {
         if (window is Frame) {
@@ -202,6 +204,18 @@ object NativeMenuBar {
                 },
             )
             viewMenu.add(sessionViewItem)
+
+            // Projects View
+            val projectsViewItem = MenuItem(
+                LocalizationManager.getString("menu.view.projects"),
+                MenuShortcut(KeyEvent.VK_P), // Ctrl+P (or Cmd+P on Mac)
+            )
+            projectsViewItem.addActionListener(
+                ActionListener {
+                    onNavigateToProjects()
+                },
+            )
+            viewMenu.add(projectsViewItem)
 
             viewMenu.addSeparator()
 

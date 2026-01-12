@@ -2000,11 +2000,23 @@
         "name": "should delete all messages for a session",
         "parameterTypes": []
       },
-      { "name": "should get only active messages", "parameterTypes": [] },
       {
-        "name": "should get recent active messages with database filtering",
+        "name": "should delete all messages when deleting the oldest message",
         "parameterTypes": []
       },
+      {
+        "name": "should delete message and all newer messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete messages with attachments when deleting message and all newer",
+        "parameterTypes": []
+      },
+      {
+        "name": "should delete only the target message when it is the newest",
+        "parameterTypes": []
+      },
+      { "name": "should get only active messages", "parameterTypes": [] },
       {
         "name": "should handle different message roles correctly",
         "parameterTypes": []
@@ -2020,10 +2032,6 @@
       },
       {
         "name": "should limit recent messages correctly",
-        "parameterTypes": []
-      },
-      {
-        "name": "should load attachments after specific message",
         "parameterTypes": []
       },
       {
@@ -2052,6 +2060,10 @@
         "parameterTypes": []
       },
       {
+        "name": "should only delete messages from the specified session",
+        "parameterTypes": []
+      },
+      {
         "name": "should paginate messages backward from end",
         "parameterTypes": []
       },
@@ -2072,15 +2084,15 @@
         "parameterTypes": []
       },
       {
-        "name": "should retrieve messages after specific message",
-        "parameterTypes": []
-      },
-      {
         "name": "should retrieve recent messages in chronological order",
         "parameterTypes": []
       },
       {
         "name": "should return null cursor when no more messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should return zero when deleting non-existent message",
         "parameterTypes": []
       },
       { "name": "should search messages by content", "parameterTypes": [] },
@@ -2326,10 +2338,6 @@
         "parameterTypes": []
       },
       {
-        "name": "resumeSession should include outdated messages",
-        "parameterTypes": []
-      },
-      {
         "name": "resumeSession should preserve message order",
         "parameterTypes": []
       },
@@ -2384,15 +2392,7 @@
       },
       { "name": "should get messages through service", "parameterTypes": [] },
       {
-        "name": "should get recent active messages through service",
-        "parameterTypes": []
-      },
-      {
         "name": "should manage starred sessions through service",
-        "parameterTypes": []
-      },
-      {
-        "name": "should mark messages as outdated through service",
         "parameterTypes": []
       },
       { "name": "should rename session through service", "parameterTypes": [] },
@@ -3428,6 +3428,12 @@
     ]
   },
   {
+    "name": "io.askimo.core.util.RetryUtilsTest$STREAMING_ERRORS preset retries streaming-related exceptions$StreamingException",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.testcontainers.ModelCachingDemoTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3464,15 +3470,6 @@
         ]
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
-      {
-        "name": "runCommand",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.Map",
-          "java.lang.Boolean"
-        ]
-      },
       {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
@@ -3533,7 +3530,8 @@
     "name": "java.io.Serializable",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.AutoCloseable",
@@ -3593,6 +3591,12 @@
   {
     "name": "java.lang.Enum",
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.Exception",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.FunctionalInterface"
@@ -3683,6 +3687,12 @@
     "methods": [{ "name": "feature", "parameterTypes": [] }]
   },
   {
+    "name": "java.lang.RuntimeException",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "java.lang.StackWalker",
     "methods": [
       {
@@ -3709,6 +3719,12 @@
   {
     "name": "java.lang.Thread",
     "fields": [{ "name": "threadLocalRandomProbe" }]
+  },
+  {
+    "name": "java.lang.Throwable",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.WeakPairMap"
@@ -4374,6 +4390,10 @@
     ]
   },
   {
+    "name": "kotlinx.coroutines.flow.StateFlowImpl",
+    "fields": [{ "name": "_state$volatile" }]
+  },
+  {
     "name": "kotlinx.coroutines.internal.DispatchedContinuation",
     "fields": [{ "name": "_reusableCancellableContinuation$volatile" }]
   },
@@ -4455,7 +4475,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$knqOSclq",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$DVkRRi9G",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

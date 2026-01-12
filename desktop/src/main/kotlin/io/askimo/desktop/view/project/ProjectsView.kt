@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.desktop.view.sessions
+package io.askimo.desktop.view.project
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
@@ -44,16 +45,17 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.askimo.core.chat.domain.ChatSession
+import io.askimo.core.chat.domain.Project
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
-import io.askimo.desktop.viewmodel.SessionsViewModel
+import io.askimo.desktop.viewmodel.ProjectsViewModel
 
 @Composable
-fun sessionsView(
-    viewModel: SessionsViewModel,
-    onResumeSession: (String) -> Unit,
+fun projectsView(
+    viewModel: ProjectsViewModel,
+    onSelectProject: (String) -> Unit,
+    onEditProject: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -67,7 +69,7 @@ fun sessionsView(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource("sessions.title"),
+                text = stringResource("projects.title"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -78,7 +80,7 @@ fun sessionsView(
             ) {
                 Icon(
                     Icons.Default.Refresh,
-                    contentDescription = "Refresh sessions",
+                    contentDescription = "Refresh projects",
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -145,7 +147,7 @@ fun sessionsView(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = stringResource("sessions.error", viewModel.errorMessage ?: ""),
+                            text = stringResource("projects.error", viewModel.errorMessage ?: ""),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -158,18 +160,18 @@ fun sessionsView(
                     }
                 }
 
-                viewModel.pagedSessions?.isEmpty == true -> {
+                viewModel.pagedProjects?.isEmpty == true -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = stringResource("sessions.empty"),
+                            text = stringResource("projects.empty"),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
-                            text = stringResource("sessions.empty.hint"),
+                            text = stringResource("projects.empty.hint"),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -177,19 +179,20 @@ fun sessionsView(
 
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Sessions list
-                        val pagedSessions = viewModel.pagedSessions!!
+                        // Projects list
+                        val pagedProjects = viewModel.pagedProjects!!
                         Column(
                             modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            pagedSessions.items.forEach { session ->
-                                sessionCard(
-                                    session = session,
-                                    onResumeSession = onResumeSession,
-                                    onDeleteSession = { viewModel.deleteSession(it) },
+                            pagedProjects.items.forEach { project ->
+                                projectCard(
+                                    project = project,
+                                    onSelectProject = onSelectProject,
+                                    onEditProject = onEditProject,
+                                    onDeleteProject = { viewModel.deleteProject(it) },
                                 )
                             }
                         }
@@ -197,12 +200,12 @@ fun sessionsView(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Pagination controls
-                        if (pagedSessions.totalPages > 1) {
+                        if (pagedProjects.totalPages > 1) {
                             paginationControls(
-                                currentPage = pagedSessions.currentPage,
-                                totalPages = pagedSessions.totalPages,
-                                hasPrevious = pagedSessions.hasPreviousPage,
-                                hasNext = pagedSessions.hasNextPage,
+                                currentPage = pagedProjects.currentPage,
+                                totalPages = pagedProjects.totalPages,
+                                hasPrevious = pagedProjects.hasPreviousPage,
+                                hasNext = pagedProjects.hasNextPage,
                                 onPrevious = { viewModel.previousPage() },
                                 onNext = { viewModel.nextPage() },
                             )
@@ -215,10 +218,11 @@ fun sessionsView(
 }
 
 @Composable
-private fun sessionCard(
-    session: ChatSession,
-    onResumeSession: (String) -> Unit,
-    onDeleteSession: (String) -> Unit,
+private fun projectCard(
+    project: Project,
+    onSelectProject: (String) -> Unit,
+    onEditProject: (String) -> Unit,
+    onDeleteProject: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -237,15 +241,25 @@ private fun sessionCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onResumeSession(session.id) }
+                    .clickable { onSelectProject(project.id) }
                     .pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text(
-                    text = session.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = project.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    project.description?.let { desc ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -254,12 +268,12 @@ private fun sessionCard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        text = stringResource("sessions.created", TimeUtil.formatDisplay(session.createdAt)),
+                        text = stringResource("projects.created", TimeUtil.formatDisplay(project.createdAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = stringResource("sessions.updated", TimeUtil.formatDisplay(session.updatedAt)),
+                        text = stringResource("projects.updated", TimeUtil.formatDisplay(project.updatedAt)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -284,10 +298,25 @@ private fun sessionCard(
                     onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
+                        text = { Text(stringResource("action.edit")) },
+                        onClick = {
+                            showMenu = false
+                            onEditProject(project.id)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource("action.delete")) },
                         onClick = {
                             showMenu = false
-                            onDeleteSession(session.id)
+                            onDeleteProject(project.id)
                         },
                         leadingIcon = {
                             Icon(
@@ -325,13 +354,13 @@ private fun paginationControls(
         ) {
             Icon(
                 Icons.Default.ChevronLeft,
-                contentDescription = stringResource("sessions.page.previous"),
+                contentDescription = stringResource("projects.page.previous"),
                 tint = if (hasPrevious) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
 
         Text(
-            text = stringResource("sessions.page", currentPage, totalPages),
+            text = stringResource("projects.page", currentPage, totalPages),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -344,7 +373,7 @@ private fun paginationControls(
         ) {
             Icon(
                 Icons.Default.ChevronRight,
-                contentDescription = stringResource("sessions.page.next"),
+                contentDescription = stringResource("projects.page.next"),
                 tint = if (hasNext) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
