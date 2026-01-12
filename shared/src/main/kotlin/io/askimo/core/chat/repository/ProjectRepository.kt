@@ -11,6 +11,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
@@ -153,6 +154,41 @@ class ProjectRepository internal constructor(
             log.debug("Updated project $projectId")
         }
         updated
+    }
+
+    /**
+     * Get projects with pagination.
+     * @param page The page number (1-based)
+     * @param pageSize Number of projects per page
+     * @return Paginated project results
+     */
+    fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> {
+        val allProjects = getAllProjects()
+
+        if (allProjects.isEmpty()) {
+            return Pageable(
+                items = emptyList(),
+                currentPage = 1,
+                totalPages = 0,
+                totalItems = 0,
+                pageSize = pageSize,
+            )
+        }
+
+        val totalPages = (allProjects.size + pageSize - 1) / pageSize
+        val validPage = page.coerceIn(1, totalPages)
+
+        val startIndex = (validPage - 1) * pageSize
+        val endIndex = minOf(startIndex + pageSize, allProjects.size)
+        val pageProjects = allProjects.subList(startIndex, endIndex)
+
+        return Pageable(
+            items = pageProjects,
+            currentPage = validPage,
+            totalPages = totalPages,
+            totalItems = allProjects.size,
+            pageSize = pageSize,
+        )
     }
 
     /**

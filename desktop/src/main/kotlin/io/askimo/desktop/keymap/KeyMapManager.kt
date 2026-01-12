@@ -49,6 +49,7 @@ object KeyMapManager {
         // View shortcuts
         ENTER_FULLSCREEN("shortcut.enter.fullscreen", Key.F, requiresPrimaryModifier = true, requiresCtrl = true),
         NAVIGATE_TO_SESSIONS("shortcut.navigate.to.sessions", Key.E, requiresPrimaryModifier = true),
+        NAVIGATE_TO_PROJECTS("shortcut.navigate.to.projects", Key.P, requiresPrimaryModifier = true),
 
         // Project shortcuts
         CREATE_PROJECT("shortcut.create.project", Key.N, requiresPrimaryModifier = true, requiresShift = true),
@@ -141,6 +142,7 @@ object KeyMapManager {
         ),
         LocalizationManager.getString("shortcut.category.view") to listOf(
             AppShortcut.NAVIGATE_TO_SESSIONS,
+            AppShortcut.NAVIGATE_TO_PROJECTS,
             AppShortcut.ENTER_FULLSCREEN,
         ),
         LocalizationManager.getString("shortcut.category.project") to listOf(

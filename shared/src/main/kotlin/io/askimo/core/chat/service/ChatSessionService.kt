@@ -26,6 +26,7 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
@@ -245,15 +246,15 @@ class ChatSessionService(
      * @param pageSize The number of sessions per page
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
-    fun getSessionsPaged(page: Int, pageSize: Int): PagedSessions {
+    fun getSessionsPaged(page: Int, pageSize: Int): Pageable<ChatSession> {
         val allSessions = sessionRepository.getSessionsWithoutProject()
 
         if (allSessions.isEmpty()) {
-            return PagedSessions(
-                sessions = emptyList(),
+            return Pageable(
+                items = emptyList(),
                 currentPage = 1,
                 totalPages = 0,
-                totalSessions = 0,
+                totalItems = 0,
                 pageSize = pageSize,
             )
         }
@@ -265,11 +266,11 @@ class ChatSessionService(
         val endIndex = minOf(startIndex + pageSize, allSessions.size)
         val pageSessions = allSessions.subList(startIndex, endIndex)
 
-        return PagedSessions(
-            sessions = pageSessions,
+        return Pageable(
+            items = pageSessions,
             currentPage = validPage,
             totalPages = totalPages,
-            totalSessions = allSessions.size,
+            totalItems = allSessions.size,
             pageSize = pageSize,
         )
     }
@@ -773,19 +774,4 @@ class ChatSessionService(
         // Then include user's message/question at the end
         appendLine(userMessage.content)
     }
-}
-
-/**
- * Container for paginated session results.
- */
-data class PagedSessions(
-    val sessions: List<ChatSession>,
-    val currentPage: Int,
-    val totalPages: Int,
-    val totalSessions: Int,
-    val pageSize: Int,
-) {
-    val hasNextPage: Boolean get() = currentPage < totalPages
-    val hasPreviousPage: Boolean get() = currentPage > 1
-    val isEmpty: Boolean get() = sessions.isEmpty()
 }

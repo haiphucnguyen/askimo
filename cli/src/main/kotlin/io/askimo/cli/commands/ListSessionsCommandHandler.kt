@@ -4,9 +4,10 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.chat.service.PagedSessions
 import io.askimo.core.context.AppContext
+import io.askimo.core.db.Pageable
 import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
@@ -40,13 +41,13 @@ class ListSessionsCommandHandler(private val appContext: AppContext) : CommandHa
         displaySessionsPage(pagedSessions)
     }
 
-    private fun displaySessionsPage(pagedSessions: PagedSessions) {
+    private fun displaySessionsPage(pagedSessions: Pageable<ChatSession>) {
         val startIndex = (pagedSessions.currentPage - 1) * pagedSessions.pageSize
 
         log.display("📋 Chat Sessions (Page ${pagedSessions.currentPage} of ${pagedSessions.totalPages})")
         log.display("=".repeat(60))
 
-        pagedSessions.sessions.forEachIndexed { index, session ->
+        pagedSessions.items.forEachIndexed { index, session ->
             val globalIndex = startIndex + index + 1
 
             log.display("$globalIndex. ID: ${session.id}")

@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.service.ChatSessionService
-import io.askimo.core.chat.service.PagedSessions
+import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
@@ -39,7 +39,7 @@ class SessionsViewModel(
         const val MAX_SIDEBAR_SESSIONS = 50
     }
 
-    var pagedSessions by mutableStateOf<PagedSessions?>(null)
+    var pagedSessions by mutableStateOf<Pageable<ChatSession>?>(null)
         private set
 
     var isLoading by mutableStateOf(false)
