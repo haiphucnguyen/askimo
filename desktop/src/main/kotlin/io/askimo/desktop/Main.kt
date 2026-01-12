@@ -58,6 +58,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.chat.domain.ChatSession
@@ -234,7 +235,7 @@ fun main() {
             title = "Askimo",
             state = windowState,
         ) {
-            app(frameWindowScope = this@Window)
+            app(frameWindowScope = this@Window, windowState = windowState)
         }
     }
 }
@@ -259,7 +260,7 @@ data class ChatViewState(
 
 @Composable
 @Preview
-fun app(frameWindowScope: FrameWindowScope? = null) {
+fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = null) {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var previousView by remember { mutableStateOf(View.CHAT) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
@@ -484,6 +485,22 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                 onCheckForUpdates = {
                     updateViewModel.checkForUpdates(silent = false)
                 },
+                onEnterFullScreen = {
+                    windowState?.let { state ->
+                        state.placement = if (state.placement == WindowPlacement.Fullscreen) {
+                            WindowPlacement.Floating
+                        } else {
+                            WindowPlacement.Fullscreen
+                        }
+                    }
+                },
+                onNavigateToSessions = {
+                    currentView = View.SESSIONS
+                },
+                onToggleSidebar = {
+                    isSidebarExpanded = !isSidebarExpanded
+                    NativeMenuBar.updateSidebarMenuLabel(isSidebarExpanded)
+                },
             )
         }
     }
@@ -634,6 +651,20 @@ fun app(frameWindowScope: FrameWindowScope? = null) {
                                                 }
                                                 AppShortcut.QUIT_APPLICATION -> {
                                                     showQuitDialog = true
+                                                    true
+                                                }
+                                                AppShortcut.ENTER_FULLSCREEN -> {
+                                                    windowState?.let { state ->
+                                                        state.placement = if (state.placement == WindowPlacement.Fullscreen) {
+                                                            WindowPlacement.Floating
+                                                        } else {
+                                                            WindowPlacement.Fullscreen
+                                                        }
+                                                    }
+                                                    true
+                                                }
+                                                AppShortcut.NAVIGATE_TO_SESSIONS -> {
+                                                    currentView = View.SESSIONS
                                                     true
                                                 }
                                                 else -> false

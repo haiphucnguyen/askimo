@@ -35,6 +35,7 @@ object KeyMapManager {
         val requiresPrimaryModifier: Boolean = false,
         val requiresShift: Boolean = false,
         val requiresAlt: Boolean = false,
+        val requiresCtrl: Boolean = false,
     ) {
         // Global shortcuts
         NEW_CHAT("shortcut.new.chat", Key.N, requiresPrimaryModifier = true),
@@ -44,6 +45,10 @@ object KeyMapManager {
         OPEN_SETTINGS("shortcut.open.settings", Key.Comma, requiresPrimaryModifier = true),
         STOP_AI_RESPONSE("shortcut.stop.ai.response", Key.S, requiresPrimaryModifier = true),
         QUIT_APPLICATION("shortcut.quit.application", Key.Q, requiresPrimaryModifier = true),
+
+        // View shortcuts
+        ENTER_FULLSCREEN("shortcut.enter.fullscreen", Key.F, requiresPrimaryModifier = true, requiresCtrl = true),
+        NAVIGATE_TO_SESSIONS("shortcut.navigate.to.sessions", Key.E, requiresPrimaryModifier = true),
 
         // Project shortcuts
         CREATE_PROJECT("shortcut.create.project", Key.N, requiresPrimaryModifier = true, requiresShift = true),
@@ -75,6 +80,8 @@ object KeyMapManager {
             if (!requiresShift && keyEvent.isShiftPressed) return false
             if (requiresAlt && !keyEvent.isAltPressed) return false
             if (!requiresAlt && keyEvent.isAltPressed) return false
+            if (requiresCtrl && !keyEvent.isCtrlPressed) return false
+            if (!requiresCtrl && keyEvent.isCtrlPressed) return false
             return true
         }
 
@@ -86,6 +93,9 @@ object KeyMapManager {
 
             if (requiresPrimaryModifier) {
                 parts.add(Platform.modifierKey)
+            }
+            if (requiresCtrl) {
+                parts.add(if (Platform.isMac) "⌃" else "Ctrl")
             }
             if (requiresShift) {
                 parts.add(if (Platform.isMac) "⇧" else "Shift")
@@ -128,6 +138,10 @@ object KeyMapManager {
             AppShortcut.OPEN_SETTINGS,
             AppShortcut.STOP_AI_RESPONSE,
             AppShortcut.QUIT_APPLICATION,
+        ),
+        LocalizationManager.getString("shortcut.category.view") to listOf(
+            AppShortcut.NAVIGATE_TO_SESSIONS,
+            AppShortcut.ENTER_FULLSCREEN,
         ),
         LocalizationManager.getString("shortcut.category.project") to listOf(
             AppShortcut.CREATE_PROJECT,
