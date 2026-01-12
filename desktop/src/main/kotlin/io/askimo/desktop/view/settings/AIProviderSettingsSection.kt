@@ -160,29 +160,5 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                 }
             }
         }
-
-        // Information Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = ComponentColors.bannerCardColors(),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = stringResource("settings.ai.provider.info"),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-                Text(
-                    text = stringResource("settings.ai.provider.info.description"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-        }
     }
 }
