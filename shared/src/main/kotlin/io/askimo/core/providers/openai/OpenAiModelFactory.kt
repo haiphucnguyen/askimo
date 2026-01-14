@@ -10,6 +10,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -26,11 +27,6 @@ import java.time.Duration
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     private val log = logger<OpenAiModelFactory>()
-
-    companion object {
-        private const val UTILITY_MODEL = "gpt-3.5-turbo"
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
 
     override fun availableModels(settings: OpenAiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -93,8 +89,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
     private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel = OpenAiChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(UTILITY_MODEL)
-        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+        .modelName(AppConfig.models.openai.utilityModel)
+        .timeout(Duration.ofSeconds(AppConfig.models.openai.utilityModelTimeoutSeconds))
         .build()
 
     override fun createUtilityClient(

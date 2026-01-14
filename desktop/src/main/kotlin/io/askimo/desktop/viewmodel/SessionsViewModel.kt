@@ -23,6 +23,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * ViewModel for managing sessions view state and operations.
@@ -143,7 +145,6 @@ class SessionsViewModel(
     fun loadRecentSessions() {
         scope.launch {
             try {
-                // Query sessions without projects directly from database
                 val sessionsWithoutProject = withContext(Dispatchers.IO) {
                     sessionService.getSessionsWithoutProject()
                 }
@@ -405,8 +406,8 @@ class SessionsViewModel(
 
                 // Use simple default filename pattern instead of session title
                 // to avoid long filenames that cause errors
-                val timestamp = java.time.LocalDateTime.now().format(
-                    java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"),
+                val timestamp = LocalDateTime.now().format(
+                    DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"),
                 )
                 val defaultFilename = "chat_export_$timestamp"
 
@@ -534,9 +535,7 @@ class SessionsViewModel(
             }
 
             result.onSuccess {
-                // Show success message
                 successMessage = "${LocalizationManager.getString("session.export.success.message")} $fullPath"
-                // Close dialog on success
                 dismissExportDialog()
             }
 

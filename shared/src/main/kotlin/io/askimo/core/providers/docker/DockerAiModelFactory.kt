@@ -10,6 +10,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.displayError
@@ -26,10 +27,6 @@ import java.time.Duration
 
 class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     private val log = logger<DockerAiModelFactory>()
-
-    companion object {
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
 
     override fun availableModels(settings: DockerAiSettings): List<String> = try {
         val process =
@@ -110,7 +107,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey("docker-ai")
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+        .timeout(Duration.ofSeconds(AppConfig.models.docker.utilityModelTimeoutSeconds))
         .build()
 
     override fun createUtilityClient(

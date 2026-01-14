@@ -11,6 +11,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -28,10 +29,6 @@ import java.time.Duration
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     private val log = logger<LmStudioModelFactory>()
-
-    companion object {
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
 
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
@@ -96,7 +93,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
             .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+            .timeout(Duration.ofSeconds(AppConfig.models.lmstudio.utilityModelTimeoutSeconds))
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }

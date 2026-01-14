@@ -51,7 +51,7 @@ private val log = logger("EmbeddingModelFactory")
 fun getModelTokenLimit(appContext: AppContext): Int = try {
     when (val provider = appContext.getActiveProvider()) {
         OPENAI -> {
-            val modelName = AppConfig.embeddingModels.openai.lowercase()
+            val modelName = AppConfig.models.openai.embeddingModel.lowercase()
             when {
                 modelName.contains("text-embedding-3") -> 8191
                 modelName.contains("ada-002") -> 8191
@@ -60,7 +60,7 @@ fun getModelTokenLimit(appContext: AppContext): Int = try {
         }
 
         GEMINI -> {
-            val modelName = AppConfig.embeddingModels.gemini.lowercase()
+            val modelName = AppConfig.models.gemini.embeddingModel.lowercase()
             when {
                 modelName.contains("embedding-001") -> 2048
                 modelName.contains("text-embedding-004") -> 2048
@@ -72,10 +72,10 @@ fun getModelTokenLimit(appContext: AppContext): Int = try {
         // They often use the same model names with different prefixes
         OLLAMA, DOCKER, LOCALAI, LMSTUDIO -> {
             val modelName = when (provider) {
-                OLLAMA -> AppConfig.embeddingModels.ollama
-                DOCKER -> AppConfig.embeddingModels.docker
-                LOCALAI -> AppConfig.embeddingModels.localai
-                LMSTUDIO -> AppConfig.embeddingModels.lmstudio
+                OLLAMA -> AppConfig.models.ollama.embeddingModel
+                DOCKER -> AppConfig.models.docker.embeddingModel
+                LOCALAI -> AppConfig.models.localai.embeddingModel
+                LMSTUDIO -> AppConfig.models.lmstudio.embeddingModel
                 else -> ""
             }.lowercase()
 
@@ -132,7 +132,7 @@ fun getModelTokenLimit(appContext: AppContext): Int = try {
 fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext.getActiveProvider()) {
     OPENAI -> {
         val openAiKey = (appContext.getCurrentProviderSettings() as OpenAiSettings).apiKey
-        val modelName = AppConfig.embeddingModels.openai
+        val modelName = AppConfig.models.openai.embeddingModel
         OpenAiEmbeddingModelBuilder()
             .apiKey(safeApiKey(openAiKey))
             .modelName(modelName)
@@ -185,7 +185,7 @@ fun getEmbeddingModel(appContext: AppContext): EmbeddingModel = when (appContext
 
 private fun buildOllamaEmbeddingModel(settings: OllamaSettings): EmbeddingModel {
     val baseUrl = settings.baseUrl.removeSuffix("/")
-    val modelName = AppConfig.embeddingModels.ollama
+    val modelName = AppConfig.models.ollama.embeddingModel
 
     ensureModelAvailable(OLLAMA, baseUrl, modelName)
 
@@ -198,13 +198,13 @@ private fun buildOllamaEmbeddingModel(settings: OllamaSettings): EmbeddingModel 
 
 private fun buildGeminiEmbeddingModel(settings: GeminiSettings): EmbeddingModel {
     val apiKey = settings.apiKey
-    val modelName = AppConfig.embeddingModels.gemini
+    val modelName = AppConfig.models.gemini.embeddingModel
 
     log.display(
         """
         ℹ️  Using Gemini for embeddings
            • Embedding model: $modelName
-           • Configure in askimo.yml: embedding_models.gemini
+           • Configure in askimo.yml: models.gemini.embedding_model
         """.trimIndent(),
     )
 
@@ -216,14 +216,14 @@ private fun buildGeminiEmbeddingModel(settings: GeminiSettings): EmbeddingModel 
 
 private fun buildDockerEmbeddingModel(settings: DockerAiSettings): EmbeddingModel {
     val baseUrl = settings.baseUrl.removeSuffix("/")
-    val modelName = AppConfig.embeddingModels.docker
+    val modelName = AppConfig.models.docker.embeddingModel
 
     log.display(
         """
         ℹ️  Using Docker AI for embeddings
            • Docker AI URL: $baseUrl
            • Embedding model: $modelName
-           • Configure in askimo.yml: embedding_models.docker
+           • Configure in askimo.yml: models.docker.embedding_model
         """.trimIndent(),
     )
 
@@ -238,14 +238,14 @@ private fun buildDockerEmbeddingModel(settings: DockerAiSettings): EmbeddingMode
 
 private fun buildLocalAiEmbeddingModel(settings: LocalAiSettings): EmbeddingModel {
     val baseUrl = settings.baseUrl.removeSuffix("/")
-    val modelName = AppConfig.embeddingModels.localai
+    val modelName = AppConfig.models.localai.embeddingModel
 
     log.display(
         """
         ℹ️  Using LocalAI for embeddings
            • LocalAI URL: $baseUrl
            • Embedding model: $modelName
-           • Configure in askimo.yml: embedding_models.localai
+           • Configure in askimo.yml: models.localai.embedding_model
         """.trimIndent(),
     )
 
@@ -260,14 +260,14 @@ private fun buildLocalAiEmbeddingModel(settings: LocalAiSettings): EmbeddingMode
 
 private fun buildLmStudioEmbeddingModel(settings: LmStudioSettings): EmbeddingModel {
     val baseUrl = settings.baseUrl.removeSuffix("/")
-    val modelName = AppConfig.embeddingModels.lmstudio
+    val modelName = AppConfig.models.lmstudio.embeddingModel
 
     log.display(
         """
         ℹ️  Using LMStudio for embeddings
            • LMStudio URL: $baseUrl
            • Embedding model: $modelName
-           • Configure in askimo.yml: embedding_models.lmstudio
+           • Configure in askimo.yml: models.lmstudio.embedding_model
         """.trimIndent(),
     )
     ensureModelAvailable(LMSTUDIO, baseUrl, modelName)

@@ -10,6 +10,7 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -27,11 +28,6 @@ import java.time.Duration
 class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     private val log = logger<GeminiModelFactory>()
-
-    companion object {
-        private const val UTILITY_MODEL = "gemini-1.5-flash"
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
 
     override fun availableModels(settings: GeminiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -121,8 +117,8 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel = GoogleAiGeminiChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(UTILITY_MODEL)
-        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+        .modelName(AppConfig.models.gemini.utilityModel)
+        .timeout(Duration.ofSeconds(AppConfig.models.gemini.utilityModelTimeoutSeconds))
         .build()
 
     override fun createUtilityClient(

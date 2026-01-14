@@ -723,12 +723,12 @@ private fun ragEmbeddingModelSelector() {
 
     // Get current value based on selected provider
     val currentValue = when (selectedProvider) {
-        "OpenAI" -> AppConfig.embeddingModels.openai
-        "Gemini" -> AppConfig.embeddingModels.gemini
-        "Ollama" -> AppConfig.embeddingModels.ollama
-        "Docker" -> AppConfig.embeddingModels.docker
-        "LocalAI" -> AppConfig.embeddingModels.localai
-        "LMStudio" -> AppConfig.embeddingModels.lmstudio
+        "OpenAI" -> AppConfig.models.openai.embeddingModel
+        "Gemini" -> AppConfig.models.gemini.embeddingModel
+        "Ollama" -> AppConfig.models.ollama.embeddingModel
+        "Docker" -> AppConfig.models.docker.embeddingModel
+        "LocalAI" -> AppConfig.models.localai.embeddingModel
+        "LMStudio" -> AppConfig.models.lmstudio.embeddingModel
         "Anthropic", "X AI" -> "N/A"
         else -> ""
     }

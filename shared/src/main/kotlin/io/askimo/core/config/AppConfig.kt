@@ -31,15 +31,6 @@ data class EmbeddingConfig(
     val preferredDim: Int? = null,
 )
 
-data class EmbeddingModelsConfig(
-    val openai: String = "text-embedding-3-small",
-    val docker: String = "ai/qwen3-embedding:0.6B-F16",
-    val ollama: String = "nomic-embed-text:latest",
-    val localai: String = "nomic-embed-text:latest",
-    val lmstudio: String = "nomic-embed-text:latest",
-    val gemini: String = "text-embedding-004",
-)
-
 data class RetryConfig(
     val attempts: Int = 4,
     val baseDelayMs: Long = 150,
@@ -232,25 +223,85 @@ data class ProxyConfig(
     val authToken: String = "",
 )
 
+data class AnthropicModelConfig(
+    val availableModels: List<String> = listOf(
+        "claude-opus-4-1",
+        "claude-opus-4-0",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-0",
+        "claude-3-7-sonnet-latest",
+        "claude-3-5-haiku-latest",
+    ),
+    val utilityModel: String = "claude-3-haiku-20240307",
+    val utilityModelTimeoutSeconds: Long = 45,
+)
+
+data class GeminiModelConfig(
+    val utilityModel: String = "gemini-1.5-flash",
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "text-embedding-004",
+)
+
+data class OpenAiModelConfig(
+    val utilityModel: String = "gpt-3.5-turbo",
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "text-embedding-3-small",
+)
+
+data class OllamaModelConfig(
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "nomic-embed-text:latest",
+)
+
+data class DockerModelConfig(
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "ai/qwen3-embedding:0.6B-F16",
+)
+
+data class LocalAiModelConfig(
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "nomic-embed-text:latest",
+)
+
+data class LmStudioModelConfig(
+    val utilityModelTimeoutSeconds: Long = 45,
+    val embeddingModel: String = "nomic-embed-text:latest",
+)
+
+data class XAiModelConfig(
+    val utilityModelTimeoutSeconds: Long = 45,
+)
+
+data class ModelsConfig(
+    val anthropic: AnthropicModelConfig = AnthropicModelConfig(),
+    val gemini: GeminiModelConfig = GeminiModelConfig(),
+    val openai: OpenAiModelConfig = OpenAiModelConfig(),
+    val ollama: OllamaModelConfig = OllamaModelConfig(),
+    val docker: DockerModelConfig = DockerModelConfig(),
+    val localai: LocalAiModelConfig = LocalAiModelConfig(),
+    val lmstudio: LmStudioModelConfig = LmStudioModelConfig(),
+    val xai: XAiModelConfig = XAiModelConfig(),
+)
+
 data class AppConfigData(
     val embedding: EmbeddingConfig = EmbeddingConfig(),
-    val embeddingModels: EmbeddingModelsConfig = EmbeddingModelsConfig(),
     val retry: RetryConfig = RetryConfig(),
     val throttle: ThrottleConfig = ThrottleConfig(),
     val indexing: IndexingConfig = IndexingConfig(),
     val developer: DeveloperConfig = DeveloperConfig(),
     val chat: ChatConfig = ChatConfig(),
     val rag: RagConfig = RagConfig(),
+    val models: ModelsConfig = ModelsConfig(),
 )
 
 object AppConfig {
     val embedding: EmbeddingConfig get() = delegate.embedding
-    val embeddingModels: EmbeddingModelsConfig get() = delegate.embeddingModels
     val retry: RetryConfig get() = delegate.retry
     val indexing: IndexingConfig get() = delegate.indexing
     val developer: DeveloperConfig get() = delegate.developer
     val chat: ChatConfig get() = delegate.chat
     val rag: RagConfig get() = delegate.rag
+    val models: ModelsConfig get() = delegate.models
 
     val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
 
@@ -274,12 +325,6 @@ object AppConfig {
           chunk_overlap:       ${'$'}{ASKIMO_EMBED_CHUNK_OVERLAP:200}
           preferred_dim:       ${'$'}{ASKIMO_EMBED_DIM:}
 
-        embedding_models:
-          openai:    ${'$'}{ASKIMO_EMBED_MODEL_OPENAI:text-embedding-3-small}
-          docker:    ${'$'}{ASKIMO_EMBED_MODEL_DOCKER:text-embedding-3-small}
-          ollama:    ${'$'}{ASKIMO_EMBED_MODEL_OLLAMA:nomic-embed-text:latest}
-          localai:   ${'$'}{ASKIMO_EMBED_MODEL_LOCALAI:text-embedding-3-small}
-          lmstudio:  ${'$'}{ASKIMO_EMBED_MODEL_LMSTUDIO:text-embedding-3-small}
 
         retry:
           attempts:      ${'$'}{ASKIMO_EMBED_RETRY_ATTEMPTS:4}
@@ -307,6 +352,34 @@ object AppConfig {
           vector_search_min_score: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE:0.3}
           hybrid_max_results: ${'$'}{ASKIMO_RAG_HYBRID_MAX_RESULTS:15}
           rank_fusion_constant: ${'$'}{ASKIMO_RAG_RANK_FUSION_CONSTANT:60}
+
+        models:
+          anthropic:
+            available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-1,claude-opus-4-0,claude-sonnet-4-5,claude-sonnet-4-0,claude-3-7-sonnet-latest,claude-3-5-haiku-latest}
+            utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-3-haiku-20240307}
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
+          gemini:
+            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-1.5-flash}
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
+          openai:
+            utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:gpt-3.5-turbo}
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+          ollama:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
+          docker:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:ai/qwen3-embedding:0.6B-F16}
+          localai:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:nomic-embed-text:latest}
+          lmstudio:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:nomic-embed-text:latest}
+          xai:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
 
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
@@ -438,14 +511,6 @@ object AppConfig {
                 chunkOverlap = envInt("ASKIMO_EMBED_CHUNK_OVERLAP", 200),
                 preferredDim = envNullableInt("ASKIMO_EMBED_DIM"),
             )
-        val embModels =
-            EmbeddingModelsConfig(
-                openai = env("ASKIMO_EMBED_MODEL_OPENAI", "text-embedding-3-small"),
-                docker = env("ASKIMO_EMBED_MODEL_DOCKER", "text-embedding-3-small"),
-                ollama = env("ASKIMO_EMBED_MODEL_OLLAMA", "nomic-embed-text:latest"),
-                localai = env("ASKIMO_EMBED_MODEL_LOCALAI", "text-embedding-3-small"),
-                lmstudio = env("ASKIMO_EMBED_MODEL_LMSTUDIO", "text-embedding-3-small"),
-            )
         val r =
             RetryConfig(
                 attempts = envInt("ASKIMO_EMBED_RETRY_ATTEMPTS", 4),
@@ -476,7 +541,81 @@ object AppConfig {
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
             )
 
-        return AppConfigData(emb, embModels, r, t, idx, dev, chat)
+        val rag =
+            RagConfig(
+                vectorSearchMaxResults = envInt("ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS", 20),
+                vectorSearchMinScore = envDouble("ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE", 0.3),
+                hybridMaxResults = envInt("ASKIMO_RAG_HYBRID_MAX_RESULTS", 15),
+                rankFusionConstant = envInt("ASKIMO_RAG_RANK_FUSION_CONSTANT", 60),
+            )
+
+        val anthropicModelConfig =
+            AnthropicModelConfig(
+                availableModels =
+                envList(
+                    "ASKIMO_ANTHROPIC_MODELS",
+                    "claude-opus-4-1,claude-opus-4-0,claude-sonnet-4-5,claude-sonnet-4-0,claude-3-7-sonnet-latest,claude-3-5-haiku-latest",
+                ).toList(),
+                utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", "claude-3-haiku-20240307"),
+                utilityModelTimeoutSeconds = envLong("ASKIMO_ANTHROPIC_UTILITY_TIMEOUT", 45L),
+            )
+
+        val geminiModelConfig =
+            GeminiModelConfig(
+                utilityModel = env("ASKIMO_GEMINI_UTILITY_MODEL", "gemini-1.5-flash"),
+                utilityModelTimeoutSeconds = envLong("ASKIMO_GEMINI_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_GEMINI_EMBEDDING_MODEL", "text-embedding-004"),
+            )
+
+        val openaiModelConfig =
+            OpenAiModelConfig(
+                utilityModel = env("ASKIMO_OPENAI_UTILITY_MODEL", "gpt-3.5-turbo"),
+                utilityModelTimeoutSeconds = envLong("ASKIMO_OPENAI_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+            )
+
+        val ollamaModelConfig =
+            OllamaModelConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_OLLAMA_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_OLLAMA_EMBEDDING_MODEL", "nomic-embed-text:latest"),
+            )
+
+        val dockerModelConfig =
+            DockerModelConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_DOCKER_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_DOCKER_EMBEDDING_MODEL", "ai/qwen3-embedding:0.6B-F16"),
+            )
+
+        val localaiModelConfig =
+            LocalAiModelConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_LOCALAI_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_LOCALAI_EMBEDDING_MODEL", "nomic-embed-text:latest"),
+            )
+
+        val lmstudioModelConfig =
+            LmStudioModelConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_LMSTUDIO_UTILITY_TIMEOUT", 45L),
+                embeddingModel = env("ASKIMO_LMSTUDIO_EMBEDDING_MODEL", "nomic-embed-text:latest"),
+            )
+
+        val xaiModelConfig =
+            XAiModelConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_XAI_UTILITY_TIMEOUT", 45L),
+            )
+
+        val models =
+            ModelsConfig(
+                anthropic = anthropicModelConfig,
+                gemini = geminiModelConfig,
+                openai = openaiModelConfig,
+                ollama = ollamaModelConfig,
+                docker = dockerModelConfig,
+                localai = localaiModelConfig,
+                lmstudio = lmstudioModelConfig,
+                xai = xaiModelConfig,
+            )
+
+        return AppConfigData(emb, r, t, idx, dev, chat, rag, models)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */
@@ -512,9 +651,9 @@ object AppConfig {
                 "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
-                "embeddingModels" -> current.copy(embeddingModels = updateEmbeddingModelsField(current.embeddingModels, field, value))
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
+                "models" -> current.copy(models = updateModelsField(current.models, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -560,16 +699,6 @@ object AppConfig {
         else -> config
     }
 
-    private fun updateEmbeddingModelsField(config: EmbeddingModelsConfig, field: String, value: Any): EmbeddingModelsConfig = when (field) {
-        "openai" -> config.copy(openai = value as String)
-        "docker" -> config.copy(docker = value as String)
-        "ollama" -> config.copy(ollama = value as String)
-        "localai" -> config.copy(localai = value as String)
-        "lmstudio" -> config.copy(lmstudio = value as String)
-        "gemini" -> config.copy(gemini = value as String)
-        else -> config
-    }
-
     private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
         "maxTokens" -> config.copy(maxTokens = value as Int)
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
@@ -583,6 +712,14 @@ object AppConfig {
         "hybridMaxResults" -> config.copy(hybridMaxResults = value as Int)
         "rankFusionConstant" -> config.copy(rankFusionConstant = value as Int)
         else -> config
+    }
+
+    private fun updateModelsField(config: ModelsConfig, field: String, value: Any): ModelsConfig {
+        // For models section, we expect nested paths like "anthropic.utilityModel"
+        // This is handled differently - would need 3-part path support
+        // For now, we'll keep it simple and not support runtime updates to models config
+        log.displayError("Runtime updates to models config not yet supported", null)
+        return config
     }
 
     /**

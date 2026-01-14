@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -75,6 +76,7 @@ import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.highlightSearchText
 import io.askimo.desktop.view.components.markdownText
 import io.askimo.desktop.view.components.themedTooltip
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -546,13 +548,18 @@ fun messageBubble(
 
                 // AI message action controls - positioned in the gap below the message, always visible
                 if (!message.isUser) {
+                    var showCopyFeedback by remember { mutableStateOf(false) }
+                    val coroutineScope = rememberCoroutineScope()
+
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Add padding to align with AI message bubble (icon 32dp + spacer 8dp)
                         Spacer(modifier = Modifier.width(40.dp))
+
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = Color.Transparent,
@@ -572,6 +579,11 @@ fun messageBubble(
                                     IconButton(
                                         onClick = {
                                             clipboardManager.setText(AnnotatedString(message.content))
+                                            showCopyFeedback = true
+                                            coroutineScope.launch {
+                                                kotlinx.coroutines.delay(2000)
+                                                showCopyFeedback = false
+                                            }
                                         },
                                         modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
                                     ) {
@@ -634,16 +646,52 @@ fun messageBubble(
                                 }
                             }
                         }
+
+                        // Copy feedback - to the right of action buttons
+                        if (showCopyFeedback) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource("mermaid.feedback.copied"),
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        shape = MaterialTheme.shapes.small,
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
 
                 // User message action controls - reserve space, show controls on hover
                 if (message.isUser) {
+                    var showCopyFeedback by remember { mutableStateOf(false) }
+                    val coroutineScope = rememberCoroutineScope()
+
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // Copy feedback - to the left of action buttons
+                        if (showCopyFeedback) {
+                            Text(
+                                text = stringResource("mermaid.feedback.copied"),
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        shape = MaterialTheme.shapes.small,
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+
                         Box(
                             modifier = Modifier.height(40.dp), // Always reserve this space
                             contentAlignment = Alignment.Center,
@@ -668,6 +716,11 @@ fun messageBubble(
                                             IconButton(
                                                 onClick = {
                                                     clipboardManager.setText(AnnotatedString(message.content))
+                                                    showCopyFeedback = true
+                                                    coroutineScope.launch {
+                                                        kotlinx.coroutines.delay(2000)
+                                                        showCopyFeedback = false
+                                                    }
                                                 },
                                                 modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
                                             ) {
