@@ -54,6 +54,7 @@ class AppContext private constructor(
         fun initialize(mode: ExecutionMode, params: AppContextParams? = null): AppContext {
             require(instance == null) { "AppContext already initialized" }
             executionMode = mode
+
             synchronized(this) {
                 val contextParams = params ?: AppContextConfigManager.load()
                 return AppContext(contextParams).also { instance = it }
@@ -68,13 +69,6 @@ class AppContext private constructor(
          * @throws IllegalStateException if AppContext has not been initialized
          */
         fun getInstance(): AppContext = instance ?: error("AppContext not initialized. Call AppContext.initialize() first.")
-
-        /**
-         * Gets the execution mode for the application.
-         *
-         * @return The current execution mode
-         */
-        fun getExecutionMode(): ExecutionMode = executionMode
 
         /**
          * Resets the singleton instance. Useful for testing or when configuration changes require a fresh instance.

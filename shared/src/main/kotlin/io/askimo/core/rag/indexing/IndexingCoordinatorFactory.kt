@@ -8,13 +8,11 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
-import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
-import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.context.AppContext
-import java.nio.file.Paths
 
 /**
  * Factory for creating appropriate IndexingCoordinator based on knowledge source types.
+ * Uses a pluggable provider registry to support extensibility.
  */
 object IndexingCoordinatorFactory {
 
@@ -37,28 +35,21 @@ object IndexingCoordinatorFactory {
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
-    ): IndexingCoordinator = when (knowledgeSource) {
-        is LocalFoldersKnowledgeSourceConfig -> {
-            val paths = knowledgeSource.resourceIdentifiers.map { Paths.get(it) }
-            LocalFoldersIndexingCoordinator(
-                projectId = projectId,
-                projectName = projectName,
-                paths = paths,
-                embeddingStore = embeddingStore,
-                embeddingModel = embeddingModel,
-                appContext = appContext,
+    ): IndexingCoordinator {
+        val provider = IndexingCoordinatorProviderRegistry.getProvider(knowledgeSource)
+            ?: throw IllegalArgumentException(
+                "No provider registered for knowledge source type: ${knowledgeSource::class.simpleName}. " +
+                    "Available types: ${IndexingCoordinatorProviderRegistry.getAllProviders()
+                        .joinToString { it.supportedType().simpleName }}",
             )
-        }
-        is LocalFilesKnowledgeSourceConfig -> {
-            val filePaths = knowledgeSource.resourceIdentifiers.map { Paths.get(it) }
-            LocalFilesIndexingCoordinator(
-                projectId = projectId,
-                projectName = projectName,
-                filePaths = filePaths,
-                embeddingStore = embeddingStore,
-                embeddingModel = embeddingModel,
-                appContext = appContext,
-            )
-        }
+
+        return provider.createCoordinator(
+            projectId = projectId,
+            projectName = projectName,
+            knowledgeSource = knowledgeSource,
+            embeddingStore = embeddingStore,
+            embeddingModel = embeddingModel,
+            appContext = appContext,
+        )
     }
 }

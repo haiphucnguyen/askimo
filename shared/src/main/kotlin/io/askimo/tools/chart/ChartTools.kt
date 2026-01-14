@@ -98,13 +98,39 @@ CRITICAL MERMAID SYNTAX RULES (DO NOT VIOLATE):
 - ER diagram relationships MUST use valid cardinality (e.g., ||--o{, }o--||, ||--|{)
 - classDiagram stereotypes (e.g., <<interface>>, <<abstract>>, <<component>>) MUST be inside the class body
 
-XYCHART-BETA EXAMPLE (VALID):
+XYCHART-BETA CRITICAL RULES:
+1. For categorical x-axis (years, months, names, categories), ALWAYS use array syntax:
+   x-axis [2010, 2011, 2012, 2013, 2014, 2015]
+   x-axis ["Jan", "Feb", "Mar", "Apr", "May"]
+   x-axis ["Product A", "Product B", "Product C"]
+
+2. For continuous numeric x-axis with label only (rare):
+   x-axis "Time (ms)"
+
+3. The number of x-axis categories MUST match the number of data points in line/bar
+4. Y-axis always uses range syntax: y-axis "Label" min --> max
+
+XYCHART-BETA EXAMPLE WITH CATEGORICAL X-AXIS (MOST COMMON):
 xychart-beta
-    title "Sales Data"
-    x-axis "Month"
+    title "Stock Price 2010-2015"
+    x-axis [2010, 2011, 2012, 2013, 2014, 2015]
+    y-axis "Price (USD)" 0 --> 1000
+    line [320, 520, 650, 800, 470, 850]
+
+XYCHART-BETA EXAMPLE WITH MONTH LABELS:
+xychart-beta
+    title "Monthly Sales"
+    x-axis ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
     y-axis "Revenue" 0 --> 1000
-    line [100, 200, 150, 300, 250]
-    bar [80, 180, 120, 280, 230]
+    line [100, 200, 150, 300, 250, 280]
+    bar [80, 180, 120, 280, 230, 260]
+
+WRONG (DO NOT DO THIS):
+xychart-beta
+    title "Stock Price 2010-2015"
+    x-axis "Year"  ❌ Missing category array! This will render incorrectly.
+    y-axis "Price (USD)" 0 --> 1000
+    line [320, 520, 650, 800, 470, 850]
 
 
 BLOCK-BETA EXAMPLE (VALID):
