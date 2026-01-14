@@ -34,8 +34,4 @@ object ChatDirectivesTable : Table("chat_directives") {
     val createdAt = sqliteDatetime("created_at")
 
     override val primaryKey = PrimaryKey(id)
-
-    init {
-        uniqueIndex(name)
-    }
 }
