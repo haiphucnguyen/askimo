@@ -268,12 +268,19 @@ class DatabaseManager private constructor(
                 """
                 CREATE TABLE IF NOT EXISTS chat_directives (
                     id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
                     content TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
                 """,
             )
+
+            // Migration: Drop unique index on name if it exists (for existing databases)
+            try {
+                stmt.executeUpdate("DROP INDEX IF EXISTS chat_directives_name")
+            } catch (e: Exception) {
+                // Ignore - index might not exist
+            }
         }
     }
 

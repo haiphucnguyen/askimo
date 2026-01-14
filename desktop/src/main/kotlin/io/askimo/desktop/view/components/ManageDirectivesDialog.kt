@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.ChatDirective
+import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 
@@ -68,7 +70,6 @@ fun manageDirectivesDialog(
         Surface(
             modifier = Modifier
                 .width(700.dp)
-                .height(600.dp)
                 .padding(16.dp),
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
@@ -115,7 +116,7 @@ fun manageDirectivesDialog(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f),
+                            .heightIn(max = 400.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(directives, key = { it.id }) { directive ->
@@ -303,7 +304,7 @@ fun manageDirectivesDialog(
 
                                         // Created date
                                         Text(
-                                            text = stringResource("directive.created", directive.createdAt.toLocalDate()),
+                                            text = stringResource("directive.created", TimeUtil.formatDisplay(directive.createdAt)),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )

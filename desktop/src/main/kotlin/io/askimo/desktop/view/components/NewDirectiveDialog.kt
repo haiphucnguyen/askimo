@@ -49,7 +49,7 @@ fun newDirectiveDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
-                .width(500.dp)
+                .width(800.dp)
                 .padding(16.dp),
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
@@ -63,6 +63,12 @@ fun newDirectiveDialog(
                     text = stringResource("directive.new.title"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Text(
+                    text = stringResource("directive.new.guidelines"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 // Name field
