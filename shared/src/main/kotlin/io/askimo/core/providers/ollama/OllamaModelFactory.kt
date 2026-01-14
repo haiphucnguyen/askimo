@@ -10,6 +10,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -25,10 +26,6 @@ import java.time.Duration
 
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     private val log = logger<OllamaModelFactory>()
-
-    companion object {
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
 
     override fun availableModels(settings: OllamaSettings): List<String> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
@@ -93,7 +90,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         .baseUrl(settings.baseUrl)
         .apiKey("ollama")
         .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+        .timeout(Duration.ofSeconds(AppConfig.models.ollama.utilityModelTimeoutSeconds))
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .build()

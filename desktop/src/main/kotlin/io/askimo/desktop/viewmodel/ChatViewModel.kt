@@ -481,6 +481,9 @@ class ChatViewModel(
 
                 if (threadId == null) {
                     errorMessage = "Please wait for the current response to complete before asking another question."
+                    isLoading = false
+                    isThinking = false
+                    stopThinkingTimer()
                     return@launch
                 }
 
@@ -492,13 +495,13 @@ class ChatViewModel(
             } catch (e: Exception) {
                 if (currentSessionId.value == sessionId) {
                     errorMessage = ErrorHandler.getUserFriendlyError(e, "sending message")
+                    // Only stop thinking timer on error
+                    isThinking = false
+                    stopThinkingTimer()
                 } else {
                     EventBus.emit(SendMessageErrorEvent(e))
                 }
-            } finally {
                 isLoading = false
-                isThinking = false
-                stopThinkingTimer()
             }
         }
     }

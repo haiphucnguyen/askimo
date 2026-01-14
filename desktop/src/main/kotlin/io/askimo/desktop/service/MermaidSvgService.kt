@@ -165,7 +165,7 @@ class MermaidSvgService {
             val exitCode = process.waitFor(30, TimeUnit.SECONDS)
 
             if (!exitCode || process.exitValue() != 0) {
-                log.error("Mermaid CLI failed with exit code: {}, output: {}", process.exitValue(), output)
+                log.error("Mermaid CLI failed with exit code: {}, diagram{}, output: {}", process.exitValue(), diagram, output)
                 throw IOException("Failed to convert Mermaid diagram: CLI returned exit code ${process.exitValue()}")
             }
 

@@ -4,14 +4,20 @@
  */
 package io.askimo.desktop.view.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
@@ -26,7 +32,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -34,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -92,6 +102,9 @@ fun chatInputField(
     modifier: Modifier = Modifier,
 ) {
     val inputFocusRequester = remember { FocusRequester() }
+
+    // State for resizable text field (min 60dp, will calculate max based on available space)
+    var textFieldHeight by remember { mutableStateOf(60.dp) }
 
     // Focus input field when entering edit mode
     LaunchedEffect(editingMessage) {
@@ -238,48 +251,91 @@ fun chatInputField(
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = onInputTextChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(inputFocusRequester)
-                    .onPreviewKeyEvent { keyEvent ->
-                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-                        when (shortcut) {
-                            AppShortcut.NEW_LINE -> {
-                                val cursorPosition = inputText.selection.start
-                                val textBeforeCursor = inputText.text.substring(0, cursorPosition)
-                                val textAfterCursor = inputText.text.substring(cursorPosition)
-                                val newText = textBeforeCursor + "\n" + textAfterCursor
-                                val newCursorPosition = cursorPosition + 1
-                                onInputTextChange(
-                                    TextFieldValue(
-                                        text = newText,
-                                        selection = TextRange(newCursorPosition),
-                                    ),
-                                )
-                                true
-                            }
-                            AppShortcut.SEND_MESSAGE -> {
-                                if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                    onSendMessage()
+            // Wrap in BoxWithConstraints to get max available height
+            BoxWithConstraints(
+                modifier = Modifier.weight(1f),
+            ) {
+                val maxAvailableHeight = maxHeight
+                val minTextFieldHeight = 60.dp
+                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(minTextFieldHeight)
+
+                Column {
+                    // Resize handle
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .pointerHoverIcon(
+                                PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.N_RESIZE_CURSOR)),
+                            )
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val newHeight = textFieldHeight - dragAmount.toDp()
+                                    textFieldHeight = newHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
                                 }
-                                true
-                            }
-                            else -> false
-                        }
-                    },
-                placeholder = { Text(placeholder) },
-                maxLines = 5,
-                isError = errorMessage != null,
-                supportingText = if (errorMessage != null) {
-                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                } else {
-                    null
-                },
-                colors = ComponentColors.outlinedTextFieldColors(),
-            )
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        // Visual indicator
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    RoundedCornerShape(2.dp),
+                                ),
+                        )
+                    }
+
+                    // Text field with constrained height
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = onInputTextChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(textFieldHeight)
+                            .focusRequester(inputFocusRequester)
+                            .onPreviewKeyEvent { keyEvent ->
+                                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+                                when (shortcut) {
+                                    AppShortcut.NEW_LINE -> {
+                                        val cursorPosition = inputText.selection.start
+                                        val textBeforeCursor = inputText.text.substring(0, cursorPosition)
+                                        val textAfterCursor = inputText.text.substring(cursorPosition)
+                                        val newText = textBeforeCursor + "\n" + textAfterCursor
+                                        val newCursorPosition = cursorPosition + 1
+                                        onInputTextChange(
+                                            TextFieldValue(
+                                                text = newText,
+                                                selection = TextRange(newCursorPosition),
+                                            ),
+                                        )
+                                        true
+                                    }
+                                    AppShortcut.SEND_MESSAGE -> {
+                                        if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                                            onSendMessage()
+                                        }
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            },
+                        placeholder = { Text(placeholder) },
+                        maxLines = Int.MAX_VALUE, // Allow unlimited lines within the height constraint
+                        isError = errorMessage != null,
+                        supportingText = if (errorMessage != null) {
+                            { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                        } else {
+                            null
+                        },
+                        colors = ComponentColors.outlinedTextFieldColors(),
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(8.dp))
 

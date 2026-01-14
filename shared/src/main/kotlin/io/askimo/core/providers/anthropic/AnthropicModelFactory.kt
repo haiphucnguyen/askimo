@@ -10,6 +10,7 @@ import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -26,19 +27,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     private val log = logger<AnthropicModelFactory>()
 
-    companion object {
-        private const val UTILITY_MODEL = "claude-3-haiku-20240307"
-        private const val UTILITY_MODEL_TIMEOUT_SECONDS = 45L
-    }
-
-    override fun availableModels(settings: AnthropicSettings): List<String> = listOf(
-        "claude-opus-4-1",
-        "claude-opus-4-0",
-        "claude-sonnet-4-5",
-        "claude-sonnet-4-0",
-        "claude-3-7-sonnet-latest",
-        "claude-3-5-haiku-latest",
-    )
+    override fun availableModels(settings: AnthropicSettings): List<String> = AppConfig.models.anthropic.availableModels
 
     override fun defaultSettings(): AnthropicSettings = AnthropicSettings()
 
@@ -78,9 +67,9 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     private fun createSecondaryChatModel(settings: AnthropicSettings): ChatModel = AnthropicChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(UTILITY_MODEL)
+        .modelName(AppConfig.models.anthropic.utilityModel)
         .baseUrl(settings.baseUrl)
-        .timeout(Duration.ofSeconds(UTILITY_MODEL_TIMEOUT_SECONDS))
+        .timeout(Duration.ofSeconds(AppConfig.models.anthropic.utilityModelTimeoutSeconds))
         .build()
 
     override fun createUtilityClient(

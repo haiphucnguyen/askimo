@@ -694,7 +694,7 @@ class SettingsViewModel(
                 val result = withContext(Dispatchers.IO) {
                     when (provider) {
                         ModelProvider.OLLAMA -> {
-                            val modelName = AppConfig.embeddingModels.ollama
+                            val modelName = AppConfig.models.ollama.embeddingModel
                             LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
@@ -702,7 +702,7 @@ class SettingsViewModel(
                             )
                         }
                         ModelProvider.DOCKER -> {
-                            val modelName = AppConfig.embeddingModels.docker
+                            val modelName = AppConfig.models.docker.embeddingModel
                             LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
@@ -710,7 +710,7 @@ class SettingsViewModel(
                             )
                         }
                         ModelProvider.LOCALAI -> {
-                            val modelName = AppConfig.embeddingModels.localai
+                            val modelName = AppConfig.models.localai.embeddingModel
                             LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
@@ -718,7 +718,7 @@ class SettingsViewModel(
                             )
                         }
                         ModelProvider.LMSTUDIO -> {
-                            val modelName = AppConfig.embeddingModels.lmstudio
+                            val modelName = AppConfig.models.lmstudio.embeddingModel
                             LocalModelValidator.checkModelExists(
                                 provider,
                                 baseUrl,
@@ -784,7 +784,7 @@ class SettingsViewModel(
         isCheckingEmbeddingModel = true
         scope.launch {
             try {
-                val modelName = AppConfig.embeddingModels.ollama
+                val modelName = AppConfig.models.ollama.embeddingModel
                 val success = withContext(Dispatchers.IO) {
                     LocalModelValidator.pullOllamaModel(baseUrl, modelName)
                 }
