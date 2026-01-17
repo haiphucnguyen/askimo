@@ -17,6 +17,7 @@ import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.core.vision.needsVision
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -206,13 +207,13 @@ class SessionManager(
 
         // Prepare context and save user message to DB
         val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, willSaveUserMessage)
-        log.debug("Saved prompt for session $sessionId: $promptWithContext")
+        log.debug("Saved prompt for session $sessionId, starting streaming")
 
         // Start streaming in background
         streamingScope.launch(thread.job) {
             try {
                 val fullResponse = chatSessionService
-                    .getOrCreateClientForSession(sessionId)
+                    .getOrCreateClientForSession(sessionId, userMessage.needsVision())
                     .sendStreamingMessageWithCallback(promptWithContext) { token ->
                         streamingScope.launch {
                             thread.appendChunk(token)
@@ -224,6 +225,7 @@ class SessionManager(
                 thread.markComplete()
                 log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
             } catch (e: Exception) {
+                log.error("Error while sending message to chat session $sessionId", e)
                 thread.markFailed()
 
                 val partialResponse = thread.getCurrentContent()

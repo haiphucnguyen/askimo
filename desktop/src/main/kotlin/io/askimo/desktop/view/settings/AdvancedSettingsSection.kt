@@ -4,6 +4,9 @@
  */
 package io.askimo.desktop.view.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -39,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
@@ -48,12 +53,14 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
 import io.askimo.desktop.view.components.clickableCard
+import kotlinx.coroutines.delay
 import java.awt.Desktop
 import java.io.File
 
@@ -91,6 +98,9 @@ fun advancedSettingsSection() {
 
         // RAG Configuration Section
         ragConfigurationSection()
+
+        // Vision Models Section
+        visionModelsSection()
 
         // Developer Mode Section
         developerModeSection()
@@ -437,7 +447,7 @@ private fun ragConfigurationSection() {
             )
 
             // Divider before embedding configuration
-            androidx.compose.material3.HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f),
             )
@@ -486,7 +496,7 @@ private fun ragConfigurationSection() {
             )
 
             // Divider before embedding models section
-            androidx.compose.material3.HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f),
             )
@@ -506,6 +516,37 @@ private fun ragConfigurationSection() {
 
             // Embedding Model Selector
             ragEmbeddingModelSelector()
+        }
+    }
+}
+
+@Composable
+private fun visionModelsSection() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Title
+            Text(
+                text = stringResource("settings.vision.models.title"),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+
+            // Description
+            Text(
+                text = stringResource("settings.vision.models.description"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            )
+
+            visionModelSelector()
         }
     }
 }
@@ -557,12 +598,20 @@ private fun ragIntField(
 ) {
     var textValue by remember { mutableStateOf(value.toString()) }
     var lastValidValue by remember { mutableStateOf(value) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
         // Update text when external value changes (e.g., reload)
         if (value != lastValidValue) {
             textValue = value.toString()
             lastValidValue = value
+        }
+    }
+
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
         }
     }
 
@@ -578,16 +627,38 @@ private fun ragIntField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
-                // Only save if it's a valid integer
-                newValue.toIntOrNull()?.let { validInt ->
-                    lastValidValue = validInt
-                    onValueChange(validInt)
-                }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) {
+                        // Only save when losing focus if value is valid and changed
+                        textValue.toIntOrNull()?.let { validInt ->
+                            if (validInt != lastValidValue) {
+                                lastValidValue = validInt
+                                onValueChange(validInt)
+                                showSavedIndicator = true
+                            }
+                        }
+                    }
+                },
             textStyle = MaterialTheme.typography.bodyMedium,
             singleLine = true,
             isError = textValue.toIntOrNull() == null,
+            trailingIcon = {
+                AnimatedVisibility(
+                    visible = showSavedIndicator,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Saved",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            },
             colors = ComponentColors.outlinedTextFieldColors(),
         )
         Text(
@@ -607,12 +678,20 @@ private fun ragDoubleField(
 ) {
     var textValue by remember { mutableStateOf(value.toString()) }
     var lastValidValue by remember { mutableStateOf(value) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
         // Update text when external value changes (e.g., reload)
         if (value != lastValidValue) {
             textValue = value.toString()
             lastValidValue = value
+        }
+    }
+
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
         }
     }
 
@@ -628,16 +707,38 @@ private fun ragDoubleField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
-                // Only save if it's a valid double
-                newValue.toDoubleOrNull()?.let { validDouble ->
-                    lastValidValue = validDouble
-                    onValueChange(validDouble)
-                }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) {
+                        // Only save when losing focus if value is valid and changed
+                        textValue.toDoubleOrNull()?.let { validDouble ->
+                            if (validDouble != lastValidValue) {
+                                lastValidValue = validDouble
+                                onValueChange(validDouble)
+                                showSavedIndicator = true
+                            }
+                        }
+                    }
+                },
             textStyle = MaterialTheme.typography.bodyMedium,
             singleLine = true,
             isError = textValue.toDoubleOrNull() == null,
+            trailingIcon = {
+                AnimatedVisibility(
+                    visible = showSavedIndicator,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Saved",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            },
             colors = ComponentColors.outlinedTextFieldColors(),
         )
         Text(
@@ -657,12 +758,20 @@ private fun ragOptionalIntField(
 ) {
     var textValue by remember { mutableStateOf(value?.toString() ?: "") }
     var lastValidValue by remember { mutableStateOf(value) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
 
     LaunchedEffect(value) {
         // Update text when external value changes (e.g., reload)
         if (value != lastValidValue) {
             textValue = value?.toString() ?: ""
             lastValidValue = value
+        }
+    }
+
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
         }
     }
 
@@ -678,22 +787,42 @@ private fun ragOptionalIntField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
-                // If empty, set to null
-                if (newValue.isBlank()) {
-                    lastValidValue = null
-                    onValueChange(null)
-                } else {
-                    // Only save if it's a valid integer
-                    newValue.toIntOrNull()?.let { validInt ->
-                        lastValidValue = validInt
-                        onValueChange(validInt)
-                    }
-                }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) {
+                        // Only save when losing focus if value changed
+                        val newValidValue = if (textValue.isBlank()) {
+                            null
+                        } else {
+                            textValue.toIntOrNull()
+                        }
+
+                        if (newValidValue != lastValidValue && (textValue.isBlank() || textValue.toIntOrNull() != null)) {
+                            lastValidValue = newValidValue
+                            onValueChange(newValidValue)
+                            showSavedIndicator = true
+                        }
+                    }
+                },
             textStyle = MaterialTheme.typography.bodyMedium,
             singleLine = true,
             isError = textValue.isNotBlank() && textValue.toIntOrNull() == null,
+            trailingIcon = {
+                AnimatedVisibility(
+                    visible = showSavedIndicator,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Saved",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            },
             colors = ComponentColors.outlinedTextFieldColors(),
         )
         Text(
@@ -704,18 +833,33 @@ private fun ragOptionalIntField(
     }
 }
 
+/**
+ * Get display name for ModelProvider enum
+ */
+private fun getProviderDisplayName(provider: ModelProvider): String = when (provider) {
+    ModelProvider.OPENAI -> "OpenAI"
+    ModelProvider.ANTHROPIC -> "Anthropic"
+    ModelProvider.GEMINI -> "Gemini"
+    ModelProvider.XAI -> "X AI"
+    ModelProvider.OLLAMA -> "Ollama"
+    ModelProvider.DOCKER -> "Docker"
+    ModelProvider.LOCALAI -> "LocalAI"
+    ModelProvider.LMSTUDIO -> "LMStudio"
+    ModelProvider.UNKNOWN -> "Unknown"
+}
+
 @Composable
 private fun ragEmbeddingModelSelector() {
-    // AI Provider options
+    // AI Provider options - only providers that support embedding models
     val providers = listOf(
-        "OpenAI" to true,
-        "Anthropic" to false,
-        "Gemini" to true,
-        "X AI" to false,
-        "Ollama" to true,
-        "Docker" to true,
-        "LocalAI" to true,
-        "LMStudio" to true,
+        ModelProvider.OPENAI to true,
+        ModelProvider.ANTHROPIC to false,
+        ModelProvider.GEMINI to true,
+        ModelProvider.XAI to false,
+        ModelProvider.OLLAMA to true,
+        ModelProvider.DOCKER to true,
+        ModelProvider.LOCALAI to true,
+        ModelProvider.LMSTUDIO to true,
     )
 
     var selectedProvider by remember { mutableStateOf(providers[0].first) }
@@ -723,22 +867,33 @@ private fun ragEmbeddingModelSelector() {
 
     // Get current value based on selected provider
     val currentValue = when (selectedProvider) {
-        "OpenAI" -> AppConfig.models.openai.embeddingModel
-        "Gemini" -> AppConfig.models.gemini.embeddingModel
-        "Ollama" -> AppConfig.models.ollama.embeddingModel
-        "Docker" -> AppConfig.models.docker.embeddingModel
-        "LocalAI" -> AppConfig.models.localai.embeddingModel
-        "LMStudio" -> AppConfig.models.lmstudio.embeddingModel
-        "Anthropic", "X AI" -> "N/A"
+        ModelProvider.OPENAI -> AppConfig.models.openai.embeddingModel
+        ModelProvider.GEMINI -> AppConfig.models.gemini.embeddingModel
+        ModelProvider.OLLAMA -> AppConfig.models.ollama.embeddingModel
+        ModelProvider.DOCKER -> AppConfig.models.docker.embeddingModel
+        ModelProvider.LOCALAI -> AppConfig.models.localai.embeddingModel
+        ModelProvider.LMSTUDIO -> AppConfig.models.lmstudio.embeddingModel
+        ModelProvider.ANTHROPIC, ModelProvider.XAI -> "N/A"
         else -> ""
     }
 
     val isSupported = providers.find { it.first == selectedProvider }?.second ?: false
 
     var textValue by remember(selectedProvider, currentValue) { mutableStateOf(currentValue) }
+    var lastSavedValue by remember(selectedProvider) { mutableStateOf(currentValue) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentValue) {
         textValue = currentValue
+        lastSavedValue = currentValue
+    }
+
+    // Auto-hide the saved indicator after 2 seconds
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
+        }
     }
 
     Column(
@@ -770,7 +925,7 @@ private fun ragEmbeddingModelSelector() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = selectedProvider,
+                            text = getProviderDisplayName(selectedProvider),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -786,7 +941,7 @@ private fun ragEmbeddingModelSelector() {
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
                 ) {
-                    providers.forEach { (providerName, supported) ->
+                    providers.forEach { (provider, supported) ->
                         DropdownMenuItem(
                             text = {
                                 Row(
@@ -794,7 +949,7 @@ private fun ragEmbeddingModelSelector() {
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        text = providerName,
+                                        text = getProviderDisplayName(provider),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = if (supported) {
                                             MaterialTheme.colorScheme.onSurface
@@ -813,10 +968,10 @@ private fun ragEmbeddingModelSelector() {
                                 }
                             },
                             onClick = {
-                                selectedProvider = providerName
+                                selectedProvider = provider
                                 dropdownExpanded = false
                             },
-                            leadingIcon = if (providerName == selectedProvider) {
+                            leadingIcon = if (provider == selectedProvider) {
                                 {
                                     Icon(
                                         Icons.Default.Check,
@@ -838,26 +993,54 @@ private fun ragEmbeddingModelSelector() {
                 onValueChange = { newValue ->
                     if (isSupported) {
                         textValue = newValue
-                        // Update the corresponding config field
-                        when (selectedProvider) {
-                            "OpenAI" -> AppConfig.updateField("embeddingModels.openai", newValue)
-                            "Gemini" -> AppConfig.updateField("embeddingModels.gemini", newValue)
-                            "Ollama" -> AppConfig.updateField("embeddingModels.ollama", newValue)
-                            "Docker" -> AppConfig.updateField("embeddingModels.docker", newValue)
-                            "LocalAI" -> AppConfig.updateField("embeddingModels.localai", newValue)
-                            "LMStudio" -> AppConfig.updateField("embeddingModels.lmstudio", newValue)
-                        }
                     }
                 },
-                modifier = Modifier.weight(2f),
+                modifier = Modifier
+                    .weight(2f)
+                    .onFocusChanged { focusState ->
+                        if (!focusState.isFocused && isSupported) {
+                            // Only save when losing focus if value changed
+                            if (textValue != lastSavedValue) {
+                                when (selectedProvider) {
+                                    ModelProvider.OPENAI -> AppConfig.updateField("models.openai.embeddingModel", textValue)
+                                    ModelProvider.GEMINI -> AppConfig.updateField("models.gemini.embeddingModel", textValue)
+                                    ModelProvider.OLLAMA -> AppConfig.updateField("models.ollama.embeddingModel", textValue)
+                                    ModelProvider.DOCKER -> AppConfig.updateField("models.docker.embeddingModel", textValue)
+                                    ModelProvider.LOCALAI -> AppConfig.updateField("models.localai.embeddingModel", textValue)
+                                    ModelProvider.LMSTUDIO -> AppConfig.updateField("models.lmstudio.embeddingModel", textValue)
+                                    else -> {}
+                                }
+                                lastSavedValue = textValue
+                                showSavedIndicator = true
+                            }
+                        }
+                    },
                 textStyle = MaterialTheme.typography.bodyMedium,
                 singleLine = true,
                 enabled = isSupported,
                 placeholder = {
                     Text(
-                        text = if (isSupported) "Enter embedding model" else "Not supported",
+                        text = if (isSupported) {
+                            stringResource("settings.model.placeholder.enter", "embedding")
+                        } else {
+                            stringResource("settings.model.placeholder.not.supported")
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = showSavedIndicator,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Saved",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 },
                 colors = ComponentColors.outlinedTextFieldColors(),
             )
@@ -866,7 +1049,219 @@ private fun ragEmbeddingModelSelector() {
         // Show not supported message
         if (!isSupported) {
             Text(
-                text = stringResource("settings.rag.embedding.not.supported", selectedProvider),
+                text = stringResource("settings.rag.embedding.not.supported", getProviderDisplayName(selectedProvider)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
+                fontStyle = FontStyle.Italic,
+            )
+        }
+    }
+}
+
+@Composable
+private fun visionModelSelector() {
+    // AI Provider options - all providers support vision models
+    val providers = listOf(
+        ModelProvider.OPENAI to true,
+        ModelProvider.ANTHROPIC to true,
+        ModelProvider.GEMINI to true,
+        ModelProvider.XAI to true,
+        ModelProvider.OLLAMA to true,
+        ModelProvider.DOCKER to true,
+        ModelProvider.LOCALAI to true,
+        ModelProvider.LMSTUDIO to true,
+    )
+
+    var selectedProvider by remember { mutableStateOf(providers[0].first) }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    // Get current value based on selected provider
+    val currentValue = when (selectedProvider) {
+        ModelProvider.OPENAI -> AppConfig.models.openai.visionModel
+        ModelProvider.ANTHROPIC -> AppConfig.models.anthropic.visionModel
+        ModelProvider.GEMINI -> AppConfig.models.gemini.visionModel
+        ModelProvider.XAI -> AppConfig.models.xai.visionModel
+        ModelProvider.OLLAMA -> AppConfig.models.ollama.visionModel
+        ModelProvider.DOCKER -> AppConfig.models.docker.visionModel
+        ModelProvider.LOCALAI -> AppConfig.models.localai.visionModel
+        ModelProvider.LMSTUDIO -> AppConfig.models.lmstudio.visionModel
+        else -> ""
+    }
+
+    val isSupported = providers.find { it.first == selectedProvider }?.second ?: false
+
+    var textValue by remember(selectedProvider, currentValue) { mutableStateOf(currentValue) }
+    var lastSavedValue by remember(selectedProvider) { mutableStateOf(currentValue) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentValue) {
+        textValue = currentValue
+        lastSavedValue = currentValue
+    }
+
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
+        }
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // Provider Dropdown and Model Field in a Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Provider Dropdown
+            Box(
+                modifier = Modifier.weight(1f),
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableCard { dropdownExpanded = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = getProviderDisplayName(selectedProvider),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Change provider",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = dropdownExpanded,
+                    onDismissRequest = { dropdownExpanded = false },
+                ) {
+                    providers.forEach { (provider, supported) ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = getProviderDisplayName(provider),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (supported) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                        },
+                                    )
+                                    if (!supported) {
+                                        Text(
+                                            text = "(Not supported)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                            fontStyle = FontStyle.Italic,
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                selectedProvider = provider
+                                dropdownExpanded = false
+                            },
+                            leadingIcon = if (provider == selectedProvider) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+            }
+
+            // Vision Model Text Field
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { newValue ->
+                    if (isSupported) {
+                        textValue = newValue
+                    }
+                },
+                modifier = Modifier
+                    .weight(2f)
+                    .onFocusChanged { focusState ->
+                        if (!focusState.isFocused && isSupported) {
+                            // Only save when losing focus if value changed
+                            if (textValue != lastSavedValue) {
+                                when (selectedProvider) {
+                                    ModelProvider.OPENAI -> AppConfig.updateField("models.openai.visionModel", textValue)
+                                    ModelProvider.ANTHROPIC -> AppConfig.updateField("models.anthropic.visionModel", textValue)
+                                    ModelProvider.GEMINI -> AppConfig.updateField("models.gemini.visionModel", textValue)
+                                    ModelProvider.XAI -> AppConfig.updateField("models.xai.visionModel", textValue)
+                                    ModelProvider.OLLAMA -> AppConfig.updateField("models.ollama.visionModel", textValue)
+                                    ModelProvider.DOCKER -> AppConfig.updateField("models.docker.visionModel", textValue)
+                                    ModelProvider.LOCALAI -> AppConfig.updateField("models.localai.visionModel", textValue)
+                                    ModelProvider.LMSTUDIO -> AppConfig.updateField("models.lmstudio.visionModel", textValue)
+                                    else -> {}
+                                }
+                                lastSavedValue = textValue
+                                showSavedIndicator = true
+                            }
+                        }
+                    },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                singleLine = true,
+                enabled = isSupported,
+                placeholder = {
+                    Text(
+                        text = if (isSupported) {
+                            stringResource("settings.model.placeholder.enter", "vision")
+                        } else {
+                            stringResource("settings.model.placeholder.not.supported")
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = showSavedIndicator,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Saved",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+                colors = ComponentColors.outlinedTextFieldColors(),
+            )
+        }
+
+        // Show not supported message
+        if (!isSupported) {
+            Text(
+                text = stringResource("settings.vision.models.not.supported", getProviderDisplayName(selectedProvider)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
                 fontStyle = FontStyle.Italic,

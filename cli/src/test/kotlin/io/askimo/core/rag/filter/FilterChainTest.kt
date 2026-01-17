@@ -5,7 +5,6 @@
 package io.askimo.core.rag.filter
 
 import io.askimo.core.config.AppConfig
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -26,11 +25,6 @@ class FilterChainTest {
     @BeforeEach
     fun setup() {
         filterChain = FilterChain.DEFAULT
-    }
-
-    @AfterEach
-    fun cleanup() {
-        // Clean up any test files
     }
 
     // ============================================================================
@@ -256,24 +250,20 @@ class FilterChainTest {
         val projectRoot = tempDir.resolve("generic-project")
         projectRoot.createDirectories()
 
-        // Test: Common excludes should still apply
-        val gitDir = projectRoot.resolve(".git")
-        gitDir.createDirectories()
+        // Test: Common excludes should still apply (without creating .git to avoid global gitignore)
+        // Create a .vscode directory which is in commonExcludes
+        val vscodeDir = projectRoot.resolve(".vscode")
+        vscodeDir.createDirectories()
 
-        assertTrue(filterChain.shouldExclude(gitDir, projectRoot), ".git/ should be excluded even without project type")
+        assertTrue(filterChain.shouldExclude(vscodeDir, projectRoot), ".vscode/ should be excluded even without project type")
 
         // Test: Project-specific excludes should NOT apply
         val buildDir = projectRoot.resolve("build")
         buildDir.createDirectories()
 
-        // Note: build/ is NOT in commonExcludes, only in Gradle/Node.js excludes
-        // But it might still be excluded if commonExcludes includes it
-        val buildShouldBeExcluded = AppConfig.indexing.commonExcludes.any { it == "build/" }
-        if (buildShouldBeExcluded) {
-            assertTrue(filterChain.shouldExclude(buildDir, projectRoot), "build/ excluded via common excludes")
-        } else {
-            assertFalse(filterChain.shouldExclude(buildDir, projectRoot), "build/ should not be excluded without Gradle/Node.js markers")
-        }
+        // Note: build/ is NOT in commonExcludes, only in Gradle/Node.js/Python excludes
+        // Without project markers, build/ should not be excluded
+        assertFalse(filterChain.shouldExclude(buildDir, projectRoot), "build/ should not be excluded without project type markers")
     }
 
     // ============================================================================

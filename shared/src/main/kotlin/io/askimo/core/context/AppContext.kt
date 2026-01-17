@@ -6,6 +6,7 @@ package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.i18n.LocalizationManager
@@ -232,12 +233,19 @@ class AppContext private constructor(
         sessionId: String,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
+        useVision: Boolean = false,
     ): ChatClient {
         val provider = params.currentProvider
         val factory = getModelFactory(provider)
             ?: error("No model factory registered for $provider")
         val settings = getOrCreateProviderSettings(provider)
-        val modelName = params.model
+
+        // Select model based on vision requirement
+        val modelName = if (useVision) {
+            getVisionModelForProvider(provider)
+        } else {
+            params.model
+        }
 
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
@@ -249,6 +257,21 @@ class AppContext private constructor(
             executionMode = executionMode,
             chatMemory = memory,
         )
+    }
+
+    /**
+     * Get the vision model name for the current provider.
+     */
+    private fun getVisionModelForProvider(provider: ModelProvider): String = when (provider) {
+        ModelProvider.OPENAI -> AppConfig.models.openai.visionModel
+        ModelProvider.ANTHROPIC -> AppConfig.models.anthropic.visionModel
+        ModelProvider.GEMINI -> AppConfig.models.gemini.visionModel
+        ModelProvider.XAI -> AppConfig.models.xai.visionModel
+        ModelProvider.OLLAMA -> AppConfig.models.ollama.visionModel
+        ModelProvider.DOCKER -> AppConfig.models.docker.visionModel
+        ModelProvider.LOCALAI -> AppConfig.models.localai.visionModel
+        ModelProvider.LMSTUDIO -> AppConfig.models.lmstudio.visionModel
+        ModelProvider.UNKNOWN -> params.model // Fallback to current model
     }
 
     /**

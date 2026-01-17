@@ -5,6 +5,8 @@
 package io.askimo.desktop.view.components
 
 import androidx.compose.ui.window.FrameWindowScope
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ThemeMode
@@ -126,6 +128,18 @@ object NativeMenuBar {
                 },
             )
             fileMenu.add(searchSessionsItem)
+
+            fileMenu.addSeparator()
+
+            val invalidateCachesItem = MenuItem(
+                LocalizationManager.getString("menu.invalidate.caches"),
+            )
+            invalidateCachesItem.addActionListener(
+                ActionListener {
+                    EventBus.post(InvalidateCacheEvent())
+                },
+            )
+            fileMenu.add(invalidateCachesItem)
 
             fileMenu.addSeparator()
 

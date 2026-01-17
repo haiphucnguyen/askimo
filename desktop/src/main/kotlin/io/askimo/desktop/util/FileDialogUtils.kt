@@ -4,7 +4,7 @@
  */
 package io.askimo.desktop.util
 
-import io.askimo.core.chat.util.FileContentExtractor
+import io.askimo.core.chat.util.FileTypeSupport
 import java.io.FilenameFilter
 
 /**
@@ -12,11 +12,27 @@ import java.io.FilenameFilter
  */
 object FileDialogUtils {
     /**
-     * Creates a filename filter that only accepts files with supported extensions.
-     * This filter is based on the extensions supported by FileContentExtractor.
+     * Creates a filename filter that accepts all supported files (text + images).
+     * This allows users to attach both text files (for RAG/content extraction) and images (for vision).
      */
     fun createSupportedFileFilter(): FilenameFilter = FilenameFilter { _, name ->
-        val extension = name.substringAfterLast('.', "").lowercase()
-        extension in FileContentExtractor.ALL_SUPPORTED_EXTENSIONS
+        val extension = FileTypeSupport.getExtension(name)
+        FileTypeSupport.isSupported(extension)
+    }
+
+    /**
+     * Creates a filename filter that only accepts text-extractable files (no images).
+     */
+    fun createTextFileFilter(): FilenameFilter = FilenameFilter { _, name ->
+        val extension = FileTypeSupport.getExtension(name)
+        FileTypeSupport.isTextExtractable(extension)
+    }
+
+    /**
+     * Creates a filename filter that only accepts image files.
+     */
+    fun createImageFileFilter(): FilenameFilter = FilenameFilter { _, name ->
+        val extension = FileTypeSupport.getExtension(name)
+        FileTypeSupport.isImageExtension(extension)
     }
 }

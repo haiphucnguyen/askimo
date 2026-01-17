@@ -408,11 +408,15 @@ class TokenAwareSummarizingMemory(
      * Generate structured summary using the provided summarizer function
      */
     private fun generateStructuredSummary(messagesToSummarize: List<MemoryMessage>) {
-        val conversationText = buildConversationText(messagesToSummarize)
-        val newSummary = chatClient.getSummary(conversationText)
+        try {
+            val conversationText = buildConversationText(messagesToSummarize)
+            val newSummary = chatClient.getSummary(conversationText)
 
-        structuredSummary = mergeWithExistingSummary(newSummary)
-        log.info("Generated structured summary with ${newSummary.keyFacts.size} facts, ${newSummary.mainTopics.size} topics")
+            structuredSummary = mergeWithExistingSummary(newSummary)
+            log.info("Generated structured summary with ${newSummary.keyFacts.size} facts, ${newSummary.mainTopics.size} topics")
+        } catch (e: Exception) {
+            log.error("Structured summarization failed for session $sessionId", e)
+        }
     }
 
     private fun mergeWithExistingSummary(newSummary: ConversationSummary): ConversationSummary {

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,12 +31,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -103,29 +107,213 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
         }
     }
 
-    val provider = configInfo.provider.name
-    val model = configInfo.model
-
-    themedTooltip(
-        text = stringResource("system.ai.config.tooltip", provider, model),
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(
-            onClick = onConfigureAiProvider,
-            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        // Provider button - click to configure
+        providerButton(
+            currentProvider = configInfo.provider,
+            onConfigureProvider = onConfigureAiProvider,
+        )
+
+        // Model dropdown - quick switch models
+        modelDropdown(
+            currentProvider = configInfo.provider,
+            currentModel = configInfo.model,
+            onModelSelected = { newModel ->
+                val appContext = get<AppContext>(AppContext::class.java)
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        appContext.params.model = newModel
+                        io.askimo.core.context.AppContextConfigManager.save(appContext.params)
+                        EventBus.emit(ModelChangedEvent(configInfo.provider, newModel))
+                    } catch (_: Exception) {
+                        // Silently handle error
+                    }
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun providerButton(
+    currentProvider: io.askimo.core.providers.ModelProvider,
+    onConfigureProvider: () -> Unit,
+) {
+    themedTooltip(
+        text = stringResource("system.ai.provider.tooltip", currentProvider.name),
+    ) {
+        Card(
+            modifier = Modifier
+                .clickableCard { onConfigureProvider() }
+                .widthIn(min = 100.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
         ) {
-            Icon(
-                imageVector = Icons.Default.AutoAwesome,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "$provider: $model",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = currentProvider.name.lowercase().replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun modelDropdown(
+    currentProvider: io.askimo.core.providers.ModelProvider,
+    currentModel: String,
+    onModelSelected: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+    val appContext = remember { get<AppContext>(AppContext::class.java) }
+    val scope = rememberCoroutineScope()
+
+    // Load models when provider changes or when dropdown is opened
+    LaunchedEffect(currentProvider, expanded) {
+        if (expanded && availableModels.isEmpty()) {
+            isLoading = true
+            scope.launch {
+                try {
+                    val settings = appContext.getOrCreateProviderSettings(currentProvider)
+                    val factory = appContext.getModelFactory(currentProvider)
+                    if (factory != null) {
+                        @Suppress("UNCHECKED_CAST")
+                        val models = (factory as io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+                            .availableModels(settings)
+                        availableModels = models
+                    }
+                } catch (_: Exception) {
+                    availableModels = emptyList()
+                } finally {
+                    isLoading = false
+                }
+            }
+        }
+    }
+
+    // Reset models when provider changes
+    LaunchedEffect(currentProvider) {
+        availableModels = emptyList()
+    }
+
+    Box {
+        Card(
+            modifier = Modifier
+                .clickableCard { expanded = true }
+                .widthIn(min = 120.dp, max = 250.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = currentModel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        ComponentColors.themedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            when {
+                isLoading -> {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Text(
+                                    text = stringResource("settings.model.loading"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        },
+                        onClick = {},
+                        enabled = false,
+                    )
+                }
+                availableModels.isEmpty() -> {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource("settings.model.none"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            )
+                        },
+                        onClick = {},
+                        enabled = false,
+                    )
+                }
+                else -> {
+                    availableModels.forEach { model ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = model,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            },
+                            onClick = {
+                                onModelSelected(model)
+                                expanded = false
+                            },
+                            leadingIcon = if (model == currentModel) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Current model",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }

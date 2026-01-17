@@ -4,6 +4,7 @@
  */
 package io.askimo.cli.recipes
 
+import dev.langchain4j.data.message.UserMessage
 import io.askimo.cli.LoadingIndicator
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
@@ -86,7 +87,7 @@ class RecipeExecutor(
         val output =
             appContext
                 .getStatelessChatClient()
-                .sendStreamingMessageWithCallback(prompt) { _ ->
+                .sendStreamingMessageWithCallback(UserMessage(prompt)) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()
                         opts.terminal?.flush()

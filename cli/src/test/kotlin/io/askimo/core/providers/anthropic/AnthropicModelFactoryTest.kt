@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.anthropic
 
+import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.Presets
@@ -42,7 +43,7 @@ class AnthropicModelFactoryTest {
             )
 
         val prompt = "Reply with a single short word."
-        val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ -> }.trim()
+        val output = chatClient.sendStreamingMessageWithCallback(UserMessage(prompt)) { _ -> }.trim()
 
         assertTrue(output.isNotBlank(), "Expected a non-empty response from Anthropic, but got blank: '$output'")
     }

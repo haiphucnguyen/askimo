@@ -4,14 +4,21 @@
  */
 package io.askimo.core.providers
 
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.JsonUtils
 import io.askimo.core.util.JsonUtils.prettyJson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
 /**
@@ -27,6 +34,7 @@ import kotlin.io.path.exists
 object ModelContextSizeCache {
     private val cache = ConcurrentHashMap<String, Int>()
     private val cacheFile: Path = AskimoHome.base().resolve("model-context-cache.json")
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Binary search reduction - halve the context size each time for fast convergence
     private const val REDUCTION_FACTOR = 0.5
@@ -35,14 +43,14 @@ object ModelContextSizeCache {
     // Cloud providers: aggressive (large contexts)
     // Local models: conservative (smaller contexts)
     private val PROVIDER_DEFAULTS: Map<ModelProvider, Int> = mapOf(
-        ModelProvider.ANTHROPIC to 262_144, // 256K - Claude 3.5 Sonnet/Opus capacity
-        ModelProvider.GEMINI to 1_048_576, // 1M - Gemini 1.5 Pro capacity
-        ModelProvider.OPENAI to 131_072, // 128K - GPT-4 Turbo/4o capacity
-        ModelProvider.XAI to 131_072, // 128K - Grok capacity
-        ModelProvider.OLLAMA to 32_768, // 32K - Conservative for local models
-        ModelProvider.DOCKER to 32_768, // 32K - Conservative for local models
-        ModelProvider.LOCALAI to 32_768, // 32K - Conservative for local models
-        ModelProvider.LMSTUDIO to 32_768, // 32K - Conservative for local models
+        ModelProvider.ANTHROPIC to 262_144,
+        ModelProvider.GEMINI to 1_048_576,
+        ModelProvider.OPENAI to 262_144,
+        ModelProvider.XAI to 262_144,
+        ModelProvider.OLLAMA to 262_144,
+        ModelProvider.DOCKER to 262_144,
+        ModelProvider.LOCALAI to 262_144,
+        ModelProvider.LMSTUDIO to 262_144,
     )
 
     // Fallback default for unknown providers (power of 2: 128K)
@@ -52,6 +60,15 @@ object ModelContextSizeCache {
 
     init {
         loadFromFile()
+
+        // Listen for cache invalidation events
+        scope.launch {
+            EventBus.internalEvents.collect { event ->
+                if (event is InvalidateCacheEvent) {
+                    invalidateCache()
+                }
+            }
+        }
     }
 
     /**
@@ -110,6 +127,20 @@ object ModelContextSizeCache {
     fun clear() {
         cache.clear()
         saveToFile()
+    }
+
+    /**
+     * Invalidate the cache by clearing all entries and deleting the cache file.
+     * This is typically triggered by user action to reset cached model context sizes.
+     */
+    private fun invalidateCache() {
+        try {
+            cache.clear()
+            cacheFile.deleteIfExists()
+            log.info("Model context size cache invalidated and file deleted")
+        } catch (e: Exception) {
+            log.warn("Failed to invalidate model context cache", e)
+        }
     }
 
     private fun loadFromFile() {

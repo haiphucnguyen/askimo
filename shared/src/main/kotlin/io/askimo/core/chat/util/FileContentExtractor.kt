@@ -34,8 +34,10 @@ object FileContentExtractor {
      * @throws Exception if the file cannot be read or the format is unsupported
      */
     fun extractContent(file: File): String {
-        val extension = file.extension.lowercase()
-        if (extension in SUPPORTED_TEXT_EXTENSIONS) {
+        val extension = FileTypeSupport.getExtension(file.name)
+        if (FileTypeSupport.isTextExtractable(extension) &&
+            extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
+        ) {
             return file.readText()
         }
 
@@ -72,7 +74,7 @@ object FileContentExtractor {
             // This handles .md, .gradle.kts, .gitignore, and other text files
             mimeType == "application/octet-stream" ||
                 mimeType.startsWith("application/x-") -> {
-                if (extension in SUPPORTED_BINARY_EXTENSIONS) {
+                if (extension in FileTypeSupport.DOCUMENT_EXTENSIONS) {
                     extractUsingTika(file)
                 } else {
                     throw UnsupportedOperationException("Cannot extract content from: $mimeType (extension: .$extension)")
@@ -118,9 +120,8 @@ object FileContentExtractor {
             mimeType.startsWith("application/x-") ||
             mimeType == "text/plain"
         ) {
-            val extension = file.extension.lowercase()
-            return extension in SUPPORTED_TEXT_EXTENSIONS ||
-                extension in SUPPORTED_BINARY_EXTENSIONS
+            val extension = FileTypeSupport.getExtension(file.name)
+            return FileTypeSupport.isTextExtractable(extension)
         }
 
         return false
@@ -143,8 +144,8 @@ object FileContentExtractor {
 
         // Fallback to extension check for files Tika misdetects
         if (mimeType == "application/octet-stream" || mimeType.startsWith("application/x-")) {
-            val extension = file.extension.lowercase()
-            return extension in SUPPORTED_TEXT_EXTENSIONS
+            val extension = FileTypeSupport.getExtension(file.name)
+            return extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
         }
 
         return false
@@ -204,65 +205,8 @@ object FileContentExtractor {
         "application/x-tex",
     )
 
-    // Fallback for extension-based check when file doesn't exist
-    val SUPPORTED_TEXT_EXTENSIONS = setOf(
-        // Plain text
-        "txt", "text",
-        // Markdown
-        "md", "markdown",
-        // Programming languages
-        "kt", "kts", "java", "py", "js", "ts", "jsx", "tsx",
-        "c", "cpp", "h", "hpp", "cs", "go", "rs", "rb", "php",
-        "swift", "m", "mm", "scala", "groovy", "clj", "ex", "exs",
-        "r", "lua", "pl", "perl", "dart", "jl", "zig", "nim", "v",
-        "f90", "f95", "f", "asm", "s", "hs", "elm", "fs", "fsx",
-        "ml", "mli", "erl", "hrl", "lisp", "scm", "vim", "d", "pas",
-        // Web
-        "html", "htm", "css", "scss", "sass", "less",
-        "vue", "svelte", "astro",
-        // Templates
-        "hbs", "mustache", "ejs", "pug", "jade", "twig", "jinja", "j2",
-        // Data formats
-        "json", "xml", "yaml", "yml", "toml", "ini", "conf", "config",
-        "csv", "tsv", "graphql", "gql", "proto",
-        // Shell scripts
-        "sh", "bash", "zsh", "fish", "bat", "ps1", "cmd",
-        // Build files
-        "gradle", "maven", "cmake", "mk", "makefile", "gnumakefile",
-        "dockerfile", "containerfile", "rakefile",
-        // Infrastructure as Code
-        "tf", "tfvars", "hcl", "nomad", "pkr.hcl",
-        // Configuration files
-        "cfg", "cnf", "editorconfig", "gitignore", "gitattributes",
-        "dockerignore", "npmignore", "eslintrc", "prettierrc", "babelrc",
-        "npmrc", "yarnrc", "htaccess",
-        // Documentation
-        "rst", "adoc", "asciidoc", "org", "pod", "rdoc",
-        // Patches & Diffs
-        "diff", "patch", "rej",
-        // Certificates & Keys (text format)
-        "pem", "crt", "key", "pub", "asc",
-        // Other
-        "sql", "log", "properties", "env", "lock", "iml",
-    )
-
-    val SUPPORTED_BINARY_EXTENSIONS = setOf(
-        // PDF
-        "pdf",
-        // Microsoft Office
-        "docx", "doc",
-        "xlsx", "xls",
-        "pptx", "ppt",
-        // OpenDocument
-        "odt", "ods", "odp",
-        // Email
-        "eml", "msg",
-        // Rich Text
-        "rtf",
-    )
-
     /**
-     * Get all supported file extensions (both text and binary).
+     * Get all supported file extensions for text extraction (text + documents, but NOT images).
      */
-    val ALL_SUPPORTED_EXTENSIONS: Set<String> = SUPPORTED_TEXT_EXTENSIONS + SUPPORTED_BINARY_EXTENSIONS
+    val ALL_SUPPORTED_EXTENSIONS: Set<String> = FileTypeSupport.TEXT_EXTRACTABLE_EXTENSIONS
 }
