@@ -2,6 +2,9 @@
   "resources": {
     "includes": [
       {
+        "pattern": "\\QMETA-INF/log4j-provider.properties\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/maven/org.xerial/sqlite-jdbc/pom.properties\\E"
       },
       {
@@ -83,6 +86,21 @@
         "pattern": "\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/javax.imageio.spi.ImageInputStreamSpi\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/javax.imageio.spi.ImageOutputStreamSpi\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/javax.imageio.spi.ImageReaderSpi\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/javax.imageio.spi.ImageTranscoderSpi\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/javax.imageio.spi.ImageWriterSpi\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/javax.xml.parsers.SAXParserFactory\\E"
       },
       {
@@ -96,6 +114,27 @@
       },
       {
         "pattern": "\\QMETA-INF/services/kotlin.test.AsserterContributor\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.logging.log4j.spi.Provider\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.logging.log4j.util.PropertySource\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.tika.detect.Detector\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.tika.detect.EncodingDetector\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.tika.detect.zip.ZipContainerDetector\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.tika.parser.Parser\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/org.apache.tika.renderer.Renderer\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.sql.DatabaseConnectionAutoRegistration\\E"
@@ -137,6 +176,9 @@
         "pattern": "\\Qcom/github/dockerjava/zerodep/shaded/org/apache/hc/client5/version.properties\\E"
       },
       {
+        "pattern": "\\Qcustom-mimetypes.xml\\E"
+      },
+      {
         "pattern": "\\Qdocker-java.properties\\E"
       },
       {
@@ -176,6 +218,18 @@
         "pattern": "\\Qkotlin/reflect/reflect.kotlin_builtins\\E"
       },
       {
+        "pattern": "\\Qlog4j2.StatusLogger.properties\\E"
+      },
+      {
+        "pattern": "\\Qlog4j2.component.properties\\E"
+      },
+      {
+        "pattern": "\\Qlog4j2.simplelog.properties\\E"
+      },
+      {
+        "pattern": "\\Qlog4j2.system.properties\\E"
+      },
+      {
         "pattern": "\\Qlogback-test.xml\\E"
       },
       {
@@ -210,6 +264,15 @@
       },
       {
         "pattern": "\\Qmozilla/public-suffix-list.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/apache/tika/mime/tika-mimetypes.xml\\E"
+      },
+      {
+        "pattern": "\\Qorg/apache/tika/parser/html/StandardCharsets_unsupported_by_IANA.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/apache/tika/parser/html/self-closeable-tags.txt\\E"
       },
       {
         "pattern": "\\Qorg/mockito/internal/creation/bytebuddy/MockMethodAdvice$ForEquals.class\\E"
@@ -258,5 +321,14 @@
       }
     ]
   },
-  "bundles": []
+  "bundles": [
+    {
+      "name": "sun.awt.resources.awt",
+      "classNames": ["sun.awt.resources.awt"]
+    },
+    {
+      "name": "sun.awt.resources.awtosx",
+      "classNames": ["sun.awt.resources.awtosx"]
+    }
+  ]
 }

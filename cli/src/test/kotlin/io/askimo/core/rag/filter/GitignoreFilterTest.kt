@@ -362,23 +362,32 @@ class GitignoreFilterTest {
         Files.writeString(
             gitignore,
             """
-            build/
-            cache/
+            xyzTestDir123/
+            abcOutputDir456/
             """.trimIndent(),
         )
 
         val filter = GitignoreFilter()
 
-        // Should exclude build directory
-        val buildDir = tempDir.resolve("build")
-        Files.createDirectory(buildDir)
-        assertTrue(filter.shouldExclude(buildDir, true, createContext(buildDir, tempDir)))
+        // Should exclude xyzTestDir123 directory
+        val testDir = tempDir.resolve("xyzTestDir123")
+        Files.createDirectory(testDir)
+        assertTrue(filter.shouldExclude(testDir, true, createContext(testDir, tempDir)))
 
-        // Should NOT exclude build file (directory-only pattern)
-        val buildFile = tempDir.resolve("build")
-        Files.deleteIfExists(buildFile) // Remove directory first
-        Files.createFile(buildFile)
-        assertFalse(filter.shouldExclude(buildFile, false, createContext(buildFile, tempDir)))
+        // Should exclude abcOutputDir456 directory
+        val outputDir = tempDir.resolve("abcOutputDir456")
+        Files.createDirectory(outputDir)
+        assertTrue(filter.shouldExclude(outputDir, true, createContext(outputDir, tempDir)))
+
+        // Should NOT exclude a file with similar name (directory-only pattern doesn't match files)
+        val testFile = tempDir.resolve("xyzTestDir123.kt")
+        Files.createFile(testFile)
+        assertFalse(filter.shouldExclude(testFile, false, createContext(testFile, tempDir)))
+
+        // Should NOT exclude another file with similar name
+        val outputFile = tempDir.resolve("abcOutputDir456.java")
+        Files.createFile(outputFile)
+        assertFalse(filter.shouldExclude(outputFile, false, createContext(outputFile, tempDir)))
     }
 
     @Test

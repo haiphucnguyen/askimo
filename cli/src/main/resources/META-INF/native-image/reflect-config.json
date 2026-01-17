@@ -231,6 +231,14 @@
     "fields": [{ "name": "FACTORY" }, { "name": "expiresAfterAccessNanos" }]
   },
   {
+    "name": "com.github.benmanes.caffeine.cache.SSMS",
+    "fields": [{ "name": "maximum" }, { "name": "weightedSize" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSMSA",
+    "fields": [{ "name": "FACTORY" }, { "name": "expiresAfterAccessNanos" }]
+  },
+  {
     "name": "com.github.benmanes.caffeine.cache.StripedBuffer",
     "fields": [{ "name": "tableBusy" }]
   },
@@ -701,7 +709,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -879,6 +888,9 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "com.github.luben.zstd.ZstdInputStream"
+  },
+  {
     "name": "com.sun.crypto.provider.AESCipher$General",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -908,6 +920,10 @@
   },
   {
     "name": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "com.sun.crypto.provider.HmacCore$HmacSHA256",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -1275,13 +1291,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "customParameters", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1339,8 +1348,7 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "build", "parameterTypes": [] },
       { "name": "content", "parameterTypes": ["java.lang.String"] },
-      { "name": "role", "parameterTypes": ["java.lang.String"] },
-      { "name": "toolCalls", "parameterTypes": ["java.util.List"] }
+      { "name": "role", "parameterTypes": ["java.lang.String"] }
     ]
   },
   {
@@ -1350,22 +1358,10 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "arguments", "parameterTypes": ["java.lang.String"] },
-      { "name": "build", "parameterTypes": [] },
-      { "name": "name", "parameterTypes": ["java.lang.String"] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Message",
@@ -1383,32 +1379,7 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.ToolCall$Builder",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "build", "parameterTypes": [] },
-      {
-        "name": "function",
-        "parameterTypes": [
-          "dev.langchain4j.model.openai.internal.chat.FunctionCall"
-        ]
-      },
-      { "name": "id", "parameterTypes": ["java.lang.String"] },
-      { "name": "index", "parameterTypes": ["java.lang.Integer"] },
-      { "name": "type", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -1513,6 +1484,16 @@
         ]
       },
       { "name": "totalTokens", "parameterTypes": ["java.lang.Integer"] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.service.UserMessage",
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "delimiter", "parameterTypes": [] },
+      { "name": "fromResource", "parameterTypes": [] },
+      { "name": "value", "parameterTypes": [] }
     ]
   },
   {
@@ -1906,6 +1887,9 @@
     ]
   },
   {
+    "name": "io.askimo.core.chat.domain.SessionMemory"
+  },
+  {
     "name": "io.askimo.core.chat.repository.ChatDirectiveRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2257,6 +2241,21 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.chat.repository.SessionMemoryRepository",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "getBySessionId", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "saveMemory",
+        "parameterTypes": ["io.askimo.core.chat.domain.SessionMemory"]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.chat.repository.SessionMemoryRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2407,6 +2406,264 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.chat.service.UrlExtractionIntentTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should NOT extract URL when asking unrelated question",
+        "parameterTypes": []
+      },
+      {
+        "name": "should NOT extract URL when just bookmarking or saving",
+        "parameterTypes": []
+      },
+      {
+        "name": "should NOT extract URL when just mentioning as reference",
+        "parameterTypes": []
+      },
+      {
+        "name": "should NOT extract URL when just providing context",
+        "parameterTypes": []
+      },
+      {
+        "name": "should NOT extract URL when sharing for later",
+        "parameterTypes": []
+      },
+      {
+        "name": "should correctly identify which URLs need extraction in multi-URL message",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when URL comes before action verb",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when URL is followed by question mark",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking to show me URL content",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking to tell me about URL",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking what URL is about",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking what URL says",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking what the page says",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when asking what's on the URL",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to analyze",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to check content",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to examine",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to explain",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to read",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to review",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract URL when user asks to summarize",
+        "parameterTypes": []
+      },
+      {
+        "name": "should extract both URLs when both have explicit intent",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle URL at different positions in message",
+        "parameterTypes": []
+      },
+      { "name": "should handle URL with fragments", "parameterTypes": [] },
+      {
+        "name": "should handle URL with query parameters",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle case insensitive patterns",
+        "parameterTypes": ["java.lang.String"]
+      },
+      {
+        "name": "should handle very long messages with URL",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.service.UrlExtractionIntentTest$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.util.FileContentExtractorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should detect RTF as supported",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should extract text from markdown file",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should extract text from plain text file",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not support images",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should support DOC files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should support DOCX files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should support PDF files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should support markdown files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should support text files",
+        "parameterTypes": ["java.nio.file.Path"]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.util.UrlContentExtractorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "should detect valid URLs", "parameterTypes": [] },
+      { "name": "should extract URLs from message", "parameterTypes": [] },
+      { "name": "should extract content from HTML page", "parameterTypes": [] },
+      { "name": "should normalize URLs", "parameterTypes": [] },
+      { "name": "should provide unsupported messages", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.AnthropicModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.lang.String",
+          "long",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.AppConfig",
+    "methods": [
+      {
+        "name": "updateChatField",
+        "parameterTypes": [
+          "io.askimo.core.config.ChatConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "updateDeveloperField",
+        "parameterTypes": [
+          "io.askimo.core.config.DeveloperConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "updateEmbeddingField",
+        "parameterTypes": [
+          "io.askimo.core.config.EmbeddingConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "updateModelsField",
+        "parameterTypes": [
+          "io.askimo.core.config.ModelsConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      },
+      {
+        "name": "updateRagField",
+        "parameterTypes": [
+          "io.askimo.core.config.RagConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.AppConfigData",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2416,29 +2673,68 @@
         "name": "<init>",
         "parameterTypes": [
           "io.askimo.core.config.EmbeddingConfig",
-          "io.askimo.core.config.EmbeddingModelsConfig",
-          "io.askimo.core.config.RetryConfig",
-          "io.askimo.core.config.ThrottleConfig",
-          "io.askimo.core.config.IndexingConfig",
-          "io.askimo.core.config.DeveloperConfig",
-          "io.askimo.core.config.ChatConfig",
-          "io.askimo.core.config.RagConfig"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "io.askimo.core.config.EmbeddingConfig",
-          "io.askimo.core.config.EmbeddingModelsConfig",
           "io.askimo.core.config.RetryConfig",
           "io.askimo.core.config.ThrottleConfig",
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
           "io.askimo.core.config.RagConfig",
+          "io.askimo.core.config.ModelsConfig"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.EmbeddingConfig",
+          "io.askimo.core.config.RetryConfig",
+          "io.askimo.core.config.ThrottleConfig",
+          "io.askimo.core.config.IndexingConfig",
+          "io.askimo.core.config.DeveloperConfig",
+          "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.RagConfig",
+          "io.askimo.core.config.ModelsConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.AppConfigTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "updateChatField should handle all fields",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateDeveloperField should handle all fields",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateEmbeddingField should handle all fields",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateModelsField should handle all provider vision models",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateModelsField should handle embedding models",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateRagField should handle all numeric fields",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateRagField should handle useAbsolutePathInCitations",
+        "parameterTypes": []
       }
     ]
   },
@@ -2484,6 +2780,28 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.DockerModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.EmbeddingConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2506,25 +2824,6 @@
     ]
   },
   {
-    "name": "io.askimo.core.config.EmbeddingModelsConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      }
-    ]
-  },
-  {
     "name": "io.askimo.core.config.FilterConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -2539,6 +2838,34 @@
           "boolean",
           "boolean",
           "boolean"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.GeminiModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       }
     ]
@@ -2578,8 +2905,137 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.LmStudioModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
       },
-      { "name": "getAllExcludes", "parameterTypes": [] }
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.LocalAiModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ModelsConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.AnthropicModelConfig",
+          "io.askimo.core.config.GeminiModelConfig",
+          "io.askimo.core.config.OpenAiModelConfig",
+          "io.askimo.core.config.OllamaModelConfig",
+          "io.askimo.core.config.DockerModelConfig",
+          "io.askimo.core.config.LocalAiModelConfig",
+          "io.askimo.core.config.LmStudioModelConfig",
+          "io.askimo.core.config.XAiModelConfig"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.AnthropicModelConfig",
+          "io.askimo.core.config.GeminiModelConfig",
+          "io.askimo.core.config.OpenAiModelConfig",
+          "io.askimo.core.config.OllamaModelConfig",
+          "io.askimo.core.config.DockerModelConfig",
+          "io.askimo.core.config.LocalAiModelConfig",
+          "io.askimo.core.config.LmStudioModelConfig",
+          "io.askimo.core.config.XAiModelConfig",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.OllamaModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.OpenAiModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
     ]
   },
   {
@@ -2654,6 +3110,24 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.XAiModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["long", "java.lang.String"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.context.AppContext",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2667,6 +3141,8 @@
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
+      { "name": "createUtilityClient", "parameterTypes": [] },
+      { "name": "getActiveProvider", "parameterTypes": [] },
       { "name": "getParams", "parameterTypes": [] }
     ]
   },
@@ -2689,7 +3165,106 @@
         ]
       },
       { "name": "getCurrentProvider", "parameterTypes": [] },
+      { "name": "getModel", "parameterTypes": [] },
       { "name": "getProviderSettings", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.db.AbstractSQLiteRepository",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "io.askimo.core.memory.TokenAwareSummarizingMemoryTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setup", "parameterTypes": [] },
+      { "name": "should add messages to memory", "parameterTypes": [] },
+      {
+        "name": "should calculate maxTokens based on model context size",
+        "parameterTypes": []
+      },
+      { "name": "should clear all messages and summary", "parameterTypes": [] },
+      {
+        "name": "should close executor service properly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should estimate tokens correctly with default estimator",
+        "parameterTypes": []
+      },
+      { "name": "should export and import memory state", "parameterTypes": [] },
+      {
+        "name": "should extract text content from different message types",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle concurrent message additions safely",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle database load failure gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle database save failure gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle empty conversation gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle summarization failure gracefully with fallback",
+        "parameterTypes": []
+      },
+      { "name": "should handle very long messages", "parameterTypes": [] },
+      { "name": "should initialize empty memory", "parameterTypes": [] },
+      {
+        "name": "should load from database on initialization",
+        "parameterTypes": []
+      },
+      { "name": "should maintain message order", "parameterTypes": [] },
+      {
+        "name": "should merge summaries when multiple summarizations occur",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not trigger summarization below threshold",
+        "parameterTypes": []
+      },
+      {
+        "name": "should persist to database when adding messages",
+        "parameterTypes": []
+      },
+      {
+        "name": "should preserve system messages during summarization",
+        "parameterTypes": []
+      },
+      {
+        "name": "should respect synchronous summarization mode",
+        "parameterTypes": []
+      },
+      {
+        "name": "should serialize and deserialize memory state correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should trigger summarization above threshold",
+        "parameterTypes": []
+      },
+      {
+        "name": "should use custom token estimator when provided",
+        "parameterTypes": []
+      },
+      { "name": "tearDown", "parameterTypes": [] }
     ]
   },
   {
@@ -2707,7 +3282,23 @@
   },
   {
     "name": "io.askimo.core.providers.ChatClient",
-    "queryAllPublicMethods": true
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "sendMessage", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "sendMessageStreaming",
+        "parameterTypes": ["dev.langchain4j.data.message.UserMessage"]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$1vFH11vZ",
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "io.askimo.core.providers.ChatRequestTransformersTest",
@@ -2872,6 +3463,305 @@
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
       { "name": "defaultSettingsTest", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.rag.MetadataAwareContentInjectorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should format citation with absolute path when enabled",
+        "parameterTypes": []
+      },
+      {
+        "name": "should format citation with relative path when absolute paths disabled",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle detailed citation style with absolute paths",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle minimal citation style with absolute paths",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle missing metadata gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle multiple contents with different files",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.rag.filter.FilterChainTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setup", "parameterTypes": [] },
+      {
+        "name": "should apply correct excludes when subproject path used as root",
+        "parameterTypes": []
+      },
+      {
+        "name": "should apply only common excludes when no project type detected",
+        "parameterTypes": []
+      },
+      {
+        "name": "should cache project type detection per subproject in monorepo",
+        "parameterTypes": []
+      },
+      {
+        "name": "should cache project type detection results",
+        "parameterTypes": []
+      },
+      { "name": "should detect Go project type", "parameterTypes": [] },
+      { "name": "should detect Gradle project type", "parameterTypes": [] },
+      { "name": "should detect Maven project type", "parameterTypes": [] },
+      { "name": "should detect Node_js project type", "parameterTypes": [] },
+      { "name": "should detect Python project type", "parameterTypes": [] },
+      { "name": "should detect Rust project type", "parameterTypes": [] },
+      {
+        "name": "should detect multiple project types in same project",
+        "parameterTypes": []
+      },
+      {
+        "name": "should discover all project roots in monorepo",
+        "parameterTypes": []
+      },
+      {
+        "name": "should exclude IDE directories for all projects",
+        "parameterTypes": []
+      },
+      {
+        "name": "should exclude git directory for all projects",
+        "parameterTypes": []
+      },
+      {
+        "name": "should exclude log files for all projects",
+        "parameterTypes": []
+      },
+      {
+        "name": "should exclude nested paths under excluded directories",
+        "parameterTypes": []
+      },
+      {
+        "name": "should find closest project root in monorepo",
+        "parameterTypes": []
+      },
+      {
+        "name": "should find project root by walking up directory tree",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle deep nested project structure",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle deeply nested monorepo structure",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle empty relative path correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle monorepo with different project types in subprojects",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle monorepo with mixed language polyglot project",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle monorepo with nested projects of same type",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle paths with similar names but different types",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle relative paths correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should handle wildcard patterns in project markers",
+        "parameterTypes": []
+      },
+      {
+        "name": "should never exclude the project root directory itself",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not exclude source files in src directory",
+        "parameterTypes": []
+      },
+      {
+        "name": "should not search inside build directories when discovering projects",
+        "parameterTypes": []
+      },
+      {
+        "name": "should use git directory as fallback for project root",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.rag.filter.GitignoreFilterTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should exclude directories",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude files matching simple patterns",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle complex real-world gitignore",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle directory-only patterns correctly",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle double asterisk patterns",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle negation patterns",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle nested gitignore files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle rooted patterns",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle wildcard patterns correctly",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should ignore comments and blank lines",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should match patterns at any level with double asterisk prefix",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should match simple patterns only at gitignore directory level",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not exclude README md file",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not exclude files when no gitignore exists",
+        "parameterTypes": ["java.nio.file.Path"]
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.rag.filter.ProjectTypeFilterTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should exclude IDE directories from commonExcludes",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude VCS directories from commonExcludes",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude cache and temp directories with project types",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude common build directories with project types",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude directories at nested levels",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should exclude node_modules directory with Node project type",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle Java project specific excludes",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle Python project specific excludes",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle directory pattern matching correctly",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle empty project types list",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle files with same name as directory patterns",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle pattern with directory in middle of path",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle project type specific excludes",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should handle relative paths correctly",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not exclude documentation files",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not exclude source directories",
+        "parameterTypes": ["java.nio.file.Path"]
+      },
+      {
+        "name": "should not exclude source files",
+        "parameterTypes": ["java.nio.file.Path"]
+      }
     ]
   },
   {
@@ -3401,6 +4291,33 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.util.ProcessBuilderExtTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "ProcessBuilderExt should execute common system commands",
+        "parameterTypes": []
+      },
+      {
+        "name": "ProcessBuilderExt should find executables in PATH",
+        "parameterTypes": []
+      },
+      {
+        "name": "ProcessBuilderExt should handle List constructor",
+        "parameterTypes": []
+      },
+      {
+        "name": "ProcessBuilderExt should work with redirectErrorStream",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.util.RetryUtilsTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3432,6 +4349,34 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.vision.ImageProcessorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "should calculate compression ratio correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "should compress JPEG image with quality setting",
+        "parameterTypes": []
+      },
+      { "name": "should handle PNG images", "parameterTypes": [] },
+      {
+        "name": "should not resize image already within max dimensions",
+        "parameterTypes": []
+      },
+      {
+        "name": "should resize large image to fit within max dimensions",
+        "parameterTypes": []
+      }
+    ]
   },
   {
     "name": "io.askimo.testcontainers.ModelCachingDemoTest",
@@ -3746,6 +4691,9 @@
     "methods": [{ "name": "value", "parameterTypes": [] }]
   },
   {
+    "name": "java.lang.annotation.RetentionPolicy"
+  },
+  {
     "name": "java.lang.annotation.Target",
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
@@ -3921,7 +4869,10 @@
   },
   {
     "name": "java.lang.reflect.AnnotatedWildcardType",
-    "methods": [{ "name": "getAnnotatedUpperBounds", "parameterTypes": [] }]
+    "methods": [
+      { "name": "getAnnotatedLowerBounds", "parameterTypes": [] },
+      { "name": "getAnnotatedUpperBounds", "parameterTypes": [] }
+    ]
   },
   {
     "name": "java.lang.reflect.Executable",
@@ -3955,6 +4906,10 @@
       { "name": "getName", "parameterTypes": [] },
       { "name": "getType", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "java.lang.reflect.TypeVariable",
+    "methods": [{ "name": "getAnnotatedBounds", "parameterTypes": [] }]
   },
   {
     "name": "java.net.UnixDomainSocketAddress",
@@ -4177,7 +5132,8 @@
     "name": "java.util.function.BiFunction"
   },
   {
-    "name": "java.util.function.Consumer"
+    "name": "java.util.function.Consumer",
+    "queryAllPublicMethods": true
   },
   {
     "name": "java.util.function.Function"
@@ -4193,6 +5149,20 @@
   },
   {
     "name": "java.util.stream.Stream"
+  },
+  {
+    "name": "javax.imageio.spi.ImageReaderSpi"
+  },
+  {
+    "name": "javax.imageio.spi.ImageReaderWriterSpi",
+    "methods": [
+      { "name": "getFileSuffixes", "parameterTypes": [] },
+      { "name": "getFormatNames", "parameterTypes": [] },
+      { "name": "getMIMETypes", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "javax.imageio.spi.ImageWriterSpi"
   },
   {
     "name": "javax.security.auth.x500.X500Principal",
@@ -4229,6 +5199,7 @@
     "name": "kotlin.Metadata",
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "bv", "parameterTypes": [] },
       { "name": "d1", "parameterTypes": [] },
@@ -4459,6 +5430,375 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "org.apache.tika.detect.microsoft.POIFSContainerDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.microsoft.ooxml.OPCPackageDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.DefaultZipContainerDetector",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.FrictionlessPackageDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.IPADetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.JarDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.KMZDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.OpenDocumentDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.StarOfficeDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.csv.TextAndCSVParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.html.HtmlEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.html.JSoupParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.EMFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.JackcessParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.MSOwnerFileParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.OfficeParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.OldExcelParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.TNEFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.WMFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.activemime.ActiveMimeParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.chm.ChmParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.onenote.OneNoteParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.ooxml.OOXMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.ooxml.xwpf.ml2006.Word2006MLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.pst.OutlookPSTParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.pst.PSTMailItemParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.rtf.RTFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.xml.SpreadsheetMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.xml.WordMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.pdf.PDFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.tmx.TMXParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.txt.Icu4jEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.txt.UniversalEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xliff.XLIFF12Parser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xliff.XLZParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xml.DcXMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xml.FictionBookParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
     "name": "org.jline.reader.ParsedLine",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4475,9 +5815,12 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$DVkRRi9G",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$c2H8MxGB",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.osgi.framework.FrameworkUtil"
   },
   {
     "name": "org.slf4j.Logger"
@@ -4485,6 +5828,13 @@
   {
     "name": "org.sqlite.JDBC",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.java2d.marlin.DMarlinRenderingEngine",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.misc.SharedSecrets"
   },
   {
     "name": "sun.security.pkcs12.PKCS12KeyStore",
@@ -4588,6 +5938,10 @@
   },
   {
     "name": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.ssl.SSLContextImpl$TLSContext",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

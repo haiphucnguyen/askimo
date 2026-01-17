@@ -4,6 +4,7 @@
  */
 package io.askimo.core.config
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -177,6 +178,7 @@ data class IndexingConfig(
      * Cached combination of commonExcludes and all ProjectType excludePaths.
      * This is computed once when the config is loaded for better performance.
      */
+    @get:JsonIgnore
     val allExcludes: Set<String> by lazy {
         buildSet {
             addAll(commonExcludes)
@@ -234,42 +236,50 @@ data class AnthropicModelConfig(
     ),
     val utilityModel: String = "claude-3-haiku-20240307",
     val utilityModelTimeoutSeconds: Long = 45,
+    val visionModel: String = "claude-3-5-sonnet-20241022",
 )
 
 data class GeminiModelConfig(
-    val utilityModel: String = "gemini-1.5-flash",
+    val utilityModel: String = "gemini-2.0-flash",
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "text-embedding-004",
+    val visionModel: String = "gemini-2.0-pro",
 )
 
 data class OpenAiModelConfig(
     val utilityModel: String = "gpt-3.5-turbo",
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "text-embedding-3-small",
+    val visionModel: String = "gpt-4o",
 )
 
 data class OllamaModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
+    val visionModel: String = "llava:7b",
 )
 
 data class DockerModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "ai/qwen3-embedding:0.6B-F16",
+    val visionModel: String = "llava:latest",
 )
 
 data class LocalAiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
+    val visionModel: String = "bakllava",
 )
 
 data class LmStudioModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
+    val visionModel: String = "llava-v1.6-mistral-7b",
 )
 
 data class XAiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
+    val visionModel: String = "grok-2-vision-latest",
 )
 
 data class ModelsConfig(
@@ -358,28 +368,36 @@ object AppConfig {
             available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-1,claude-opus-4-0,claude-sonnet-4-5,claude-sonnet-4-0,claude-3-7-sonnet-latest,claude-3-5-haiku-latest}
             utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-3-haiku-20240307}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
+            vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-3-5-sonnet-20241022}
           gemini:
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-1.5-flash}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
+            vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
           openai:
             utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:gpt-3.5-turbo}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+            vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
           ollama:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
+            vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:llava:latest}
           docker:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:ai/qwen3-embedding:0.6B-F16}
+            vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:llava:latest}
           localai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:nomic-embed-text:latest}
+            vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:bakllava}
           lmstudio:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:nomic-embed-text:latest}
+            vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:llava-v1.6-mistral-7b}
           xai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
+            vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
 
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
@@ -392,14 +410,6 @@ object AppConfig {
             cached ?: synchronized(this) {
                 cached ?: loadOnce().also { cached = it }
             }
-
-    /** Reload on demand after editing the file. */
-    fun reload(): AppConfigData = synchronized(this) {
-        cached = null
-        val re = loadOnce()
-        cached = re
-        re
-    }
 
     private fun loadOnce(): AppConfigData {
         val path = resolveOrCreateConfigPath()
@@ -636,13 +646,14 @@ object AppConfig {
     fun updateField(path: String, value: Any) {
         synchronized(this) {
             val parts = path.split(".")
-            if (parts.size != 2) {
-                log.displayError("Invalid config path: $path. Must be in format 'section.field'", null)
+
+            if (parts.size < 2 || parts.size > 3) {
+                log.displayError("Invalid config path: $path. Must be in format 'section.field' or 'models.provider.field'", null)
                 return
             }
 
             val section = parts[0]
-            val field = parts[1]
+            val field = if (parts.size == 2) parts[1] else "${parts[1]}.${parts[2]}"
 
             // Update in-memory cache
             val current = cached ?: loadOnce()
@@ -660,14 +671,13 @@ object AppConfig {
                 }
             }
 
-            // Persist to YAML file
             val configPath = resolveOrCreateConfigPath()
             if (configPath != null && configPath.exists()) {
                 try {
-                    val content = Files.readString(configPath)
-                    val updatedContent = updateYamlField(content, section, field, value)
-                    Files.writeString(configPath, updatedContent)
-                    log.info("Updated $path=$value in $configPath")
+                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(cached)
+                    Files.writeString(configPath, updatedYaml)
+
+                    log.debug("Updated $path=$value in $configPath")
                 } catch (e: Exception) {
                     log.displayError("Failed to persist $path to config file", e)
                 }
@@ -711,62 +721,108 @@ object AppConfig {
         "vectorSearchMinScore" -> config.copy(vectorSearchMinScore = (value as Number).toDouble())
         "hybridMaxResults" -> config.copy(hybridMaxResults = value as Int)
         "rankFusionConstant" -> config.copy(rankFusionConstant = value as Int)
+        "useAbsolutePathInCitations" -> config.copy(useAbsolutePathInCitations = value as Boolean)
         else -> config
     }
 
     private fun updateModelsField(config: ModelsConfig, field: String, value: Any): ModelsConfig {
-        // For models section, we expect nested paths like "anthropic.utilityModel"
-        // This is handled differently - would need 3-part path support
-        // For now, we'll keep it simple and not support runtime updates to models config
-        log.displayError("Runtime updates to models config not yet supported", null)
-        return config
-    }
+        // Handle nested paths like "openai.visionModel"
+        val parts = field.split(".")
+        if (parts.size != 2) {
+            log.displayError("Models config requires nested path format: provider.field (e.g., openai.visionModel)", null)
+            return config
+        }
 
-    /**
-     * Generic YAML field updater that handles nested sections.
-     */
-    private fun updateYamlField(yamlContent: String, section: String, field: String, value: Any): String {
-        val lines = yamlContent.lines().toMutableList()
-        var inSection = false
-        var fieldLineIndex = -1
-        var sectionLineIndex = -1
+        val provider = parts[0]
+        val modelField = parts[1]
+        val stringValue = value as? String ?: value.toString()
 
-        // Find the section and field
-        for (i in lines.indices) {
-            val line = lines[i].trimStart()
-
-            if (line.startsWith("$section:")) {
-                inSection = true
-                sectionLineIndex = i
-            } else if (inSection && line.startsWith("$field:")) {
-                fieldLineIndex = i
-                break
-            } else if (inSection && line.isNotBlank() && !line.startsWith(" ") && !line.startsWith("\t")) {
-                // We've entered another top-level section
-                break
+        return when (provider) {
+            "openai" -> config.copy(
+                openai = when (modelField) {
+                    "visionModel" -> config.openai.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.openai.copy(embeddingModel = stringValue)
+                    "utilityModel" -> config.openai.copy(utilityModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown OpenAI model field: $modelField", null)
+                        config.openai
+                    }
+                },
+            )
+            "anthropic" -> config.copy(
+                anthropic = when (modelField) {
+                    "visionModel" -> config.anthropic.copy(visionModel = stringValue)
+                    "utilityModel" -> config.anthropic.copy(utilityModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown Anthropic model field: $modelField", null)
+                        config.anthropic
+                    }
+                },
+            )
+            "gemini" -> config.copy(
+                gemini = when (modelField) {
+                    "visionModel" -> config.gemini.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.gemini.copy(embeddingModel = stringValue)
+                    "utilityModel" -> config.gemini.copy(utilityModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown Gemini model field: $modelField", null)
+                        config.gemini
+                    }
+                },
+            )
+            "xai" -> config.copy(
+                xai = when (modelField) {
+                    "visionModel" -> config.xai.copy(visionModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown X AI model field: $modelField", null)
+                        config.xai
+                    }
+                },
+            )
+            "ollama" -> config.copy(
+                ollama = when (modelField) {
+                    "visionModel" -> config.ollama.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.ollama.copy(embeddingModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown Ollama model field: $modelField", null)
+                        config.ollama
+                    }
+                },
+            )
+            "docker" -> config.copy(
+                docker = when (modelField) {
+                    "visionModel" -> config.docker.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.docker.copy(embeddingModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown Docker model field: $modelField", null)
+                        config.docker
+                    }
+                },
+            )
+            "localai" -> config.copy(
+                localai = when (modelField) {
+                    "visionModel" -> config.localai.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.localai.copy(embeddingModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown LocalAI model field: $modelField", null)
+                        config.localai
+                    }
+                },
+            )
+            "lmstudio" -> config.copy(
+                lmstudio = when (modelField) {
+                    "visionModel" -> config.lmstudio.copy(visionModel = stringValue)
+                    "embeddingModel" -> config.lmstudio.copy(embeddingModel = stringValue)
+                    else -> {
+                        log.displayError("Unknown LMStudio model field: $modelField", null)
+                        config.lmstudio
+                    }
+                },
+            )
+            else -> {
+                log.displayError("Unknown provider: $provider", null)
+                config
             }
         }
-
-        val formattedValue = when (value) {
-            is String -> value
-            is Boolean -> value.toString()
-            is Number -> value.toString()
-            else -> value.toString()
-        }
-
-        if (fieldLineIndex >= 0) {
-            val indent = lines[fieldLineIndex].takeWhile { it.isWhitespace() }
-            lines[fieldLineIndex] = "$indent$field: $formattedValue"
-        } else if (sectionLineIndex >= 0) {
-            val sectionIndent = lines[sectionLineIndex].takeWhile { it.isWhitespace() }
-            val fieldIndent = "$sectionIndent  "
-            lines.add(sectionLineIndex + 1, "$fieldIndent$field: $formattedValue")
-        } else {
-            lines.add("")
-            lines.add("$section:")
-            lines.add("  $field: $formattedValue")
-        }
-
-        return lines.joinToString("\n")
     }
 }

@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
@@ -35,7 +36,7 @@ import java.util.concurrent.CountDownLatch
  * @return The complete response from the language model as a string
  */
 fun ChatClient.sendStreamingMessageWithCallback(
-    prompt: String,
+    userMessage: UserMessage,
     onToken: (String) -> Unit = {},
 ): String {
     val log = logger<ChatClient>()
@@ -62,7 +63,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 var isConfigurationError = false
                 var capturedError: Throwable? = null
 
-                sendMessageStreaming(prompt)
+                sendMessageStreaming(userMessage)
                     .onPartialResponse { chunk ->
                         sb.append(chunk)
                         onToken(chunk)

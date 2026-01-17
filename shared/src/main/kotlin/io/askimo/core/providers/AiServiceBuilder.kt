@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers
 
+import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.exception.InvalidRequestException
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
@@ -121,7 +122,7 @@ object AiServiceBuilder {
         val testClient = testClientBuilder.build()
 
         // Send a simple test message using the ChatClient.sendMessage method
-        testClient.sendStreamingMessageWithCallback("do you support tools? Answer yes or no only")
+        testClient.sendStreamingMessageWithCallback(UserMessage("do you support tools? Answer yes or no only"))
 
         true
     } catch (e: Exception) {

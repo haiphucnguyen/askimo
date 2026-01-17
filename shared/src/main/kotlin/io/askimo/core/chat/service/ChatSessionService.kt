@@ -6,6 +6,7 @@ package io.askimo.core.chat.service
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
 import io.askimo.core.chat.domain.ChatMessage
@@ -40,6 +41,7 @@ import io.askimo.core.rag.enrichContentRetrieverWithLucene
 import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.core.rag.getEmbeddingStore
 import io.askimo.core.util.formatFileSize
+import io.askimo.core.vision.toUserMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -108,17 +110,27 @@ class ChatSessionService(
 
     /**
      * Cache of session contexts (ChatClient + TokenAwareSummarizingMemory).
-     * Each session gets its own context with integrated memory.
+     * Each session can have TWO contexts: regular and vision.
+     * Cache keys: "sessionId" for regular, "sessionId_vision" for vision.
      * Caffeine provides automatic eviction when memory is low or sessions are inactive.
      */
     private val sessionContextCache: Cache<String, SessionChatContext> = Caffeine.newBuilder()
-        .maximumSize(10)
+        .maximumSize(20) // Increased to accommodate both regular and vision clients
         .expireAfterAccess(30.minutes.toJavaDuration())
         .removalListener<String, SessionChatContext> { sessionId, context, cause ->
             if (context != null && sessionId != null) {
                 log.debug("Evicting session context for session {} (cause: {})", sessionId, cause)
             }
         }
+        .build()
+
+    /**
+     * Cache of shared memory instances.
+     * Both regular and vision clients share the same memory to maintain conversation continuity.
+     */
+    private val memoryCache: Cache<String, TokenAwareSummarizingMemory> = Caffeine.newBuilder()
+        .maximumSize(10)
+        .expireAfterAccess(30.minutes.toJavaDuration())
         .build()
 
     init {
@@ -140,45 +152,77 @@ class ChatSessionService(
     }
 
     /**
-     * Get or create a chat context (client + memory) for a session.
-     * The context is cached and will be reused for subsequent requests.
+     * Get or create shared memory for a session.
+     * This ensures both regular and vision clients share the same conversation history.
      *
      * @param sessionId The session ID
-     * @return SessionChatContext containing the ChatClient and its associated memory
+     * @return Shared TokenAwareSummarizingMemory instance
      */
-    private fun getOrCreateContextForSession(sessionId: String): SessionChatContext = sessionContextCache.get(sessionId) { _ ->
-        val project = projectRepository.findProjectBySessionId(sessionId)
-
-        // Create self-managing memory that handles its own persistence
-        val memory = TokenAwareSummarizingMemory(
+    private fun getOrCreateSharedMemory(sessionId: String): TokenAwareSummarizingMemory = memoryCache.get(sessionId) { _ ->
+        TokenAwareSummarizingMemory(
             appContext,
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
             asyncSummarization = true,
             summarizationTimeoutSeconds = AppConfig.chat.summarizationTimeoutSeconds,
         )
+    }
 
-        // Create content retriever if project has indexed paths
-        val retriever = if (project != null) {
-            log.debug("Session $sessionId belongs to project: ${project.id}")
-            createRetrieverForProject(appContext.createUtilityClient(), project)
-        } else {
-            null
+    /**
+     * Get or create a chat context (client + memory) for a session.
+     * If needsVision=true, creates a vision-capable client that can be used alongside the regular client.
+     * Both regular and vision clients share the same memory to maintain conversation continuity.
+     *
+     * @param sessionId The session ID
+     * @param needsVision Whether to create a vision-capable client
+     * @return SessionChatContext containing the ChatClient and its associated memory
+     */
+    private fun getOrCreateContextForSession(
+        sessionId: String,
+        needsVision: Boolean = false,
+    ): SessionChatContext {
+        // Different cache keys for regular vs vision clients
+        val cacheKey = if (needsVision) "${sessionId}_vision" else sessionId
+
+        return sessionContextCache.get(cacheKey) { _ ->
+            val project = projectRepository.findProjectBySessionId(sessionId)
+
+            // Get or create shared memory - REUSE across both regular and vision clients
+            val sharedMemory = getOrCreateSharedMemory(sessionId)
+
+            // Create content retriever if project has indexed paths
+            val retriever = if (project != null) {
+                log.debug("Session $sessionId belongs to project: ${project.id}")
+                createRetrieverForProject(appContext.createUtilityClient(), project)
+            } else {
+                null
+            }
+
+            // Create client with vision support if requested
+            val chatClient = appContext.createStatefulChatSession(
+                sessionId = sessionId,
+                retriever = retriever,
+                memory = sharedMemory,
+                useVision = needsVision, // ← Pass vision flag
+            )
+
+            SessionChatContext(chatClient, sharedMemory)
         }
-
-        val chatClient = appContext.createStatefulChatSession(sessionId = sessionId, retriever = retriever, memory = memory)
-
-        SessionChatContext(chatClient, memory)
     }
 
     /**
      * Get or create a ChatClient for a session.
-     * This is a convenience method that returns just the client from the context.
+     * If needsVision=true, returns a vision-capable client.
+     * Both regular and vision clients share the same conversation memory.
      *
      * @param sessionId The session ID
-     * @return ChatClient for the session
+     * @param needsVision Whether to get a vision-capable client (default: false)
+     * @return ChatClient for the session (vision-capable if requested)
      */
-    fun getOrCreateClientForSession(sessionId: String): ChatClient = getOrCreateContextForSession(sessionId).chatClient
+    fun getOrCreateClientForSession(
+        sessionId: String,
+        needsVision: Boolean = false,
+    ): ChatClient = getOrCreateContextForSession(sessionId, needsVision).chatClient
 
     /**
      * Create a content retriever for a project if it has indexed paths.
@@ -311,7 +355,10 @@ class ChatSessionService(
      * @return true if the session was deleted, false if it didn't exist
      */
     fun deleteSession(sessionId: String): Boolean {
+        // Invalidate both regular and vision clients
         sessionContextCache.invalidate(sessionId)
+        sessionContextCache.invalidate("${sessionId}_vision")
+        memoryCache.invalidate(sessionId)
 
         messageRepository.deleteMessagesBySession(sessionId)
         sessionMemoryRepository.deleteBySessionId(sessionId)
@@ -391,10 +438,10 @@ class ChatSessionService(
     fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int {
         val count = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
 
-        // Get cached context if session is active
-        val context = sessionContextCache.getIfPresent(sessionId)
+        // Get shared memory if session is active
+        val sharedMemory = memoryCache.getIfPresent(sessionId)
 
-        if (context != null) {
+        if (sharedMemory != null) {
             // 1. Delete session memory from database
             sessionMemoryRepository.deleteBySessionId(sessionId)
 
@@ -414,7 +461,7 @@ class ChatSessionService(
                 )
             }
 
-            context.memory.loadFromFilteredMemory(memoryMessages)
+            sharedMemory.loadFromFilteredMemory(memoryMessages)
 
             log.debug(
                 "Cleared memory and reloaded {} active messages for session {} after marking {} messages as outdated",
@@ -566,69 +613,10 @@ class ChatSessionService(
     fun getStarredSessions(): List<ChatSession> = sessionRepository.getStarredSessions()
 
     /**
-     * Determines if URL content should be extracted based on explicit user intent.
+     * Prepares user message with attachments and URL contents, returns UserMessage for multi-modal support.
      *
-     * Following the pattern used by ChatGPT, Claude, and other AI services,
-     * we only extract URL content when the user explicitly requests it through:
-     * - Action verbs: "summarize", "analyze", "explain", "read"
-     * - Questions about URL: "what does", "what's on", "what is"
-     * - URL followed by a question or request
-     *
-     * @param userMessage The user's message
-     * @param url The URL to check
-     * @return true if URL content should be extracted, false otherwise
-     */
-    internal fun shouldExtractUrlContent(userMessage: String, url: String): Boolean {
-        val message = userMessage.lowercase()
-        val urlLower = url.lowercase()
-
-        // Find the position of the URL in the message
-        val urlIndex = message.indexOf(urlLower)
-        if (urlIndex == -1) return false
-
-        // Get text before and after the URL (within reasonable distance)
-        val beforeUrl = message.substring(0, urlIndex).takeLast(100) // Look at last 100 chars before URL
-        val afterUrl = message.substring(urlIndex + urlLower.length).take(100) // Look at first 100 chars after URL
-
-        // Patterns to check in text BEFORE the URL (action verb before URL)
-        val beforePatterns = listOf(
-            "\\b(summarize|summarise)\\s+[^.!?]*$", // Action verb not separated by sentence boundary
-            "\\banalyze\\s+[^.!?]*$",
-            "\\banalyse\\s+[^.!?]*$",
-            "\\bexplain\\s+[^.!?]*$",
-            "\\bread\\s+[^.!?]*$",
-            "\\breview\\s+[^.!?]*$",
-            "\\bexamine\\s+[^.!?]*$",
-            "\\bcheck\\s+(what|what's|whats|the\\s+content|this)[^.!?]*$",
-            // Questions about URL
-            "what\\s+does[^.!?]*$",
-            "what\\s+is[^.!?]*$",
-            "what'?s?\\s+(on|in|at)[^.!?]*$",
-            "what[^.!?]*$", // Generic "what" question before URL
-        )
-
-        // Patterns to check in text AFTER the URL (URL followed by request)
-        val afterPatterns = listOf(
-            "^[^.!?]*\\?", // URL followed by question mark (same sentence)
-            "^[^.!?]*(tell|show)\\s+me", // URL followed by "tell me" or "show me"
-            "^[^.!?]*(summarize|summarise|analyze|analyse|explain|review)", // URL followed by action
-        )
-
-        // Check if any before pattern matches
-        val hasBeforeMatch = beforePatterns.any { pattern ->
-            Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(beforeUrl)
-        }
-
-        // Check if any after pattern matches
-        val hasAfterMatch = afterPatterns.any { pattern ->
-            Regex(pattern, RegexOption.IGNORE_CASE).containsMatchIn(afterUrl)
-        }
-
-        return hasBeforeMatch || hasAfterMatch
-    }
-
-    /**
-     * Prepares user message with attachments and URL contents, returns combined prompt including any active directive.
+     * Handles both text-only messages and multi-modal messages containing images, file attachments,
+     * and extracted URL contents. Uses VisionExtensions.toUserMessage() for automatic conversion.
      *
      * The directive (system instructions + session-specific directive) is prepended to the user message
      * to act as system-level instructions. While ideally these would be separate system messages,
@@ -651,17 +639,16 @@ class ChatSessionService(
      * If attachments are present, they will be included inline in the message using file:// format.
      * If URLs are detected in the message with explicit intent, their content will be extracted and appended.
      *
-     * @return The complete prompt string ready to send to the AI (directive prepended if present)
+     * @return UserMessage ready to send to the AI (supports text + images)
      */
     fun prepareContextAndGetPromptForChat(
         sessionId: String,
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
-    ): String {
+    ): UserMessage {
         val urls = UrlContentExtractor.extractUrls(userMessage.content)
         val urlContents = urls.mapNotNull { url ->
-            // Only extract if user explicitly requested it
-            if (!shouldExtractUrlContent(userMessage.content, url)) {
+            if (!UrlIntentDetector.shouldExtractUrlContent(userMessage.content, url)) {
                 log.debug("Skipping URL content extraction for: $url (no explicit intent detected)")
                 return@mapNotNull null
             }
@@ -704,14 +691,20 @@ class ChatSessionService(
             }
         }
 
-        return constructMessageWithAttachmentsAndUrls(userMessage, urlContents)
+        // Construct enriched message with attachments and URL contents
+        val enrichedContent = constructMessageWithAttachmentsAndUrls(userMessage, urlContents)
+
+        // Create enriched ChatMessageDTO with combined content but preserve image attachments
+        val enrichedMessage = userMessage.copy(content = enrichedContent)
+
+        // Convert to UserMessage - this handles both text-only and multi-modal (images)
+        return enrichedMessage.toUserMessage()
     }
 
     /**
      * Constructs a formatted message with both file attachments and extracted URL contents.
      *
      * @param userMessage The original user message
-     * @param attachments List of file attachments
      * @param urlContents List of extracted URL contents
      * @return Formatted message with attachments and URL contents appended
      */
@@ -719,13 +712,7 @@ class ChatSessionService(
         userMessage: ChatMessageDTO,
         urlContents: List<ExtractedUrlContent>,
     ): String = buildString {
-        // First include attachments if present
         userMessage.attachments.forEach { attachment ->
-            appendLine("---")
-            appendLine("Attached file: ${attachment.fileName}")
-            appendLine("File size: ${formatFileSize(attachment.size)}")
-            appendLine()
-
             val content = when {
                 attachment.content != null -> attachment.content
                 attachment.filePath != null -> {
@@ -733,27 +720,34 @@ class ChatSessionService(
                         val file = File(attachment.filePath)
                         if (!file.exists()) {
                             log.error("File not found: ${attachment.filePath}")
-                            "[Error: File not found]"
+                            null
                         } else if (!FileContentExtractor.isSupported(file)) {
                             log.warn("Unsupported file type: ${attachment.fileName}")
-                            "[${FileContentExtractor.getUnsupportedMessage(file)}]"
+                            null
                         } else {
                             FileContentExtractor.extractContent(file)
                         }
                     } catch (e: Exception) {
                         log.error("Failed to extract content from ${attachment.fileName}: ${e.message}", e)
-                        "[Error: Could not read file - ${e.message}]"
+                        null
                     }
                 }
                 else -> {
                     log.error("Attachment has neither content nor filePath: ${attachment.fileName}")
-                    "[Error: No content available]"
+                    null
                 }
             }
 
-            appendLine(content)
-            appendLine("---")
-            appendLine()
+            // Only add file metadata and content if content is actually extractable
+            if (content != null) {
+                appendLine("---")
+                appendLine("Attached file: ${attachment.fileName}")
+                appendLine("File size: ${formatFileSize(attachment.size)}")
+                appendLine()
+                appendLine(content)
+                appendLine("---")
+                appendLine()
+            }
         }
 
         // Add URL contents if present

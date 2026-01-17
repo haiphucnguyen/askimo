@@ -25,7 +25,7 @@ interface ChatClient {
      * @return A [TokenStream] that emits tokens as they are generated
      */
     fun sendMessageStreaming(
-        @UserMessage prompt: String,
+        userMessage: dev.langchain4j.data.message.UserMessage,
     ): TokenStream
 
     /**

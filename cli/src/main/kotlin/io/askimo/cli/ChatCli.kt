@@ -4,6 +4,7 @@
  */
 package io.askimo.cli
 
+import dev.langchain4j.data.message.UserMessage
 import io.askimo.cli.autocompleter.CliCommandCompleter
 import io.askimo.cli.commands.CommandHandler
 import io.askimo.cli.commands.ConfigCommandHandler
@@ -185,7 +186,11 @@ fun main(args: Array<String>) {
         if (promptText != null) {
             val stdinText = readStdinIfAny()
             val prompt = buildPrompt(promptText, stdinText)
-            sendNonInteractiveChatMessage(appContext.getStatelessChatClient(), prompt, TerminalBuilder.builder().system(true).build())
+            sendNonInteractiveChatMessage(
+                appContext.getStatelessChatClient(),
+                UserMessage(prompt),
+                TerminalBuilder.builder().system(true).build(),
+            )
             return
         }
 
@@ -309,9 +314,9 @@ fun main(args: Array<String>) {
 
 private fun sendNonInteractiveChatMessage(
     chatClient: ChatClient,
-    prompt: String,
+    userMessage: UserMessage,
     terminal: Terminal,
-): String = streamChatResponse(chatClient, prompt, terminal)
+): String = streamChatResponse(chatClient, userMessage, terminal)
 
 private fun sendChatMessage(
     prompt: String,
@@ -346,7 +351,7 @@ private fun sendChatMessage(
  */
 private fun streamChatResponse(
     chatClient: ChatClient,
-    promptWithContext: String,
+    userMessage: UserMessage,
     terminal: Terminal,
 ): String {
     val indicator = LoadingIndicator(terminal, "Thinking…").apply { start() }
@@ -354,7 +359,7 @@ private fun streamChatResponse(
     val mdRenderer = MarkdownJLineRenderer()
     val mdSink = MarkdownStreamingSink(terminal, mdRenderer)
 
-    val output = chatClient.sendStreamingMessageWithCallback(promptWithContext) { token ->
+    val output = chatClient.sendStreamingMessageWithCallback(userMessage) { token ->
         if (firstTokenSeen.compareAndSet(false, true)) {
             indicator.stopWithElapsed()
             terminal.flush()

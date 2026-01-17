@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.gemini
 
+import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.Presets
@@ -42,7 +43,7 @@ class GeminiModelFactoryTest {
     private fun sendPromptAndGetResponse(chatClient: ChatClient, prompt: String): String {
         println("Sending prompt: '$prompt'")
 
-        val output = chatClient.sendStreamingMessageWithCallback(prompt) { _ ->
+        val output = chatClient.sendStreamingMessageWithCallback(UserMessage(prompt)) { _ ->
             print(".") // Show progress without overwhelming output
         }.trim()
 
