@@ -161,6 +161,44 @@ iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/inst
 
 [**Learn more about the command line tool →**](https://askimo.chat/cli)
 
+---
+
+## 🛠️ Developer Setup
+
+Want to build and run Askimo from source? Here's how to get started:
+
+### Prerequisites
+
+- **JDK 21** or later
+- **Git** for cloning the repository
+
+### Clone & Build
+
+```bash
+# Clone the repository
+git clone https://github.com/haiphucnguyen/askimo.git
+cd askimo
+
+# Run the desktop application
+./gradlew :desktop:run
+
+# Build native installers
+./gradlew :desktop:package
+```
+
+### Project Structure
+
+- **`desktop/`** - Desktop application (Kotlin Multiplatform)
+- **`cli/`** - Command-line interface
+- **`shared/`** - Shared business logic and utilities
+
+### Contributing
+
+Ready to contribute? Check out our [**Contributing Guide**](./CONTRIBUTING.md) for detailed development guidelines, code standards, and how to submit pull requests.
+
+> **📚 Note:** For detailed information on customizing Askimo, building from source, and development workflows, follow the [**Development Getting Started Guide**](https://askimo.chat/docs/development/getting-started/).
+
+---
 
 ## 🌐 Available in Your Language
 

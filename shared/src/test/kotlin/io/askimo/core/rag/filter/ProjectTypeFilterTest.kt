@@ -4,6 +4,7 @@
  */
 package io.askimo.core.rag.filter
 
+import io.askimo.core.config.ProjectType
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -22,7 +23,7 @@ class ProjectTypeFilterTest {
         Files.createDirectory(buildDir)
 
         // Create a context with Node.js project type
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("node_modules/", "dist/", "build/"),
@@ -53,7 +54,7 @@ class ProjectTypeFilterTest {
         assertTrue(filter.shouldExclude(distDir, true, distContext))
 
         // target/ is in Maven/Rust project types
-        val mavenProjectType = io.askimo.core.config.ProjectType(
+        val mavenProjectType = ProjectType(
             name = "Maven",
             markers = setOf("pom.xml"),
             excludePaths = setOf("target/", ".mvn/"),
@@ -77,7 +78,7 @@ class ProjectTypeFilterTest {
     fun `should exclude node_modules directory with Node project type`(@TempDir tempDir: Path) {
         val filter = ProjectTypeFilter()
 
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("node_modules/", "dist/", "build/"),
@@ -197,7 +198,7 @@ class ProjectTypeFilterTest {
     fun `should exclude directories at nested levels`(@TempDir tempDir: Path) {
         val filter = ProjectTypeFilter()
 
-        val gradleProjectType = io.askimo.core.config.ProjectType(
+        val gradleProjectType = ProjectType(
             name = "Gradle",
             markers = setOf("build.gradle"),
             excludePaths = setOf("build/", ".gradle/", "out/", "bin/"),
@@ -234,7 +235,7 @@ class ProjectTypeFilterTest {
     fun `should handle directory pattern matching correctly`(@TempDir tempDir: Path) {
         val filter = ProjectTypeFilter()
 
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("build/", "dist/"),
@@ -272,7 +273,7 @@ class ProjectTypeFilterTest {
     fun `should handle files with same name as directory patterns`(@TempDir tempDir: Path) {
         val filter = ProjectTypeFilter()
 
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("build/"),
@@ -316,7 +317,7 @@ class ProjectTypeFilterTest {
         val nodeModules = tempDir.resolve("node_modules")
         Files.createDirectory(nodeModules)
 
-        val customProjectType = io.askimo.core.config.ProjectType(
+        val customProjectType = ProjectType(
             name = "JavaScript",
             markers = setOf("package.json", "node_modules"),
             excludePaths = setOf("node_modules/", "dist/"),
@@ -341,7 +342,7 @@ class ProjectTypeFilterTest {
         val pycacheDir = tempDir.resolve("__pycache__")
         Files.createDirectory(pycacheDir)
 
-        val customProjectType = io.askimo.core.config.ProjectType(
+        val customProjectType = ProjectType(
             name = "Python",
             markers = setOf("requirements.txt", "setup.py"),
             excludePaths = setOf("__pycache__/", ".pytest_cache/", "*.pyc"),
@@ -366,7 +367,7 @@ class ProjectTypeFilterTest {
         val gradleDir = tempDir.resolve(".gradle")
         Files.createDirectory(gradleDir)
 
-        val customProjectType = io.askimo.core.config.ProjectType(
+        val customProjectType = ProjectType(
             name = "Java",
             markers = setOf("build.gradle", "pom.xml"),
             excludePaths = setOf(".gradle/", "target/", "*.class"),
@@ -388,7 +389,7 @@ class ProjectTypeFilterTest {
         val filter = ProjectTypeFilter()
 
         // tmp/ is in Ruby project type
-        val rubyProjectType = io.askimo.core.config.ProjectType(
+        val rubyProjectType = ProjectType(
             name = "Ruby",
             markers = setOf("Gemfile"),
             excludePaths = setOf("vendor/", ".bundle/", "tmp/", "log/"),
@@ -407,7 +408,7 @@ class ProjectTypeFilterTest {
         assertTrue(filter.shouldExclude(tmpDir, true, tmpContext))
 
         // .cache/ is in Node.js project type
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("node_modules/", ".cache/", "coverage/"),
@@ -485,7 +486,7 @@ class ProjectTypeFilterTest {
     fun `should handle pattern with directory in middle of path`(@TempDir tempDir: Path) {
         val filter = ProjectTypeFilter()
 
-        val nodeProjectType = io.askimo.core.config.ProjectType(
+        val nodeProjectType = ProjectType(
             name = "Node.js",
             markers = setOf("package.json"),
             excludePaths = setOf("node_modules/", "dist/"),

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
@@ -72,6 +75,7 @@ import androidx.compose.ui.window.Popup
 import io.askimo.core.VersionInfo
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
@@ -82,6 +86,9 @@ import io.askimo.core.event.user.IndexingCompletedEvent
 import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
+import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.telemetry.TelemetryMetrics
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.desktop.i18n.stringResource
@@ -89,10 +96,13 @@ import io.askimo.desktop.monitoring.SystemResourceMonitor
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.formatDuration
 import io.askimo.desktop.util.formatDurationDetailed
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.get
 import java.awt.Desktop
 import java.net.URI
+import java.util.Locale.getDefault
 
 @Composable
 private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
@@ -123,10 +133,10 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
             currentModel = configInfo.model,
             onModelSelected = { newModel ->
                 val appContext = get<AppContext>(AppContext::class.java)
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     try {
                         appContext.params.model = newModel
-                        io.askimo.core.context.AppContextConfigManager.save(appContext.params)
+                        AppContextConfigManager.save(appContext.params)
                         EventBus.emit(ModelChangedEvent(configInfo.provider, newModel))
                     } catch (_: Exception) {
                         // Silently handle error
@@ -139,7 +149,7 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
 
 @Composable
 private fun providerButton(
-    currentProvider: io.askimo.core.providers.ModelProvider,
+    currentProvider: ModelProvider,
     onConfigureProvider: () -> Unit,
 ) {
     themedTooltip(
@@ -176,13 +186,14 @@ private fun providerButton(
 
 @Composable
 private fun modelDropdown(
-    currentProvider: io.askimo.core.providers.ModelProvider,
+    currentProvider: ModelProvider,
     currentModel: String,
     onModelSelected: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val appContext = remember { get<AppContext>(AppContext::class.java) }
     val scope = rememberCoroutineScope()
 
@@ -196,7 +207,7 @@ private fun modelDropdown(
                     val factory = appContext.getModelFactory(currentProvider)
                     if (factory != null) {
                         @Suppress("UNCHECKED_CAST")
-                        val models = (factory as io.askimo.core.providers.ChatModelFactory<io.askimo.core.providers.ProviderSettings>)
+                        val models = (factory as ChatModelFactory<ProviderSettings>)
                             .availableModels(settings)
                         availableModels = models
                     }
@@ -209,9 +220,10 @@ private fun modelDropdown(
         }
     }
 
-    // Reset models when provider changes
+    // Reset models and search when provider changes
     LaunchedEffect(currentProvider) {
         availableModels = emptyList()
+        searchQuery = ""
     }
 
     Box {
@@ -233,7 +245,7 @@ private fun modelDropdown(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Icon(
                     imageVector = if (expanded) {
@@ -250,17 +262,20 @@ private fun modelDropdown(
 
         ComponentColors.themedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = {
+                expanded = false
+                searchQuery = ""
+            },
         ) {
             when {
                 isLoading -> {
-                    androidx.compose.material3.DropdownMenuItem(
+                    DropdownMenuItem(
                         text = {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.CircularProgressIndicator(
+                                CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Text(
@@ -274,7 +289,7 @@ private fun modelDropdown(
                     )
                 }
                 availableModels.isEmpty() -> {
-                    androidx.compose.material3.DropdownMenuItem(
+                    DropdownMenuItem(
                         text = {
                             Text(
                                 text = stringResource("settings.model.none"),
@@ -287,30 +302,126 @@ private fun modelDropdown(
                     )
                 }
                 else -> {
-                    availableModels.forEach { model ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = {
+                    // Search field
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource("settings.model.search"),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodySmall,
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Filter models based on search
+                    val filteredModels = availableModels.filter {
+                        it.contains(searchQuery, ignoreCase = true)
+                    }
+
+                    // Group models by family (e.g., gpt-4, gpt-3.5, claude, gemini)
+                    val groupedModels = filteredModels.groupBy { model ->
+                        val parts = model.split('-', '.')
+                        when {
+                            parts.size >= 2 -> "${parts[0]}-${parts[1]}"
+                            parts.size == 1 -> parts[0]
+                            else -> "Other"
+                        }
+                    }.toSortedMap()
+
+                    // Scrollable list with fixed dimensions to avoid intrinsic measurement issues
+                    val scrollState = rememberScrollState()
+
+                    Box(
+                        modifier = Modifier
+                            .width(300.dp)
+                            .height(400.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scrollState),
+                        ) {
+                            if (filteredModels.isEmpty()) {
+                                // Show "no results" message if search yields nothing
                                 Text(
-                                    text = model,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = stringResource("settings.model.no.results"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(16.dp),
                                 )
-                            },
-                            onClick = {
-                                onModelSelected(model)
-                                expanded = false
-                            },
-                            leadingIcon = if (model == currentModel) {
-                                {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Current model",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
                             } else {
-                                null
-                            },
-                        )
+                                groupedModels.forEach { (category, models) ->
+                                    // Category header (only if multiple groups)
+                                    if (groupedModels.size > 1 && models.isNotEmpty()) {
+                                        Text(
+                                            text = category.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(
+                                                horizontal = 16.dp,
+                                                vertical = 8.dp,
+                                            ),
+                                        )
+                                    }
+
+                                    // Models in this category
+                                    models.forEach { model ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = model,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                )
+                                            },
+                                            onClick = {
+                                                onModelSelected(model)
+                                                expanded = false
+                                                searchQuery = ""
+                                            },
+                                            leadingIcon = if (model == currentModel) {
+                                                {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = "Current model",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Scrollbar for long lists
+                        if (filteredModels.size > 10) {
+                            VerticalScrollbar(
+                                adapter = rememberScrollbarAdapter(scrollState),
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight()
+                                    .padding(end = 2.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -813,7 +924,7 @@ private fun telemetryPanel(metrics: TelemetryMetrics, maxHeight: Dp) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(maxHeight), // Force exact height to enable scrolling
+                .height(maxHeight),
         ) {
             Column(
                 modifier = Modifier
@@ -847,7 +958,7 @@ private fun telemetryPanel(metrics: TelemetryMetrics, maxHeight: Dp) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = stringResource("telemetry.reset"),
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
                                     tint = MaterialTheme.colorScheme.error,
                                 )
                             }
@@ -1032,7 +1143,17 @@ private fun telemetryProviderRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = providerModel.split(":").joinToString(" • ") { it.capitalize() },
+            text = providerModel.split(":").joinToString(" • ") {
+                it.replaceFirstChar { it ->
+                    if (it.isLowerCase()) {
+                        it.titlecase(
+                            getDefault(),
+                        )
+                    } else {
+                        it.toString()
+                    }
+                }
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
