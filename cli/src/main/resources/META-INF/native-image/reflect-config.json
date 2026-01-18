@@ -954,13 +954,6 @@
     "fields": [{ "name": "state" }]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicContent",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicCreateMessageRequest",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -984,13 +977,6 @@
     ]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicDelta",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1002,37 +988,16 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicResponseMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicRole",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [{ "name": "serialize", "parameterTypes": [] }]
   },
   {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicStreamingData",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTextContent",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicUsage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiContent",
@@ -2709,7 +2674,7 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       {
-        "name": "updateChatField should handle all fields",
+        "name": "updateChatField should handle all fields including nested sampling",
         "parameterTypes": []
       },
       {
@@ -2746,7 +2711,13 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["int", "double", "boolean", "long"]
+        "parameterTypes": [
+          "int",
+          "double",
+          "boolean",
+          "long",
+          "io.askimo.core.config.SamplingConfig"
+        ]
       },
       {
         "name": "<init>",
@@ -2755,6 +2726,7 @@
           "double",
           "boolean",
           "long",
+          "io.askimo.core.config.SamplingConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -3093,6 +3065,25 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.SamplingConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["double", "double", "boolean"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "double",
+          "double",
+          "boolean",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.ThrottleConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3160,7 +3151,6 @@
           "java.util.Map",
           "io.askimo.core.providers.ModelProvider",
           "java.util.Map",
-          "io.askimo.core.providers.Presets",
           "kotlinx.serialization.internal.SerializationConstructorMarker"
         ]
       },
@@ -3291,12 +3281,15 @@
       { "name": "sendMessage", "parameterTypes": ["java.lang.String"] },
       {
         "name": "sendMessageStreaming",
-        "parameterTypes": ["dev.langchain4j.data.message.UserMessage"]
+        "parameterTypes": [
+          "dev.langchain4j.data.message.UserMessage",
+          "dev.langchain4j.model.chat.request.ChatRequestParameters"
+        ]
       }
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$1vFH11vZ",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$Cyj0aCvT",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -3394,7 +3387,8 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "availableModelsReturnsKnownModels", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
-      { "name": "defaultSettingsTest", "parameterTypes": [] }
+      { "name": "defaultSettingsTest", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -3412,7 +3406,8 @@
       },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
-      { "name": "defaultSettingsTest", "parameterTypes": [] }
+      { "name": "defaultSettingsTest", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -3444,7 +3439,8 @@
       },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
-      { "name": "defaultSettingsTest", "parameterTypes": [] }
+      { "name": "defaultSettingsTest", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -3462,7 +3458,8 @@
       },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
-      { "name": "defaultSettingsTest", "parameterTypes": [] }
+      { "name": "defaultSettingsTest", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -4414,6 +4411,7 @@
           "java.lang.Boolean"
         ]
       },
+      { "name": "print", "parameterTypes": ["java.lang.String"] },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
         "name": "writeFile",
@@ -4979,6 +4977,12 @@
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.Collections$SingletonMap",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Collections$UnmodifiableCollection",
@@ -5815,7 +5819,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$c2H8MxGB",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$2wJBcnuC",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

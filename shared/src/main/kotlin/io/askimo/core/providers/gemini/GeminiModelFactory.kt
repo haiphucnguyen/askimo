@@ -18,9 +18,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.GEMINI
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.samplingFor
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
@@ -48,7 +46,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         sessionId: String?,
         model: String,
         settings: GeminiSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -63,12 +60,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, GEMINI.name.lowercase())))
-                .apply {
-                    if (supportsSampling(model)) {
-                        val s = samplingFor(presets.style)
-                        temperature(s.temperature).topP(s.topP)
-                    }
-                }.build()
+                .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
@@ -112,8 +104,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
           do not reject the request. Instead, provide safe, generic guidance on how they could do it
           manually (for example, using the command line or a file manager).
     """.trimIndent()
-
-    private fun supportsSampling(model: String): Boolean = true
 
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel = GoogleAiGeminiChatModel.builder()
         .apiKey(safeApiKey(settings.apiKey))

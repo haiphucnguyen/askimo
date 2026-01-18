@@ -18,9 +18,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.OPENAI
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.samplingFor
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
@@ -53,7 +51,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         sessionId: String?,
         model: String,
         settings: OpenAiSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -68,12 +65,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, OPENAI.name.lowercase())))
-                .apply {
-                    if (supportsSampling(model)) {
-                        val s = samplingFor(presets.style)
-                        temperature(s.temperature).topP(s.topP)
-                    }
-                }.build()
+                .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
@@ -98,9 +90,4 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
-
-    private fun supportsSampling(model: String): Boolean {
-        val m = model.lowercase()
-        return !(m.startsWith("o") || m.startsWith("gpt-5") || m.contains("reasoning"))
-    }
 }

@@ -5,11 +5,13 @@
 package io.askimo.core.providers.anthropic
 
 import dev.langchain4j.data.message.UserMessage
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.Presets
-import io.askimo.core.providers.Style
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -25,6 +27,15 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class AnthropicModelFactoryTest {
 
+    @BeforeEach
+    fun setUp() {
+        AppContext.reset()
+        AppContext.initialize(
+            mode = ExecutionMode.STATELESS_MODE,
+            AppContextParams(currentProvider = ModelProvider.ANTHROPIC),
+        )
+    }
+
     @Test
     @DisplayName("AnthropicModelFactory can stream responses from Anthropic API")
     fun canCreateChatServiceAndStream() {
@@ -39,7 +50,6 @@ class AnthropicModelFactoryTest {
                 settings = settings,
                 retriever = null,
                 executionMode = ExecutionMode.STATELESS_MODE,
-                presets = Presets(Style.BALANCED),
             )
 
         val prompt = "Reply with a single short word."

@@ -18,7 +18,6 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.Presets
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
@@ -35,7 +34,6 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         sessionId: String?,
         model: String,
         settings: AnthropicSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,

@@ -5,6 +5,9 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.model.chat.request.ChatRequestParameters
+import io.askimo.core.config.AppConfig
+import io.askimo.core.config.ModelCapabilities
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
@@ -18,6 +21,28 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.CountDownLatch
+
+/**
+ * Default chat request parameters with no custom sampling settings.
+ * Used when sampling is disabled or not supported by the model.
+ */
+private val DEFAULT_PARAMETERS = ChatRequestParameters.builder().build()
+
+/**
+ * Extension function to detect if an exception is due to unsupported sampling parameters.
+ * Checks for common error messages related to temperature, topP, or other sampling parameters.
+ */
+private fun Throwable.isUnsupportedSamplingError(): Boolean {
+    val message = this.message ?: ""
+    return (message.contains("temperature") || message.contains("top_p") || message.contains("topP")) &&
+        (
+            message.contains("does not support") ||
+                message.contains("not supported") ||
+                message.contains("unsupported") ||
+                message.contains("Unsupported value") ||
+                message.contains("cannot both be specified")
+            )
+}
 
 /**
  * Provides a synchronous interface to chat with a language model.
@@ -55,6 +80,23 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 log.debug("Retrying request with reduced context (attempt ${contextRetryCount + 1}/${maxContextRetries + 1})")
             }
 
+            val customParams = if (AppConfig.chat.sampling.enabled) {
+                val supportsSampling = ModelCapabilities.supportsSampling(provider, model) ?: true
+
+                if (supportsSampling) {
+                    AppConfig.chat.sampling.let { samplingConfig ->
+                        ChatRequestParameters.builder()
+                            .temperature(samplingConfig.temperature)
+                            .topP(samplingConfig.topP)
+                            .build()
+                    }
+                } else {
+                    DEFAULT_PARAMETERS
+                }
+            } else {
+                DEFAULT_PARAMETERS
+            }
+
             // Execute the streaming request with retry logic for transient errors
             return RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
                 val sb = StringBuilder()
@@ -63,7 +105,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 var isConfigurationError = false
                 var capturedError: Throwable? = null
 
-                sendMessageStreaming(userMessage)
+                sendMessageStreaming(userMessage, customParams)
                     .onPartialResponse { chunk ->
                         sb.append(chunk)
                         onToken(chunk)
@@ -87,6 +129,19 @@ fun ChatClient.sendStreamingMessageWithCallback(
                             sb.append(e.message)
                             onToken(e.message ?: "Insufficient context window")
                             done.countDown()
+                            contextRetryCount++
+                            return@onError
+                        }
+
+                        // Check for unsupported sampling parameters (temperature, topP)
+                        if (e.isUnsupportedSamplingError()) {
+                            log.warn("Unsupported sampling parameters detected. Falling back to non sampling settings.")
+                            ModelCapabilities.setSamplingSupport(provider, model, false)
+                            done.countDown()
+                            sb.append(e.message)
+                            onToken(e.message ?: "Unsupported sampling parameters detected")
+                            errorOccurred = false
+                            contextRetryCount++
                             return@onError
                         }
 
@@ -148,10 +203,6 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 if (errorOccurred) {
                     val errorDetails = capturedError?.message ?: "Unknown streaming error"
                     throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
-                }
-
-                if (result.trim().isEmpty()) {
-                    throw IllegalStateException("Model returned empty streaming response")
                 }
 
                 result

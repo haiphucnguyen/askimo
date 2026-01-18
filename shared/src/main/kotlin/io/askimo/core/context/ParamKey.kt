@@ -7,7 +7,6 @@ package io.askimo.core.context
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.providers.Style
 
 enum class ParamKey(
     val key: String,
@@ -26,28 +25,6 @@ enum class ParamKey(
         isSupported = { true },
         getValue = { params, _ -> params.model },
         setValue = { params, _, v -> params.model = v },
-    ),
-
-    STYLE(
-        key = "style",
-        type = "Enum(precise|balanced|creative)",
-        description = "Output style (determinism vs. creativity)",
-        isSupported = { true },
-        getValue = { params, _ ->
-            params.presets.style.name
-                .lowercase()
-        },
-        setValue = { params, _, v ->
-            val style =
-                when (v.trim().lowercase()) {
-                    "precise" -> Style.PRECISE
-                    "balanced" -> Style.BALANCED
-                    "creative" -> Style.CREATIVE
-                    else -> throw IllegalArgumentException("Use: precise | balanced | creative")
-                }
-            params.presets = params.presets.copy(style = style)
-        },
-        suggestions = listOf("precise", "balanced", "creative"),
     ),
 
     API_KEY(

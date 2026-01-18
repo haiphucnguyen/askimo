@@ -5,8 +5,6 @@
 package io.askimo.desktop.view.components
 
 import androidx.compose.ui.window.FrameWindowScope
-import io.askimo.core.event.EventBus
-import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ThemeMode
@@ -47,11 +45,12 @@ object NativeMenuBar {
         onNavigateToSessions: () -> Unit,
         onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
+        onInvalidateCaches: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -87,6 +86,7 @@ object NativeMenuBar {
         onNavigateToSessions: () -> Unit,
         onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
+        onInvalidateCaches: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -136,7 +136,7 @@ object NativeMenuBar {
             )
             invalidateCachesItem.addActionListener(
                 ActionListener {
-                    EventBus.post(InvalidateCacheEvent())
+                    onInvalidateCaches()
                 },
             )
             fileMenu.add(invalidateCachesItem)

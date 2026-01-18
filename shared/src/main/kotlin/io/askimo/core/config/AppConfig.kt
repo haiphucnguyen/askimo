@@ -4,7 +4,6 @@
  */
 package io.askimo.core.config
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -173,26 +172,17 @@ data class IndexingConfig(
         ".git/", ".svn/", ".hg/", ".idea/", ".vscode/", ".DS_Store",
         "*.log", "*.tmp", "*.temp", "*.swp", "*.bak", ".history/",
     ),
-) {
-    /**
-     * Cached combination of commonExcludes and all ProjectType excludePaths.
-     * This is computed once when the config is loaded for better performance.
-     */
-    @get:JsonIgnore
-    val allExcludes: Set<String> by lazy {
-        buildSet {
-            addAll(commonExcludes)
-
-            projectTypes.forEach { projectType ->
-                addAll(projectType.excludePaths)
-            }
-        }
-    }
-}
+)
 
 data class DeveloperConfig(
     val enabled: Boolean = true,
     val active: Boolean = false,
+)
+
+data class SamplingConfig(
+    val temperature: Double = 1.0, // Default value supported by all models
+    val topP: Double = 1.0, // Default value supported by all models
+    val enabled: Boolean = true, // Allow users to disable sampling parameters
 )
 
 data class ChatConfig(
@@ -200,6 +190,7 @@ data class ChatConfig(
     val summarizationThreshold: Double = 0.75,
     val enableAsyncSummarization: Boolean = true,
     val summarizationTimeoutSeconds: Long = 60,
+    val sampling: SamplingConfig = SamplingConfig(),
 )
 
 /**
@@ -356,6 +347,10 @@ object AppConfig {
           max_tokens: ${'$'}{ASKIMO_CHAT_MAX_TOKENS:8000}
           summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:0.75}
           enable_async_summarization: ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
+          sampling:
+            temperature: ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
+            top_p: ${'$'}{ASKIMO_CHAT_SAMPLING_TOP_P:1.0}
+            enabled: ${'$'}{ASKIMO_CHAT_SAMPLING_ENABLED:true}
 
         rag:
           vector_search_max_results: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
@@ -549,6 +544,11 @@ object AppConfig {
                 maxTokens = envInt("ASKIMO_CHAT_MAX_TOKENS", 8000),
                 summarizationThreshold = envDouble("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 0.75),
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
+                sampling = SamplingConfig(
+                    temperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
+                    topP = envDouble("ASKIMO_CHAT_SAMPLING_TOP_P", 1.0),
+                    enabled = System.getenv("ASKIMO_CHAT_SAMPLING_ENABLED")?.toBoolean() ?: true,
+                ),
             )
 
         val rag =
@@ -647,7 +647,7 @@ object AppConfig {
         synchronized(this) {
             val parts = path.split(".")
 
-            if (parts.size < 2 || parts.size > 3) {
+            if (parts.size !in 2..3) {
                 log.displayError("Invalid config path: $path. Must be in format 'section.field' or 'models.provider.field'", null)
                 return
             }
@@ -713,6 +713,9 @@ object AppConfig {
         "maxTokens" -> config.copy(maxTokens = value as Int)
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
+        "sampling.temperature" -> config.copy(sampling = config.sampling.copy(temperature = (value as Number).toDouble()))
+        "sampling.topP" -> config.copy(sampling = config.sampling.copy(topP = (value as Number).toDouble()))
+        "sampling.enabled" -> config.copy(sampling = config.sampling.copy(enabled = value as Boolean))
         else -> config
     }
 
