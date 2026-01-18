@@ -101,9 +101,10 @@ class ProcessBuilderExt(vararg command: String) {
             val windowsPaths =
                 if (isWindows()) {
                     listOf(
-                        System.getenv("ProgramFiles") + "\\$executableName",
-                        System.getenv("ProgramFiles(x86)") + "\\$executableName",
-                        System.getenv("LOCALAPPDATA") + "\\Programs\\$executableName",
+                        System.getenv("ProgramFiles") + "\\${executableName}.exe",
+                        System.getenv("ProgramFiles(x86)") +  "\\${executableName}.exe",
+                        System.getenv("LOCALAPPDATA") +  "\\${executableName}.exe",
+                        System.getenv("windir") + "\\System32\\${executableName}.exe",
                     )
                 } else {
                     emptyList()

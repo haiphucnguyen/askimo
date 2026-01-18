@@ -73,6 +73,7 @@ import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.logger
+import io.askimo.core.util.TimeUtil.formatDisplay
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
 import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
@@ -442,12 +443,12 @@ fun chatView(
                                             // Timestamps
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = "Created: ${formatDateTime(project.createdAt)}",
+                                                text = "Created: ${formatDisplay(project.createdAt)}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             Text(
-                                                text = "Updated: ${formatDateTime(project.updatedAt)}",
+                                                text = "Updated: ${formatDisplay(project.updatedAt)}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -1064,8 +1065,3 @@ fun chatView(
         )
     }
 }
-
-/**
- * Format LocalDateTime for display in project info tooltip.
- */
-private fun formatDateTime(dateTime: LocalDateTime): String = "${dateTime.monthValue.toString().padStart(2, '0')}/${dateTime.dayOfMonth.toString().padStart(2, '0')}/${dateTime.year} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
