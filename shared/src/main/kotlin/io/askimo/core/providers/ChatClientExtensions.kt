@@ -140,8 +140,24 @@ fun ChatClient.sendStreamingMessageWithCallback(
                             done.countDown()
                             sb.append(e.message)
                             onToken(e.message ?: "Unsupported sampling parameters detected")
-                            errorOccurred = false
                             contextRetryCount++
+                            return@onError
+                        }
+
+                        // Check if the underlying cause is a network connection issue
+                        if (e.cause is java.nio.channels.UnresolvedAddressException) {
+                            isConfigurationError = true
+                            val connectionErrorMsg = """
+                                ⚠️  Unable to connect to the server!
+
+                                Cannot resolve the server address. Please check:
+                                1. Your internet connection is working
+                                2. The server URL/endpoint is correct
+                                3. There are no firewall or proxy issues blocking the connection
+                            """.trimIndent()
+                            sb.append(connectionErrorMsg)
+                            onToken(connectionErrorMsg)
+                            done.countDown()
                             return@onError
                         }
 

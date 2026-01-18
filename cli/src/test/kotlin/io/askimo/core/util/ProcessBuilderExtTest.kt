@@ -7,6 +7,7 @@ package io.askimo.core.util
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 
 class ProcessBuilderExtTest {
     @Test
@@ -48,7 +49,7 @@ class ProcessBuilderExtTest {
                 .redirectErrorStream(true)
                 .start()
 
-        val exitCode = process.waitFor()
+        val exitCode = process.waitFor(5, TimeUnit.SECONDS)
         // Either success or error is fine, we're just testing the API works
         assertNotNull(exitCode)
     }
@@ -86,10 +87,10 @@ class ProcessBuilderExtTest {
                     .start()
 
             val output = process.inputStream.bufferedReader().readText()
-            val exitCode = process.waitFor()
+            val exitCode = process.waitFor(5, TimeUnit.SECONDS)
 
             // If echo is found and works, verify it
-            if (exitCode == 0) {
+            if (exitCode) {
                 assertTrue(output.contains("test"), "Echo should output 'test'")
             }
         } catch (e: Exception) {
