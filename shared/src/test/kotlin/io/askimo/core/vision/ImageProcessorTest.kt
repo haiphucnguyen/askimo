@@ -1,12 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (c) 2025 Hai Nguyen
+ * Copyright (c) 2026 Hai Nguyen
  */
 package io.askimo.core.vision
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -24,13 +22,13 @@ class ImageProcessorTest {
         val result = ImageProcessor.process(imageBytes, "image/jpeg")
 
         // Should be resized
-        assertTrue(result.wasResized)
-        assertTrue(result.processedWidth!! <= ImageProcessor.DEFAULT_MAX_WIDTH)
-        assertTrue(result.processedHeight!! <= ImageProcessor.DEFAULT_MAX_HEIGHT)
+        Assertions.assertTrue(result.wasResized)
+        Assertions.assertTrue(result.processedWidth!! <= ImageProcessor.DEFAULT_MAX_WIDTH)
+        Assertions.assertTrue(result.processedHeight!! <= ImageProcessor.DEFAULT_MAX_HEIGHT)
 
         // Aspect ratio should be maintained (4:3)
         val aspectRatio = result.processedWidth!!.toDouble() / result.processedHeight!!
-        assertEquals(4.0 / 3.0, aspectRatio, 0.01)
+        Assertions.assertEquals(4.0 / 3.0, aspectRatio, 0.01)
     }
 
     @Test
@@ -43,8 +41,8 @@ class ImageProcessorTest {
         val result = ImageProcessor.process(imageBytes, "image/jpeg")
 
         // Should not be resized
-        assertEquals(1024, result.processedWidth)
-        assertEquals(768, result.processedHeight)
+        Assertions.assertEquals(1024, result.processedWidth)
+        Assertions.assertEquals(768, result.processedHeight)
     }
 
     @Test
@@ -57,10 +55,10 @@ class ImageProcessorTest {
         val result = ImageProcessor.process(imageBytes, "image/jpeg", jpegQuality = 0.5f)
 
         // Should process successfully
-        assertNotNull(result.bytes)
-        assertTrue(result.processedSize > 0)
+        Assertions.assertNotNull(result.bytes)
+        Assertions.assertTrue(result.processedSize > 0)
         // Compression may or may not reduce size for simple test images
-        assertTrue(result.processedSize <= result.originalSize * 2) // Sanity check
+        Assertions.assertTrue(result.processedSize <= result.originalSize * 2) // Sanity check
     }
 
     @Test
@@ -73,11 +71,11 @@ class ImageProcessorTest {
         val result = ImageProcessor.process(imageBytes, "image/png")
 
         // Should process successfully
-        assertNotNull(result.bytes)
+        Assertions.assertNotNull(result.bytes)
         // ImageProcessor normalizes all images to JPEG for vision processing
-        assertEquals("image/jpeg", result.mimeType)
-        assertEquals(800, result.processedWidth)
-        assertEquals(600, result.processedHeight)
+        Assertions.assertEquals("image/jpeg", result.mimeType)
+        Assertions.assertEquals(800, result.processedWidth)
+        Assertions.assertEquals(600, result.processedHeight)
     }
 
     @Test
@@ -88,9 +86,9 @@ class ImageProcessorTest {
         val result = ImageProcessor.process(imageBytes, "image/jpeg", jpegQuality = 0.7f)
 
         // Compression ratio should be calculated (ratio = processed/original)
-        assertTrue(result.compressionRatio > 0)
+        Assertions.assertTrue(result.compressionRatio > 0)
         // Saved bytes calculation should work
-        assertEquals(result.originalSize - result.processedSize, result.savedBytes)
+        Assertions.assertEquals(result.originalSize - result.processedSize, result.savedBytes)
     }
 
     // Helper methods

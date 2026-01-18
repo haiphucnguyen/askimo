@@ -590,6 +590,27 @@ class ChatViewModel(
                     currentCursor = result.cursor
                     hasMoreMessages = result.hasMore
 
+                    // Check for interrupted AI response
+                    // Only when all messages are loaded (hasMoreMessages = false)
+                    if (!hasMoreMessages && messages.isNotEmpty()) {
+                        val lastNonOutdatedMessage = messages.lastOrNull { !it.isOutdated }
+                        val activeThread = sessionManager.getActiveThread(sessionId)
+
+                        // If last non-outdated message is from user and session is not running, add interrupted message
+                        if (lastNonOutdatedMessage != null && lastNonOutdatedMessage.isUser && activeThread == null) {
+                            val interruptedMessage = withContext(Dispatchers.IO) {
+                                chatSessionService.saveAiResponse(
+                                    sessionId = sessionId,
+                                    response = "Response was interrupted. Please retry.",
+                                    isFailed = true,
+                                )
+                            }
+
+                            // Add to the messages list for UI display
+                            messages = messages + interruptedMessage.toDTO()
+                        }
+                    }
+
                     // Load directive from the resumed session
                     selectedDirective = result.directiveId
 
