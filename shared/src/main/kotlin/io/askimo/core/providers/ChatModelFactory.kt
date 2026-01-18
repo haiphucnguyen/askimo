@@ -49,7 +49,6 @@ interface ChatModelFactory<T : ProviderSettings> {
         sessionId: String? = null,
         model: String,
         settings: T,
-        presets: Presets,
         retriever: ContentRetriever? = null,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,

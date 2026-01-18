@@ -19,9 +19,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.samplingFor
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import java.net.http.HttpClient
 import java.time.Duration
@@ -42,7 +40,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         sessionId: String?,
         model: String,
         settings: LmStudioSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -64,11 +61,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.LMSTUDIO.name.lowercase())))
-                .apply {
-                    val s = samplingFor(presets.style)
-                    temperature(s.temperature)
-                    topP(s.topP)
-                }.build()
+                .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,

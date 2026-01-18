@@ -5,11 +5,11 @@
 package io.askimo.core.providers.gemini
 
 import dev.langchain4j.data.message.UserMessage
+import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.providers.Presets
-import io.askimo.core.providers.Style
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -25,6 +25,12 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class GeminiModelFactoryTest {
 
+    @BeforeEach
+    fun setUp() {
+        AppContext.reset()
+        AppContext.initialize(mode = ExecutionMode.STATELESS_MODE)
+    }
+
     private fun createChatService(): ChatClient {
         val apiKey = System.getenv("GEMINI_API_KEY")
             ?: throw IllegalStateException("GEMINI_API_KEY environment variable is required")
@@ -36,7 +42,6 @@ class GeminiModelFactoryTest {
             settings = settings,
             retriever = null,
             executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
-            presets = Presets(Style.BALANCED),
         )
     }
 

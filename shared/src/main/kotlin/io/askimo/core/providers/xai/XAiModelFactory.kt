@@ -18,9 +18,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider.XAI
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.samplingFor
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 import java.time.Duration
@@ -45,7 +43,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         sessionId: String?,
         model: String,
         settings: XAiSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -61,12 +58,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
-                .apply {
-                    if (supportsSampling(model)) {
-                        val s = samplingFor(presets.style)
-                        temperature(s.temperature).topP(s.topP)
-                    }
-                }.build()
+                .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
@@ -92,6 +84,4 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
-
-    private fun supportsSampling(model: String): Boolean = true
 }

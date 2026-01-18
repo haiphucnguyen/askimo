@@ -18,9 +18,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
-import io.askimo.core.providers.Presets
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
-import io.askimo.core.providers.samplingFor
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import java.time.Duration
 
@@ -52,7 +50,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         sessionId: String?,
         model: String,
         settings: OllamaSettings,
-        presets: Presets,
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
@@ -67,12 +64,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase())))
-                .apply {
-                    val s = samplingFor(presets.style)
-                    temperature(s.temperature)
-                    topP(s.topP)
-                }.build()
+                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase()))).build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,

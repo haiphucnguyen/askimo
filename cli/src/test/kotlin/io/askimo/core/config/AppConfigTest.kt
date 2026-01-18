@@ -110,17 +110,36 @@ class AppConfigTest {
     }
 
     @Test
-    fun `updateChatField should handle all fields`() {
-        val config = ChatConfig()
+    fun `updateChatField should handle all fields including nested sampling`() {
+        var config = ChatConfig()
 
-        var updated = updateChatFieldHelper(config, "maxTokens", 10000)
-        assertEquals(10000, updated.maxTokens)
+        // Test top-level fields
+        config = updateChatFieldHelper(config, "maxTokens", 10000)
+        assertEquals(10000, config.maxTokens)
 
-        updated = updateChatFieldHelper(config, "summarizationThreshold", 0.8)
-        assertEquals(0.8, updated.summarizationThreshold, 0.001)
+        config = updateChatFieldHelper(config, "summarizationThreshold", 0.8)
+        assertEquals(0.8, config.summarizationThreshold, 0.001)
 
-        updated = updateChatFieldHelper(config, "enableAsyncSummarization", false)
-        assertFalse(updated.enableAsyncSummarization)
+        config = updateChatFieldHelper(config, "enableAsyncSummarization", false)
+        assertFalse(config.enableAsyncSummarization)
+
+        // Test nested sampling fields
+        config = updateChatFieldHelper(config, "sampling.temperature", 0.7)
+        assertEquals(0.7, config.sampling.temperature, 0.001)
+
+        config = updateChatFieldHelper(config, "sampling.topP", 0.9)
+        assertEquals(0.9, config.sampling.topP, 0.001)
+
+        config = updateChatFieldHelper(config, "sampling.enabled", false)
+        assertFalse(config.sampling.enabled)
+
+        // Verify all fields are correct after multiple updates
+        assertEquals(10000, config.maxTokens)
+        assertEquals(0.8, config.summarizationThreshold, 0.001)
+        assertFalse(config.enableAsyncSummarization)
+        assertEquals(0.7, config.sampling.temperature, 0.001)
+        assertEquals(0.9, config.sampling.topP, 0.001)
+        assertFalse(config.sampling.enabled)
     }
 
     @Test

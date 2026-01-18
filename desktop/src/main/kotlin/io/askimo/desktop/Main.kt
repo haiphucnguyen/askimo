@@ -77,6 +77,7 @@ import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.event.internal.ProjectSessionsRefreshRequested
+import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.logger
@@ -271,6 +272,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getMainSidebarWidthFraction()) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showInvalidateCacheDialog by remember { mutableStateOf(false) }
+    var showCacheDeletedDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showEventLogWindow by remember { mutableStateOf(false) }
     var showEventLogPanel by remember { mutableStateOf(false) }
@@ -504,6 +507,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onToggleSidebar = {
                     isSidebarExpanded = !isSidebarExpanded
                     NativeMenuBar.updateSidebarMenuLabel(isSidebarExpanded)
+                },
+                onInvalidateCaches = {
+                    showInvalidateCacheDialog = true
                 },
             )
         }
@@ -927,6 +933,55 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.no"))
+                            }
+                        },
+                    )
+                }
+
+                // Invalidate cache confirmation dialog
+                if (showInvalidateCacheDialog) {
+                    ComponentColors.themedAlertDialog(
+                        onDismissRequest = { showInvalidateCacheDialog = false },
+                        title = { Text(stringResource("menu.invalidate.caches.title")) },
+                        text = { Text(stringResource("menu.invalidate.caches.message")) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showInvalidateCacheDialog = false
+                                    // Post the invalidate cache event
+                                    EventBus.post(InvalidateCacheEvent())
+                                    // Show success dialog
+                                    showCacheDeletedDialog = true
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.yes"))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showInvalidateCacheDialog = false },
+                                colors = ComponentColors.primaryTextButtonColors(),
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.cancel"))
+                            }
+                        },
+                    )
+                }
+
+                // Cache deleted success dialog
+                if (showCacheDeletedDialog) {
+                    ComponentColors.themedAlertDialog(
+                        onDismissRequest = { showCacheDeletedDialog = false },
+                        title = { Text(stringResource("menu.invalidate.caches.success.title")) },
+                        text = { Text(stringResource("menu.invalidate.caches.success.message")) },
+                        confirmButton = {
+                            Button(
+                                onClick = { showCacheDeletedDialog = false },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.ok"))
                             }
                         },
                     )

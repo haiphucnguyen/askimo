@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -21,8 +23,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,11 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextConfigManager
+import io.askimo.core.config.AppConfig
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.core.providers.Style
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.ThemePreferences
 import io.askimo.desktop.theme.ComponentColors
@@ -65,8 +69,8 @@ fun generalSettingsSection() {
         // Font Settings
         fontSettingsCard()
 
-        // Conversation Presets
-        conversationPresetsCard()
+        // AI Sampling Settings
+        samplingSettingsCard()
     }
 }
 
@@ -85,7 +89,7 @@ private fun languageSelectionCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = stringResource("settings.app.language"),
@@ -163,7 +167,7 @@ private fun fontSettingsCard() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Font Family
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource("settings.font.family"),
                     style = MaterialTheme.typography.labelMedium,
@@ -252,7 +256,7 @@ private fun fontSettingsCard() {
             HorizontalDivider()
 
             // Font Size
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource("settings.font.size"),
                     style = MaterialTheme.typography.labelMedium,
@@ -326,11 +330,7 @@ private fun fontSettingsCard() {
 }
 
 @Composable
-private fun conversationPresetsCard() {
-    val appContext = AppContext.getInstance()
-    var currentPresets by remember { mutableStateOf(appContext.params.presets) }
-    var styleDropdownExpanded by remember { mutableStateOf(false) }
-
+private fun samplingSettingsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = ComponentColors.bannerCardColors(),
@@ -341,96 +341,226 @@ private fun conversationPresetsCard() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Style Setting
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource("settings.conversation.style"),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource("settings.sampling.title"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Text(
+                        text = stringResource("settings.sampling.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    )
+                }
+                Switch(
+                    checked = AppConfig.chat.sampling.enabled,
+                    onCheckedChange = { newEnabled ->
+                        AppConfig.updateField("chat.sampling.enabled", newEnabled)
+                    },
                 )
-                Text(
-                    text = stringResource("settings.conversation.style.description"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                )
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickableCard { styleDropdownExpanded = true },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column {
-                                Text(
-                                    text = currentPresets.style.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = currentPresets.style.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                )
-                            }
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = "Change style",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
+            }
 
-                    ComponentColors.themedDropdownMenu(
-                        expanded = styleDropdownExpanded,
-                        onDismissRequest = { styleDropdownExpanded = false },
+            if (AppConfig.chat.sampling.enabled) {
+                HorizontalDivider()
+
+                // Temperature Setting
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Style.entries.forEach { style ->
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = style.displayName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        Text(
-                                            text = style.description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    val newPresets = currentPresets.copy(style = style)
-                                    appContext.params.presets = newPresets
-                                    AppContextConfigManager.save(appContext.params)
-                                    currentPresets = newPresets
-                                    styleDropdownExpanded = false
-                                },
-                                leadingIcon = if (style == currentPresets.style) {
-                                    {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                } else {
-                                    null
-                                },
-                            )
-                        }
+                        Text(
+                            text = stringResource("settings.sampling.temperature"),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            text = "(${stringResource("settings.sampling.range")}: 0.0 - 2.0)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                        )
                     }
+                    Text(
+                        text = stringResource("settings.sampling.temperature.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    )
+
+                    doubleValueControl(
+                        value = AppConfig.chat.sampling.temperature,
+                        onValueChange = { newValue ->
+                            AppConfig.updateField("chat.sampling.temperature", newValue.coerceIn(0.0, 2.0))
+                        },
+                        min = 0.0,
+                        max = 2.0,
+                        step = 0.1,
+                    )
+                }
+
+                HorizontalDivider()
+
+                // TopP Setting
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource("settings.sampling.topP"),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            text = "(${stringResource("settings.sampling.range")}: 0.0 - 1.0)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                        )
+                    }
+                    Text(
+                        text = stringResource("settings.sampling.topP.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    )
+
+                    doubleValueControl(
+                        value = AppConfig.chat.sampling.topP,
+                        onValueChange = { newValue ->
+                            AppConfig.updateField("chat.sampling.topP", newValue.coerceIn(0.0, 1.0))
+                        },
+                        min = 0.0,
+                        max = 1.0,
+                        step = 0.1,
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun doubleValueControl(
+    value: Double,
+    onValueChange: (Double) -> Unit,
+    min: Double,
+    max: Double,
+    step: Double,
+) {
+    // Use value as key to recreate state when external value changes
+    var internalValue by remember(value) { mutableStateOf(value) }
+    var textValue by remember(value) { mutableStateOf(String.format("%.1f", value)) }
+    var isEditing by remember { mutableStateOf(false) }
+
+    // Compact stepper: Decrement button - Text field - Increment button
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Decrement button
+        IconButton(
+            onClick = {
+                val newValue = ((internalValue - step) * 10 + 0.5).toLong() / 10.0
+                val clamped = newValue.coerceIn(min, max)
+                internalValue = clamped
+                onValueChange(clamped)
+            },
+            enabled = internalValue > min,
+            modifier = Modifier.width(36.dp),
+        ) {
+            Text(
+                text = "−",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (internalValue > min) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
+        }
+
+        // Editable text field
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        ) {
+            if (isEditing) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                ) {
+                    TextField(
+                        value = textValue,
+                        onValueChange = { textValue = it },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.width(60.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
+                    IconButton(
+                        onClick = {
+                            val parsed = textValue.toDoubleOrNull()
+                            if (parsed != null) {
+                                val rounded = ((parsed * 10) + 0.5).toLong() / 10.0
+                                val clamped = rounded.coerceIn(min, max)
+                                internalValue = clamped
+                                onValueChange(clamped)
+                            }
+                            isEditing = false
+                        },
+                        modifier = Modifier.width(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Apply",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = String.format("%.1f", internalValue),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clickableCard {
+                            isEditing = true
+                            textValue = String.format("%.1f", internalValue)
+                        },
+                )
+            }
+        }
+
+        // Increment button
+        IconButton(
+            onClick = {
+                val newValue = ((internalValue + step) * 10 + 0.5).toLong() / 10.0
+                val clamped = newValue.coerceIn(min, max)
+                internalValue = clamped
+                onValueChange(clamped)
+            },
+            enabled = internalValue < max,
+            modifier = Modifier.width(36.dp),
+        ) {
+            Text(
+                text = "+",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (internalValue < max) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
         }
     }
 }
