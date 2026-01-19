@@ -366,7 +366,7 @@ jobs:
           class Askimo < Formula
             desc "AI-powered terminal assistant for multiple LLM providers"
             homepage "https://github.com/haiphucnguyen/askimo"
-            license "Apache-2.0"
+            license "AGPLv3"
             
             on_macos do
           RUBY
@@ -496,7 +496,7 @@ jobs:
             '  "version": "VERSION_PLACEHOLDER",' \
             '  "description": "AI-powered terminal assistant for multiple LLM providers",' \
             '  "homepage": "https://github.com/haiphucnguyen/askimo",' \
-            '  "license": "Apache-2.0",' \
+            '  "license": "AGPLv3",' \
             '  "architecture": {' \
             '    "64bit": {' \
             '      "url": "WIN_URL_PLACEHOLDER",' \

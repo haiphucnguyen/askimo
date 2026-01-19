@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -22,6 +22,13 @@ interface ChatModelFactory<T : ProviderSettings> {
      * @return List of model identifiers that can be used with this provider
      */
     fun availableModels(settings: T): List<String>
+
+    /**
+     * Returns the provider type for this factory.
+     *
+     * @return The ModelProvider enum value representing this factory's provider
+     */
+    fun getProvider(): ModelProvider
 
     /**
      * Returns the default settings for this provider.

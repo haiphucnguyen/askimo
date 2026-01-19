@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -10,6 +10,7 @@ import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
+import io.askimo.core.chat.repository.ModelClassificationRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
@@ -99,6 +100,7 @@ class DatabaseManager private constructor(
         createDirectivesTable(connection)
         createSessionMemoryTable(connection)
         createFileSegmentsTable(connection)
+        createModelClassificationsTable(connection)
     }
 
     private fun createProjectsTable(conn: Connection) {
@@ -327,6 +329,38 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createModelClassificationsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS model_classifications (
+                    id TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    model_name TEXT NOT NULL,
+                    supports_text INTEGER DEFAULT 1,
+                    supports_image INTEGER DEFAULT 0,
+                    supports_audio INTEGER DEFAULT 0,
+                    supports_video INTEGER DEFAULT 0,
+                    supports_tools INTEGER DEFAULT 0,
+                    supports_sampling INTEGER DEFAULT 1,
+                    supports_streaming INTEGER DEFAULT 1,
+                    description TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """,
+            )
+
+            // Create unique index on provider + model_name to prevent duplicates
+            stmt.executeUpdate(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_model_classifications_provider_model
+                ON model_classifications (provider, model_name)
+                """,
+            )
+        }
+    }
+
     private val _chatSessionRepository: ChatSessionRepository by lazy {
         ChatSessionRepository(this)
     }
@@ -353,6 +387,10 @@ class DatabaseManager private constructor(
 
     private val _resourceSegmentRepository: ResourceSegmentRepository by lazy {
         ResourceSegmentRepository(this)
+    }
+
+    private val _modelClassificationRepository: ModelClassificationRepository by lazy {
+        ModelClassificationRepository(this)
     }
 
     /**
@@ -396,6 +434,12 @@ class DatabaseManager private constructor(
      * All access to resource-segment mappings should go through this repository.
      */
     fun getResourceSegmentRepository(): ResourceSegmentRepository = _resourceSegmentRepository
+
+    /**
+     * Get the singleton ModelClassificationRepository instance.
+     * All access to model classifications should go through this repository.
+     */
+    fun getModelClassificationRepository(): ModelClassificationRepository = _modelClassificationRepository
 
     /**
      * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).

@@ -9,7 +9,7 @@ The DCO is a lightweight alternative to a Contributor License Agreement (CLA).
 By signing off your commits, you certify that:
 
 > The contribution is your original work, or you have the right to submit it under the project’s license, and you 
-> agree it can be distributed under the Apache 2.0 License.
+> agree it can be distributed under the AGPLv3 License.
 
 The full text is available here: https://developercertificate.org/
 

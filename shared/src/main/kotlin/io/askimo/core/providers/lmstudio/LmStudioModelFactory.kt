@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -27,6 +27,8 @@ import java.time.Duration
 class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     private val log = logger<LmStudioModelFactory>()
+
+    override fun getProvider(): ModelProvider = ModelProvider.LMSTUDIO
 
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",

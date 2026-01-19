@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -25,6 +25,8 @@ import java.time.Duration
 class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     private val log = logger<AnthropicModelFactory>()
+
+    override fun getProvider(): ModelProvider = ModelProvider.ANTHROPIC
 
     override fun availableModels(settings: AnthropicSettings): List<String> = AppConfig.models.anthropic.availableModels
 
