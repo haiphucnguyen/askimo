@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -24,6 +24,8 @@ import java.time.Duration
 
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     private val log = logger<OllamaModelFactory>()
+
+    override fun getProvider(): ModelProvider = ModelProvider.OLLAMA
 
     override fun availableModels(settings: OllamaSettings): List<String> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()

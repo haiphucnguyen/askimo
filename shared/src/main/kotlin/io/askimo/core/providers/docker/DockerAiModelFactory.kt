@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -25,6 +25,8 @@ import java.time.Duration
 
 class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     private val log = logger<DockerAiModelFactory>()
+
+    override fun getProvider(): ModelProvider = ModelProvider.DOCKER
 
     override fun availableModels(settings: DockerAiSettings): List<String> = try {
         val process =

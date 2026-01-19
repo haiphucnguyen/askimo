@@ -17,7 +17,7 @@
     <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Build">
   </a>
   <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/License-AGPLv3-blue.svg" alt="License">
   </a>
   <a href="https://github.com/haiphucnguyen/askimo/releases">
     <img src="https://img.shields.io/github/v/release/haiphucnguyen/askimo" alt="Release">
@@ -250,4 +250,4 @@ Thanks for being part of the journey! 🙌
 
 ## 📄 License
 
-Apache 2.0. See [LICENSE](./LICENSE).
+AGPLv3. See [LICENSE](./LICENSE).

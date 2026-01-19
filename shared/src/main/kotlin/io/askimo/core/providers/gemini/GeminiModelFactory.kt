@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: AGPLv3
  *
  * Copyright (c) 2025 Hai Nguyen
  */
@@ -17,6 +17,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
@@ -26,6 +27,8 @@ import java.time.Duration
 class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     private val log = logger<GeminiModelFactory>()
+
+    override fun getProvider(): ModelProvider = GEMINI
 
     override fun availableModels(settings: GeminiSettings): List<String> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
