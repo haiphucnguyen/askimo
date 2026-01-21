@@ -50,7 +50,7 @@ class LocalFoldersIndexingCoordinator(
     private val log = logger<LocalFoldersIndexingCoordinator>()
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
-    private val stateManager = IndexStateManager(projectId)
+    private val stateManager = IndexStateManager(projectId, "folders")
     private val hybridIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val _progress = MutableStateFlow(IndexProgress())

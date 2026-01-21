@@ -44,6 +44,7 @@ langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-
 langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
 langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
 langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
+langchain4j-agentic = { group = "dev.langchain4j", name = "langchain4j-agentic", version.ref = "langchain4j-extra" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
@@ -120,7 +121,8 @@ langchain4j = [
     "langchain4j-google-ai-gemini",
     "langchain4j-anthropic",
     "langchain4j-http-client",
-    "langchain4j-jvector"
+    "langchain4j-jvector",
+    "langchain4j-agentic"
 ]
 
 lucene = [

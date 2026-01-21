@@ -13,7 +13,7 @@ import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
-import io.askimo.core.event.internal.SessionsRefreshRequested
+import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.desktop.model.ExportFormat
@@ -129,7 +129,7 @@ class SessionsViewModel(
         // Listen for generic session refresh requests
         scope.launch {
             EventBus.internalEvents
-                .filterIsInstance<SessionsRefreshRequested>()
+                .filterIsInstance<SessionsRefreshEvent>()
                 .collect { event ->
                     log.debug("Sessions refresh requested: ${event.reason ?: "no reason specified"}")
                     loadRecentSessions()

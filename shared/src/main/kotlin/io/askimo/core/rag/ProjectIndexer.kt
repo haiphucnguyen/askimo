@@ -261,6 +261,13 @@ class ProjectIndexer(
             log.info("Re-indexing initiated for project $projectId")
         } catch (e: Exception) {
             log.error("Failed to handle re-index request for project ${event.projectId}", e)
+            EventBus.emit(
+                IndexingFailedEvent(
+                    projectId = event.projectId,
+                    projectName = event.projectId,
+                    errorMessage = e.message ?: "Unknown error",
+                ),
+            )
         }
     }
 

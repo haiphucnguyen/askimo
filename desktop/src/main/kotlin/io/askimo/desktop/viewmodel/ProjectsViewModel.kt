@@ -12,7 +12,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectsRefreshRequested
+import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.desktop.util.ErrorHandler
@@ -60,7 +60,7 @@ class ProjectsViewModel(
     private fun subscribeToProjectEvents() {
         scope.launch {
             EventBus.internalEvents
-                .filterIsInstance<ProjectsRefreshRequested>()
+                .filterIsInstance<ProjectsRefreshEvent>()
                 .collect { event ->
                     log.debug("Projects refresh requested: ${event.reason ?: "no reason specified"}")
                     loadProjects()

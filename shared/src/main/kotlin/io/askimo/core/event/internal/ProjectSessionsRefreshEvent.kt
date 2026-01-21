@@ -22,7 +22,7 @@ import java.time.Instant
  * @param projectId The ID of the project whose sessions should be refreshed
  * @param reason Optional description of why the refresh is needed (for debugging)
  */
-data class ProjectSessionsRefreshRequested(
+data class ProjectSessionsRefreshEvent(
     val projectId: String,
     val reason: String? = null,
     override val timestamp: Instant = Instant.now(),

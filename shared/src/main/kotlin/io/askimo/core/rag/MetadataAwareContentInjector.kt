@@ -66,6 +66,39 @@ class MetadataAwareContentInjector(
     private fun formatSourceCitation(content: Content): String {
         val segment = content.textSegment()
         val meta = segment.metadata()
+        val sourceType = meta.getString("source_type")
+        val url = meta.getString("url")
+
+        // Handle URL sources
+        if (sourceType == "url" && url != null) {
+            val title = meta.getString("title") ?: meta.getString("file_name") ?: "Web Page"
+            val contentType = meta.getString("content_type")
+
+            return when (citationStyle) {
+                CitationStyle.MINIMAL -> {
+                    "Source: [$title]($url)"
+                }
+                CitationStyle.COMPACT -> {
+                    buildString {
+                        append("Source: [`$title`]($url)")
+                        if (!contentType.isNullOrBlank()) {
+                            append(" ($contentType)")
+                        }
+                    }
+                }
+                CitationStyle.DETAILED -> {
+                    buildString {
+                        append("Source: [`$title`]($url)")
+                        append("\nURL: `$url`")
+                        if (!contentType.isNullOrBlank()) {
+                            append("\nType: $contentType")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle file-based sources
         val fileName = meta.getString("file_name") ?: "unknown"
         val filePath = meta.getString("file_path")
         val startLine = meta.getInteger("start_line")
@@ -135,11 +168,13 @@ class MetadataAwareContentInjector(
             """
                 |Answer the following question using the provided context.
                 |When referencing sources, include the exact markdown link format provided in the context naturally in your response.
+                |For file sources, use: [`filename`](file://path#L10-L15)
+                |For web sources, use: [`title`](url)
                 |You can use varied phrases like:
                 |- "As mentioned in [`filename`](file://path#L10-L15)..."
-                |- "The [`filename`](file://path#L20-L30) shows..."
+                |- "The [`title`](url) shows..."
                 |- "Based on [`filename`](file://path#L40-L50)..."
-                |- "In [`filename`](file://path#L60-L70), we see..."
+                |- "According to [`title`](url)..."
                 |Vary your phrasing to make citations feel natural.
                 |
                 |Context:
@@ -155,7 +190,7 @@ class MetadataAwareContentInjector(
                 |- "As mentioned in `filename` (lines 10-15)..."
                 |- "The `filename` shows..."
                 |- "Based on `filename` (lines 20-30)..."
-                |- "In `filename`, we see..."
+                |- "According to the web page..."
                 |Vary your phrasing to make citations feel natural.
                 |
                 |Context:
@@ -170,14 +205,16 @@ class MetadataAwareContentInjector(
                 |Answer the following question using the provided context.
                 |
                 |When citing information, include the exact markdown link format provided in the context.
+                |For file sources, use: [`filename`](file://path#L10-L15)
+                |For web sources, use: [`title`](url)
                 |Use varied, natural phrases such as:
                 |- "As mentioned in [`filename`](file://path#L10-L15)..."
-                |- "The [`filename`](file://path#L20-L30) indicates..."
+                |- "The [`title`](url) indicates..."
                 |- "Based on [`filename`](file://path#L40-L50)..."
-                |- "Looking at [`filename`](file://path#L60-L70)..."
+                |- "According to [`title`](url)..."
                 |- "The code in [`filename`](file://path#L80-L90) demonstrates..."
                 |
-                |This allows the user to click on the reference and jump directly to the source file.
+                |This allows the user to click on the reference and jump directly to the source.
                 |Avoid repeating the same citation phrase - vary your wording to make the response more natural.
                 |
                 |Context:
@@ -192,7 +229,7 @@ class MetadataAwareContentInjector(
                 |When citing information, mention the source file path and line numbers naturally.
                 |Use varied phrases such as:
                 |- "As mentioned in `filename` (lines 10-15)..."
-                |- "The `filename` indicates..."
+                |- "The web page indicates..."
                 |- "Based on `path/to/file`..."
                 |- "Looking at `filename` (lines 20-30)..."
                 |

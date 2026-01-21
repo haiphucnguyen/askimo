@@ -26,7 +26,7 @@ class ResourceContentProcessor(
     /**
      * Content extractor for extracting text from local files.
      */
-    private val contentExtractor = LocalFileContentExtractor()
+    private val localFileContentExtractor = LocalFileContentExtractor()
 
     /**
      * Text processor for chunking and creating segments.
@@ -39,7 +39,7 @@ class ResourceContentProcessor(
      */
     fun extractTextFromFile(filePath: Path): String? {
         val resourceIdentifier = FileResourceIdentifier(filePath)
-        return contentExtractor.extractContent(resourceIdentifier)
+        return localFileContentExtractor.extractContent(resourceIdentifier)
     }
 
     /**
@@ -48,7 +48,7 @@ class ResourceContentProcessor(
      */
     fun isTextFile(filePath: Path): Boolean {
         val resourceIdentifier = FileResourceIdentifier(filePath)
-        return contentExtractor.isTextFile(resourceIdentifier)
+        return localFileContentExtractor.isTextFile(resourceIdentifier)
     }
 
     /**
@@ -94,5 +94,52 @@ class ResourceContentProcessor(
         }
 
         return textProcessor.createTextSegment(chunk, metadata)
+    }
+
+    /**
+     * Process web content and create text segments with metadata.
+     * Chunks the HTML/text content and creates segments with URL metadata.
+     */
+    fun processWebContent(
+        url: String,
+        content: String,
+        metadata: Map<String, String>,
+    ): List<TextSegment> {
+        // Extract text from HTML if needed (basic implementation)
+        val textContent = extractTextFromHtml(content)
+
+        if (textContent.isBlank()) {
+            return emptyList()
+        }
+
+        // Chunk the text
+        val chunks = chunkText(textContent)
+
+        // Create text segments with metadata
+        return chunks.mapIndexed { index, chunk ->
+            val segmentMetadata = metadata.toMutableMap()
+            segmentMetadata["chunk_index"] = index.toString()
+            segmentMetadata["chunk_total"] = chunks.size.toString()
+            segmentMetadata["url"] = url
+
+            textProcessor.createTextSegment(chunk, segmentMetadata)
+        }
+    }
+
+    /**
+     * Basic HTML text extraction.
+     * Removes HTML tags and extracts text content.
+     */
+    private fun extractTextFromHtml(html: String): String {
+        // Simple regex-based HTML tag removal
+        // For production, consider using a proper HTML parser like JSoup
+        return html
+            .replace(Regex("<script[^>]*>.*?</script>", RegexOption.DOT_MATCHES_ALL), "")
+            .replace(Regex("<style[^>]*>.*?</style>", RegexOption.DOT_MATCHES_ALL), "")
+            .replace(Regex("<[^>]+>"), " ")
+            .replace(Regex("&nbsp;"), " ")
+            .replace(Regex("&[a-z]+;"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 }

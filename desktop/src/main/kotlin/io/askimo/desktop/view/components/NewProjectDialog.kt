@@ -76,6 +76,7 @@ fun newProjectDialog(
     var projectDescription by remember { mutableStateOf("") }
     var knowledgeSources by remember { mutableStateOf<List<KnowledgeSourceItem>>(emptyList()) }
     var showAddSourceMenu by remember { mutableStateOf(false) }
+    var showUrlInputDialog by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
     var showSuccess by remember { mutableStateOf(false) }
     var createdProjectName by remember { mutableStateOf("") }
@@ -140,6 +141,7 @@ fun newProjectDialog(
         when (type) {
             KnowledgeSourceType.FOLDER -> browseForFolder()
             KnowledgeSourceType.FILE -> browseForFiles()
+            KnowledgeSourceType.URL -> showUrlInputDialog = true
         }
     }
 
@@ -294,7 +296,7 @@ fun newProjectDialog(
                         keyboardActions = KeyboardActions(onDone = { handleCreate() }),
                     )
 
-                    // Knowledge Sources Section
+                    // Reference Materials Section
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -381,5 +383,19 @@ fun newProjectDialog(
                 }
             }
         }
+    }
+
+    // Show URL input dialog when requested
+    if (showUrlInputDialog) {
+        urlInputDialog(
+            onDismiss = { showUrlInputDialog = false },
+            onUrlAdded = { url ->
+                knowledgeSources = knowledgeSources + KnowledgeSourceItem.Url(
+                    id = UUID.randomUUID().toString(),
+                    url = url,
+                    isValid = validateUrl(url),
+                )
+            },
+        )
     }
 }

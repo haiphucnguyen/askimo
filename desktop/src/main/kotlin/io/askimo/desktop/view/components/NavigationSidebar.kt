@@ -60,8 +60,8 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectsRefreshRequested
-import io.askimo.core.event.internal.SessionsRefreshRequested
+import io.askimo.core.event.internal.ProjectsRefreshEvent
+import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.util.Platform
@@ -839,12 +839,12 @@ private fun sessionItemWithMenu(
                         sessionRepository.updateSessionProject(session.id, selectedProject.id)
                         // Publish events to refresh both projects and sessions
                         EventBus.post(
-                            ProjectsRefreshRequested(
+                            ProjectsRefreshEvent(
                                 reason = "Session ${session.id} moved to project ${selectedProject.id}",
                             ),
                         )
                         EventBus.post(
-                            SessionsRefreshRequested(
+                            SessionsRefreshEvent(
                                 reason = "Session ${session.id} moved to project ${selectedProject.id}",
                             ),
                         )
@@ -872,12 +872,12 @@ private fun sessionItemWithMenu(
                     sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
                     // Publish events to refresh both projects and sessions
                     EventBus.post(
-                        ProjectsRefreshRequested(
+                        ProjectsRefreshEvent(
                             reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
                         ),
                     )
                     EventBus.post(
-                        SessionsRefreshRequested(
+                        SessionsRefreshEvent(
                             reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
                         ),
                     )

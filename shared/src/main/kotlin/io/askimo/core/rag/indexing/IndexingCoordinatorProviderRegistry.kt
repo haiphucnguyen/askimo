@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.rag.indexing.providers.LocalFilesIndexingProvider
 import io.askimo.core.rag.indexing.providers.LocalFoldersIndexingProvider
+import io.askimo.core.rag.indexing.providers.UrlIndexingProvider
 import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 
@@ -56,6 +57,7 @@ object IndexingCoordinatorProviderRegistry {
     private fun registerBuiltInProviders() {
         registerProvider(LocalFoldersIndexingProvider())
         registerProvider(LocalFilesIndexingProvider())
+        registerProvider(UrlIndexingProvider())
     }
 
     /**
