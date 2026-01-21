@@ -26,8 +26,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectsRefreshRequested
-import io.askimo.core.event.internal.SessionsRefreshRequested
+import io.askimo.core.event.internal.ProjectsRefreshEvent
+import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
 import io.askimo.desktop.theme.ComponentColors
@@ -147,12 +147,12 @@ fun sessionActionsMenu(
                     sessionRepository.updateSessionProject(sessionId, selectedProject.id)
                     // Publish events to refresh both projects and sessions
                     EventBus.post(
-                        ProjectsRefreshRequested(
+                        ProjectsRefreshEvent(
                             reason = "Session $sessionId moved to project ${selectedProject.id}",
                         ),
                     )
                     EventBus.post(
-                        SessionsRefreshRequested(
+                        SessionsRefreshEvent(
                             reason = "Session $sessionId moved to project ${selectedProject.id}",
                         ),
                     )
@@ -169,12 +169,12 @@ fun sessionActionsMenu(
                         sessionRepository.updateSessionProject(sessionId, null)
                         // Publish events to refresh both projects and sessions
                         EventBus.post(
-                            ProjectsRefreshRequested(
+                            ProjectsRefreshEvent(
                                 reason = "Session $sessionId removed from project",
                             ),
                         )
                         EventBus.post(
-                            SessionsRefreshRequested(
+                            SessionsRefreshEvent(
                                 reason = "Session $sessionId removed from project",
                             ),
                         )
@@ -247,12 +247,12 @@ fun sessionActionsMenu(
                     sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
                     // Publish events to refresh both projects and sessions
                     EventBus.post(
-                        ProjectsRefreshRequested(
+                        ProjectsRefreshEvent(
                             reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
                         ),
                     )
                     EventBus.post(
-                        SessionsRefreshRequested(
+                        SessionsRefreshEvent(
                             reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
                         ),
                     )

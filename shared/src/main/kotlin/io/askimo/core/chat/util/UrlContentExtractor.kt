@@ -66,7 +66,7 @@ object UrlContentExtractor {
             val contentType = response.header("Content-Type") ?: "application/octet-stream"
             val bytes = response.body.use { body ->
                 body.source().readByteArray()
-            } ?: throw Exception("Empty response body")
+            }
 
             return when {
                 contentType.contains("text/html", ignoreCase = true) -> {
@@ -107,8 +107,7 @@ object UrlContentExtractor {
         // Remove unwanted elements
         doc.select("script, style, nav, header, footer, aside, .ad, .advertisement, .sidebar, .menu, .navigation").remove()
 
-        val mainContent = doc.select("article, main, .content, .post, .entry, #content").firstOrNull()
-            ?: doc.body()
+        val mainContent = doc.body()
 
         val cleanText = mainContent?.text()?.trim() ?: ""
 

@@ -52,6 +52,23 @@ data class LocalFilesKnowledgeSourceConfig(
 ) : KnowledgeSourceConfig()
 
 /**
+ * Configuration for URL-based knowledge sources.
+ * URLs are fetched and indexed for retrieval.
+ *
+ * @property resourceIdentifiers URLs (e.g., "https://example.com/docs")
+ * @property config Configuration options:
+ *   - crawlDepth: "1" (how many levels deep to crawl, default: 0 = single page only)
+ *   - maxPages: "100" (maximum number of pages to index)
+ *   - respectRobotsTxt: "true" or "false" (default: true)
+ */
+@Serializable
+@SerialName("urls")
+data class UrlKnowledgeSourceConfig(
+    override val resourceIdentifiers: List<String>,
+    override val config: Map<String, String> = emptyMap(),
+) : KnowledgeSourceConfig()
+
+/**
  * Wrapper for the new indexed_paths JSON format.
  * Contains version for future migrations and list of knowledge sources.
  */

@@ -4,6 +4,10 @@
  */
 package io.askimo.desktop.view.project
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,11 +27,13 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,11 +47,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
+import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -230,109 +242,220 @@ private fun projectCard(
     onDeleteProject: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = ComponentColors.bannerCardColors(),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
         ) {
-            // Clickable content area
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onSelectProject(project.id) }
-                    .pointerHoverIcon(PointerIcon.Hand),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = project.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    project.description?.let { desc ->
-                        Spacer(modifier = Modifier.height(4.dp))
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSelectProject(project.id) }
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = desc,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = project.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        project.description?.let { desc ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = desc,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = stringResource("projects.created", TimeUtil.formatDisplay(project.createdAt)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource("projects.updated", TimeUtil.formatDisplay(project.updatedAt)),
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Menu button
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        text = stringResource("projects.created", TimeUtil.formatDisplay(project.createdAt)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource("projects.updated", TimeUtil.formatDisplay(project.updatedAt)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    ComponentColors.themedDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource("action.edit")) },
+                            onClick = {
+                                showMenu = false
+                                onEditProject(project.id)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource("action.delete")) },
+                            onClick = {
+                                showMenu = false
+                                onDeleteProject(project.id)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        )
+                    }
                 }
             }
 
-            // Menu button
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            // Knowledge Sources Section
+            if (project.knowledgeSources.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Collapsible header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Text(
+                        text = stringResource("projects.sources.count", project.knowledgeSources.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+
+                    val rotation by animateFloatAsState(
+                        targetValue = if (isExpanded) 180f else 0f,
+                        label = "rotation",
+                    )
+
                     Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) {
+                            stringResource("projects.sources.collapse")
+                        } else {
+                            stringResource("projects.sources.expand")
+                        },
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.rotate(rotation),
                     )
                 }
 
-                ComponentColors.themedDropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
+                // Expandable content
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("action.edit")) },
-                        onClick = {
-                            showMenu = false
-                            onEditProject(project.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource("action.delete")) },
-                        onClick = {
-                            showMenu = false
-                            onDeleteProject(project.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        project.knowledgeSources.forEach { source ->
+                            knowledgeSourceItem(source)
+                        }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun knowledgeSourceItem(source: KnowledgeSourceConfig) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        // Source type header
+        Text(
+            text = when (source) {
+                is LocalFoldersKnowledgeSourceConfig -> stringResource("projects.sources.type.local_folders")
+                is LocalFilesKnowledgeSourceConfig -> stringResource("projects.sources.type.local_files")
+                is UrlKnowledgeSourceConfig -> stringResource("projects.sources.type.urls")
+            },
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        // Resource identifiers (paths/URLs)
+        source.resourceIdentifiers.forEach { identifier ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "•",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = identifier,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

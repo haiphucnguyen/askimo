@@ -101,6 +101,7 @@ class DatabaseManager private constructor(
         createSessionMemoryTable(connection)
         createFileSegmentsTable(connection)
         createModelClassificationsTable(connection)
+        createIndexFileStateTable(connection)
     }
 
     private fun createProjectsTable(conn: Connection) {
@@ -356,6 +357,39 @@ class DatabaseManager private constructor(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_model_classifications_provider_model
                 ON model_classifications (provider, model_name)
+                """,
+            )
+        }
+    }
+
+    private fun createIndexFileStateTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS index_file_state (
+                    project_id TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    file_hash TEXT NOT NULL,
+                    source_type TEXT NOT NULL,
+                    indexed_at TEXT NOT NULL,
+                    PRIMARY KEY (project_id, file_path)
+                )
+                """,
+            )
+
+            // Index on file_hash for fast hash lookups
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_index_file_state_hash
+                ON index_file_state (file_hash)
+                """,
+            )
+
+            // Composite index on project_id and source_type for filtering
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_index_file_state_project_source
+                ON index_file_state (project_id, source_type)
                 """,
             )
         }

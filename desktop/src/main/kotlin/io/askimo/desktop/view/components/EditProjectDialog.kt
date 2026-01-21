@@ -79,6 +79,7 @@ fun editProjectDialog(
     }
     var knowledgeSources by remember { mutableStateOf(initialSources) }
     var showAddSourceMenu by remember { mutableStateOf(false) }
+    var showUrlInputDialog by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
@@ -127,6 +128,7 @@ fun editProjectDialog(
         when (type) {
             KnowledgeSourceType.FOLDER -> browseForFolder()
             KnowledgeSourceType.FILE -> browseForFiles()
+            KnowledgeSourceType.URL -> showUrlInputDialog = true
         }
     }
 
@@ -152,12 +154,12 @@ fun editProjectDialog(
             knowledgeSourceConfigs,
         )
 
-        // If knowledge sources changed, emit re-index event
+        // If reference materials changed, emit re-index event
         if (knowledgeSourceChanged) {
             EventBus.post(
                 ProjectReIndexEvent(
                     projectId = project.id,
-                    reason = "Knowledge sources changed",
+                    reason = "Reference materials changed",
                 ),
             )
         }
@@ -220,7 +222,7 @@ fun editProjectDialog(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
 
-                // Knowledge Sources Section
+                // Reference Materials Section
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -302,6 +304,20 @@ fun editProjectDialog(
                 }
             }
         }
+    }
+
+    // Show URL input dialog when requested
+    if (showUrlInputDialog) {
+        urlInputDialog(
+            onDismiss = { showUrlInputDialog = false },
+            onUrlAdded = { url ->
+                knowledgeSources = knowledgeSources + KnowledgeSourceItem.Url(
+                    id = UUID.randomUUID().toString(),
+                    url = url,
+                    isValid = validateUrl(url),
+                )
+            },
+        )
     }
 }
 

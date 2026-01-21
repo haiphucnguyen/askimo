@@ -4,77 +4,58 @@
  */
 package io.askimo.core.rag.state
 
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.RagUtils
-import io.askimo.core.util.JsonUtils.json
-import kotlinx.serialization.Serializable
 import java.nio.file.Path
 import java.security.MessageDigest
-import kotlin.io.path.exists
 import kotlin.io.path.readBytes
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
- * Manages the persisted state of an index
+ * Manages the persisted state of an index.
+ * Now uses database-backed storage instead of JSON files for better scalability.
  */
 class IndexStateManager(
     private val projectId: String,
+    private val sourceType: String, // 'folders', 'files', or 'urls'
 ) {
     private val log = logger<IndexStateManager>()
-    private val stateFile = RagUtils.getProjectIndexDir(projectId).resolve("index-state.json")
-
-    @Serializable
-    private data class PersistedIndexState(
-        val totalFilesIndexed: Int,
-        val lastIndexedTimestamp: Long,
-        val fileHashes: Map<String, String>,
-    )
+    private val repository = IndexStateRepository(DatabaseManager.getInstance())
 
     /**
-     * Load persisted state from disk
+     * Load persisted state from database
      */
     fun loadPersistedState(): IndexPersistedState? {
         return try {
-            if (!stateFile.exists()) {
-                log.debug("No persisted state found for project $projectId")
+            val fileHashes = repository.getHashesForSourceType(projectId, sourceType)
+
+            if (fileHashes.isEmpty()) {
+                log.debug("No persisted state found for project $projectId, source type $sourceType")
                 return null
             }
 
-            val jsonContent = stateFile.readText()
-            val state = json.decodeFromString<PersistedIndexState>(jsonContent)
-
             IndexPersistedState(
-                totalFilesIndexed = state.totalFilesIndexed,
-                lastIndexedTimestamp = state.lastIndexedTimestamp,
-                fileHashes = state.fileHashes,
+                totalFilesIndexed = fileHashes.size,
+                lastIndexedTimestamp = System.currentTimeMillis(), // Not stored in DB anymore
+                fileHashes = fileHashes,
             )
         } catch (e: Exception) {
-            log.error("Failed to load persisted state for project $projectId", e)
+            log.error("Failed to load persisted state for project $projectId, source type $sourceType", e)
             null
         }
     }
 
     /**
-     * Save state to disk
+     * Save state to database using batch insert for performance
      */
     fun saveState(
         totalFilesIndexed: Int,
         fileHashes: Map<String, String>,
     ) {
         try {
-            val state = PersistedIndexState(
-                totalFilesIndexed = totalFilesIndexed,
-                lastIndexedTimestamp = System.currentTimeMillis(),
-                fileHashes = fileHashes,
-            )
-
-            val jsonContent = json.encodeToString(state)
-            stateFile.writeText(jsonContent)
-
-            log.debug("Saved index state for project $projectId: $totalFilesIndexed files")
+            repository.batchSaveFileStates(projectId, fileHashes, sourceType)
+            log.debug("Saved index state for project $projectId, source type $sourceType: $totalFilesIndexed files")
         } catch (e: Exception) {
-            log.error("Failed to save index state for project $projectId", e)
+            log.error("Failed to save index state for project $projectId, source type $sourceType", e)
         }
     }
 
@@ -90,4 +71,9 @@ class IndexStateManager(
         log.warn("Failed to calculate hash for ${filePath.fileName}: ${e.message}")
         ""
     }
+
+    /**
+     * Calculate hash for URL content (used by URL indexing coordinator)
+     */
+    fun calculateUrlHash(url: String): String = url.hashCode().toString()
 }
