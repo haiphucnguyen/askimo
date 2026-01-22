@@ -162,11 +162,11 @@ class ProjectRepository internal constructor(
      * @param pageSize Number of projects per page
      * @return Paginated project results
      */
-    fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> {
-        val allProjects = getAllProjects()
+    fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> = transaction(database) {
+        val totalItems = ProjectsTable.selectAll().count().toInt()
 
-        if (allProjects.isEmpty()) {
-            return Pageable(
+        if (totalItems == 0) {
+            return@transaction Pageable(
                 items = emptyList(),
                 currentPage = 1,
                 totalPages = 0,
@@ -175,18 +175,22 @@ class ProjectRepository internal constructor(
             )
         }
 
-        val totalPages = (allProjects.size + pageSize - 1) / pageSize
+        val totalPages = (totalItems + pageSize - 1) / pageSize
         val validPage = page.coerceIn(1, totalPages)
+        val offset = ((validPage - 1) * pageSize).toLong()
 
-        val startIndex = (validPage - 1) * pageSize
-        val endIndex = minOf(startIndex + pageSize, allProjects.size)
-        val pageProjects = allProjects.subList(startIndex, endIndex)
+        val pageProjects = ProjectsTable
+            .selectAll()
+            .orderBy(ProjectsTable.updatedAt to SortOrder.DESC)
+            .limit(pageSize)
+            .offset(offset)
+            .map { it.toProject() }
 
-        return Pageable(
+        Pageable(
             items = pageProjects,
             currentPage = validPage,
             totalPages = totalPages,
-            totalItems = allProjects.size,
+            totalItems = totalItems,
             pageSize = pageSize,
         )
     }

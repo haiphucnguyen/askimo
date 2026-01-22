@@ -15,9 +15,9 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.ModelNotAvailableEvent
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
-import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.LocalModelValidator
 import io.askimo.core.providers.ModelAvailabilityResult
@@ -39,7 +39,7 @@ import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
 
-private val log = logger("EmbeddingModelFactory")
+private val log = currentFileLogger()
 
 /**
  * Get the maximum token limit for the current embedding model.

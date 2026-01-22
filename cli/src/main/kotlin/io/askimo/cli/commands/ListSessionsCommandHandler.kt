@@ -25,7 +25,7 @@ class ListSessionsCommandHandler(private val appContext: AppContext) : CommandHa
         val args = line.words()
         val requestedPage = if (args.size >= 2) args[1].toIntOrNull() ?: 1 else 1
 
-        val pagedSessions = sessionService.getSessionsPaged(requestedPage, sessionsPerPage)
+        val pagedSessions = sessionService.getSessionsPagedWithoutProject(requestedPage, sessionsPerPage)
 
         if (pagedSessions.isEmpty) {
             log.display("No chat sessions found.")

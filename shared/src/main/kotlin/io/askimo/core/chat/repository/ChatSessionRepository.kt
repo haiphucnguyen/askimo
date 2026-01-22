@@ -9,6 +9,7 @@ import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.SESSION_TITLE_MAX_LENGTH
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.Pageable
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -69,7 +70,14 @@ class ChatSessionRepository internal constructor(
         return sessionWithInjectedFields
     }
 
-    fun getAllSessions(): List<ChatSession> = transaction(database) {
+    /**
+     * Get sessions with a limited number.
+     * Sessions are ordered by starred status, sort order, and updated time.
+     *
+     * @param limit Maximum number of sessions to return
+     * @return List of sessions up to the specified limit
+     */
+    fun getSessions(limit: Int): List<ChatSession> = transaction(database) {
         ChatSessionsTable
             .selectAll()
             .orderBy(
@@ -77,7 +85,77 @@ class ChatSessionRepository internal constructor(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
+            .limit(limit)
             .map { it.toChatSession() }
+    }
+
+    /**
+     * Get sessions with pagination and optional filtering.
+     * Sessions are ordered by starred status, sort order, and updated time.
+     *
+     * @param page The page number (1-based)
+     * @param pageSize Number of sessions per page
+     * @param projectFilter Filter by project status:
+     *   - null: return all sessions (default)
+     *   - true: return only sessions WITH a project
+     *   - false: return only sessions WITHOUT a project
+     * @return Paginated session results
+     */
+    fun getSessionsPaged(
+        page: Int = 1,
+        pageSize: Int = 10,
+        projectFilter: Boolean? = null,
+    ): Pageable<ChatSession> = transaction(database) {
+        // Build base query with optional filter
+        val baseQuery = ChatSessionsTable.selectAll().apply {
+            when (projectFilter) {
+                true -> where { ChatSessionsTable.projectId.isNotNull() }
+                false -> where { ChatSessionsTable.projectId.isNull() }
+                null -> {} // No filter, get all sessions
+            }
+        }
+
+        // Get total count
+        val totalItems = baseQuery.count().toInt()
+
+        if (totalItems == 0) {
+            return@transaction Pageable(
+                items = emptyList(),
+                currentPage = 1,
+                totalPages = 0,
+                totalItems = 0,
+                pageSize = pageSize,
+            )
+        }
+
+        val totalPages = (totalItems + pageSize - 1) / pageSize
+        val validPage = page.coerceIn(1, totalPages)
+        val offset = ((validPage - 1) * pageSize).toLong()
+
+        // Query only the records for the current page
+        val pageSessions = ChatSessionsTable.selectAll().apply {
+            when (projectFilter) {
+                true -> where { ChatSessionsTable.projectId.isNotNull() }
+                false -> where { ChatSessionsTable.projectId.isNull() }
+                null -> {} // No filter, get all sessions
+            }
+        }
+            .orderBy(
+                ChatSessionsTable.isStarred to SortOrder.DESC,
+                ChatSessionsTable.sortOrder to SortOrder.ASC,
+                ChatSessionsTable.updatedAt to SortOrder.DESC,
+            )
+            .limit(pageSize)
+            .offset(offset)
+            .map { it.toChatSession() }
+
+        Pageable(
+            items = pageSessions,
+            currentPage = validPage,
+            totalPages = totalPages,
+            totalItems = totalItems,
+            pageSize = pageSize,
+        )
     }
 
     /**
@@ -243,9 +321,13 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Get all sessions not belonging to any project (general chat sessions).
+     * Get sessions not belonging to any project (general chat sessions) with a limit.
+     * Sessions are ordered by starred status, sort order, and updated time.
+     *
+     * @param limit Maximum number of sessions to return
+     * @return List of sessions up to the specified limit
      */
-    fun getSessionsWithoutProject(): List<ChatSession> = transaction(database) {
+    fun getSessionsWithoutProject(limit: Int): List<ChatSession> = transaction(database) {
         ChatSessionsTable
             .selectAll()
             .where { ChatSessionsTable.projectId.isNull() }
@@ -254,6 +336,7 @@ class ChatSessionRepository internal constructor(
                 ChatSessionsTable.sortOrder to SortOrder.ASC,
                 ChatSessionsTable.updatedAt to SortOrder.DESC,
             )
+            .limit(limit)
             .map { it.toChatSession() }
     }
 

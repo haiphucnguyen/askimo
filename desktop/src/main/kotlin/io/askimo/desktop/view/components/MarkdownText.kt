@@ -69,7 +69,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.view.chart.renderers.mermaidChart
@@ -100,7 +100,7 @@ import org.commonmark.node.StrongEmphasis
 import org.commonmark.parser.Parser
 import org.commonmark.node.Text as MarkdownText
 
-private val log = logger("markdownText")
+private val log = currentFileLogger()
 
 /**
  * Simple Markdown renderer for Compose.
@@ -1290,8 +1290,6 @@ private fun extractVideoUrl(paragraph: Paragraph): String? {
  * Returns MermaidChartData if the JSON/Mermaid is a valid diagram specification, null otherwise.
  */
 private fun parseChartData(code: String, language: String?): MermaidChartData? {
-    val log = logger("parseChartData")
-
     // Handle Mermaid diagrams
     if (language?.lowercase() == "mermaid") {
         val cleanedCode = code.trim()

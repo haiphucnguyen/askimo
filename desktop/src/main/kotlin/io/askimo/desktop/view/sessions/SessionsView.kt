@@ -5,6 +5,7 @@
 package io.askimo.desktop.view.sessions
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -242,7 +243,10 @@ private fun sessionCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onResumeSession(session.id) }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onResumeSession(session.id) }
                     .pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(

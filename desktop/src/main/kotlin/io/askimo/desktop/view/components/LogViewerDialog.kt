@@ -47,7 +47,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.askimo.core.logging.LoggingService
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
-private val log = logger("LogViewerDialog")
+private val log = currentFileLogger()
 
 /**
  * Dialog for viewing application log files.

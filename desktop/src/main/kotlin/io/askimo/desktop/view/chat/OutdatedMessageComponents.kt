@@ -7,6 +7,7 @@ package io.askimo.desktop.view.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontStyle
@@ -81,6 +83,8 @@ fun groupMessagesWithOutdatedBranches(messages: List<ChatMessageDTO>): List<Mess
 fun outdatedBranchComponent(
     messages: List<ChatMessageDTO>,
     modifier: Modifier = Modifier,
+    userAvatarPath: String? = null,
+    aiAvatarPath: String? = null,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -93,6 +97,7 @@ fun outdatedBranchComponent(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(CardDefaults.shape)
                 .clickable { isExpanded = !isExpanded }
                 .pointerHoverIcon(PointerIcon.Hand),
             colors = CardDefaults.cardColors(
@@ -140,7 +145,11 @@ fun outdatedBranchComponent(
                     .padding(8.dp),
             ) {
                 messages.forEach { message ->
-                    outdatedMessageItem(message)
+                    outdatedMessageItem(
+                        message = message,
+                        userAvatarPath = userAvatarPath,
+                        aiAvatarPath = aiAvatarPath,
+                    )
                 }
             }
         }
@@ -149,44 +158,36 @@ fun outdatedBranchComponent(
 
 /**
  * Component to display a single outdated message
+ * Reuses messageBubble from MessageComponents for consistent rendering
+ * with a gray overlay to create a faded/outdated appearance
  */
 @Composable
-fun outdatedMessageItem(message: ChatMessageDTO) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
+fun outdatedMessageItem(
+    message: ChatMessageDTO,
+    userAvatarPath: String? = null,
+    aiAvatarPath: String? = null,
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (message.isUser) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                },
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            ),
+        // Render the message bubble
+        messageBubble(
+            message = message,
+            isOutdatedMessage = true,
+            userAvatarPath = userAvatarPath,
+            aiAvatarPath = aiAvatarPath,
+            // Disable interactive features for outdated messages
+            onMessageClick = null,
+            onEditMessage = null,
+            onDownloadAttachment = null,
+            onRetryMessage = null,
+        )
+
+        // Gray overlay on top to create faded appearance
+        Box(
             modifier = Modifier
-                .padding(horizontal = 8.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-            ) {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
-                // Show "outdated" label
-                Text(
-                    text = stringResource("outdated.label"),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    fontStyle = FontStyle.Italic,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-        }
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)),
+        )
     }
 }

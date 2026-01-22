@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import org.scilab.forge.jlatexmath.TeXConstants
 import org.scilab.forge.jlatexmath.TeXFormula
 import java.awt.AlphaComposite
@@ -29,7 +29,7 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 import java.awt.Color as AwtColor
 
-private val log = logger("LatexRenderer")
+private val log = currentFileLogger()
 
 /**
  * Renders a LaTeX formula as an image using JLaTeXMath.

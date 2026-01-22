@@ -66,10 +66,12 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -78,6 +80,8 @@ import io.askimo.desktop.view.components.markdownText
 import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+
+private val log = currentFileLogger()
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -227,6 +231,8 @@ fun messageList(
                     is MessageGroup.OutdatedBranch -> {
                         outdatedBranchComponent(
                             messages = group.messages,
+                            userAvatarPath = userAvatarPath,
+                            aiAvatarPath = aiAvatarPath,
                         )
                         isFirstMessage = false
                         messageIndex += group.messages.size
@@ -329,6 +335,7 @@ fun messageBubble(
     viewportTopY: Float? = null,
     allMessages: List<ChatMessageDTO> = emptyList(),
     onShowRetryConfirmDialog: ((String) -> Unit)? = null,
+    isOutdatedMessage: Boolean = false,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
@@ -412,8 +419,20 @@ fun messageBubble(
                                     },
                                 ),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                containerColor = if (isOutdatedMessage) {
+                                    if (message.isUser) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    } else {
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                                    }
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                },
+                                contentColor = if (isOutdatedMessage) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                },
                             ),
                         ) {
                             Column {
@@ -441,9 +460,9 @@ fun messageBubble(
                                                 text = highlightSearchText(
                                                     text = message.content,
                                                     query = searchQuery,
-                                                    highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
+                                                    highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
                                                     isActiveResult = isActiveSearchResult,
-                                                    activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
+                                                    activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
                                                 ),
                                                 modifier = Modifier.padding(12.dp),
                                                 style = MaterialTheme.typography.bodyMedium,
@@ -463,9 +482,9 @@ fun messageBubble(
                                                 text = highlightSearchText(
                                                     text = message.content,
                                                     query = searchQuery,
-                                                    highlightColor = Color(0xFFFFEB3B).copy(alpha = 0.5f), // Yellow for normal matches
+                                                    highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
                                                     isActiveResult = isActiveSearchResult,
-                                                    activeHighlightColor = Color(0xFFFF9800).copy(alpha = 0.8f), // Bright orange for active match
+                                                    activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
                                                 ),
                                                 modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
                                                 style = MaterialTheme.typography.bodyMedium,
@@ -483,6 +502,17 @@ fun messageBubble(
                                             )
                                         }
                                     }
+                                }
+
+                                // Show "outdated" label for outdated messages
+                                if (isOutdatedMessage) {
+                                    Text(
+                                        text = stringResource("outdated.label"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontStyle = FontStyle.Italic,
+                                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
+                                    )
                                 }
                             }
                         }
@@ -546,7 +576,8 @@ fun messageBubble(
                     }
                 }
 
-                // AI message action controls - positioned in the gap below the message, always visible
+                // AI message action controls - positioned in the gap below the message
+                // Always show for AI messages (at minimum, copy button is always available)
                 if (!message.isUser) {
                     var showCopyFeedback by remember { mutableStateOf(false) }
                     val coroutineScope = rememberCoroutineScope()
@@ -572,7 +603,7 @@ fun messageBubble(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Copy button
+                                // Copy button - always show for AI messages (including outdated)
                                 themedTooltip(
                                     text = stringResource("message.copy"),
                                 ) {
@@ -596,52 +627,56 @@ fun messageBubble(
                                     }
                                 }
 
-                                // Edit button for AI messages
-                                themedTooltip(
-                                    text = stringResource("message.ai.edit"),
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            onEditMessage?.invoke(message)
-                                        },
-                                        modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                // Edit button for AI messages - only show if callback is provided
+                                if (onEditMessage != null) {
+                                    themedTooltip(
+                                        text = stringResource("message.ai.edit"),
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = stringResource("message.ai.edit.description"),
-                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
+                                        IconButton(
+                                            onClick = {
+                                                onEditMessage.invoke(message)
+                                            },
+                                            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = stringResource("message.ai.edit.description"),
+                                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                        }
                                     }
                                 }
 
-                                // Try again button for AI messages
-                                themedTooltip(
-                                    text = stringResource("message.ai.try.again"),
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            message.id?.let { messageId ->
-                                                // Check if this is the latest AI message
-                                                val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
-
-                                                if (isLatestMessage) {
-                                                    // Directly retry for latest message
-                                                    onRetryMessage?.invoke(messageId)
-                                                } else {
-                                                    // Show confirmation dialog for mid-conversation retry
-                                                    onShowRetryConfirmDialog?.invoke(messageId)
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                // Try again button for AI messages - only show if callback is provided
+                                if (onRetryMessage != null) {
+                                    themedTooltip(
+                                        text = stringResource("message.ai.try.again"),
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = stringResource("message.ai.try.again.description"),
-                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
+                                        IconButton(
+                                            onClick = {
+                                                message.id?.let { messageId ->
+                                                    // Check if this is the latest AI message
+                                                    val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
+
+                                                    if (isLatestMessage) {
+                                                        // Directly retry for latest message
+                                                        onRetryMessage.invoke(messageId)
+                                                    } else {
+                                                        // Show confirmation dialog for mid-conversation retry
+                                                        onShowRetryConfirmDialog?.invoke(messageId)
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = stringResource("message.ai.try.again.description"),
+                                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -666,6 +701,7 @@ fun messageBubble(
                 }
 
                 // User message action controls - reserve space, show controls on hover
+                // Always show for user messages (at minimum, copy button is always available)
                 if (message.isUser) {
                     var showCopyFeedback by remember { mutableStateOf(false) }
                     val coroutineScope = rememberCoroutineScope()
@@ -709,7 +745,7 @@ fun messageBubble(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        // Copy button
+                                        // Copy button - always show for user messages (including outdated)
                                         themedTooltip(
                                             text = stringResource("message.copy"),
                                         ) {
@@ -733,21 +769,24 @@ fun messageBubble(
                                             }
                                         }
 
-                                        themedTooltip(
-                                            text = stringResource("message.edit"),
-                                        ) {
-                                            IconButton(
-                                                onClick = {
-                                                    onEditMessage?.invoke(message)
-                                                },
-                                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                        // Edit button - only show if callback is provided
+                                        if (onEditMessage != null) {
+                                            themedTooltip(
+                                                text = stringResource("message.edit"),
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = stringResource("message.edit.description"),
-                                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        onEditMessage.invoke(message)
+                                                    },
+                                                    modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = stringResource("message.edit.description"),
+                                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    )
+                                                }
                                             }
                                         }
                                     }

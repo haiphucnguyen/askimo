@@ -22,7 +22,7 @@ sealed class ModelAvailabilityResult {
  * on local AI providers like Ollama, Docker AI, LocalAI, LMStudio, etc.
  */
 object LocalModelValidator {
-    private val log = logger("LocalModelValidator")
+    private val log = logger<LocalModelValidator>()
 
     private val LOCAL_PROVIDERS = setOf(
         ModelProvider.OLLAMA,

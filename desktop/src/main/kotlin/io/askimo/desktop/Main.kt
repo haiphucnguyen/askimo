@@ -80,7 +80,7 @@ import io.askimo.core.event.internal.ProjectSessionsRefreshEvent
 import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.desktop.di.allDesktopModules
@@ -170,7 +170,7 @@ fun detectMacOSDarkMode(): Boolean {
     }
 }
 
-private val log = logger("Main")
+private val log = currentFileLogger()
 
 fun main() {
     AppContext.initialize(ExecutionMode.STATEFUL_CHARTS_MODE)

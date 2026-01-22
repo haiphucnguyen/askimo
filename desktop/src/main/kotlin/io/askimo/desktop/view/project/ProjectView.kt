@@ -63,7 +63,6 @@ import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.core.event.internal.ProjectSessionsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
-import io.askimo.core.logging.logger
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -76,8 +75,6 @@ import io.askimo.desktop.view.components.newProjectDialog
 import io.askimo.desktop.view.components.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-private val log = logger("ProjectView")
 
 /**
  * Project view showing project details and chat interface.

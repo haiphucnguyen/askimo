@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.service.MermaidCliNotAvailableException
 import io.askimo.desktop.service.MermaidSvgService
@@ -77,12 +77,13 @@ import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 import org.jetbrains.skia.Image as SkiaImage
 
+private val log = currentFileLogger()
+
 /**
  * Cache for rendered Mermaid diagrams.
  * Uses memory cache for fast access and temp directory for persistence across renders.
  */
 private object DiagramCache {
-    private val log = logger("DiagramCache")
     private val memoryCache = mutableMapOf<String, ByteArray>()
 
     private val cacheDir = File(
@@ -153,7 +154,6 @@ fun mermaidChart(
     data: MermaidChartData,
     modifier: Modifier = Modifier,
 ) {
-    val log = remember { logger("MermaidChartRenderer") }
     val mermaidService = remember { MermaidSvgService() }
     var imageData by remember { mutableStateOf<ByteArray?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -528,7 +528,6 @@ private fun diagramViewer(
     onFullScreen: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val log = remember { logger("MermaidChartRenderer") }
     val clipboardManager = LocalClipboardManager.current
     var showCopyFeedback by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()

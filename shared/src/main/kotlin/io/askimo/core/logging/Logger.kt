@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 
 inline fun <reified T> logger() = LoggerFactory.getLogger(T::class.java)
 
-fun logger(name: String) = LoggerFactory.getLogger(name)
+inline fun currentFileLogger(): Logger = LoggerFactory.getLogger(object {}.javaClass.enclosingClass.name)
 
 fun Logger.display(message: String) {
     println(message)
