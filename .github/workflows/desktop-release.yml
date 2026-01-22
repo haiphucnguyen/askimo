@@ -9,12 +9,20 @@ on:
 jobs:
   # Build desktop application for each platform (runs on PRs and releases)
   desktop-build:
-    name: desktop-build-${{ matrix.os }}
+    name: desktop-build-${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest, windows-latest, ubuntu-latest ]
+        include:
+          - os: macos-latest
+            name: macos-arm64
+          - os: macos-13
+            name: macos-intel
+          - os: windows-latest
+            name: windows
+          - os: ubuntu-latest
+            name: linux
 
     steps:
       - name: Checkout
@@ -51,20 +59,25 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            name: macos
+            name: macos-arm64
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
-            artifact-suffix: "macos"
+            artifact-suffix: "macos-arm64"
+          - os: macos-13
+            name: macos-intel
+            task: customNotarizeMacApp
+            artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
+            artifact-suffix: "macos-intel"
+          - os: ubuntu-latest
+            name: linux
+            task: packageDeb
+            artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
+            artifact-suffix: "linux"
           - os: windows-latest
             name: windows
             task: packageMsi
             artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
             artifact-suffix: "windows"
-          - os: ubuntu-latest
-            name: linux-x64
-            task: packageDeb
-            artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
-            artifact-suffix: "linux-x64"
             arch: "x64"
           - os: ubuntu-24.04-arm64
             name: linux-arm64
@@ -357,14 +370,25 @@ jobs:
           mkdir -p release
           files=()
 
-          # macOS DMG
-          if [ -d "dist/askimo-desktop-installer-macos" ]; then
-            DMG=$(find dist/askimo-desktop-installer-macos -name "*.dmg" -type f | head -n1)
+          # macOS DMG (ARM64)
+          if [ -d "dist/askimo-desktop-installer-macos-arm64" ]; then
+            DMG=$(find dist/askimo-desktop-installer-macos-arm64 -name "*.dmg" -type f | head -n1)
             if [ -n "$DMG" ]; then
-              DEST="release/Askimo-Desktop-macos.dmg"
+              DEST="release/Askimo-Desktop-macos-arm64.dmg"
               cp "$DMG" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS DMG: $DEST"
+              echo "✓ Packaged macOS ARM64 DMG: $DEST"
+            fi
+          fi
+
+          # macOS DMG (Intel)
+          if [ -d "dist/askimo-desktop-installer-macos-intel" ]; then
+            DMG=$(find dist/askimo-desktop-installer-macos-intel -name "*.dmg" -type f | head -n1)
+            if [ -n "$DMG" ]; then
+              DEST="release/Askimo-Desktop-macos-intel.dmg"
+              cp "$DMG" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged macOS Intel DMG: $DEST"
             fi
           fi
 
@@ -380,10 +404,10 @@ jobs:
           fi
 
           # Linux DEB (x64)
-          if [ -d "dist/askimo-desktop-installer-linux-x64" ]; then
-            DEB=$(find dist/askimo-desktop-installer-linux-x64 -name "*.deb" -type f | head -n1)
+          if [ -d "dist/askimo-desktop-installer-linux" ]; then
+            DEB=$(find dist/askimo-desktop-installer-linux -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
-              DEST="release/Askimo-Desktop-linux-x64.deb"
+              DEST="release/Askimo-Desktop-linux.deb"
               cp "$DEB" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Linux x64 DEB: $DEST"
@@ -401,14 +425,25 @@ jobs:
             fi
           fi
 
-          # macOS uber JAR
-          if [ -d "dist/askimo-desktop-jar-macos" ]; then
-            JAR=$(find dist/askimo-desktop-jar-macos -name "*.jar" -type f | head -n1)
+          # macOS uber JAR (ARM64)
+          if [ -d "dist/askimo-desktop-jar-macos-arm64" ]; then
+            JAR=$(find dist/askimo-desktop-jar-macos-arm64 -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-macos.jar"
+              DEST="release/askimo-desktop-macos-arm64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS uber JAR: $DEST"
+              echo "✓ Packaged macOS ARM64 uber JAR: $DEST"
+            fi
+          fi
+
+          # macOS uber JAR (Intel)
+          if [ -d "dist/askimo-desktop-jar-macos-intel" ]; then
+            JAR=$(find dist/askimo-desktop-jar-macos-intel -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-macos-intel.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged macOS Intel uber JAR: $DEST"
             fi
           fi
 
@@ -424,10 +459,10 @@ jobs:
           fi
 
           # Linux uber JAR (x64)
-          if [ -d "dist/askimo-desktop-jar-linux-x64" ]; then
-            JAR=$(find dist/askimo-desktop-jar-linux-x64 -name "*.jar" -type f | head -n1)
+          if [ -d "dist/askimo-desktop-jar-linux" ]; then
+            JAR=$(find dist/askimo-desktop-jar-linux -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-linux-x64.jar"
+              DEST="release/askimo-desktop-linux.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Linux x64 uber JAR: $DEST"
