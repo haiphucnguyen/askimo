@@ -387,10 +387,10 @@ jobs:
           if [ -d "dist/askimo-desktop-installer-macos-intel" ]; then
             DMG=$(find dist/askimo-desktop-installer-macos-intel -name "*.dmg" -type f | head -n1)
             if [ -n "$DMG" ]; then
-              DEST="release/Askimo-Desktop-macos-intel.dmg"
+              DEST="release/Askimo-Desktop-macos-x64.dmg"
               cp "$DMG" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS Intel DMG: $DEST"
+              echo "✓ Packaged macOS x64 DMG: $DEST"
             fi
           fi
 
@@ -398,10 +398,10 @@ jobs:
           if [ -d "dist/askimo-desktop-installer-windows" ]; then
             MSI=$(find dist/askimo-desktop-installer-windows -name "*.msi" -type f | head -n1)
             if [ -n "$MSI" ]; then
-              DEST="release/Askimo-Desktop-windows.msi"
+              DEST="release/Askimo-Desktop-windows-x64.msi"
               cp "$MSI" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Windows MSI: $DEST"
+              echo "✓ Packaged Windows x64 MSI: $DEST"
             fi
           fi
 
@@ -409,7 +409,7 @@ jobs:
           if [ -d "dist/askimo-desktop-installer-linux" ]; then
             DEB=$(find dist/askimo-desktop-installer-linux -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
-              DEST="release/Askimo-Desktop-linux.deb"
+              DEST="release/Askimo-Desktop-linux-x64.deb"
               cp "$DEB" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Linux x64 DEB: $DEST"
@@ -442,10 +442,10 @@ jobs:
           if [ -d "dist/askimo-desktop-jar-macos-intel" ]; then
             JAR=$(find dist/askimo-desktop-jar-macos-intel -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-macos-intel.jar"
+              DEST="release/askimo-desktop-macos-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS Intel uber JAR: $DEST"
+              echo "✓ Packaged macOS x64 uber JAR: $DEST"
             fi
           fi
 
@@ -453,10 +453,10 @@ jobs:
           if [ -d "dist/askimo-desktop-jar-windows" ]; then
             JAR=$(find dist/askimo-desktop-jar-windows -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-windows.jar"
+              DEST="release/askimo-desktop-windows-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Windows uber JAR: $DEST"
+              echo "✓ Packaged Windows x64 uber JAR: $DEST"
             fi
           fi
 
@@ -464,7 +464,7 @@ jobs:
           if [ -d "dist/askimo-desktop-jar-linux" ]; then
             JAR=$(find dist/askimo-desktop-jar-linux -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-linux.jar"
+              DEST="release/askimo-desktop-linux-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
               echo "✓ Packaged Linux x64 uber JAR: $DEST"
