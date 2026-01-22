@@ -968,12 +968,57 @@ tasks.register("createSignedDmg") {
 
             // Give Finder time to save the settings
             logger.lifecycle("⏳ Waiting for Finder to save settings...")
-            Thread.sleep(5000)
-        } finally {
-            // Unmount
-            logger.lifecycle("💿 Unmounting DMG...")
+            Thread.sleep(3000)
+
+            // Sync to ensure all changes are written
+            logger.lifecycle("💾 Syncing filesystem...")
             project.exec {
-                commandLine("hdiutil", "detach", mountPath)
+                commandLine("sync")
+                isIgnoreExitValue = true
+            }
+            Thread.sleep(500)
+
+            // Force Finder to close all windows for the volume
+            logger.lifecycle("🔒 Closing Finder windows...")
+            project.exec {
+                commandLine("osascript", "-e", "tell application \"Finder\" to close every window")
+                isIgnoreExitValue = true
+            }
+            Thread.sleep(1000)
+        } finally {
+            // Unmount with retries
+            logger.lifecycle("💿 Unmounting DMG...")
+            var unmounted = false
+            var attempts = 0
+            val maxAttempts = 5
+
+            while (!unmounted && attempts < maxAttempts) {
+                attempts++
+                try {
+                    if (attempts > 1) {
+                        logger.lifecycle("   Retry attempt $attempts/$maxAttempts...")
+                        Thread.sleep(2000)
+                    }
+
+                    project.exec {
+                        commandLine("hdiutil", "detach", mountPath, "-force")
+                        isIgnoreExitValue = false
+                    }
+                    unmounted = true
+                    logger.lifecycle("✅ DMG unmounted successfully")
+                } catch (_: Exception) {
+                    if (attempts < maxAttempts) {
+                        logger.lifecycle("⚠️  Unmount failed, will retry...")
+                        // Kill any processes that might be using the volume
+                        project.exec {
+                            commandLine("lsof", "+D", mountPath)
+                            isIgnoreExitValue = true
+                            standardOutput = System.out
+                        }
+                    } else {
+                        logger.warn("⚠️  Could not unmount DMG after $maxAttempts attempts, continuing anyway...")
+                    }
+                }
             }
         }
 
