@@ -15,11 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import org.jetbrains.skia.Image
 import java.io.File
 
-private val log = logger("AsyncImageLogger")
+private val log = currentFileLogger()
 
 /**
  * Asynchronously load and display an image from a file path.

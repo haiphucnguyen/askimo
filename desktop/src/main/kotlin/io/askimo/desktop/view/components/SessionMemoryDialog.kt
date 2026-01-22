@@ -20,6 +20,8 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -241,7 +243,7 @@ fun sessionMemoryDialog(
                                             modifier = Modifier.size(32.dp),
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.KeyboardArrowLeft,
+                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                                 contentDescription = "Previous page",
                                                 modifier = Modifier.size(20.dp),
                                             )
@@ -259,7 +261,7 @@ fun sessionMemoryDialog(
                                             modifier = Modifier.size(32.dp),
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.KeyboardArrowRight,
+                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                                 contentDescription = "Next page",
                                                 modifier = Modifier.size(20.dp),
                                             )

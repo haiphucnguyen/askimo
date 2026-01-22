@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.preferences.DeveloperModePreferences
@@ -64,7 +64,7 @@ import kotlinx.coroutines.delay
 import java.awt.Desktop
 import java.io.File
 
-private val log = logger("AdvancedSettingsSection")
+private val log = currentFileLogger()
 
 @Composable
 fun advancedSettingsSection() {

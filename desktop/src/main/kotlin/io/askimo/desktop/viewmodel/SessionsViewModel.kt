@@ -146,7 +146,7 @@ class SessionsViewModel(
         scope.launch {
             try {
                 val sessionsWithoutProject = withContext(Dispatchers.IO) {
-                    sessionService.getSessionsWithoutProject()
+                    sessionService.getSessionsWithoutProject(MAX_SIDEBAR_SESSIONS)
                 }
                 recentSessions = sessionsWithoutProject.take(MAX_SIDEBAR_SESSIONS)
                 totalSessionCount = sessionsWithoutProject.size
@@ -168,7 +168,7 @@ class SessionsViewModel(
         scope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    sessionService.getSessionsPaged(page, sessionsPerPage)
+                    sessionService.getSessionsPagedWithoutProject(page, sessionsPerPage)
                 }
                 pagedSessions = result
             } catch (e: Exception) {
@@ -233,7 +233,7 @@ class SessionsViewModel(
         scope.launch {
             try {
                 // 1. Clean up ViewModel and stop any active streaming
-                sessionManager?.closeSession(sessionId)
+                sessionManager.closeSession(sessionId)
 
                 // 2. Delete from database
                 val deleted = withContext(Dispatchers.IO) {
@@ -242,21 +242,19 @@ class SessionsViewModel(
 
                 if (deleted) {
                     // 3. If deleted active session, switch to another or create new
-                    if (sessionManager?.activeSessionId == null) {
+                    if (sessionManager.activeSessionId == null) {
                         // Refresh to get updated list first
                         val updatedSessions = withContext(Dispatchers.IO) {
-                            sessionService.getAllSessionsSorted().take(MAX_SIDEBAR_SESSIONS)
+                            sessionService.getSessions(MAX_SIDEBAR_SESSIONS)
                         }
 
                         if (updatedSessions.isNotEmpty()) {
                             // Switch to first remaining session
-                            sessionManager?.switchToSession(updatedSessions.first().id)
+                            sessionManager.switchToSession(updatedSessions.first().id)
                         } else {
                             // Create new empty session
-                            val newSessionId = onCreateNewSession?.invoke()
-                            if (newSessionId != null) {
-                                sessionManager?.switchToSession(newSessionId)
-                            }
+                            val newSessionId = onCreateNewSession.invoke()
+                            sessionManager.switchToSession(newSessionId)
                         }
                     }
 

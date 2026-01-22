@@ -22,7 +22,6 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.leftJoin
 import org.jetbrains.exposed.sql.lowerCase
-import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -117,38 +116,6 @@ class ChatMessageRepository internal constructor(
             .where { ChatMessagesTable.sessionId eq sessionId }
             .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
             .map { it.toChatMessage() }
-
-        val messageIds = messages.map { it.id }
-        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
-
-        messages.map { message ->
-            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
-        }
-    }
-
-    /**
-     * Delete a message and its attachments from the database.
-     *
-     * @param messageId The message ID to delete
-     */
-    fun deleteMessage(messageId: String) {
-        transaction(database) {
-            // Delete attachments first (foreign key constraint)
-            attachmentRepository.deleteAttachmentsByMessageId(messageId)
-
-            // Delete the message
-            ChatMessagesTable.deleteWhere { id eq messageId }
-        }
-    }
-
-    fun getRecentMessages(sessionId: String, limit: Int = 20): List<ChatMessage> = transaction(database) {
-        val messages = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.sessionId eq sessionId }
-            .orderBy(ChatMessagesTable.createdAt to SortOrder.DESC)
-            .limit(limit)
-            .map { it.toChatMessage() }
-            .reversed()
 
         val messageIds = messages.map { it.id }
         val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
@@ -377,56 +344,6 @@ class ChatMessageRepository internal constructor(
     }
 
     /**
-     * Delete a message and all newer messages in the session.
-     * This is used when retrying an AI response to clean up the conversation from that point forward.
-     * Attachments are automatically deleted via CASCADE foreign key constraint.
-     *
-     * @param sessionId The session ID
-     * @param messageId The message ID to delete (along with all messages after it)
-     * @return Number of messages deleted
-     */
-    fun deleteMessageAndAllNewer(sessionId: String, messageId: String): Int = transaction(database) {
-        // First get the timestamp of the message to delete
-        val messageTimestamp = ChatMessagesTable
-            .select(ChatMessagesTable.createdAt)
-            .where { ChatMessagesTable.id eq messageId }
-            .singleOrNull()
-            ?.get(ChatMessagesTable.createdAt)
-            ?: return@transaction 0
-
-        // Delete the message and all messages created at or after that timestamp
-        ChatMessagesTable.deleteWhere {
-            (ChatMessagesTable.sessionId eq sessionId) and
-                ((ChatMessagesTable.createdAt eq messageTimestamp) or (ChatMessagesTable.createdAt greater messageTimestamp))
-        }
-    }
-
-    /**
-     * Get only active (non-outdated) messages for a session.
-     * This is used when building context for AI responses.
-     *
-     * @param sessionId The session ID
-     * @return List of active messages, ordered by creation time
-     */
-    fun getActiveMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        val messages = ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isOutdated eq 0)
-            }
-            .orderBy(ChatMessagesTable.createdAt to SortOrder.ASC)
-            .map { it.toChatMessage() }
-
-        val messageIds = messages.map { it.id }
-        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
-
-        messages.map { message ->
-            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
-        }
-    }
-
-    /**
      * Get the most recent active (non-outdated) messages for a session, limited to a specified count.
      * Messages are sorted by creation time descending and limited in the database query for efficiency.
      *
@@ -452,27 +369,6 @@ class ChatMessageRepository internal constructor(
         messages.map { message ->
             message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
         }
-    }
-
-    /**
-     * Find a message by ID.
-     *
-     * @param messageId The message ID
-     * @return The message, or null if not found
-     */
-    fun findById(messageId: String): ChatMessage? = transaction(database) {
-        val message = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.id eq messageId }
-            .singleOrNull()
-            ?.toChatMessage()
-
-        if (message != null) {
-            val attachmentsMap = loadAttachmentsForMessageIds(listOf(message.id))
-            return@transaction message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
-        }
-
-        return@transaction null
     }
 
     /**

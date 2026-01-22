@@ -130,7 +130,7 @@ class ChatViewModel(
     private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
 
     companion object {
-        private const val MESSAGE_PAGE_SIZE = 100
+        private const val MESSAGE_PAGE_SIZE = 50
         private const val MESSAGE_BUFFER_THRESHOLD = MESSAGE_PAGE_SIZE * 2
     }
 
@@ -465,8 +465,8 @@ class ChatViewModel(
 
         if (messages.size > MESSAGE_BUFFER_THRESHOLD) {
             messages = messages.takeLast(MESSAGE_PAGE_SIZE)
-            currentCursor = null
-            hasMoreMessages = false
+            currentCursor = messages.firstOrNull()?.timestamp
+            hasMoreMessages = true
         }
 
         startThinkingTimer()
@@ -669,6 +669,7 @@ class ChatViewModel(
 
                 isLoadingPrevious = false
             } catch (e: Exception) {
+                log.error("Failed to load previous messages", e)
                 errorMessage = ErrorHandler.getUserFriendlyError(e, "loading previous messages", "Failed to load previous messages. Please try again.")
                 isLoadingPrevious = false
             }
@@ -719,6 +720,7 @@ class ChatViewModel(
 
                 isSearching = false
             } catch (e: Exception) {
+                log.error("Failed to search messages", e)
                 errorMessage = ErrorHandler.getUserFriendlyError(e, "searching messages", "Search failed. Please try again.")
                 isSearching = false
             }

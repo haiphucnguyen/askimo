@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -261,7 +262,10 @@ private fun projectCard(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onSelectProject(project.id) }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onSelectProject(project.id) }
                         .pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -366,7 +370,10 @@ private fun projectCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { isExpanded = !isExpanded }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { isExpanded = !isExpanded }
                         .pointerHoverIcon(PointerIcon.Hand)
                         .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

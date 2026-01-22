@@ -70,7 +70,8 @@ import io.askimo.core.event.user.IndexingCompletedEvent
 import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
-import io.askimo.core.logging.logger
+import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.rag.ProjectIndexer
 import io.askimo.core.util.TimeUtil.formatDisplay
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.keymap.KeyMapManager
@@ -90,8 +91,7 @@ import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
 
-private object ChatViewObject
-private val log = logger<ChatViewObject>()
+private val log = currentFileLogger()
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -157,7 +157,6 @@ fun chatView(
     // Session memory dialog state
     var showSessionMemoryDialog by remember { mutableStateOf(false) }
     var sessionMemorySessionId by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     // RAG indexing status state
     var ragIndexingStatus by remember { mutableStateOf<String?>(null) }
@@ -168,9 +167,9 @@ fun chatView(
         if (project?.id != null && project.knowledgeSources.isNotEmpty()) {
             // Check if project is already indexed
             val projectIndexer = try {
-                GlobalContext.get().get<io.askimo.core.rag.ProjectIndexer>()
+                GlobalContext.get().get<ProjectIndexer>()
             } catch (e: Exception) {
-                log.warn("ProjectIndexer not available: ${e.message}")
+                log.warn("ProjectIndexer not available: ${e.message}", e)
                 null
             }
 
@@ -385,7 +384,7 @@ fun chatView(
                                             if (project.knowledgeSources.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
-                                                    text = "Knowledge Sources:",
+                                                    text = stringResource("projects.sources.title"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                 )

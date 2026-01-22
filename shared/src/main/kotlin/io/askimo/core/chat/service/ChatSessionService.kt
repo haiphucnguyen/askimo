@@ -273,13 +273,9 @@ class ChatSessionService(
     /**
      * Get all sessions sorted by most recently updated first.
      */
-    fun getAllSessionsSorted(): List<ChatSession> = sessionRepository.getAllSessions().sortedByDescending { it.createdAt }
+    fun getSessions(limit: Int): List<ChatSession> = sessionRepository.getSessions(limit)
 
-    /**
-     * Get all sessions without a project, sorted by star status and updated time.
-     * This is used for the sidebar sessions list.
-     */
-    fun getSessionsWithoutProject(): List<ChatSession> = sessionRepository.getSessionsWithoutProject()
+    fun getSessionsWithoutProject(limit: Int): List<ChatSession> = sessionRepository.getSessionsWithoutProject(limit)
 
     /**
      * Get sessions with pagination support.
@@ -290,34 +286,7 @@ class ChatSessionService(
      * @param pageSize The number of sessions per page
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
-    fun getSessionsPaged(page: Int, pageSize: Int): Pageable<ChatSession> {
-        val allSessions = sessionRepository.getSessionsWithoutProject()
-
-        if (allSessions.isEmpty()) {
-            return Pageable(
-                items = emptyList(),
-                currentPage = 1,
-                totalPages = 0,
-                totalItems = 0,
-                pageSize = pageSize,
-            )
-        }
-
-        val totalPages = (allSessions.size + pageSize - 1) / pageSize
-        val validPage = page.coerceIn(1, totalPages)
-
-        val startIndex = (validPage - 1) * pageSize
-        val endIndex = minOf(startIndex + pageSize, allSessions.size)
-        val pageSessions = allSessions.subList(startIndex, endIndex)
-
-        return Pageable(
-            items = pageSessions,
-            currentPage = validPage,
-            totalPages = totalPages,
-            totalItems = allSessions.size,
-            pageSize = pageSize,
-        )
-    }
+    fun getSessionsPagedWithoutProject(page: Int, pageSize: Int): Pageable<ChatSession> = sessionRepository.getSessionsPaged(page, pageSize, projectFilter = true)
 
     /**
      * Get a session by ID.
