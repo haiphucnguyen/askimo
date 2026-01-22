@@ -79,8 +79,8 @@ jobs:
             artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
             artifact-suffix: "windows"
             arch: "x64"
-          - os: ubuntu-24.04-arm64
-            name: linux-arm64
+          - os: ubuntu-24.04-arm
+            name: linux-arm
             task: packageDeb
             artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
             artifact-suffix: "linux-arm64"
