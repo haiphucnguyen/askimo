@@ -63,7 +63,7 @@ jobs:
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
             artifact-suffix: "macos-arm64"
-          - os: macos-13
+          - os: macos-15-intel
             name: macos-intel
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
