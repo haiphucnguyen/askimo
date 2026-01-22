@@ -206,16 +206,49 @@ afterEvaluate {
                             return@forEach
                         }
 
-                        // Use zip to delete signature files directly from JAR
-                        // JARs are ZIP files, so we can use zip -d to delete entries
-                        listOf("*.SF", "*.DSA", "*.RSA").forEach { pattern ->
-                            project.exec {
-                                commandLine("zip", "-d", jarFile.absolutePath, "META-INF/$pattern")
-                                isIgnoreExitValue = true // Ignore error if pattern doesn't match
-                            }
-                        }
+                        // Create a temporary directory for extraction
+                        val tempDir =
+                            layout.buildDirectory
+                                .dir("tmp/jar-strip/${jarFile.nameWithoutExtension}")
+                                .get()
+                                .asFile
+                        tempDir.deleteRecursively()
+                        tempDir.mkdirs()
 
-                        logger.lifecycle("✅ Successfully stripped signatures from: ${jarFile.name}")
+                        try {
+                            // Extract JAR contents
+                            project.exec {
+                                commandLine("jar", "xf", jarFile.absolutePath)
+                                workingDir = tempDir
+                            }
+
+                            // Delete signature files from META-INF
+                            val metaInfDir = File(tempDir, "META-INF")
+                            if (metaInfDir.exists()) {
+                                metaInfDir.listFiles()?.forEach { file ->
+                                    if (file.extension in listOf("SF", "DSA", "RSA")) {
+                                        file.delete()
+                                        logger.lifecycle("   Deleted: META-INF/${file.name}")
+                                    }
+                                }
+                            }
+
+                            // Re-create JAR without signature files
+                            val manifestFile = File(metaInfDir, "MANIFEST.MF")
+                            project.exec {
+                                if (manifestFile.exists()) {
+                                    commandLine("jar", "cfm", jarFile.absolutePath, "META-INF/MANIFEST.MF", ".")
+                                } else {
+                                    commandLine("jar", "cf", jarFile.absolutePath, ".")
+                                }
+                                workingDir = tempDir
+                            }
+
+                            logger.lifecycle("✅ Successfully stripped signatures from: ${jarFile.name}")
+                        } finally {
+                            // Clean up temporary directory
+                            tempDir.deleteRecursively()
+                        }
                     }
                 }
             }
