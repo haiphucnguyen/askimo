@@ -43,7 +43,7 @@ jobs:
 
   # Package desktop installers for each platform (runs only on release tags)
   desktop-package:
-    name: desktop-package-${{ matrix.os }}
+    name: desktop-package-${{ matrix.name }}
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
@@ -51,17 +51,27 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            name: macos
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
             artifact-suffix: "macos"
           - os: windows-latest
+            name: windows
             task: packageMsi
             artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
             artifact-suffix: "windows"
           - os: ubuntu-latest
+            name: linux-x64
             task: packageDeb
             artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
-            artifact-suffix: "linux"
+            artifact-suffix: "linux-x64"
+            arch: "x64"
+          - os: ubuntu-24.04-arm64
+            name: linux-arm64
+            task: packageDeb
+            artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
+            artifact-suffix: "linux-arm64"
+            arch: "arm64"
 
     steps:
       - name: Checkout
@@ -369,14 +379,25 @@ jobs:
             fi
           fi
 
-          # Linux DEB
-          if [ -d "dist/askimo-desktop-installer-linux" ]; then
-            DEB=$(find dist/askimo-desktop-installer-linux -name "*.deb" -type f | head -n1)
+          # Linux DEB (x64)
+          if [ -d "dist/askimo-desktop-installer-linux-x64" ]; then
+            DEB=$(find dist/askimo-desktop-installer-linux-x64 -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
-              DEST="release/Askimo-Desktop-linux.deb"
+              DEST="release/Askimo-Desktop-linux-x64.deb"
               cp "$DEB" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Linux DEB: $DEST"
+              echo "✓ Packaged Linux x64 DEB: $DEST"
+            fi
+          fi
+
+          # Linux DEB (ARM64)
+          if [ -d "dist/askimo-desktop-installer-linux-arm64" ]; then
+            DEB=$(find dist/askimo-desktop-installer-linux-arm64 -name "*.deb" -type f | head -n1)
+            if [ -n "$DEB" ]; then
+              DEST="release/Askimo-Desktop-linux-arm64.deb"
+              cp "$DEB" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux ARM64 DEB: $DEST"
             fi
           fi
 
@@ -402,14 +423,25 @@ jobs:
             fi
           fi
 
-          # Linux uber JAR
-          if [ -d "dist/askimo-desktop-jar-linux" ]; then
-            JAR=$(find dist/askimo-desktop-jar-linux -name "*.jar" -type f | head -n1)
+          # Linux uber JAR (x64)
+          if [ -d "dist/askimo-desktop-jar-linux-x64" ]; then
+            JAR=$(find dist/askimo-desktop-jar-linux-x64 -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-linux.jar"
+              DEST="release/askimo-desktop-linux-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Linux uber JAR: $DEST"
+              echo "✓ Packaged Linux x64 uber JAR: $DEST"
+            fi
+          fi
+
+          # Linux uber JAR (ARM64)
+          if [ -d "dist/askimo-desktop-jar-linux-arm64" ]; then
+            JAR=$(find dist/askimo-desktop-jar-linux-arm64 -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-linux-arm64.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux ARM64 uber JAR: $DEST"
             fi
           fi
 

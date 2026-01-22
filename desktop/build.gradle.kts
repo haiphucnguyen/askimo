@@ -115,7 +115,7 @@ compose.desktop {
             )
             packageName = "Askimo"
             packageVersion = project.version.toString()
-            description = "AI-powered user assistant with local RAG and semantic search capabilities"
+            description = "AI assistant with multi-LLM support and local document intelligence"
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"
 
@@ -139,6 +139,18 @@ compose.desktop {
             }
             linux {
                 iconFile.set(project.file("src/main/resources/images/askimo_512.png"))
+
+                // Package metadata
+                packageName = "askimo"
+                debMaintainer = author
+                menuGroup = "Utility;Office;"
+                appCategory = "utils"
+
+                // Add desktop entry details
+                shortcut = true
+
+                // Debian package dependencies
+                debPackageVersion = project.version.toString()
             }
         }
     }
@@ -148,6 +160,75 @@ compose.desktop {
 // Enable ZIP64 format for Compose Desktop packaging (supports unlimited entries)
 tasks.withType<Zip> {
     isZip64 = true
+}
+
+// Configure Compose Desktop uber JAR tasks to exclude signature files
+// These tasks are created by the Compose Desktop plugin
+// The plugin creates uber JARs that may contain conflicting signatures from dependencies
+// We need to post-process the JAR to remove signature files
+afterEvaluate {
+    fun createStripSignaturesTask(
+        sourceTaskName: String,
+        targetTaskName: String,
+    ) {
+        tasks.register(targetTaskName) {
+            group = "compose desktop"
+            description = "Strip signature files from $sourceTaskName output"
+
+            val sourceTask = tasks.findByName(sourceTaskName)
+            if (sourceTask != null) {
+                dependsOn(sourceTask)
+
+                doLast {
+                    // Find the output JAR from the source task
+                    val jarFiles =
+                        fileTree(layout.buildDirectory.dir("compose/jars")) {
+                            include("*.jar")
+                        }
+
+                    jarFiles.forEach { jarFile ->
+                        logger.lifecycle("Stripping signatures from: ${jarFile.name}")
+
+                        // Check if JAR has signature files
+                        val hasSignatures =
+                            ByteArrayOutputStream().use { output ->
+                                project.exec {
+                                    commandLine("jar", "tf", jarFile.absolutePath)
+                                    standardOutput = output
+                                    isIgnoreExitValue = true
+                                }
+                                val contents = output.toString()
+                                contents.contains(".SF") || contents.contains(".DSA") || contents.contains(".RSA")
+                            }
+
+                        if (!hasSignatures) {
+                            logger.lifecycle("   No signature files found, skipping...")
+                            return@forEach
+                        }
+
+                        // Use zip to delete signature files directly from JAR
+                        // JARs are ZIP files, so we can use zip -d to delete entries
+                        listOf("*.SF", "*.DSA", "*.RSA").forEach { pattern ->
+                            project.exec {
+                                commandLine("zip", "-d", jarFile.absolutePath, "META-INF/$pattern")
+                                isIgnoreExitValue = true // Ignore error if pattern doesn't match
+                            }
+                        }
+
+                        logger.lifecycle("✅ Successfully stripped signatures from: ${jarFile.name}")
+                    }
+                }
+            }
+        }
+    }
+
+    // Create signature stripping tasks for uber JARs
+    createStripSignaturesTask("packageUberJarForCurrentOS", "stripSignaturesFromUberJar")
+    createStripSignaturesTask("packageReleaseUberJarForCurrentOS", "stripSignaturesFromReleaseUberJar")
+
+    // Make the uber JAR tasks finalize with signature stripping
+    tasks.findByName("packageUberJarForCurrentOS")?.finalizedBy("stripSignaturesFromUberJar")
+    tasks.findByName("packageReleaseUberJarForCurrentOS")?.finalizedBy("stripSignaturesFromReleaseUberJar")
 }
 
 tasks.test {

@@ -130,7 +130,7 @@ class ChatViewModel(
     private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
 
     companion object {
-        private const val MESSAGE_PAGE_SIZE = 50
+        private const val MESSAGE_PAGE_SIZE = 100
         private const val MESSAGE_BUFFER_THRESHOLD = MESSAGE_PAGE_SIZE * 2
     }
 
