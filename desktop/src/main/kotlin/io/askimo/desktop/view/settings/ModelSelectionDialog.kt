@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
@@ -49,6 +50,18 @@ fun modelSelectionDialog(
         } else {
             viewModel.availableModels.filter { it.contains(searchQuery, ignoreCase = true) }
         }
+    }
+
+    // Group models by family (e.g., gpt-4, gpt-3.5, claude, gemini)
+    val groupedModels = remember(filteredModels) {
+        filteredModels.groupBy { model ->
+            val parts = model.split('-', '.')
+            when {
+                parts.size >= 2 -> "${parts[0]}-${parts[1]}"
+                parts.size == 1 -> parts[0]
+                else -> "Other"
+            }
+        }.toSortedMap()
     }
 
     ComponentColors.themedAlertDialog(
@@ -185,7 +198,6 @@ fun modelSelectionDialog(
                                 .fillMaxWidth()
                                 .heightIn(max = 400.dp)
                                 .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             if (filteredModels.isEmpty()) {
                                 Text(
@@ -200,36 +212,56 @@ fun modelSelectionDialog(
                                         text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 8.dp),
                                     )
                                 }
-                                filteredModels.forEach { model ->
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickableCard { selectedModel = model },
-                                        colors = if (model == selectedModel) {
-                                            ComponentColors.primaryCardColors()
-                                        } else {
-                                            ComponentColors.surfaceVariantCardColors()
-                                        },
-                                    ) {
-                                        Row(
+
+                                // Display grouped models
+                                groupedModels.forEach { (category, models) ->
+                                    if (groupedModels.size > 1 && models.isNotEmpty()) {
+                                        Text(
+                                            text = category.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(
+                                                horizontal = 0.dp,
+                                                vertical = 8.dp,
+                                            ),
+                                        )
+                                    }
+
+                                    // Models in this category
+                                    models.forEach { model ->
+                                        Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
+                                                .padding(bottom = 8.dp)
+                                                .clickableCard { selectedModel = model },
+                                            colors = if (model == selectedModel) {
+                                                ComponentColors.primaryCardColors()
+                                            } else {
+                                                ComponentColors.surfaceVariantCardColors()
+                                            },
                                         ) {
-                                            Text(
-                                                text = model,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            if (model == selectedModel) {
-                                                Icon(
-                                                    Icons.Default.CheckCircle,
-                                                    contentDescription = "Selected model",
-                                                    tint = MaterialTheme.colorScheme.primary,
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = model,
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
+                                                if (model == selectedModel) {
+                                                    Icon(
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = "Selected model",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                }
                                             }
                                         }
                                     }
