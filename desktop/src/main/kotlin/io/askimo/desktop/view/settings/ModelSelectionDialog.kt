@@ -40,7 +40,10 @@ fun modelSelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
-    var selectedModel by remember { mutableStateOf<String?>(viewModel.model.takeIf { it.isNotBlank() }) }
+    // Use viewModel.model as a key to reset selectedModel when the current model changes
+    var selectedModel by remember(viewModel.model) {
+        mutableStateOf<String?>(viewModel.model.takeIf { it.isNotBlank() })
+    }
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredModels = remember(viewModel.availableModels, searchQuery) {
