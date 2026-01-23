@@ -155,6 +155,8 @@ compose.desktop {
                 // Add runtime dependencies compatible with both Ubuntu 22.04 and 24.04+
                 // Using base package names that work across Ubuntu versions via virtual/transitional packages
                 args(
+                    // Disable automatic dependency scanning to prevent jpackage from overriding our manual deps
+                    "--linux-skip-dep-scan",
                     "--linux-deb-depends",
                     "libasound2", // Audio (maps to libasound2t64 on 24.04+)
                     "--linux-deb-depends",
