@@ -4,43 +4,32 @@
  */
 package io.askimo.desktop.preferences
 
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.prefs.Preferences
 
 /**
  * Manages preferences for GitHub star prompt behavior.
- * Tracks usage metrics and whether the user has been prompted.
+ * Tracks first use date and whether the user has been prompted.
  */
 object StarPromptPreferences {
-    private const val CHAT_COUNT_KEY = "star_prompt_chat_count"
     private const val HAS_BEEN_PROMPTED_KEY = "star_prompt_has_been_prompted"
     private const val FIRST_USE_DATE_KEY = "star_prompt_first_use_date"
-    private const val PROMPT_DISMISSED_KEY = "star_prompt_dismissed"
+    private const val MINIMUM_DAYS_BEFORE_PROMPT = 7L
 
     private val prefs = Preferences.userNodeForPackage(StarPromptPreferences::class.java)
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     /**
-     * Increment the chat count and return the new count.
+     * Initialize first use date if not already set.
+     * Should be called once when the app starts.
      */
-    fun incrementChatCount(): Int {
-        val currentCount = getChatCount()
-        val newCount = currentCount + 1
-        prefs.putInt(CHAT_COUNT_KEY, newCount)
-
-        // Record first use date if not set
+    fun recordFirstUseIfNeeded() {
         if (getFirstUseDate() == null) {
             setFirstUseDate(LocalDateTime.now())
         }
-
-        return newCount
     }
-
-    /**
-     * Get the current chat count.
-     */
-    fun getChatCount(): Int = prefs.getInt(CHAT_COUNT_KEY, 0)
 
     /**
      * Check if the user has been prompted to star.
@@ -55,22 +44,9 @@ object StarPromptPreferences {
     }
 
     /**
-     * Check if the user dismissed the prompt.
-     */
-    fun wasPromptDismissed(): Boolean = prefs.getBoolean(PROMPT_DISMISSED_KEY, false)
-
-    /**
-     * Mark that the user dismissed the prompt.
-     */
-    fun markPromptDismissed() {
-        prefs.putBoolean(PROMPT_DISMISSED_KEY, true)
-        markAsPrompted()
-    }
-
-    /**
      * Get the first use date.
      */
-    fun getFirstUseDate(): LocalDateTime? {
+    private fun getFirstUseDate(): LocalDateTime? {
         val dateString = prefs.get(FIRST_USE_DATE_KEY, null)
         return dateString?.let { LocalDateTime.parse(it, dateFormatter) }
     }
@@ -87,33 +63,27 @@ object StarPromptPreferences {
      */
     fun getDaysSinceFirstUse(): Long {
         val firstUse = getFirstUseDate() ?: return 0
-        return java.time.Duration.between(firstUse, LocalDateTime.now()).toDays()
+        return Duration.between(firstUse, LocalDateTime.now()).toDays()
     }
 
     /**
      * Check if the user should be prompted to star.
-     * Conditions:
-     * - Has not been prompted before
-     * - Has at least 5 chats OR used for 3+ days
+     * Shows the prompt after MINIMUM_DAYS_BEFORE_PROMPT days of use.
      */
     fun shouldShowStarPrompt(): Boolean {
         if (hasBeenPrompted()) {
             return false
         }
 
-        val chatCount = getChatCount()
         val daysSinceFirstUse = getDaysSinceFirstUse()
-
-        return chatCount >= 5 || daysSinceFirstUse >= 3
+        return daysSinceFirstUse >= MINIMUM_DAYS_BEFORE_PROMPT
     }
 
     /**
      * Reset all star prompt preferences (for testing).
      */
     fun reset() {
-        prefs.remove(CHAT_COUNT_KEY)
         prefs.remove(HAS_BEEN_PROMPTED_KEY)
         prefs.remove(FIRST_USE_DATE_KEY)
-        prefs.remove(PROMPT_DISMISSED_KEY)
     }
 }

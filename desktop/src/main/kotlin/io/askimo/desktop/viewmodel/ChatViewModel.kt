@@ -115,7 +115,6 @@ class ChatViewModel(
     // Track the position where retry response should be inserted (null = append to end)
     private var retryInsertPosition: Int? = null
 
-    private var onMessageComplete: (() -> Unit)? = null
     private var currentJob: Job? = null
     private var thinkingJob: Job? = null
     private var animationJob: Job? = null
@@ -132,14 +131,6 @@ class ChatViewModel(
     companion object {
         private const val MESSAGE_PAGE_SIZE = 100
         private const val MESSAGE_BUFFER_THRESHOLD = MESSAGE_PAGE_SIZE * 2
-    }
-
-    /**
-     * Set a callback to be invoked when a message exchange is complete.
-     * This is useful for refreshing the sessions list after the first message.
-     */
-    fun setOnMessageCompleteCallback(callback: (() -> Unit)?) {
-        onMessageComplete = callback
     }
 
     /**
@@ -233,8 +224,6 @@ class ChatViewModel(
                                 messages + newAiMessage
                             }
                         }
-
-                        onMessageComplete?.invoke()
                     }
                 }
             }

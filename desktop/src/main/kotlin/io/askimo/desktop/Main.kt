@@ -436,13 +436,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
     }
 
-    // Set message complete callback once per chatViewModel instance
-    LaunchedEffect(chatViewModel) {
-        chatViewModel?.setOnMessageCompleteCallback {
-            StarPromptPreferences.incrementChatCount()
-            if (StarPromptPreferences.shouldShowStarPrompt()) {
-                showStarPromptDialog = true
-            }
+    // Check if we should show star prompt (once on startup)
+    LaunchedEffect(Unit) {
+        StarPromptPreferences.recordFirstUseIfNeeded()
+        if (StarPromptPreferences.shouldShowStarPrompt()) {
+            showStarPromptDialog = true
         }
     }
 
@@ -1221,7 +1219,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 if (showStarPromptDialog) {
                     starPromptDialog(
                         onDismiss = {
-                            StarPromptPreferences.markPromptDismissed()
+                            StarPromptPreferences.markAsPrompted()
                             showStarPromptDialog = false
                         },
                         onStar = {
