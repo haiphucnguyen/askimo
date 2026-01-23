@@ -153,16 +153,16 @@ compose.desktop {
                 debPackageVersion = project.version.toString()
 
                 // Add runtime dependencies compatible with both Ubuntu 22.04 and 24.04+
-                // Using jpackage's --linux-deb-depends argument
+                // Using base package names that work across Ubuntu versions via virtual/transitional packages
                 args(
                     "--linux-deb-depends",
-                    "libasound2t64 | libasound2", // Audio (time64 transition)
+                    "libasound2", // Audio (maps to libasound2t64 on 24.04+)
                     "--linux-deb-depends",
                     "libgl1", // OpenGL for graphics
                     "--linux-deb-depends",
                     "libgtk-3-0", // GTK for native dialogs
                     "--linux-deb-depends",
-                    "libpng16-16t64 | libpng16-16", // PNG support (time64 transition)
+                    "libpng16-16", // PNG support (maps to libpng16-16t64 on 24.04+)
                     "--linux-deb-depends",
                     "libfreetype6", // Font rendering
                     "--linux-deb-depends",
