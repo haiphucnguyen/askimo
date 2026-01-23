@@ -151,6 +151,19 @@ compose.desktop {
 
                 // Debian package dependencies
                 debPackageVersion = project.version.toString()
+
+                // Add runtime dependencies compatible with both Ubuntu 22.04 and 24.04+
+                // Using jpackage's --linux-deb-depends argument
+                args(
+                    "--linux-deb-depends",
+                    "libasound2t64 | libasound2", // Audio (time64 transition)
+                    "--linux-deb-depends",
+                    "libgl1", // OpenGL for graphics
+                    "--linux-deb-depends",
+                    "libgtk-3-0", // GTK for native dialogs
+                    // Add verbose logging for debugging
+                    "--verbose",
+                )
             }
         }
     }
@@ -216,32 +229,95 @@ afterEvaluate {
                         tempDir.mkdirs()
 
                         try {
-                            // Extract JAR contents
+                            // Extract JAR contents using verbose mode to track all files
+                            val extractOutput = ByteArrayOutputStream()
                             project.exec {
                                 commandLine("jar", "xf", jarFile.absolutePath)
                                 workingDir = tempDir
+                                standardOutput = extractOutput
                             }
+
+                            // Count extracted files for verification
+                            val extractedFiles = tempDir.walkTopDown().filter { it.isFile }.count()
+                            logger.lifecycle("   Extracted $extractedFiles files")
 
                             // Delete signature files from META-INF
                             val metaInfDir = File(tempDir, "META-INF")
+                            var deletedCount = 0
                             if (metaInfDir.exists()) {
                                 metaInfDir.listFiles()?.forEach { file ->
                                     if (file.extension in listOf("SF", "DSA", "RSA")) {
                                         file.delete()
                                         logger.lifecycle("   Deleted: META-INF/${file.name}")
+                                        deletedCount++
                                     }
                                 }
                             }
 
                             // Re-create JAR without signature files
+                            // Important: List all files explicitly to avoid missing hidden files or special resources
                             val manifestFile = File(metaInfDir, "MANIFEST.MF")
-                            project.exec {
-                                if (manifestFile.exists()) {
-                                    commandLine("jar", "cfm", jarFile.absolutePath, "META-INF/MANIFEST.MF", ".")
-                                } else {
-                                    commandLine("jar", "cf", jarFile.absolutePath, ".")
+                            val repackOutput = ByteArrayOutputStream()
+
+                            // Build the file list to include in the JAR
+                            val allFiles =
+                                tempDir
+                                    .walkTopDown()
+                                    .filter { it.isFile }
+                                    .map { it.relativeTo(tempDir).path }
+                                    .toList()
+
+                            // Create a temporary file list
+                            val fileListFile = File(tempDir.parentFile, "${jarFile.nameWithoutExtension}-files.txt")
+                            fileListFile.writeText(allFiles.joinToString("\n"))
+
+                            try {
+                                project.exec {
+                                    if (manifestFile.exists()) {
+                                        // Create JAR with manifest and all files from list
+                                        commandLine(
+                                            "jar",
+                                            "cfm",
+                                            jarFile.absolutePath,
+                                            "META-INF/MANIFEST.MF",
+                                            "@${fileListFile.absolutePath}",
+                                        )
+                                    } else {
+                                        // Create JAR with all files from list
+                                        commandLine("jar", "cf", jarFile.absolutePath, "@${fileListFile.absolutePath}")
+                                    }
+                                    workingDir = tempDir
+                                    standardOutput = repackOutput
                                 }
-                                workingDir = tempDir
+                            } finally {
+                                fileListFile.delete()
+                            }
+
+                            // Verify the repacked JAR
+                            val repackedFileCount =
+                                ByteArrayOutputStream().use { output ->
+                                    project.exec {
+                                        commandLine("jar", "tf", jarFile.absolutePath)
+                                        standardOutput = output
+                                        isIgnoreExitValue = true
+                                    }
+                                    output
+                                        .toString()
+                                        .lines()
+                                        .filter { it.isNotBlank() }
+                                        .size
+                                }
+
+                            logger.lifecycle(
+                                "   Repacked JAR contains $repackedFileCount entries (original: $extractedFiles, deleted: $deletedCount)",
+                            )
+
+                            // Verify no files were lost (allowing for deleted signature files)
+                            val expectedCount = extractedFiles - deletedCount
+                            if (repackedFileCount < expectedCount - 5) { // Allow small variance for directory entries
+                                logger.warn(
+                                    "   ⚠️ Warning: Repacked JAR may be missing files (expected ~$expectedCount, got $repackedFileCount)",
+                                )
                             }
 
                             logger.lifecycle("✅ Successfully stripped signatures from: ${jarFile.name}")
