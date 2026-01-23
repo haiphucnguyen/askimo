@@ -9,12 +9,22 @@ on:
 jobs:
   # Build desktop application for each platform (runs on PRs and releases)
   desktop-build:
-    name: desktop-build-${{ matrix.os }}
+    name: desktop-build-${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest, windows-latest, ubuntu-latest ]
+        include:
+          - os: macos-latest
+            name: macos-arm64
+          - os: macos-15-intel
+            name: macos-intel
+          - os: windows-latest
+            name: windows
+          - os: ubuntu-22.04
+            name: linux
+          - os: ubuntu-22.04-arm
+            name: linux-arm64
 
     steps:
       - name: Checkout
@@ -43,7 +53,7 @@ jobs:
 
   # Package desktop installers for each platform (runs only on release tags)
   desktop-package:
-    name: desktop-package-${{ matrix.os }}
+    name: desktop-package-${{ matrix.name }}
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
@@ -51,17 +61,32 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            name: macos-arm64
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
-            artifact-suffix: "macos"
-          - os: windows-latest
-            task: packageMsi
-            artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
-            artifact-suffix: "windows"
-          - os: ubuntu-latest
+            artifact-suffix: "macos-arm64"
+          - os: macos-15-intel
+            name: macos-intel
+            task: customNotarizeMacApp
+            artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
+            artifact-suffix: "macos-intel"
+          - os: ubuntu-22.04
+            name: linux
             task: packageDeb
             artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
             artifact-suffix: "linux"
+          - os: windows-latest
+            name: windows
+            task: packageMsi
+            artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
+            artifact-suffix: "windows"
+            arch: "x64"
+          - os: ubuntu-22.04-arm
+            name: linux-arm
+            task: packageDeb
+            artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
+            artifact-suffix: "linux-arm64"
+            arch: "arm64"
 
     steps:
       - name: Checkout
@@ -347,14 +372,25 @@ jobs:
           mkdir -p release
           files=()
 
-          # macOS DMG
-          if [ -d "dist/askimo-desktop-installer-macos" ]; then
-            DMG=$(find dist/askimo-desktop-installer-macos -name "*.dmg" -type f | head -n1)
+          # macOS DMG (ARM64)
+          if [ -d "dist/askimo-desktop-installer-macos-arm64" ]; then
+            DMG=$(find dist/askimo-desktop-installer-macos-arm64 -name "*.dmg" -type f | head -n1)
             if [ -n "$DMG" ]; then
-              DEST="release/Askimo-Desktop-macos.dmg"
+              DEST="release/Askimo-Desktop-macos-arm64.dmg"
               cp "$DMG" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS DMG: $DEST"
+              echo "✓ Packaged macOS ARM64 DMG: $DEST"
+            fi
+          fi
+
+          # macOS DMG (Intel)
+          if [ -d "dist/askimo-desktop-installer-macos-intel" ]; then
+            DMG=$(find dist/askimo-desktop-installer-macos-intel -name "*.dmg" -type f | head -n1)
+            if [ -n "$DMG" ]; then
+              DEST="release/Askimo-Desktop-macos-x64.dmg"
+              cp "$DMG" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged macOS x64 DMG: $DEST"
             fi
           fi
 
@@ -362,32 +398,54 @@ jobs:
           if [ -d "dist/askimo-desktop-installer-windows" ]; then
             MSI=$(find dist/askimo-desktop-installer-windows -name "*.msi" -type f | head -n1)
             if [ -n "$MSI" ]; then
-              DEST="release/Askimo-Desktop-windows.msi"
+              DEST="release/Askimo-Desktop-windows-x64.msi"
               cp "$MSI" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Windows MSI: $DEST"
+              echo "✓ Packaged Windows x64 MSI: $DEST"
             fi
           fi
 
-          # Linux DEB
+          # Linux DEB (x64)
           if [ -d "dist/askimo-desktop-installer-linux" ]; then
             DEB=$(find dist/askimo-desktop-installer-linux -name "*.deb" -type f | head -n1)
             if [ -n "$DEB" ]; then
-              DEST="release/Askimo-Desktop-linux.deb"
+              DEST="release/Askimo-Desktop-linux-x64.deb"
               cp "$DEB" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Linux DEB: $DEST"
+              echo "✓ Packaged Linux x64 DEB: $DEST"
             fi
           fi
 
-          # macOS uber JAR
-          if [ -d "dist/askimo-desktop-jar-macos" ]; then
-            JAR=$(find dist/askimo-desktop-jar-macos -name "*.jar" -type f | head -n1)
+          # Linux DEB (ARM64)
+          if [ -d "dist/askimo-desktop-installer-linux-arm64" ]; then
+            DEB=$(find dist/askimo-desktop-installer-linux-arm64 -name "*.deb" -type f | head -n1)
+            if [ -n "$DEB" ]; then
+              DEST="release/Askimo-Desktop-linux-arm64.deb"
+              cp "$DEB" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux ARM64 DEB: $DEST"
+            fi
+          fi
+
+          # macOS uber JAR (ARM64)
+          if [ -d "dist/askimo-desktop-jar-macos-arm64" ]; then
+            JAR=$(find dist/askimo-desktop-jar-macos-arm64 -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-macos.jar"
+              DEST="release/askimo-desktop-macos-arm64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged macOS uber JAR: $DEST"
+              echo "✓ Packaged macOS ARM64 uber JAR: $DEST"
+            fi
+          fi
+
+          # macOS uber JAR (Intel)
+          if [ -d "dist/askimo-desktop-jar-macos-intel" ]; then
+            JAR=$(find dist/askimo-desktop-jar-macos-intel -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-macos-x64.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged macOS x64 uber JAR: $DEST"
             fi
           fi
 
@@ -395,21 +453,32 @@ jobs:
           if [ -d "dist/askimo-desktop-jar-windows" ]; then
             JAR=$(find dist/askimo-desktop-jar-windows -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-windows.jar"
+              DEST="release/askimo-desktop-windows-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Windows uber JAR: $DEST"
+              echo "✓ Packaged Windows x64 uber JAR: $DEST"
             fi
           fi
 
-          # Linux uber JAR
+          # Linux uber JAR (x64)
           if [ -d "dist/askimo-desktop-jar-linux" ]; then
             JAR=$(find dist/askimo-desktop-jar-linux -name "*.jar" -type f | head -n1)
             if [ -n "$JAR" ]; then
-              DEST="release/askimo-desktop-linux.jar"
+              DEST="release/askimo-desktop-linux-x64.jar"
               cp "$JAR" "$DEST"
               files+=("$DEST")
-              echo "✓ Packaged Linux uber JAR: $DEST"
+              echo "✓ Packaged Linux x64 uber JAR: $DEST"
+            fi
+          fi
+
+          # Linux uber JAR (ARM64)
+          if [ -d "dist/askimo-desktop-jar-linux-arm64" ]; then
+            JAR=$(find dist/askimo-desktop-jar-linux-arm64 -name "*.jar" -type f | head -n1)
+            if [ -n "$JAR" ]; then
+              DEST="release/askimo-desktop-linux-arm64.jar"
+              cp "$JAR" "$DEST"
+              files+=("$DEST")
+              echo "✓ Packaged Linux ARM64 uber JAR: $DEST"
             fi
           fi
 
@@ -441,6 +510,8 @@ jobs:
             release/*
           append_body: false
           fail_on_unmatched_files: true
+          prerelease: true
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

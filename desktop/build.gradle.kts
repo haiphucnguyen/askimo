@@ -115,7 +115,7 @@ compose.desktop {
             )
             packageName = "Askimo"
             packageVersion = project.version.toString()
-            description = "AI-powered user assistant with local RAG and semantic search capabilities"
+            description = "AI assistant with multi-LLM support and local document intelligence"
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"
 
@@ -139,6 +139,24 @@ compose.desktop {
             }
             linux {
                 iconFile.set(project.file("src/main/resources/images/askimo_512.png"))
+
+                // Package metadata
+                packageName = "askimo"
+                debMaintainer = author
+                menuGroup = "Utility;Office;"
+                appCategory = "utils"
+
+                // Add desktop entry details
+                shortcut = true
+
+                // Debian package dependencies
+                debPackageVersion = project.version.toString()
+
+                // Let jpackage auto-detect dependencies from the bundled libraries
+                // Build on Ubuntu 22.04 to ensure compatibility with both 22.04 and 24.04
+                args(
+                    "--verbose",
+                )
             }
         }
     }
@@ -148,6 +166,171 @@ compose.desktop {
 // Enable ZIP64 format for Compose Desktop packaging (supports unlimited entries)
 tasks.withType<Zip> {
     isZip64 = true
+}
+
+// Configure Compose Desktop uber JAR tasks to exclude signature files
+// These tasks are created by the Compose Desktop plugin
+// The plugin creates uber JARs that may contain conflicting signatures from dependencies
+// We need to post-process the JAR to remove signature files
+afterEvaluate {
+    fun createStripSignaturesTask(
+        sourceTaskName: String,
+        targetTaskName: String,
+    ) {
+        tasks.register(targetTaskName) {
+            group = "compose desktop"
+            description = "Strip signature files from $sourceTaskName output"
+
+            val sourceTask = tasks.findByName(sourceTaskName)
+            if (sourceTask != null) {
+                dependsOn(sourceTask)
+
+                doLast {
+                    // Find the output JAR from the source task
+                    val jarFiles =
+                        fileTree(layout.buildDirectory.dir("compose/jars")) {
+                            include("*.jar")
+                        }
+
+                    jarFiles.forEach { jarFile ->
+                        logger.lifecycle("Stripping signatures from: ${jarFile.name}")
+
+                        // Check if JAR has signature files
+                        val hasSignatures =
+                            ByteArrayOutputStream().use { output ->
+                                project.exec {
+                                    commandLine("jar", "tf", jarFile.absolutePath)
+                                    standardOutput = output
+                                    isIgnoreExitValue = true
+                                }
+                                val contents = output.toString()
+                                contents.contains(".SF") || contents.contains(".DSA") || contents.contains(".RSA")
+                            }
+
+                        if (!hasSignatures) {
+                            logger.lifecycle("   No signature files found, skipping...")
+                            return@forEach
+                        }
+
+                        // Create a temporary directory for extraction
+                        val tempDir =
+                            layout.buildDirectory
+                                .dir("tmp/jar-strip/${jarFile.nameWithoutExtension}")
+                                .get()
+                                .asFile
+                        tempDir.deleteRecursively()
+                        tempDir.mkdirs()
+
+                        try {
+                            // Extract JAR contents using verbose mode to track all files
+                            val extractOutput = ByteArrayOutputStream()
+                            project.exec {
+                                commandLine("jar", "xf", jarFile.absolutePath)
+                                workingDir = tempDir
+                                standardOutput = extractOutput
+                            }
+
+                            // Count extracted files for verification
+                            val extractedFiles = tempDir.walkTopDown().filter { it.isFile }.count()
+                            logger.lifecycle("   Extracted $extractedFiles files")
+
+                            // Delete signature files from META-INF
+                            val metaInfDir = File(tempDir, "META-INF")
+                            var deletedCount = 0
+                            if (metaInfDir.exists()) {
+                                metaInfDir.listFiles()?.forEach { file ->
+                                    if (file.extension in listOf("SF", "DSA", "RSA")) {
+                                        file.delete()
+                                        logger.lifecycle("   Deleted: META-INF/${file.name}")
+                                        deletedCount++
+                                    }
+                                }
+                            }
+
+                            // Re-create JAR without signature files
+                            // Important: List all files explicitly to avoid missing hidden files or special resources
+                            val manifestFile = File(metaInfDir, "MANIFEST.MF")
+                            val repackOutput = ByteArrayOutputStream()
+
+                            // Build the file list to include in the JAR
+                            val allFiles =
+                                tempDir
+                                    .walkTopDown()
+                                    .filter { it.isFile }
+                                    .map { it.relativeTo(tempDir).path }
+                                    .toList()
+
+                            // Create a temporary file list
+                            val fileListFile = File(tempDir.parentFile, "${jarFile.nameWithoutExtension}-files.txt")
+                            fileListFile.writeText(allFiles.joinToString("\n"))
+
+                            try {
+                                project.exec {
+                                    if (manifestFile.exists()) {
+                                        // Create JAR with manifest and all files from list
+                                        commandLine(
+                                            "jar",
+                                            "cfm",
+                                            jarFile.absolutePath,
+                                            "META-INF/MANIFEST.MF",
+                                            "@${fileListFile.absolutePath}",
+                                        )
+                                    } else {
+                                        // Create JAR with all files from list
+                                        commandLine("jar", "cf", jarFile.absolutePath, "@${fileListFile.absolutePath}")
+                                    }
+                                    workingDir = tempDir
+                                    standardOutput = repackOutput
+                                }
+                            } finally {
+                                fileListFile.delete()
+                            }
+
+                            // Verify the repacked JAR
+                            val repackedFileCount =
+                                ByteArrayOutputStream().use { output ->
+                                    project.exec {
+                                        commandLine("jar", "tf", jarFile.absolutePath)
+                                        standardOutput = output
+                                        isIgnoreExitValue = true
+                                    }
+                                    output
+                                        .toString()
+                                        .lines()
+                                        .filter { it.isNotBlank() }
+                                        .size
+                                }
+
+                            logger.lifecycle(
+                                "   Repacked JAR contains $repackedFileCount entries (original: $extractedFiles, deleted: $deletedCount)",
+                            )
+
+                            // Verify no files were lost (allowing for deleted signature files)
+                            val expectedCount = extractedFiles - deletedCount
+                            if (repackedFileCount < expectedCount - 5) { // Allow small variance for directory entries
+                                logger.warn(
+                                    "   ⚠️ Warning: Repacked JAR may be missing files (expected ~$expectedCount, got $repackedFileCount)",
+                                )
+                            }
+
+                            logger.lifecycle("✅ Successfully stripped signatures from: ${jarFile.name}")
+                        } finally {
+                            // Clean up temporary directory
+                            tempDir.deleteRecursively()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Create signature stripping tasks for uber JARs
+    createStripSignaturesTask("packageUberJarForCurrentOS", "stripSignaturesFromUberJar")
+    createStripSignaturesTask("packageReleaseUberJarForCurrentOS", "stripSignaturesFromReleaseUberJar")
+
+    // Make the uber JAR tasks finalize with signature stripping
+    tasks.findByName("packageUberJarForCurrentOS")?.finalizedBy("stripSignaturesFromUberJar")
+    tasks.findByName("packageReleaseUberJarForCurrentOS")?.finalizedBy("stripSignaturesFromReleaseUberJar")
 }
 
 tasks.test {
@@ -854,12 +1037,57 @@ tasks.register("createSignedDmg") {
 
             // Give Finder time to save the settings
             logger.lifecycle("⏳ Waiting for Finder to save settings...")
-            Thread.sleep(5000)
-        } finally {
-            // Unmount
-            logger.lifecycle("💿 Unmounting DMG...")
+            Thread.sleep(3000)
+
+            // Sync to ensure all changes are written
+            logger.lifecycle("💾 Syncing filesystem...")
             project.exec {
-                commandLine("hdiutil", "detach", mountPath)
+                commandLine("sync")
+                isIgnoreExitValue = true
+            }
+            Thread.sleep(500)
+
+            // Force Finder to close all windows for the volume
+            logger.lifecycle("🔒 Closing Finder windows...")
+            project.exec {
+                commandLine("osascript", "-e", "tell application \"Finder\" to close every window")
+                isIgnoreExitValue = true
+            }
+            Thread.sleep(1000)
+        } finally {
+            // Unmount with retries
+            logger.lifecycle("💿 Unmounting DMG...")
+            var unmounted = false
+            var attempts = 0
+            val maxAttempts = 5
+
+            while (!unmounted && attempts < maxAttempts) {
+                attempts++
+                try {
+                    if (attempts > 1) {
+                        logger.lifecycle("   Retry attempt $attempts/$maxAttempts...")
+                        Thread.sleep(2000)
+                    }
+
+                    project.exec {
+                        commandLine("hdiutil", "detach", mountPath, "-force")
+                        isIgnoreExitValue = false
+                    }
+                    unmounted = true
+                    logger.lifecycle("✅ DMG unmounted successfully")
+                } catch (_: Exception) {
+                    if (attempts < maxAttempts) {
+                        logger.lifecycle("⚠️  Unmount failed, will retry...")
+                        // Kill any processes that might be using the volume
+                        project.exec {
+                            commandLine("lsof", "+D", mountPath)
+                            isIgnoreExitValue = true
+                            standardOutput = System.out
+                        }
+                    } else {
+                        logger.warn("⚠️  Could not unmount DMG after $maxAttempts attempts, continuing anyway...")
+                    }
+                }
             }
         }
 

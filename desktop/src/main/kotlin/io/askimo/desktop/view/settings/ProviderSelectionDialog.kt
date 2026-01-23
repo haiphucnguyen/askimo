@@ -53,6 +53,7 @@ import io.askimo.core.providers.ProviderConfigField
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
 import io.askimo.desktop.view.components.clickableCard
+import io.askimo.desktop.view.components.groupedModelListAsCards
 import io.askimo.desktop.viewmodel.SettingsViewModel
 import java.awt.Desktop
 import java.net.URI
@@ -182,7 +183,6 @@ fun providerSelectionDialog(
                                     .fillMaxWidth()
                                     .heightIn(max = 400.dp)
                                     .verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 if (filteredModels.isEmpty()) {
                                     Text(
@@ -197,40 +197,19 @@ fun providerSelectionDialog(
                                             text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(bottom = 8.dp),
                                         )
                                     }
-                                    filteredModels.forEach { model ->
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickableCard { viewModel.selectModelForNewProvider(model) },
-                                            colors = if (model == viewModel.pendingModelForNewProvider) {
-                                                ComponentColors.primaryCardColors()
-                                            } else {
-                                                ComponentColors.surfaceVariantCardColors()
-                                            },
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Text(
-                                                    text = model,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                )
-                                                if (model == viewModel.pendingModelForNewProvider) {
-                                                    Icon(
-                                                        Icons.Default.CheckCircle,
-                                                        contentDescription = "Selected model",
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+
+                                    // Display grouped models using shared component
+                                    groupedModelListAsCards(
+                                        models = filteredModels,
+                                        selectedModel = viewModel.pendingModelForNewProvider,
+                                        onModelClick = { model ->
+                                            viewModel.selectModelForNewProvider(model)
+                                        },
+                                        showHeaders = true,
+                                    )
                                 }
                             }
                         }
