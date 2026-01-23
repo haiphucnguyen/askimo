@@ -161,6 +161,22 @@ compose.desktop {
                     "libgl1", // OpenGL for graphics
                     "--linux-deb-depends",
                     "libgtk-3-0", // GTK for native dialogs
+                    "--linux-deb-depends",
+                    "libpng16-16t64 | libpng16-16", // PNG support (time64 transition)
+                    "--linux-deb-depends",
+                    "libfreetype6", // Font rendering
+                    "--linux-deb-depends",
+                    "libfontconfig1", // Font configuration
+                    "--linux-deb-depends",
+                    "libx11-6", // X11 support
+                    "--linux-deb-depends",
+                    "libxext6", // X11 extensions
+                    "--linux-deb-depends",
+                    "libxrender1", // X11 rendering
+                    "--linux-deb-depends",
+                    "libxtst6", // X11 test extensions
+                    "--linux-deb-depends",
+                    "libxi6", // X11 input extensions
                     // Add verbose logging for debugging
                     "--verbose",
                 )
