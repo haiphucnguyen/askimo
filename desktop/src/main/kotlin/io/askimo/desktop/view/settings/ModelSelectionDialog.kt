@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.i18n.stringResource
 import io.askimo.desktop.theme.ComponentColors
-import io.askimo.desktop.view.components.clickableCard
+import io.askimo.desktop.view.components.groupedModelListAsCards
 import io.askimo.desktop.viewmodel.SettingsViewModel
 
 @Composable
@@ -40,7 +40,10 @@ fun modelSelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
-    var selectedModel by remember { mutableStateOf<String?>(viewModel.model.takeIf { it.isNotBlank() }) }
+    // Use viewModel.model as a key to reset selectedModel when the current model changes
+    var selectedModel by remember(viewModel.model) {
+        mutableStateOf<String?>(viewModel.model.takeIf { it.isNotBlank() })
+    }
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredModels = remember(viewModel.availableModels, searchQuery) {
@@ -185,7 +188,6 @@ fun modelSelectionDialog(
                                 .fillMaxWidth()
                                 .heightIn(max = 400.dp)
                                 .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             if (filteredModels.isEmpty()) {
                                 Text(
@@ -200,40 +202,19 @@ fun modelSelectionDialog(
                                         text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 8.dp),
                                     )
                                 }
-                                filteredModels.forEach { model ->
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickableCard { selectedModel = model },
-                                        colors = if (model == selectedModel) {
-                                            ComponentColors.primaryCardColors()
-                                        } else {
-                                            ComponentColors.surfaceVariantCardColors()
-                                        },
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = model,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            if (model == selectedModel) {
-                                                Icon(
-                                                    Icons.Default.CheckCircle,
-                                                    contentDescription = "Selected model",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+
+                                // Display grouped models using shared component
+                                groupedModelListAsCards(
+                                    models = filteredModels,
+                                    selectedModel = selectedModel,
+                                    onModelClick = { model ->
+                                        selectedModel = model
+                                    },
+                                    showHeaders = true,
+                                )
                             }
                         }
                     }

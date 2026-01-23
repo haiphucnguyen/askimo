@@ -135,6 +135,14 @@ class SettingsViewModel(
 
     init {
         loadConfiguration()
+
+        scope.launch {
+            EventBus.internalEvents.collect { event ->
+                if (event is ModelChangedEvent) {
+                    model = event.newModel
+                }
+            }
+        }
     }
 
     /**
