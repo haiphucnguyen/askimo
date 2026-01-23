@@ -152,34 +152,9 @@ compose.desktop {
                 // Debian package dependencies
                 debPackageVersion = project.version.toString()
 
-                // Add runtime dependencies compatible with both Ubuntu 22.04 and 24.04+
-                // Using base package names that work across Ubuntu versions via virtual/transitional packages
+                // Let jpackage auto-detect dependencies from the bundled libraries
+                // Build on Ubuntu 22.04 to ensure compatibility with both 22.04 and 24.04
                 args(
-                    // Disable automatic dependency scanning to prevent jpackage from overriding our manual deps
-                    "--linux-skip-dep-scan",
-                    "--linux-deb-depends",
-                    "libasound2", // Audio (maps to libasound2t64 on 24.04+)
-                    "--linux-deb-depends",
-                    "libgl1", // OpenGL for graphics
-                    "--linux-deb-depends",
-                    "libgtk-3-0", // GTK for native dialogs
-                    "--linux-deb-depends",
-                    "libpng16-16", // PNG support (maps to libpng16-16t64 on 24.04+)
-                    "--linux-deb-depends",
-                    "libfreetype6", // Font rendering
-                    "--linux-deb-depends",
-                    "libfontconfig1", // Font configuration
-                    "--linux-deb-depends",
-                    "libx11-6", // X11 support
-                    "--linux-deb-depends",
-                    "libxext6", // X11 extensions
-                    "--linux-deb-depends",
-                    "libxrender1", // X11 rendering
-                    "--linux-deb-depends",
-                    "libxtst6", // X11 test extensions
-                    "--linux-deb-depends",
-                    "libxi6", // X11 input extensions
-                    // Add verbose logging for debugging
                     "--verbose",
                 )
             }

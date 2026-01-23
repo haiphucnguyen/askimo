@@ -21,9 +21,9 @@ jobs:
             name: macos-intel
           - os: windows-latest
             name: windows
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             name: linux
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             name: linux-arm64
 
     steps:
@@ -70,7 +70,7 @@ jobs:
             task: customNotarizeMacApp
             artifact-pattern: "desktop/build/compose/notarized/Askimo-signed.dmg"
             artifact-suffix: "macos-intel"
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             name: linux
             task: packageDeb
             artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
@@ -81,7 +81,7 @@ jobs:
             artifact-pattern: "desktop/build/compose/binaries/main/msi/*.msi"
             artifact-suffix: "windows"
             arch: "x64"
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             name: linux-arm
             task: packageDeb
             artifact-pattern: "desktop/build/compose/binaries/main/deb/*.deb"
