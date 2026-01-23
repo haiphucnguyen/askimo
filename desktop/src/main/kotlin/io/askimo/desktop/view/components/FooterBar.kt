@@ -31,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -333,16 +332,6 @@ private fun modelDropdown(
                         it.contains(searchQuery, ignoreCase = true)
                     }
 
-                    // Group models by family (e.g., gpt-4, gpt-3.5, claude, gemini)
-                    val groupedModels = filteredModels.groupBy { model ->
-                        val parts = model.split('-', '.')
-                        when {
-                            parts.size >= 2 -> "${parts[0]}-${parts[1]}"
-                            parts.size == 1 -> parts[0]
-                            else -> "Other"
-                        }
-                    }.toSortedMap()
-
                     // Scrollable list with fixed dimensions to avoid intrinsic measurement issues
                     val scrollState = rememberScrollState()
 
@@ -365,50 +354,16 @@ private fun modelDropdown(
                                     modifier = Modifier.padding(16.dp),
                                 )
                             } else {
-                                groupedModels.forEach { (category, models) ->
-                                    // Category header (only if multiple groups)
-                                    if (groupedModels.size > 1 && models.isNotEmpty()) {
-                                        Text(
-                                            text = category.uppercase(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(
-                                                horizontal = 16.dp,
-                                                vertical = 8.dp,
-                                            ),
-                                        )
-                                    }
-
-                                    // Models in this category
-                                    models.forEach { model ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = model,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                )
-                                            },
-                                            onClick = {
-                                                onModelSelected(model)
-                                                expanded = false
-                                                searchQuery = ""
-                                            },
-                                            leadingIcon = if (model == currentModel) {
-                                                {
-                                                    Icon(
-                                                        Icons.Default.Check,
-                                                        contentDescription = "Current model",
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                    )
-                                                }
-                                            } else {
-                                                null
-                                            },
-                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                        )
-                                    }
-                                }
+                                // Display grouped models using shared component
+                                groupedModelListAsMenuItems(
+                                    models = filteredModels,
+                                    selectedModel = currentModel,
+                                    onModelClick = { model ->
+                                        onModelSelected(model)
+                                        expanded = false
+                                        searchQuery = ""
+                                    },
+                                )
                             }
                         }
 
