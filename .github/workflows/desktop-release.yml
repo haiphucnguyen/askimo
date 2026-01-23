@@ -510,6 +510,8 @@ jobs:
             release/*
           append_body: false
           fail_on_unmatched_files: true
+          prerelease: true
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
