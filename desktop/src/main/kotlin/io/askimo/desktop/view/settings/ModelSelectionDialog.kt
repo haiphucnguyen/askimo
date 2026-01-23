@@ -218,7 +218,7 @@ fun modelSelectionDialog(
 
                                 // Display grouped models
                                 groupedModels.forEach { (category, models) ->
-                                    if (groupedModels.size > 1 && models.isNotEmpty()) {
+                                    if (models.isNotEmpty()) {
                                         Text(
                                             text = category.uppercase(),
                                             style = MaterialTheme.typography.labelSmall,
