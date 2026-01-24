@@ -9,10 +9,10 @@ import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
-import io.askimo.desktop.monitoring.SystemResourceMonitor
-import io.askimo.desktop.viewmodel.SessionManager
-import io.askimo.desktop.viewmodel.SessionsViewModel
-import io.askimo.desktop.viewmodel.SettingsViewModel
+import io.askimo.desktop.common.monitoring.SystemResourceMonitor
+import io.askimo.desktop.session.SessionManager
+import io.askimo.desktop.session.SessionsViewModel
+import io.askimo.desktop.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.jupiter.api.AfterEach

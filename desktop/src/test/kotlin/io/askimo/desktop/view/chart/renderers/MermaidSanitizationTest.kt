@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.view.chart.renderers
 
+import io.askimo.desktop.common.ui.sanitizeMermaidDiagram
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

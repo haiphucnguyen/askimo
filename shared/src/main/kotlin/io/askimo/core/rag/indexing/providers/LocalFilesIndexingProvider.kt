@@ -30,12 +30,12 @@ class LocalFilesIndexingProvider : IndexingCoordinatorProvider {
         appContext: AppContext,
     ): IndexingCoordinator {
         val config = knowledgeSource as LocalFilesKnowledgeSourceConfig
-        val filePaths = config.resourceIdentifiers.map { Paths.get(it) }
+        val filePath = Paths.get(config.resourceIdentifier)
 
         return LocalFilesIndexingCoordinator(
             projectId = projectId,
             projectName = projectName,
-            filePaths = filePaths,
+            filePaths = listOf(filePath),
             embeddingStore = embeddingStore,
             embeddingModel = embeddingModel,
             appContext = appContext,

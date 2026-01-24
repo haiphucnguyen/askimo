@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 sealed class KnowledgeSourceConfig {
-    abstract val resourceIdentifiers: List<String>
+    abstract val resourceIdentifier: String
     abstract val config: Map<String, String>
 }
 
@@ -24,16 +24,17 @@ sealed class KnowledgeSourceConfig {
  * Configuration for local folder knowledge sources.
  * Folders are watched for changes.
  *
- * @property resourceIdentifiers Folder paths (e.g., "/path/to/folder")
+ * @property resourceIdentifier Folder path (e.g., "/path/to/folder")
  * @property config Configuration options:
  *   - watchForChanges: "true" or "false"
  *   - fileExtensions: ".kt,.java,.md" (comma-separated)
  *   - excludePatterns: "node_modules,build,.git" (comma-separated)
+ * @property createdAt Timestamp when this source was added
  */
 @Serializable
 @SerialName("local_folders")
 data class LocalFoldersKnowledgeSourceConfig(
-    override val resourceIdentifiers: List<String>,
+    override val resourceIdentifier: String,
     override val config: Map<String, String> = emptyMap(),
 ) : KnowledgeSourceConfig()
 
@@ -41,13 +42,14 @@ data class LocalFoldersKnowledgeSourceConfig(
  * Configuration for individual files as knowledge sources.
  * Unlike folders, files are NOT watched for changes.
  *
- * @property resourceIdentifiers File paths (e.g., "/path/to/document.pdf")
+ * @property resourceIdentifier File path (e.g., "/path/to/document.pdf")
  * @property config Configuration options (currently unused)
+ * @property createdAt Timestamp when this source was added
  */
 @Serializable
 @SerialName("local_files")
 data class LocalFilesKnowledgeSourceConfig(
-    override val resourceIdentifiers: List<String>,
+    override val resourceIdentifier: String,
     override val config: Map<String, String> = emptyMap(),
 ) : KnowledgeSourceConfig()
 
@@ -55,16 +57,17 @@ data class LocalFilesKnowledgeSourceConfig(
  * Configuration for URL-based knowledge sources.
  * URLs are fetched and indexed for retrieval.
  *
- * @property resourceIdentifiers URLs (e.g., "https://example.com/docs")
+ * @property resourceIdentifier URL (e.g., "https://example.com/docs")
  * @property config Configuration options:
  *   - crawlDepth: "1" (how many levels deep to crawl, default: 0 = single page only)
  *   - maxPages: "100" (maximum number of pages to index)
  *   - respectRobotsTxt: "true" or "false" (default: true)
+ * @property createdAt Timestamp when this source was added
  */
 @Serializable
 @SerialName("urls")
 data class UrlKnowledgeSourceConfig(
-    override val resourceIdentifiers: List<String>,
+    override val resourceIdentifier: String,
     override val config: Map<String, String> = emptyMap(),
 ) : KnowledgeSourceConfig()
 
