@@ -107,7 +107,7 @@ class ProjectRepositoryIT {
                 id = "",
                 name = "Project 2",
                 description = "Description 2",
-                knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifiers = listOf("/path/to/folder"))),
+                knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifier = "/path/to/folder")),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             ),
@@ -146,7 +146,7 @@ class ProjectRepositoryIT {
             projectId = project.id,
             name = "Updated Name",
             description = "Updated Description",
-            knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifiers = listOf("/new/path"))),
+            knowledgeSources = listOf(LocalFoldersKnowledgeSourceConfig(resourceIdentifier = "/new/path")),
         )
 
         assertTrue(updated)
@@ -157,7 +157,7 @@ class ProjectRepositoryIT {
         assertEquals("Updated Name", updatedProject!!.name)
         assertEquals("Updated Description", updatedProject.description)
         assertEquals(1, updatedProject.knowledgeSources.size)
-        assertEquals(listOf("/new/path"), (updatedProject.knowledgeSources[0] as LocalFoldersKnowledgeSourceConfig).resourceIdentifiers)
+        assertEquals("/new/path", (updatedProject.knowledgeSources[0] as LocalFoldersKnowledgeSourceConfig).resourceIdentifier)
         assertTrue(updatedProject.updatedAt.isAfter(project.updatedAt))
     }
 
@@ -284,9 +284,8 @@ class ProjectRepositoryIT {
     @Test
     fun `should create project with indexed paths`() {
         val knowledgeSources = listOf(
-            LocalFoldersKnowledgeSourceConfig(
-                resourceIdentifiers = listOf("/path/to/folder1", "/path/to/folder2"),
-            ),
+            LocalFoldersKnowledgeSourceConfig(resourceIdentifier = "/path/to/folder1"),
+            LocalFoldersKnowledgeSourceConfig(resourceIdentifier = "/path/to/folder2"),
         )
         val project = projectRepository.createProject(
             Project(

@@ -5,6 +5,9 @@
 package io.askimo.desktop.util
 
 import io.askimo.core.logging.logger
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 /**
  * Utility for handling errors with user-friendly messages and proper logging.
@@ -27,9 +30,9 @@ object ErrorHandler {
 
         // Return user-friendly message based on exception type
         return when (exception) {
-            is java.net.UnknownHostException -> "Unable to connect to the server. Please check your internet connection."
-            is java.net.ConnectException -> "Failed to connect to the AI service. Please check your connection and try again."
-            is java.net.SocketTimeoutException -> "The request timed out. Please try again."
+            is UnknownHostException -> "Unable to connect to the server. Please check your internet connection."
+            is ConnectException -> "Failed to connect to the AI service. Please check your connection and try again."
+            is SocketTimeoutException -> "The request timed out. Please try again."
             is java.io.IOException -> "A network error occurred. Please check your connection and try again."
             is IllegalStateException -> "An unexpected state error occurred. Please try again."
             is IllegalArgumentException -> "Invalid input provided. Please check your settings."
@@ -62,9 +65,9 @@ object ErrorHandler {
 
         // Try to get a specific message first
         val specificMessage = when (exception) {
-            is java.net.UnknownHostException -> "Unable to connect to the server. Please check your internet connection."
-            is java.net.ConnectException -> "Failed to connect to the AI service. Please check your connection and try again."
-            is java.net.SocketTimeoutException -> "The request timed out. Please try again."
+            is UnknownHostException -> "Unable to connect to the server. Please check your internet connection."
+            is ConnectException -> "Failed to connect to the AI service. Please check your connection and try again."
+            is SocketTimeoutException -> "The request timed out. Please try again."
             is java.io.IOException -> "A network error occurred. Please check your connection and try again."
             else -> null
         }

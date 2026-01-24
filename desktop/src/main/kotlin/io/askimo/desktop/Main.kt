@@ -83,48 +83,47 @@ import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.ProcessBuilderExt
+import io.askimo.desktop.chat.ChatViewModel
+import io.askimo.desktop.chat.chatView
+import io.askimo.desktop.common.dialog.errorDialog
+import io.askimo.desktop.common.dialog.updateCheckDialog
+import io.askimo.desktop.common.i18n.provideLocalization
+import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.keymap.KeyMapManager
+import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.ThemeMode
+import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.desktop.common.theme.createCustomTypography
+import io.askimo.desktop.common.theme.getDarkColorScheme
+import io.askimo.desktop.common.theme.getLightColorScheme
+import io.askimo.desktop.common.ui.util.CustomUriHandler
 import io.askimo.desktop.di.allDesktopModules
-import io.askimo.desktop.i18n.provideLocalization
-import io.askimo.desktop.i18n.stringResource
-import io.askimo.desktop.keymap.KeyMapManager
-import io.askimo.desktop.keymap.KeyMapManager.AppShortcut
-import io.askimo.desktop.preferences.StarPromptPreferences
-import io.askimo.desktop.preferences.ThemePreferences
-import io.askimo.desktop.theme.ComponentColors
-import io.askimo.desktop.theme.ThemeMode
-import io.askimo.desktop.theme.createCustomTypography
-import io.askimo.desktop.theme.getDarkColorScheme
-import io.askimo.desktop.theme.getLightColorScheme
-import io.askimo.desktop.ui.dialog.errorDialog
-import io.askimo.desktop.ui.dialog.updateCheckDialog
-import io.askimo.desktop.util.CustomUriHandler
-import io.askimo.desktop.view.View
-import io.askimo.desktop.view.about.aboutDialog
-import io.askimo.desktop.view.chat.chatView
-import io.askimo.desktop.view.components.NativeMenuBar
-import io.askimo.desktop.view.components.editProjectDialog
-import io.askimo.desktop.view.components.eventLogPanel
-import io.askimo.desktop.view.components.eventLogWindow
-import io.askimo.desktop.view.components.exportSessionDialog
-import io.askimo.desktop.view.components.fileViewerDialog
-import io.askimo.desktop.view.components.footerBar
-import io.askimo.desktop.view.components.globalSearchDialog
-import io.askimo.desktop.view.components.navigationSidebar
-import io.askimo.desktop.view.components.newProjectDialog
-import io.askimo.desktop.view.components.renameSessionDialog
-import io.askimo.desktop.view.components.sessionMemoryDialog
-import io.askimo.desktop.view.components.starPromptDialog
-import io.askimo.desktop.view.project.projectView
-import io.askimo.desktop.view.project.projectsView
-import io.askimo.desktop.view.sessions.sessionsView
-import io.askimo.desktop.view.settings.providerSelectionDialog
-import io.askimo.desktop.view.settings.settingsViewWithSidebar
-import io.askimo.desktop.viewmodel.ChatViewModel
-import io.askimo.desktop.viewmodel.ProjectsViewModel
-import io.askimo.desktop.viewmodel.SessionManager
-import io.askimo.desktop.viewmodel.SessionsViewModel
-import io.askimo.desktop.viewmodel.SettingsViewModel
-import io.askimo.desktop.viewmodel.UpdateViewModel
+import io.askimo.desktop.project.ProjectsViewModel
+import io.askimo.desktop.project.editProjectDialog
+import io.askimo.desktop.project.newProjectDialog
+import io.askimo.desktop.project.projectView
+import io.askimo.desktop.project.projectsView
+import io.askimo.desktop.session.SessionManager
+import io.askimo.desktop.session.SessionsViewModel
+import io.askimo.desktop.session.exportSessionDialog
+import io.askimo.desktop.session.renameSessionDialog
+import io.askimo.desktop.session.sessionMemoryDialog
+import io.askimo.desktop.session.sessionsView
+import io.askimo.desktop.settings.SettingsViewModel
+import io.askimo.desktop.settings.aboutDialog
+import io.askimo.desktop.settings.fileViewerDialog
+import io.askimo.desktop.settings.providerSelectionDialog
+import io.askimo.desktop.settings.settingsViewWithSidebar
+import io.askimo.desktop.shell.NativeMenuBar
+import io.askimo.desktop.shell.StarPromptPreferences
+import io.askimo.desktop.shell.UpdateViewModel
+import io.askimo.desktop.shell.eventLogPanel
+import io.askimo.desktop.shell.eventLogWindow
+import io.askimo.desktop.shell.footerBar
+import io.askimo.desktop.shell.globalSearchDialog
+import io.askimo.desktop.shell.navigationSidebar
+import io.askimo.desktop.shell.starPromptDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -1275,24 +1274,19 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 }
 
                 // Edit Project Dialog
-                if (showEditProjectDialog) {
-                    val projectToEdit = editingProjectId?.let { id ->
-                        projectsViewModel.projects.find { it.id == id }
-                    }
-                    if (projectToEdit != null) {
-                        editProjectDialog(
-                            project = projectToEdit,
-                            onDismiss = {
-                                showEditProjectDialog = false
-                                editingProjectId = null
-                            },
-                            onSave = { projectId, name, description, knowledgeSources ->
-                                projectsViewModel.updateProject(projectId, name, description, knowledgeSources)
-                                showEditProjectDialog = false
-                                editingProjectId = null
-                            },
-                        )
-                    }
+                if (showEditProjectDialog && editingProjectId != null) {
+                    editProjectDialog(
+                        projectId = editingProjectId!!,
+                        onDismiss = {
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                        onSave = { projectId, name, description, knowledgeSources ->
+                            projectsViewModel.updateProject(projectId, name, description, knowledgeSources)
+                            showEditProjectDialog = false
+                            editingProjectId = null
+                        },
+                    )
                 }
 
                 if (showGlobalSearchDialog) {
@@ -1304,7 +1298,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             showGlobalSearchDialog = false
 
                             if (currentView != View.CHAT) {
-                                log.debug("Switching from $currentView to CHAT view")
+                                log.debug("Switching from {} to CHAT view", currentView)
                                 currentView = View.CHAT
                             }
 
@@ -1420,8 +1414,8 @@ fun mainContent(
                     initialEditingMessage = sessionChatState?.editingMessage,
                     onStateChange = onChatStateChange,
                     sessionId = activeSessionId,
-                    sessionTitle = chatViewModel?.sessionTitle,
-                    project = chatViewModel?.project,
+                    sessionTitle = chatViewModel.sessionTitle,
+                    project = chatViewModel.project,
                     onRenameSession = { sessionId ->
                         sessionsViewModel.showRenameDialog(sessionId)
                     },

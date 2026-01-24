@@ -29,12 +29,12 @@ class UrlIndexingProvider : IndexingCoordinatorProvider {
         appContext: AppContext,
     ): IndexingCoordinator {
         val config = knowledgeSource as UrlKnowledgeSourceConfig
-        val urls = config.resourceIdentifiers
+        val url = config.resourceIdentifier
 
         return UrlIndexingCoordinator(
             projectId = projectId,
             projectName = projectName,
-            urls = urls,
+            urls = listOf(url),
             embeddingStore = embeddingStore,
             embeddingModel = embeddingModel,
             appContext = appContext,
