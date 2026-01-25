@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemePreferences
 
 @Composable
@@ -45,13 +46,13 @@ fun shortcutsSettingsSection() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.shortcuts"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         Text(
@@ -69,8 +70,8 @@ fun shortcutsSettingsSection() {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(Spacing.large),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.medium),
                 ) {
                     Text(
                         text = category,
@@ -81,7 +82,7 @@ fun shortcutsSettingsSection() {
                     shortcuts.forEachIndexed { index, (description, keyBinding) ->
                         if (index > 0) {
                             HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 4.dp),
+                                modifier = Modifier.padding(vertical = Spacing.extraSmall),
                             )
                         }
 

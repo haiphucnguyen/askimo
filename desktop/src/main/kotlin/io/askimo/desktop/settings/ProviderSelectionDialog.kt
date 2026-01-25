@@ -52,6 +52,7 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.ui.clickableCard
 import java.awt.Desktop
 import java.net.URI
@@ -90,7 +91,7 @@ fun providerSelectionDialog(
 
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.large),
                 ) {
                     when {
                         viewModel.isLoadingModels -> {
@@ -102,12 +103,12 @@ fun providerSelectionDialog(
                                 CircularProgressIndicator()
                                 Text(
                                     text = stringResource("settings.model.loading"),
-                                    modifier = Modifier.padding(start = 16.dp),
+                                    modifier = Modifier.padding(start = Spacing.large),
                                 )
                             }
                         }
                         viewModel.modelError != null -> {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                                 Text(
                                     text = viewModel.modelError ?: "",
                                     color = MaterialTheme.colorScheme.error,
@@ -118,7 +119,7 @@ fun providerSelectionDialog(
                                         Text(
                                             text = helpText,
                                             style = MaterialTheme.typography.bodySmall,
-                                            modifier = Modifier.padding(12.dp),
+                                            modifier = Modifier.padding(Spacing.medium),
                                         )
                                     }
                                 }
@@ -145,7 +146,7 @@ fun providerSelectionDialog(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(16.dp),
+                                            .padding(Spacing.large),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -187,7 +188,7 @@ fun providerSelectionDialog(
                                         text = stringResource("settings.model.no.match"),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(16.dp),
+                                        modifier = Modifier.padding(Spacing.large),
                                     )
                                 } else {
                                     if (searchQuery.isNotBlank()) {
@@ -195,7 +196,7 @@ fun providerSelectionDialog(
                                             text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(bottom = 8.dp),
+                                            modifier = Modifier.padding(bottom = Spacing.small),
                                         )
                                     }
 
@@ -224,13 +225,13 @@ fun providerSelectionDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(Spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.large),
                     ) {
                         // Step 1: Provider selection dropdown
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                         ) {
                             Text(
                                 text = stringResource("provider.select.prompt"),
@@ -249,7 +250,7 @@ fun providerSelectionDialog(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
+                                            .padding(Spacing.medium),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -320,7 +321,7 @@ fun providerSelectionDialog(
                                     contentDescription = "Help",
                                     modifier = Modifier.size(16.dp),
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Spacing.extraSmall))
                                 Text(
                                     text = stringResource("provider.setup.guide", viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""),
                                     style = MaterialTheme.typography.bodySmall,
@@ -331,7 +332,7 @@ fun providerSelectionDialog(
 
                         // Step 2: Configuration fields (shown after provider is selected)
                         if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
 
                             Text(
                                 text = stringResource("provider.configure.prompt"),
@@ -341,7 +342,7 @@ fun providerSelectionDialog(
                             viewModel.providerConfigFields.forEach { field ->
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                                 ) {
                                     Text(
                                         text = field.label + if (field.required) " *" else "",
@@ -390,7 +391,7 @@ fun providerSelectionDialog(
                                             Card(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 8.dp),
+                                                    .padding(top = Spacing.small),
                                                 colors = CardDefaults.cardColors(
                                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                                 ),
@@ -398,8 +399,8 @@ fun providerSelectionDialog(
                                                 Column(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .padding(12.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                                        .padding(Spacing.medium),
+                                                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                                                 ) {
                                                     Text(
                                                         text = stringResource("provider.apikey.security.message"),
@@ -453,11 +454,11 @@ fun providerSelectionDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                            .padding(Spacing.medium),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.small),
                                     ) {
                                         Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(Spacing.small),
                                             verticalAlignment = Alignment.Top,
                                         ) {
                                             Icon(
@@ -472,7 +473,7 @@ fun providerSelectionDialog(
                                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                                 )
                                                 if (viewModel.connectionErrorHelp != null) {
-                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Spacer(modifier = Modifier.height(Spacing.extraSmall))
                                                     Text(
                                                         text = viewModel.connectionErrorHelp ?: "",
                                                         style = MaterialTheme.typography.bodySmall,
@@ -496,11 +497,11 @@ fun providerSelectionDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                            .padding(Spacing.medium),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.small),
                                     ) {
                                         Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(Spacing.small),
                                             verticalAlignment = Alignment.Top,
                                         ) {
                                             Icon(
@@ -514,7 +515,7 @@ fun providerSelectionDialog(
                                                     style = MaterialTheme.typography.titleSmall,
                                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                                                 )
-                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Spacer(modifier = Modifier.height(Spacing.extraSmall))
                                                 Text(
                                                     text = viewModel.embeddingModelWarning ?: "",
                                                     style = MaterialTheme.typography.bodySmall,
@@ -555,7 +556,7 @@ fun providerSelectionDialog(
         },
         confirmButton = {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 if (viewModel.showModelSelectionInProviderDialog) {
                     OutlinedButton(
@@ -576,7 +577,7 @@ fun providerSelectionDialog(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp,
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.small))
                                 Text(stringResource("settings.test.connection.testing"))
                             } else {
                                 Text(stringResource("settings.test.connection"))

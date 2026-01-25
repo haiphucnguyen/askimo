@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 
 @Composable
 fun modelSelectionDialog(
@@ -63,7 +64,7 @@ fun modelSelectionDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
                 // Display current model
                 if (viewModel.model.isNotBlank()) {
@@ -74,8 +75,8 @@ fun modelSelectionDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                .padding(Spacing.large),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                         ) {
                             Text(
                                 text = stringResource("settings.model.current"),
@@ -101,12 +102,12 @@ fun modelSelectionDialog(
                             CircularProgressIndicator()
                             Text(
                                 text = stringResource("settings.model.loading"),
-                                modifier = Modifier.padding(start = 16.dp),
+                                modifier = Modifier.padding(start = Spacing.large),
                             )
                         }
                     }
                     viewModel.modelError != null -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                             Text(
                                 text = viewModel.modelError ?: "",
                                 color = MaterialTheme.colorScheme.error,
@@ -117,7 +118,7 @@ fun modelSelectionDialog(
                                     Text(
                                         text = helpText,
                                         style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(Spacing.medium),
                                     )
                                 }
                             }
@@ -144,7 +145,7 @@ fun modelSelectionDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(Spacing.large),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
@@ -192,7 +193,7 @@ fun modelSelectionDialog(
                                     text = stringResource("settings.model.no.match"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp),
+                                    modifier = Modifier.padding(Spacing.large),
                                 )
                             } else {
                                 if (searchQuery.isNotBlank()) {
@@ -200,7 +201,7 @@ fun modelSelectionDialog(
                                         text = stringResource("settings.model.filtered", filteredModels.size, viewModel.availableModels.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(bottom = 8.dp),
+                                        modifier = Modifier.padding(bottom = Spacing.small),
                                     )
                                 }
 

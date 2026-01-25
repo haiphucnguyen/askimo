@@ -10,6 +10,35 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+
+/**
+ * Standardized spacing system following Material Design 3 guidelines.
+ * Use these constants throughout the application for consistent spacing.
+ *
+ * Guidelines:
+ * - extraSmall (4.dp): Tight spacing within small components (e.g., label + description pairs)
+ * - small (8.dp): Standard spacing between related items within a component
+ * - medium (12.dp): Spacing between component groups within a card
+ * - large (16.dp): Spacing between cards/panels and padding inside cards
+ * - extraLarge (24.dp): Major section spacing
+ */
+object Spacing {
+    /** 4.dp - Tight spacing for closely related elements (label + description) */
+    val extraSmall = 4.dp
+
+    /** 8.dp - Standard spacing between related items within a component */
+    val small = 8.dp
+
+    /** 12.dp - Spacing between component groups within a card */
+    val medium = 12.dp
+
+    /** 16.dp - Card/panel padding and spacing between cards */
+    val large = 16.dp
+
+    /** 24.dp - Major section spacing */
+    val extraLarge = 24.dp
+}
 
 // Light Theme Colors
 private val md_theme_light_primary = Color(0xFF006C4C)

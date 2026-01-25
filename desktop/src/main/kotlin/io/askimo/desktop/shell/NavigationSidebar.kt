@@ -65,6 +65,7 @@ import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.desktop.View
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.LocalFontScale
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.project.ProjectsViewModel
 import io.askimo.desktop.project.deleteProjectDialog
@@ -89,7 +90,6 @@ fun navigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
-    fontScale: Float,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -121,7 +121,6 @@ fun navigationSidebar(
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
             currentSessionId = currentSessionId,
-            fontScale = fontScale,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onToggleProjects = onToggleProjects,
@@ -141,7 +140,6 @@ fun navigationSidebar(
         collapsedNavigationSidebar(
             animatedWidth = animatedWidth,
             currentView = currentView,
-            fontScale = fontScale,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onNavigateToSessions = onNavigateToSessions,
@@ -159,7 +157,6 @@ private fun expandedNavigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
-    fontScale: Float,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -175,6 +172,8 @@ private fun expandedNavigationSidebar(
     onShowSessionSummary: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit,
 ) {
+    val fontScale = LocalFontScale.current
+
     Column(
         modifier = Modifier
             .width(animatedWidth)
@@ -283,7 +282,6 @@ private fun expandedNavigationSidebar(
             if (isProjectsExpanded) {
                 projectsList(
                     projectsViewModel = projectsViewModel,
-                    fontScale = fontScale,
                     onNewProject = onNewProject,
                     onSelectProject = onSelectProject,
                 )
@@ -320,7 +318,6 @@ private fun expandedNavigationSidebar(
                 sessionsList(
                     sessionsViewModel = sessionsViewModel,
                     currentSessionId = currentSessionId,
-                    fontScale = fontScale,
                     onNavigateToSessions = onNavigateToSessions,
                     onResumeSession = onResumeSession,
                     onDeleteSession = onDeleteSession,
@@ -352,12 +349,13 @@ private fun expandedNavigationSidebar(
 private fun collapsedNavigationSidebar(
     animatedWidth: Dp,
     currentView: View,
-    fontScale: Float,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
+    val fontScale = LocalFontScale.current
+
     Column(
         modifier = Modifier
             .width(animatedWidth)
@@ -452,10 +450,10 @@ private fun collapsedNavigationSidebar(
 @Composable
 private fun projectsList(
     projectsViewModel: ProjectsViewModel,
-    fontScale: Float,
     onNewProject: () -> Unit,
     onSelectProject: (String) -> Unit,
 ) {
+    val fontScale = LocalFontScale.current
     var projectToDelete by remember { mutableStateOf<Project?>(null) }
 
     Column(
@@ -632,7 +630,6 @@ private fun projectItemWithMenu(
 private fun sessionsList(
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
-    fontScale: Float,
     onNavigateToSessions: () -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
@@ -642,6 +639,7 @@ private fun sessionsList(
     onShowSessionSummary: (String) -> Unit = {},
     projectsViewModel: ProjectsViewModel,
 ) {
+    val fontScale = LocalFontScale.current
     var isStarredExpanded by remember { mutableStateOf(true) }
 
     Column(

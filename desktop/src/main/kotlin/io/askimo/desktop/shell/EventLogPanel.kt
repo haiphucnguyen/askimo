@@ -57,6 +57,7 @@ import io.askimo.core.event.Event
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.EventLogDockPosition
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.Spacing
 import java.awt.Cursor
 
 /**
@@ -130,9 +131,9 @@ private fun resizeHandle(
         modifier = Modifier
             .then(
                 if (isHorizontal) {
-                    Modifier.fillMaxWidth().height(8.dp)
+                    Modifier.fillMaxWidth().height(Spacing.small)
                 } else {
-                    Modifier.fillMaxHeight().width(8.dp)
+                    Modifier.fillMaxHeight().width(Spacing.small)
                 },
             )
             .background(
@@ -259,11 +260,11 @@ private fun eventLogPanelContent(
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(8.dp),
+            .padding(Spacing.small),
     ) {
         // Header with controls
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.small),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -274,7 +275,7 @@ private fun eventLogPanelContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.extraSmall)) {
                 if (events.isNotEmpty()) {
                     IconButton(
                         onClick = onClearEvents,
@@ -399,7 +400,7 @@ private fun eventLogPanelContent(
             Box(modifier = Modifier.fillMaxWidth()) {
                 LazyColumn(
                     state = listState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                 ) {
                     itemsIndexed(events) { index, event ->
                         eventLogCompactItem(event, isEven = index % 2 == 0)
@@ -435,16 +436,16 @@ private fun eventLogCompactItem(event: Event, isEven: Boolean) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(Spacing.small),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -475,7 +476,7 @@ private fun eventLogCompactItem(event: Event, isEven: Boolean) {
                     text = event.source.name,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = Spacing.extraSmall),
                 )
             }
         }

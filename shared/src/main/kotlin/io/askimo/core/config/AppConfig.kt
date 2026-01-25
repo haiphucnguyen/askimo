@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
@@ -191,6 +193,7 @@ data class ChatConfig(
     val enableAsyncSummarization: Boolean = true,
     val summarizationTimeoutSeconds: Long = 60,
     val sampling: SamplingConfig = SamplingConfig(),
+    val defaultResponseAILocale: String? = null,
 )
 
 /**
@@ -716,6 +719,13 @@ object AppConfig {
         "sampling.temperature" -> config.copy(sampling = config.sampling.copy(temperature = (value as Number).toDouble()))
         "sampling.topP" -> config.copy(sampling = config.sampling.copy(topP = (value as Number).toDouble()))
         "sampling.enabled" -> config.copy(sampling = config.sampling.copy(enabled = value as Boolean))
+        "defaultResponseAILocale" -> {
+            val newLocale = if (value is String && value.isBlank()) null else value as? String
+            EventBus.post(
+                LanguageDirectiveChangedEvent(localeString = newLocale),
+            )
+            config.copy(defaultResponseAILocale = newLocale)
+        }
         else -> config
     }
 

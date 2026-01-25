@@ -56,6 +56,7 @@ import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.clickableCard
 import io.askimo.desktop.shell.DeveloperModePreferences
@@ -75,13 +76,13 @@ fun advancedSettingsSection() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.advanced"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         // Log Level Section
@@ -127,8 +128,8 @@ private fun logLevelCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.small),
         ) {
             Text(
                 text = stringResource("settings.log.level.description"),
@@ -226,8 +227,8 @@ private fun logViewerCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             Text(
                 text = stringResource("settings.log.viewer"),
@@ -338,8 +339,8 @@ private fun developerModeSection() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             // Header
             Row(
@@ -349,7 +350,7 @@ private fun developerModeSection() {
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                 ) {
                     Text(
                         text = stringResource("settings.developer.mode"),
@@ -380,8 +381,8 @@ private fun ragConfigurationSection() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.large),
         ) {
             // Title
             Text(
@@ -530,8 +531,8 @@ private fun visionModelsSection() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.large),
         ) {
             // Title
             Text(
@@ -560,7 +561,7 @@ private fun ragBooleanField(
     onValueChange: (Boolean) -> Unit,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -569,7 +570,7 @@ private fun ragBooleanField(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
             ) {
                 Text(
                     text = label,
@@ -617,7 +618,7 @@ private fun ragIntField(
     }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
     ) {
         Text(
             text = label,
@@ -697,7 +698,7 @@ private fun ragDoubleField(
     }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
     ) {
         Text(
             text = label,
@@ -777,7 +778,7 @@ private fun ragOptionalIntField(
     }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
     ) {
         Text(
             text = label,

@@ -42,7 +42,7 @@ class ChatViewModel(
     private val sessionManager: SessionManager,
     private val scope: CoroutineScope,
     private val chatSessionService: ChatSessionService,
-) {
+) : ChatActions {
     private val log = logger<ChatViewModel>()
 
     var messages by mutableStateOf(listOf<ChatMessageDTO>())
@@ -95,6 +95,26 @@ class ChatViewModel(
 
     var project by mutableStateOf<Project?>(null)
         private set
+
+    val state: ChatState
+        get() = ChatState(
+            messages = messages,
+            hasMoreMessages = hasMoreMessages,
+            isLoadingPrevious = isLoadingPrevious,
+            isLoading = isLoading,
+            isThinking = isThinking,
+            thinkingElapsedSeconds = thinkingElapsedSeconds,
+            spinnerFrame = getSpinnerFrame(),
+            errorMessage = errorMessage,
+            isSearchMode = isSearchMode,
+            searchQuery = searchQuery,
+            searchResults = searchResults,
+            currentSearchResultIndex = currentSearchResultIndex,
+            isSearching = isSearching,
+            selectedDirective = selectedDirective,
+            sessionTitle = sessionTitle ?: "",
+            project = project,
+        )
 
     /**
      * Refresh the session title from the database.
@@ -282,18 +302,18 @@ class ChatViewModel(
     }
 
     /**
-     * Send a message or edit an existing message.
+     * Send or edit a chat message.
      * This method handles both normal message sending and edit mode.
      *
-     * @param message The user's message
+     * @param message The message text
      * @param attachments Optional list of file attachments
      * @param editingMessage The message being edited (null for normal send)
      * @return The session ID after sending (or null if no session)
      */
-    fun sendOrEditMessage(
+    override fun sendOrEditMessage(
         message: String,
-        attachments: List<FileAttachmentDTO> = emptyList(),
-        editingMessage: ChatMessageDTO? = null,
+        attachments: List<FileAttachmentDTO>,
+        editingMessage: ChatMessageDTO?,
     ): String? {
         if (message.isBlank() || isLoading) return currentSessionId.value
 
@@ -320,7 +340,7 @@ class ChatViewModel(
      *
      * @param messageId The AI message ID to retry
      */
-    fun retryMessage(messageId: String) {
+    override fun retryMessage(messageId: String) {
         scope.launch {
             try {
                 // 1. Find the AI message to retry
@@ -501,7 +521,7 @@ class ChatViewModel(
      * Cancel the current AI response.
      * Stops the stream and discards all buffered chunks (does not save to database).
      */
-    fun cancelResponse() {
+    override fun cancelResponse() {
         currentJob?.cancel()
         currentJob = null
         isLoading = false
@@ -635,7 +655,7 @@ class ChatViewModel(
      * Load previous messages when scrolling to the top.
      * Only loads if there are more messages available.
      */
-    fun loadPreviousMessages() {
+    override fun loadPrevious() {
         if (isLoadingPrevious || !hasMoreMessages || currentCursor == null || currentSessionId.value == null) {
             return
         }
@@ -672,7 +692,7 @@ class ChatViewModel(
      *
      * @param query The search query
      */
-    fun searchMessages(query: String) {
+    override fun searchMessages(query: String) {
         if (currentSessionId.value == null) {
             return
         }
@@ -728,7 +748,7 @@ class ChatViewModel(
     /**
      * Clear the search and return to normal view.
      */
-    fun clearSearch() {
+    override fun clearSearch() {
         searchQuery = ""
         searchResults = emptyList()
         currentSearchResultIndex = 0
@@ -738,7 +758,7 @@ class ChatViewModel(
     /**
      * Navigate to the next search result.
      */
-    fun nextSearchResult() {
+    override fun nextSearchResult() {
         if (searchResults.isEmpty()) return
         currentSearchResultIndex = (currentSearchResultIndex + 1) % searchResults.size
         // Jump to the message
@@ -753,7 +773,7 @@ class ChatViewModel(
     /**
      * Navigate to the previous search result.
      */
-    fun previousSearchResult() {
+    override fun previousSearchResult() {
         if (searchResults.isEmpty()) return
         currentSearchResultIndex = if (currentSearchResultIndex == 0) {
             searchResults.size - 1
@@ -934,7 +954,7 @@ class ChatViewModel(
      * Set the directive for the current or next chat session.
      * @param directiveId The directive ID to set (null to clear directive)
      */
-    fun setDirective(directiveId: String?) {
+    override fun setDirective(directiveId: String?) {
         selectedDirective = directiveId
 
         val sessionId = currentSessionId.value
@@ -959,7 +979,7 @@ class ChatViewModel(
      * @param messageId The ID of the message to update
      * @param newContent The new content for the message
      */
-    fun updateAIMessageContent(messageId: String, newContent: String) {
+    override fun updateAIMessage(messageId: String, newContent: String) {
         scope.launch {
             try {
                 withContext(Dispatchers.IO) {

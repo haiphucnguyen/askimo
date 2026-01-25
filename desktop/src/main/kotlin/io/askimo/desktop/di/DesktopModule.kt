@@ -9,10 +9,12 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.common.monitoring.SystemResourceMonitor
+import io.askimo.desktop.project.ProjectViewModel
 import io.askimo.desktop.project.ProjectsViewModel
 import io.askimo.desktop.service.UpdateService
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.session.SessionsViewModel
+import io.askimo.desktop.session.command.DeleteSessionFromProjectCommand
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.shell.UpdateViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -71,8 +73,20 @@ val desktopModule = module {
         ProjectsViewModel(scope = scope)
     }
 
+    factory { (scope: CoroutineScope, projectId: String) ->
+        ProjectViewModel(scope = scope, projectId = projectId)
+    }
+
     factory { (scope: CoroutineScope) ->
         SettingsViewModel(scope = scope, appContext = get())
+    }
+
+    // Commands
+    factory { (scope: CoroutineScope) ->
+        DeleteSessionFromProjectCommand(
+            chatSessionRepository = get(),
+            scope = scope,
+        )
     }
 
     single { UpdateService() }

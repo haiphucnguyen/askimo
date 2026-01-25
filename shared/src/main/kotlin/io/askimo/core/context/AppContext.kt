@@ -9,7 +9,6 @@ import dev.langchain4j.rag.content.retriever.ContentRetriever
 import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
-import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
@@ -279,7 +278,7 @@ class AppContext private constructor(
      *
      * @param locale The user's selected locale (e.g., Locale.JAPANESE, Locale.ENGLISH)
      */
-    fun setLanguageDirective(locale: Locale) {
+    fun setLanguageDirective(locale: Locale?) {
         systemDirective = buildLanguageDirective(locale)
     }
 
@@ -291,44 +290,24 @@ class AppContext private constructor(
      * @param locale The target locale
      * @return A complete language directive with fallback instructions
      */
-    private fun buildLanguageDirective(locale: Locale): String {
-        // Temporarily set locale to get the correct translations
-        val previousLocale = Locale.getDefault()
-        LocalizationManager.setLocale(locale)
+    private fun buildLanguageDirective(locale: Locale?): String? {
+        if (locale == null) return null
 
-        try {
-            val languageCode = locale.language
+        val languageCode = locale.displayLanguage
 
-            // For English, use simplified template without fallback
-            return if (languageCode == "en") {
-                LocalizationManager.getString("language.directive.english.only")
-            } else {
-                // Get the language display name
-                val languageDisplayName = LocalizationManager.getString("language.name.display")
+        // Get templates and format with language name
+        val instruction = "LANGUAGE INSTRUCTION:\n" +
+            "Respond in $languageCode.\n" +
+            "\n" +
+            "- Always reply in $languageCode.\n" +
+            "- If the user writes in another language, still respond in $languageCode,\n" +
+            "  unless the user explicitly asks for a different language.\n" +
+            "- Use natural, conversational %s appropriate for the context."
 
-                // Get templates and format with language name
-                val instruction = LocalizationManager.getString(
-                    "language.directive.instruction",
-                    languageDisplayName,
-                    languageDisplayName,
-                    languageDisplayName,
-                    languageDisplayName,
-                )
+        val fallback = "FALLBACK:\n" +
+            "If generating a clear and accurate response in $languageCode is not possible,\n" +
+            "respond in English and let the user know that %s support may be limited."
 
-                val fallback = LocalizationManager.getString(
-                    "language.directive.fallback",
-                    languageDisplayName,
-                    languageDisplayName,
-                    languageDisplayName,
-                )
-
-                instruction + fallback
-            }
-        } finally {
-            // Restore previous locale if it was different
-            if (previousLocale != locale) {
-                LocalizationManager.setLocale(previousLocale)
-            }
-        }
+        return instruction + "\n" + fallback
     }
 }

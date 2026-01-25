@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import java.awt.Desktop
 import java.net.URI
 import java.time.Year
@@ -44,7 +45,7 @@ fun aboutDialog(
                 modifier = Modifier
                     .widthIn(max = 500.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
                 // Version Info
                 Card(
@@ -52,8 +53,8 @@ fun aboutDialog(
                     colors = ComponentColors.bannerCardColors(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(Spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.small),
                     ) {
                         Text(
                             text = VersionInfo.name,
@@ -95,8 +96,8 @@ fun aboutDialog(
                     colors = ComponentColors.bannerCardColors(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(Spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.small),
                     ) {
                         Text(
                             text = stringResource("about.description"),
@@ -117,8 +118,8 @@ fun aboutDialog(
                     colors = ComponentColors.bannerCardColors(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(Spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.small),
                     ) {
                         Text(
                             text = stringResource("about.license"),

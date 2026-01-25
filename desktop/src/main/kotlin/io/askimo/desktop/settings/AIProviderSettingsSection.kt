@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 
 @Composable
 fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
@@ -35,13 +36,13 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.ai.provider"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         // Chat Configuration Card
@@ -52,8 +53,8 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
             ) {
                 // Provider
                 Row(
@@ -129,7 +130,7 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                     ) {
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                         ) {
                             Text(
                                 text = stringResource("settings.title"),

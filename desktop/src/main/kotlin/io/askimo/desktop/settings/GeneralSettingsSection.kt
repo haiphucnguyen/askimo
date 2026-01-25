@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -45,8 +46,10 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.FontSettings
 import io.askimo.desktop.common.theme.FontSize
+import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.clickableCard
+import io.askimo.desktop.common.ui.themedTooltip
 
 @Composable
 fun generalSettingsSection() {
@@ -54,13 +57,13 @@ fun generalSettingsSection() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.general"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         // Language Selection
@@ -88,8 +91,8 @@ private fun languageSelectionCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.small),
         ) {
             Text(
                 text = stringResource("settings.app.language"),
@@ -145,6 +148,119 @@ private fun languageSelectionCard() {
                     }
                 }
             }
+
+            HorizontalDivider()
+
+            // Preferred AI Response Language
+            preferredAIResponseLanguageField(availableLanguages)
+        }
+    }
+}
+
+@Composable
+private fun preferredAIResponseLanguageField(availableLanguages: Map<java.util.Locale, String>) {
+    var aiLanguageDropdownExpanded by remember { mutableStateOf(false) }
+    val currentAILocale = AppConfig.chat.defaultResponseAILocale
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource("settings.ai.response.language"),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            themedTooltip(
+                text = stringResource("settings.ai.response.language.tooltip"),
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Information",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier.width(24.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource("settings.ai.response.language.description"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickableCard { aiLanguageDropdownExpanded = true },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (currentAILocale == null) {
+                            stringResource("settings.ai.response.language.auto")
+                        } else {
+                            availableLanguages.entries.find { it.key.toString() == currentAILocale }?.value
+                                ?: currentAILocale
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Change AI response language",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            ComponentColors.themedDropdownMenu(
+                expanded = aiLanguageDropdownExpanded,
+                onDismissRequest = { aiLanguageDropdownExpanded = false },
+            ) {
+                // Auto-detect option
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = if (currentAILocale == null) {
+                                "✓ ${stringResource("settings.ai.response.language.auto")}"
+                            } else {
+                                stringResource("settings.ai.response.language.auto")
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        AppConfig.updateField("chat.defaultResponseAILocale", "")
+                        aiLanguageDropdownExpanded = false
+                    },
+                )
+
+                // Language options
+                availableLanguages.forEach { (locale, name) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = if (locale.toString() == currentAILocale) "✓ $name" else name,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            AppConfig.updateField("chat.defaultResponseAILocale", locale.toString())
+                            aiLanguageDropdownExpanded = false
+                        },
+                    )
+                }
+            }
         }
     }
 }
@@ -163,11 +279,11 @@ private fun fontSettingsCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             // Font Family
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                 Text(
                     text = stringResource("settings.font.family"),
                     style = MaterialTheme.typography.labelMedium,
@@ -256,7 +372,7 @@ private fun fontSettingsCard() {
             HorizontalDivider()
 
             // Font Size
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                 Text(
                     text = stringResource("settings.font.size"),
                     style = MaterialTheme.typography.labelMedium,
@@ -338,8 +454,8 @@ private fun samplingSettingsCard() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -370,7 +486,7 @@ private fun samplingSettingsCard() {
                 HorizontalDivider()
 
                 // Temperature Setting
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -407,7 +523,7 @@ private fun samplingSettingsCard() {
                 HorizontalDivider()
 
                 // TopP Setting
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
