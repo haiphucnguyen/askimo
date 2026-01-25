@@ -76,7 +76,7 @@ import io.askimo.core.event.error.IndexingErrorEvent
 import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.event.error.SendMessageErrorEvent
-import io.askimo.core.event.internal.ProjectSessionsRefreshEvent
+import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
@@ -92,6 +92,7 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.LocalFontScale
 import io.askimo.desktop.common.theme.ThemeMode
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.theme.createCustomTypography
@@ -106,6 +107,7 @@ import io.askimo.desktop.project.projectView
 import io.askimo.desktop.project.projectsView
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.session.SessionsViewModel
+import io.askimo.desktop.session.command.DeleteSessionFromProjectCommand
 import io.askimo.desktop.session.exportSessionDialog
 import io.askimo.desktop.session.renameSessionDialog
 import io.askimo.desktop.session.sessionMemoryDialog
@@ -126,6 +128,7 @@ import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -136,6 +139,7 @@ import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
 import java.awt.Desktop
 import java.net.URI
+import java.util.Locale
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -403,6 +407,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
     val updateViewModel = remember { koin.get<UpdateViewModel> { parametersOf(scope) } }
 
+    val deleteSessionCommand = remember {
+        koin.get<DeleteSessionFromProjectCommand> { parametersOf(scope) }
+    }
+
     LaunchedEffect(Unit) {
         val newSessionId = UUID.randomUUID().toString()
         sessionManager.createNewSession(newSessionId)
@@ -449,11 +457,36 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     val fontSettings by ThemePreferences.fontSettings.collectAsState()
     val locale by ThemePreferences.locale.collectAsState()
 
+    // Watch AI response language config and update directive
+    var preferredResponseAILocale by remember { mutableStateOf(AppConfig.chat.defaultResponseAILocale) }
+
+    // Listen for language directive changes from settings
+    LaunchedEffect(Unit) {
+        EventBus.internalEvents
+            .filterIsInstance<LanguageDirectiveChangedEvent>()
+            .collect { event ->
+                preferredResponseAILocale = event.localeString
+            }
+    }
+
+    LaunchedEffect(preferredResponseAILocale, locale) {
+        val localeString = preferredResponseAILocale
+        val aiLocale = if (localeString.isNullOrBlank()) {
+            null // Let AI auto-detect language
+        } else {
+            val parts = localeString.split("_")
+            if (parts.size == 2) {
+                Locale.Builder().setLanguage(parts[0]).setRegion(parts[1]).build()
+            } else {
+                Locale.Builder().setLanguage(parts[0]).build()
+            }
+        }
+        appContext.setLanguageDirective(aiLocale)
+    }
+
     // React to locale changes - update menu bar and language settings
     LaunchedEffect(locale, frameWindowScope) {
         LocalizationManager.setLocale(locale)
-
-        appContext.setLanguageDirective(locale)
 
         frameWindowScope?.let { scope ->
             NativeMenuBar.setup(
@@ -544,6 +577,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     provideLocalization(locale = locale) {
         CompositionLocalProvider(
+            LocalFontScale provides fontSettings.fontSize.scale,
             LocalUriHandler provides CustomUriHandler(
                 onShowFileViewer = { title, filePath, content ->
                     fileViewerTitle = title
@@ -682,8 +716,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                             }
                                         },
                                 ) {
-                                    val currentSessionId = activeSessionId
-
                                     Row(modifier = Modifier.fillMaxSize()) {
                                         BoxWithConstraints {
                                             // Calculate actual sidebar width from fraction
@@ -703,8 +735,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                 isSessionsExpanded = isSessionsExpanded,
                                                 projectsViewModel = projectsViewModel,
                                                 sessionsViewModel = sessionsViewModel,
-                                                currentSessionId = currentSessionId,
-                                                fontScale = fontSettings.fontSize.scale,
+                                                currentSessionId = activeSessionId,
                                                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                                 onNewChat = {
                                                     chatViewModel?.clearChat()
@@ -801,6 +832,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                 projectsViewModel = projectsViewModel,
                                                 appContext = appContext,
                                                 sessionManager = sessionManager,
+                                                deleteSessionCommand = deleteSessionCommand,
                                                 onResumeSession = handleResumeSession,
                                                 onNavigateToChat = {
                                                     currentView = View.CHAT
@@ -1352,6 +1384,7 @@ fun mainContent(
     projectsViewModel: ProjectsViewModel,
     appContext: AppContext,
     sessionManager: SessionManager,
+    deleteSessionCommand: DeleteSessionFromProjectCommand,
     onResumeSession: (String) -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
@@ -1373,49 +1406,18 @@ fun mainContent(
             View.CHAT, View.NEW_CHAT -> {
                 val configInfo = appContext.getConfigInfo()
                 chatView(
-                    messages = chatViewModel.messages,
-                    onSendMessage = { message, fileAttachments, editingMsg ->
-                        chatViewModel.sendOrEditMessage(
-                            message = message,
-                            attachments = fileAttachments,
-                            editingMessage = editingMsg,
-                        )
-                    },
-                    onStopResponse = { chatViewModel.cancelResponse() },
-                    isLoading = chatViewModel.isLoading,
-                    isThinking = chatViewModel.isThinking,
-                    thinkingElapsedSeconds = chatViewModel.thinkingElapsedSeconds,
-                    spinnerFrame = chatViewModel.getSpinnerFrame(),
-                    errorMessage = chatViewModel.errorMessage,
+                    state = chatViewModel.state,
+                    actions = chatViewModel,
                     provider = configInfo.provider.name,
                     model = configInfo.model,
-                    hasMoreMessages = chatViewModel.hasMoreMessages,
-                    isLoadingPrevious = chatViewModel.isLoadingPrevious,
-                    onLoadPrevious = { chatViewModel.loadPreviousMessages() },
-                    isSearchMode = chatViewModel.isSearchMode,
-                    searchQuery = chatViewModel.searchQuery,
-                    searchResults = chatViewModel.searchResults,
-                    currentSearchResultIndex = chatViewModel.currentSearchResultIndex,
-                    isSearching = chatViewModel.isSearching,
-                    onSearch = { query -> chatViewModel.searchMessages(query) },
-                    onClearSearch = { chatViewModel.clearSearch() },
-                    onNextSearchResult = { chatViewModel.nextSearchResult() },
-                    onPreviousSearchResult = { chatViewModel.previousSearchResult() },
                     onJumpToMessage = { messageId, timestamp ->
                         chatViewModel.jumpToMessage(messageId, timestamp)
-                    },
-                    selectedDirective = chatViewModel.selectedDirective,
-                    onDirectiveSelected = { directiveId -> chatViewModel.setDirective(directiveId) },
-                    onUpdateAIMessage = { messageId, newContent ->
-                        chatViewModel.updateAIMessageContent(messageId, newContent)
                     },
                     initialInputText = sessionChatState?.inputText ?: TextFieldValue(""),
                     initialAttachments = sessionChatState?.attachments ?: emptyList(),
                     initialEditingMessage = sessionChatState?.editingMessage,
                     onStateChange = onChatStateChange,
                     sessionId = activeSessionId,
-                    sessionTitle = chatViewModel.sessionTitle,
-                    project = chatViewModel.project,
                     onRenameSession = { sessionId ->
                         sessionsViewModel.showRenameDialog(sessionId)
                     },
@@ -1424,9 +1426,6 @@ fun mainContent(
                     },
                     onDeleteSession = { sessionId ->
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
-                    },
-                    onRetryMessage = { messageId ->
-                        chatViewModel.retryMessage(messageId)
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -1443,14 +1442,12 @@ fun mainContent(
                 modifier = Modifier.fillMaxSize(),
             )
             View.PROJECT_DETAIL -> {
-                val projectId = selectedProjectId
-                if (projectId != null) {
-                    val project = projectsViewModel.projects.find { it.id == projectId }
+                if (selectedProjectId != null) {
+                    val project = projectsViewModel.projects.find { it.id == selectedProjectId }
                     if (project != null) {
                         projectView(
                             project = project,
                             onStartChat = { projId, message, attachments ->
-                                // Delegate to SessionManager to handle business logic
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
                                     message = message,
@@ -1459,23 +1456,7 @@ fun mainContent(
                                 )
                             },
                             onResumeSession = onResumeSession,
-                            onDeleteSession = { sessionId, projectId ->
-                                scope.launch {
-                                    // Delete session from database
-                                    withContext(Dispatchers.IO) {
-                                        DatabaseManager.getInstance()
-                                            .getChatSessionRepository()
-                                            .deleteSession(sessionId)
-                                    }
-
-                                    EventBus.post(
-                                        ProjectSessionsRefreshEvent(
-                                            projectId = projectId,
-                                            reason = "Session $sessionId deleted from project",
-                                        ),
-                                    )
-                                }
-                            },
+                            onDeleteSession = deleteSessionCommand::execute,
                             onRenameSession = { sessionId, _ ->
                                 sessionsViewModel.showRenameDialog(sessionId)
                             },

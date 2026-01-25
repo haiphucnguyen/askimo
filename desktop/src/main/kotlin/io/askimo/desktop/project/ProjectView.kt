@@ -37,10 +37,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,8 +62,6 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
-import io.askimo.core.event.internal.ProjectRefreshEvent
-import io.askimo.core.event.internal.ProjectSessionsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.chat.chatInputField
@@ -71,8 +69,8 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.session.SessionActionMenu
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 
 /**
  * Project view showing project details and chat interface.
@@ -89,56 +87,26 @@ fun projectView(
     onDeleteProject: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Create ViewModel
+    val scope = rememberCoroutineScope()
+    val viewModel = remember(project.id) {
+        GlobalContext.get().get<ProjectViewModel> { parametersOf(scope, project.id) }
+    }
+
+    // Local UI state
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var attachments by remember { mutableStateOf<List<FileAttachmentDTO>>(emptyList()) }
-    var projectSessions by remember { mutableStateOf<List<ChatSession>>(emptyList()) }
     var showProjectMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddReferenceMaterialDialog by remember { mutableStateOf(false) }
 
-    // Maintain reactive project state that can be updated when refresh events occur
-    var currentProject by remember(project.id) { mutableStateOf(project) }
+    // Use ViewModel state
+    val currentProject = viewModel.currentProject ?: project
+    val projectSessions = viewModel.projectSessions
+    val allProjects = viewModel.allProjects
 
+    // Get repository
     val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
-    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
-
-    // Load all projects for Move to Project functionality
-    var allProjects by remember { mutableStateOf<List<Project>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        allProjects = withContext(Dispatchers.IO) {
-            projectRepository.getAllProjects()
-        }
-    }
-
-    // Load sessions for this project initially
-    LaunchedEffect(project.id) {
-        projectSessions = withContext(Dispatchers.IO) {
-            sessionRepository.getSessionsByProjectId(project.id)
-        }
-    }
-
-    // Listen for project sessions refresh events
-    LaunchedEffect(project.id) {
-        EventBus.internalEvents.collect { event ->
-            if (event is ProjectSessionsRefreshEvent && event.projectId == project.id) {
-                projectSessions = withContext(Dispatchers.IO) {
-                    sessionRepository.getSessionsByProjectId(project.id)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(project.id) {
-        EventBus.internalEvents.collect { event ->
-            if (event is ProjectRefreshEvent && event.projectId == project.id) {
-                withContext(Dispatchers.IO) {
-                    projectRepository.getProject(project.id)?.let { updatedProject ->
-                        currentProject = updatedProject
-                    }
-                }
-            }
-        }
-    }
 
     Column(
         modifier = modifier
@@ -268,6 +236,19 @@ fun projectView(
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.rotate(rotation),
                             )
+
+                            themedTooltip(
+                                text = stringResource("projects.sources.info.tooltip"),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand),
+                                )
+                            }
                         }
                     } else {
                         // Show empty state with explanation
@@ -368,32 +349,7 @@ fun projectView(
                                     knowledgeSourceItem(
                                         source = source,
                                         onDelete = {
-                                            // Remove this source from the project's knowledge sources
-                                            val updatedSources = currentProject.knowledgeSources.filter { it != source }
-
-                                            // Update the project in the database
-                                            projectRepository.updateProject(
-                                                projectId = currentProject.id,
-                                                name = currentProject.name,
-                                                description = currentProject.description,
-                                                knowledgeSources = updatedSources,
-                                            )
-
-                                            // Trigger re-indexing to clean up removed sources
-                                            EventBus.post(
-                                                ProjectReIndexEvent(
-                                                    projectId = currentProject.id,
-                                                    reason = "Knowledge source removed by user",
-                                                ),
-                                            )
-
-                                            // Refresh the current project to update the UI
-                                            EventBus.post(
-                                                ProjectRefreshEvent(
-                                                    projectId = currentProject.id,
-                                                    reason = "Knowledge source removed from project",
-                                                ),
-                                            )
+                                            viewModel.deleteKnowledgeSource(source)
                                         },
                                     )
                                 }
@@ -458,6 +414,7 @@ fun projectView(
                         onExportSession = onExportSession,
                         currentProject = currentProject,
                         allProjects = allProjects,
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -536,13 +493,11 @@ private fun sessionCard(
     onExportSession: (String) -> Unit,
     currentProject: Project,
     allProjects: List<Project>,
+    viewModel: ProjectViewModel,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var sessionIdToMove by remember { mutableStateOf<String?>(null) }
-
-    val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
-    val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
 
     val backgroundColor = if (index % 2 == 0) {
         MaterialTheme.colorScheme.surface
@@ -628,25 +583,10 @@ private fun sessionCard(
                             showNewProjectDialog = true
                         },
                         onMoveToExistingProject = { selectedProject ->
-                            // Move session to another project
-                            sessionRepository.updateSessionProject(session.id, selectedProject.id)
-                            // Refresh current project's session list (remove the moved session)
-                            EventBus.post(
-                                ProjectSessionsRefreshEvent(
-                                    projectId = currentProject.id,
-                                    reason = "Session ${session.id} moved to ${selectedProject.id}",
-                                ),
-                            )
+                            viewModel.moveSessionToProject(session.id, selectedProject.id)
                         },
                         onRemoveFromProject = {
-                            sessionRepository.updateSessionProject(session.id, null)
-                            // Refresh current project's session list (remove the session)
-                            EventBus.post(
-                                ProjectSessionsRefreshEvent(
-                                    projectId = currentProject.id,
-                                    reason = "Session ${session.id} removed from project",
-                                ),
-                            )
+                            viewModel.removeSessionFromProject(session.id)
                             // Refresh global sessions list (session now appears in "All Sessions")
                             EventBus.post(
                                 SessionsRefreshEvent(
@@ -663,6 +603,7 @@ private fun sessionCard(
 
     // New Project Dialog
     if (showNewProjectDialog && sessionIdToMove != null) {
+        val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
         newProjectDialog(
             onDismiss = {
                 showNewProjectDialog = false
@@ -673,14 +614,7 @@ private fun sessionCard(
                 val createdProject = projectRepository.findProjectByName(name)
 
                 if (createdProject != null) {
-                    sessionRepository.updateSessionProject(sessionIdToMove!!, createdProject.id)
-                    // Refresh current project's session list (remove the moved session)
-                    EventBus.post(
-                        ProjectSessionsRefreshEvent(
-                            projectId = currentProject.id,
-                            reason = "Session $sessionIdToMove moved to new project ${createdProject.id}",
-                        ),
-                    )
+                    viewModel.moveSessionToProject(sessionIdToMove!!, createdProject.id)
                 }
 
                 showNewProjectDialog = false

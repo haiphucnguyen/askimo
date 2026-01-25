@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import java.awt.Desktop
 import java.net.URI
 import java.time.Year
@@ -48,13 +49,13 @@ fun aboutSettingsSection() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.about"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         // Application Info Card
@@ -65,12 +66,12 @@ fun aboutSettingsSection() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
@@ -136,8 +137,8 @@ fun aboutSettingsSection() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 Text(
                     text = stringResource("about.description"),
@@ -160,8 +161,8 @@ fun aboutSettingsSection() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 Text(
                     text = stringResource("about.license"),
@@ -174,7 +175,7 @@ fun aboutSettingsSection() {
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     fontFamily = FontFamily.Monospace,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.extraSmall))
                 Text(
                     text = stringResource("about.copyright", Year.now().value, VersionInfo.author),
                     style = MaterialTheme.typography.bodySmall,
@@ -191,8 +192,8 @@ fun aboutSettingsSection() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 Text(
                     text = stringResource("about.runtime.info"),
@@ -224,8 +225,8 @@ fun aboutSettingsSection() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(Spacing.large),
+                verticalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 Text(
                     text = stringResource("about.links"),
@@ -267,7 +268,7 @@ private fun infoRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

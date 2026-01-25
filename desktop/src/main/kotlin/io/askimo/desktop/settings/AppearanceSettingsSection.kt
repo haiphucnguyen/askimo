@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.AccentColor
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemeMode
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.asyncImage
@@ -67,13 +68,13 @@ fun appearanceSettingsSection() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
         Text(
             text = stringResource("settings.appearance"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         // Theme Mode Section
@@ -115,13 +116,13 @@ fun appearanceSettingsSection() {
             text = stringResource("settings.accent.color"),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = Spacing.small),
         )
 
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             AccentColor.entries.forEach { accentColor ->
                 Box(
@@ -213,9 +214,9 @@ private fun avatarSettingsSection() {
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.large),
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.small))
 
         Text(
             text = stringResource("settings.appearance.avatars"),

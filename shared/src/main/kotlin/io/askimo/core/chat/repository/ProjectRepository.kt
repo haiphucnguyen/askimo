@@ -12,8 +12,6 @@ import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
-import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
@@ -203,14 +201,8 @@ class ProjectRepository internal constructor(
      */
     fun deleteProject(projectId: String): Boolean {
         log.debug("Deleting project $projectId")
-        val deleted = transaction(database) {
+        return transaction(database) {
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
         }
-        if (deleted) {
-            // Publish event for cleanup (e.g., stop file watcher, remove indexer instance)
-            EventBus.post(ProjectDeletedEvent(projectId))
-            log.debug("Successfully deleted project $projectId")
-        }
-        return deleted
     }
 }

@@ -29,7 +29,7 @@ class ProjectsViewModel(
     private val scope: CoroutineScope,
 ) {
     private val log = logger<ProjectsViewModel>()
-    private val projectRepository = DatabaseManager.Companion.getInstance().getProjectRepository()
+    private val projectRepository = DatabaseManager.getInstance().getProjectRepository()
 
     var projects by mutableStateOf<List<Project>>(emptyList())
         private set
@@ -43,7 +43,7 @@ class ProjectsViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    var successMessage by mutableStateOf<String?>(null)
+    var deleteProjectSuccessfulBannerMessage by mutableStateOf<String?>(null)
         private set
 
     private val projectsPerPage = 10
@@ -63,7 +63,6 @@ class ProjectsViewModel(
                 .filterIsInstance<ProjectsRefreshEvent>()
                 .collect { event ->
                     log.debug("Projects refresh requested: ${event.reason ?: "no reason specified"}")
-                    loadProjects()
                     refresh()
                 }
         }
@@ -155,7 +154,7 @@ class ProjectsViewModel(
      * Dismiss success message.
      */
     fun dismissSuccessMessage() {
-        successMessage = null
+        deleteProjectSuccessfulBannerMessage = null
     }
 
     /**
@@ -168,7 +167,7 @@ class ProjectsViewModel(
                     projectRepository.deleteProject(projectId)
                 }
                 if (deleted) {
-                    successMessage = LocalizationManager.getString("projects.delete.success")
+                    deleteProjectSuccessfulBannerMessage = LocalizationManager.getString("projects.delete.success")
                     refresh()
                 } else {
                     errorMessage = LocalizationManager.getString("projects.error.not.found")

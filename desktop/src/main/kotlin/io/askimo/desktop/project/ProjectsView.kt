@@ -101,7 +101,7 @@ fun projectsView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Success message banner
-        viewModel.successMessage?.let { message ->
+        viewModel.deleteProjectSuccessfulBannerMessage?.let { message ->
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

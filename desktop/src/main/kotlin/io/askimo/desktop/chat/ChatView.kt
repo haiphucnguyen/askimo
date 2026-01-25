@@ -60,7 +60,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatDirective
-import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatDirectiveService
@@ -95,45 +94,39 @@ private val log = currentFileLogger()
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun chatView(
-    messages: List<ChatMessageDTO>,
-    onSendMessage: (String, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
-    onStopResponse: () -> Unit = {},
-    isLoading: Boolean = false,
-    isThinking: Boolean = false,
-    thinkingElapsedSeconds: Int = 0,
-    spinnerFrame: Char = '⠋',
-    errorMessage: String? = null,
+    state: ChatState,
+    actions: ChatActions,
     provider: String? = null,
     model: String? = null,
-    hasMoreMessages: Boolean = false,
-    isLoadingPrevious: Boolean = false,
-    onLoadPrevious: () -> Unit = {},
-    isSearchMode: Boolean = false,
-    searchQuery: String = "",
-    searchResults: List<ChatMessageDTO> = emptyList(),
-    currentSearchResultIndex: Int = 0,
-    isSearching: Boolean = false,
-    onSearch: (String) -> Unit = {},
-    onClearSearch: () -> Unit = {},
-    onNextSearchResult: () -> Unit = {},
-    onPreviousSearchResult: () -> Unit = {},
     onJumpToMessage: (String, LocalDateTime) -> Unit = { _, _ -> },
-    selectedDirective: String? = null,
-    onDirectiveSelected: (String?) -> Unit = {},
-    onUpdateAIMessage: (String, String) -> Unit = { _, _ -> },
     initialInputText: TextFieldValue = TextFieldValue(""),
     initialAttachments: List<FileAttachmentDTO> = emptyList(),
     initialEditingMessage: ChatMessageDTO? = null,
     onStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit = { _, _, _ -> },
     sessionId: String? = null,
-    sessionTitle: String? = null,
-    project: Project? = null,
     onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
-    onRetryMessage: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    // Unpack state for internal use
+    val messages = state.messages
+    val hasMoreMessages = state.hasMoreMessages
+    val isLoadingPrevious = state.isLoadingPrevious
+    val isLoading = state.isLoading
+    val isThinking = state.isThinking
+    val thinkingElapsedSeconds = state.thinkingElapsedSeconds
+    val spinnerFrame = state.spinnerFrame
+    val errorMessage = state.errorMessage
+    val isSearchMode = state.isSearchMode
+    val searchQuery = state.searchQuery
+    val searchResults = state.searchResults
+    val currentSearchResultIndex = state.currentSearchResultIndex
+    val isSearching = state.isSearching
+    val selectedDirective = state.selectedDirective
+    val sessionTitle = state.sessionTitle
+    val project = state.project
+
     // Internal state management for ChatView
     var inputText by remember(initialInputText) { mutableStateOf(initialInputText) }
     var attachments by remember(initialAttachments) { mutableStateOf(initialAttachments) }
@@ -275,7 +268,7 @@ fun chatView(
 
                 // Apply to current session if requested
                 if (applyToCurrent) {
-                    onDirectiveSelected(newDirective.id)
+                    actions.setDirective(newDirective.id)
                 }
 
                 showNewDirectiveDialog = false
@@ -294,7 +287,7 @@ fun chatView(
                 when (shortcut) {
                     AppShortcut.SEARCH_IN_CHAT -> {
                         if (!isSearchMode) {
-                            onSearch("")
+                            actions.searchMessages("")
                             true
                         } else {
                             false
@@ -302,7 +295,7 @@ fun chatView(
                     }
                     AppShortcut.CLOSE_SEARCH -> {
                         if (isSearchMode) {
-                            onClearSearch()
+                            actions.clearSearch()
                             true
                         } else {
                             false
@@ -310,7 +303,7 @@ fun chatView(
                     }
                     AppShortcut.NEXT_SEARCH_RESULT -> {
                         if (isSearchMode && searchResults.isNotEmpty()) {
-                            onNextSearchResult()
+                            actions.nextSearchResult()
                             true
                         } else {
                             false
@@ -318,7 +311,7 @@ fun chatView(
                     }
                     AppShortcut.PREVIOUS_SEARCH_RESULT -> {
                         if (isSearchMode && searchResults.isNotEmpty()) {
-                            onPreviousSearchResult()
+                            actions.previousSearchResult()
                             true
                         } else {
                             false
@@ -594,7 +587,7 @@ fun chatView(
                                         )
                                     },
                                     onClick = {
-                                        onDirectiveSelected(null)
+                                        actions.setDirective(null)
                                         directiveDropdownExpanded = false
                                     },
                                     leadingIcon = if (selectedDirective == null) {
@@ -648,7 +641,7 @@ fun chatView(
                                                     )
                                                 },
                                                 onClick = {
-                                                    onDirectiveSelected(directive.id)
+                                                    actions.setDirective(directive.id)
                                                     directiveDropdownExpanded = false
                                                 },
                                                 leadingIcon = if (selectedDirective == directive.id) {
@@ -740,7 +733,7 @@ fun chatView(
                                     onDelete = { id ->
                                         directiveService.deleteDirective(id)
                                         if (selectedDirective == id) {
-                                            onDirectiveSelected(null)
+                                            actions.setDirective(null)
                                         }
                                         availableDirectives = directiveService.listAllDirectives()
                                     },
@@ -792,7 +785,7 @@ fun chatView(
                     // Search input field
                     OutlinedTextField(
                         value = searchQuery,
-                        onValueChange = onSearch,
+                        onValueChange = actions::searchMessages,
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(searchFocusRequester),
@@ -817,7 +810,7 @@ fun chatView(
 
                     // Navigation buttons (Previous)
                     IconButton(
-                        onClick = onPreviousSearchResult,
+                        onClick = actions::previousSearchResult,
                         enabled = searchResults.isNotEmpty(),
                         modifier = Modifier
                             .size(36.dp)
@@ -832,7 +825,7 @@ fun chatView(
 
                     // Navigation buttons (Next)
                     IconButton(
-                        onClick = onNextSearchResult,
+                        onClick = actions::nextSearchResult,
                         enabled = searchResults.isNotEmpty(),
                         modifier = Modifier
                             .size(36.dp)
@@ -847,7 +840,7 @@ fun chatView(
 
                     // Close button
                     IconButton(
-                        onClick = onClearSearch,
+                        onClick = actions::clearSearch,
                         modifier = Modifier
                             .size(36.dp)
                             .pointerHoverIcon(PointerIcon.Hand),
@@ -934,7 +927,7 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
-                        onRetryMessage = onRetryMessage,
+                        onRetryMessage = actions::retryMessage,
                     )
                 }
                 messages.isEmpty() -> {
@@ -953,7 +946,7 @@ fun chatView(
                         spinnerFrame = spinnerFrame.toString(),
                         hasMoreMessages = hasMoreMessages,
                         isLoadingPrevious = isLoadingPrevious,
-                        onLoadPrevious = onLoadPrevious,
+                        onLoadPrevious = actions::loadPrevious,
                         onEditMessage = { message ->
                             if (message.isUser) {
                                 // User message - set editing mode
@@ -971,7 +964,7 @@ fun chatView(
                         onDownloadAttachment = downloadAttachment,
                         userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
-                        onRetryMessage = onRetryMessage,
+                        onRetryMessage = actions::retryMessage,
                     )
                 }
             }
@@ -985,7 +978,7 @@ fun chatView(
             onAttachmentsChange = { attachments = it },
             onSendMessage = {
                 if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                    onSendMessage(inputText.text, attachments, editingMessage)
+                    actions.sendOrEditMessage(inputText.text, attachments, editingMessage)
                     inputText = TextFieldValue("")
                     attachments = emptyList()
                     editingMessage = null
@@ -993,7 +986,7 @@ fun chatView(
             },
             isLoading = isLoading,
             isThinking = isThinking,
-            onStopResponse = onStopResponse,
+            onStopResponse = actions::cancelResponse,
             errorMessage = errorMessage,
             editingMessage = editingMessage,
             onCancelEdit = {
@@ -1014,7 +1007,7 @@ fun chatView(
             onDismiss = { editingAIMessage = null },
             onSave = { newContent ->
                 message.id?.let { messageId ->
-                    onUpdateAIMessage(messageId, newContent)
+                    actions.updateAIMessage(messageId, newContent)
                 }
             },
         )
