@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -107,6 +108,7 @@ fun chatView(
     onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
+    onNavigateToProject: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Unpack state for internal use
@@ -344,97 +346,114 @@ fun chatView(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f, fill = false),
                     ) {
-                        // Project indicator badge
+                        // Breadcrumb navigation for project
                         if (project != null) {
-                            TooltipArea(
-                                tooltip = {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                        shape = RoundedCornerShape(4.dp),
-                                        modifier = Modifier.width(350.dp),
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Clickable project name as breadcrumb
+                                TooltipArea(
+                                    tooltip = {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.width(350.dp),
                                         ) {
-                                            Text(
-                                                text = project.name,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-
-                                            project.description?.let { description ->
-                                                if (description.isNotBlank()) {
-                                                    Text(
-                                                        text = description,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                            }
-
-                                            if (project.knowledgeSources.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(4.dp))
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
                                                 Text(
-                                                    text = stringResource("projects.sources.title"),
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    text = project.name,
+                                                    style = MaterialTheme.typography.titleSmall,
                                                     fontWeight = FontWeight.Bold,
                                                 )
-                                                Column(
-                                                    modifier = Modifier.padding(start = 8.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                                                ) {
-                                                    project.knowledgeSources.forEach { source ->
-                                                        Row(
-                                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                        ) {
-                                                            Text(
-                                                                text = "•",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                            )
-                                                            Text(
-                                                                text = source.resourceIdentifier,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis,
-                                                            )
+
+                                                project.description?.let { description ->
+                                                    if (description.isNotBlank()) {
+                                                        Text(
+                                                            text = description,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        )
+                                                    }
+                                                }
+
+                                                if (project.knowledgeSources.isNotEmpty()) {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Text(
+                                                        text = stringResource("projects.sources.title"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                    )
+                                                    Column(
+                                                        modifier = Modifier.padding(start = 8.dp),
+                                                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                                                    ) {
+                                                        project.knowledgeSources.forEach { source ->
+                                                            Row(
+                                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                            ) {
+                                                                Text(
+                                                                    text = "•",
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                )
+                                                                Text(
+                                                                    text = source.resourceIdentifier,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis,
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
-                                            }
 
-                                            // Timestamps
-                                            Spacer(modifier = Modifier.height(4.dp))
+                                                // Timestamps
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Created: ${formatDisplay(project.createdAt)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Text(
+                                                    text = "Updated: ${formatDisplay(project.updatedAt)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    },
+                                ) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(4.dp),
+                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                onNavigateToProject?.invoke(project.id)
+                                            },
+                                            colors = ComponentColors.primaryTextButtonColors(),
+                                        ) {
                                             Text(
-                                                text = "Created: ${formatDisplay(project.createdAt)}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Text(
-                                                text = "Updated: ${formatDisplay(project.updatedAt)}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                text = project.name.take(3).uppercase(),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
                                             )
                                         }
                                     }
-                                },
-                            ) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = RoundedCornerShape(4.dp),
-                                    modifier = Modifier
-                                        .padding(0.dp)
-                                        .pointerHoverIcon(PointerIcon.Hand),
-                                ) {
-                                    Text(
-                                        text = project.name.take(3).uppercase(),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontWeight = FontWeight.Bold,
-                                    )
                                 }
+
+                                // Chevron separator
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
                             }
                         }
 

@@ -1427,6 +1427,7 @@ fun mainContent(
                     onDeleteSession = { sessionId ->
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
                     },
+                    onNavigateToProject = onSelectProject,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

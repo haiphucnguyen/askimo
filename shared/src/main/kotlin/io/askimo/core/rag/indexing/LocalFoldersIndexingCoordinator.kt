@@ -273,7 +273,7 @@ class LocalFoldersIndexingCoordinator(
 
             // Skip if file hasn't changed (incremental indexing)
             if (previousHashes[absolutePath] == hash) {
-                log.debug("Skipping unchanged file: {}", filePath.fileName)
+                log.trace("Skipping unchanged file: {}", filePath.fileName)
                 updateProgressAtomic()
                 return true
             }

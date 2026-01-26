@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import java.nio.channels.UnresolvedAddressException
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -56,7 +57,7 @@ private fun Throwable.isUnsupportedSamplingError(): Boolean {
  * - Memory clearing on context errors to reduce conversation history
  * - User-friendly error messages for configuration issues
  *
- * @param prompt The input text to send to the language model
+ * @param userMessage The input text to send to the language model
  * @param onToken Optional callback function that is invoked for each token received from the model
  * @return The complete response from the language model as a string
  */
@@ -120,6 +121,11 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         // Check for context length errors first - let it bubble up for immediate retry
                         if (e.isContextLengthError()) {
                             done.countDown()
+                            val modelKey = ModelContextSizeCache.modelKey(provider, model)
+                            val currentSize = ModelContextSizeCache.get(modelKey)
+                            val newSize = ModelContextSizeCache.reduce(modelKey, currentSize)
+
+                            log.warn("Context length exceeded for $modelKey (attempt $contextRetryCount/${maxContextRetries + 1}). Reducing context size: $currentSize → $newSize tokens. Retrying immediately...")
                             return@onError
                         }
 
@@ -138,14 +144,11 @@ fun ChatClient.sendStreamingMessageWithCallback(
                             log.warn("Unsupported sampling parameters detected. Falling back to non sampling settings.")
                             ModelCapabilities.setSamplingSupport(provider, model, false)
                             done.countDown()
-                            sb.append(e.message)
-                            onToken(e.message ?: "Unsupported sampling parameters detected")
-                            contextRetryCount++
                             return@onError
                         }
 
                         // Check if the underlying cause is a network connection issue
-                        if (e.cause is java.nio.channels.UnresolvedAddressException) {
+                        if (e.cause is UnresolvedAddressException) {
                             isConfigurationError = true
                             val connectionErrorMsg = """
                                 ⚠️  Unable to connect to the server!
@@ -225,14 +228,8 @@ fun ChatClient.sendStreamingMessageWithCallback(
             }
         } catch (e: Exception) {
             // Check if this is a context length error - immediate retry without backoff
-            if (e.isContextLengthError() && contextRetryCount < maxContextRetries) {
+            if ((e.isContextLengthError() || e.isUnsupportedSamplingError()) && contextRetryCount < maxContextRetries) {
                 contextRetryCount++
-
-                val modelKey = ModelContextSizeCache.modelKey(provider, model)
-                val currentSize = ModelContextSizeCache.get(modelKey)
-                val newSize = ModelContextSizeCache.reduce(modelKey, currentSize)
-
-                log.warn("Context length exceeded for $modelKey (attempt $contextRetryCount/${maxContextRetries + 1}). Reducing context size: $currentSize → $newSize tokens. Retrying immediately...")
 
                 // Retry immediately with reduced context size (no backoff)
                 // ChatRequestTransformers.enforceTokenBudget() will automatically truncate
