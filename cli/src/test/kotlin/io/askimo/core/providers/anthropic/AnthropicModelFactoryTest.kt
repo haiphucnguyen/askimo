@@ -32,7 +32,10 @@ class AnthropicModelFactoryTest {
         AppContext.reset()
         AppContext.initialize(
             mode = ExecutionMode.STATELESS_MODE,
-            AppContextParams(currentProvider = ModelProvider.ANTHROPIC),
+            AppContextParams(
+                currentProvider = ModelProvider.ANTHROPIC,
+                models = mutableMapOf(ModelProvider.ANTHROPIC to "claude-sonnet-4-5"),
+            ),
         )
     }
 

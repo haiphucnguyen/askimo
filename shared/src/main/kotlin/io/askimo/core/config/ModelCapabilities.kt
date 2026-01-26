@@ -81,6 +81,10 @@ object ModelCapabilities {
      * @param supported Whether the model supports sampling parameters
      */
     fun setSamplingSupport(provider: ModelProvider, model: String, supported: Boolean) {
+        if (model.isBlank()) {
+            log.warn("Cannot set sampling support for empty model name (provider: ${provider.providerKey()})")
+            return
+        }
         val key = createKey(provider, model)
         synchronized(lock) {
             cache[key] = supported
