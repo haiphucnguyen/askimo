@@ -66,8 +66,8 @@ fun addReferenceMaterialDialog(
     }
 
     // Handle adding a source based on type
-    fun handleAddSource(type: KnowledgeSourceType) {
-        val newSources = sourceBrowser.handleAddSource(type) {
+    fun handleAddSource(typeInfo: KnowledgeSourceItem.TypeInfo) {
+        val newSources = sourceBrowser.handleAddSource(typeInfo) {
             showUrlInputDialog = true
         }
         knowledgeSources = knowledgeSources + newSources
@@ -118,16 +118,16 @@ fun addReferenceMaterialDialog(
                         expanded = showAddSourceMenu,
                         onDismissRequest = { showAddSourceMenu = false },
                     ) {
-                        KnowledgeSourceType.entries.forEach { type ->
+                        KnowledgeSourceItem.availableTypes.forEach { typeInfo ->
                             DropdownMenuItem(
-                                text = { Text(type.displayName) },
+                                text = { Text(stringResource(typeInfo.typeLabelKey)) },
                                 onClick = {
-                                    handleAddSource(type)
+                                    handleAddSource(typeInfo)
                                     showAddSourceMenu = false
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = type.icon,
+                                        imageVector = typeInfo.icon,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                     )

@@ -344,16 +344,107 @@ kotlin {
     jvmToolchain(21)
 }
 
+// Task to check for missing i18n keys across language files
+tasks.register("checkI18nKeys") {
+    group = "verification"
+    description = "Check for missing i18n keys across language files"
+
+    doLast {
+        val i18nDir = file("src/main/resources/i18n")
+        val baseFile = i18nDir.resolve("messages.properties")
+
+        if (!baseFile.exists()) {
+            throw GradleException("Base messages.properties not found at ${baseFile.absolutePath}")
+        }
+
+        // Read base keys in order
+        val baseKeysInOrder =
+            baseFile
+                .readLines()
+                .filter { it.isNotBlank() && !it.trim().startsWith("#") && it.contains("=") }
+                .map { it.substringBefore("=").trim() }
+
+        val baseKeys = baseKeysInOrder.toSet()
+
+        logger.lifecycle("📋 Found ${baseKeys.size} keys in base messages.properties")
+
+        // Check other language files
+        val languageFiles =
+            i18nDir.listFiles { file ->
+                file.name.startsWith("messages_") && file.extension == "properties"
+            } ?: emptyArray()
+
+        if (languageFiles.isEmpty()) {
+            logger.lifecycle("⚠️  No language files found")
+            return@doLast
+        }
+
+        var hasErrors = false
+        val reportLines = mutableListOf<String>()
+
+        languageFiles.sorted().forEach { langFile ->
+            val langKeys =
+                langFile
+                    .readLines()
+                    .filter { it.isNotBlank() && !it.trim().startsWith("#") && it.contains("=") }
+                    .map { it.substringBefore("=").trim() }
+                    .toSet()
+
+            val missingKeys = baseKeys - langKeys
+            val extraKeys = langKeys - baseKeys
+
+            if (missingKeys.isNotEmpty() || extraKeys.isNotEmpty()) {
+                hasErrors = true
+                reportLines.add("")
+                reportLines.add("❌ ${langFile.name}:")
+
+                if (missingKeys.isNotEmpty()) {
+                    reportLines.add("   Missing ${missingKeys.size} key(s) (in order of appearance):")
+                    // Sort by order of occurrence in base file
+                    baseKeysInOrder.filter { it in missingKeys }.forEach { key ->
+                        reportLines.add("     - $key")
+                    }
+                }
+
+                if (extraKeys.isNotEmpty()) {
+                    reportLines.add("   Extra ${extraKeys.size} key(s) (not in base):")
+                    extraKeys.sorted().forEach { key ->
+                        reportLines.add("     + $key")
+                    }
+                }
+            } else {
+                logger.lifecycle("✅ ${langFile.name} - All keys present (${langKeys.size} keys)")
+            }
+        }
+
+        if (hasErrors) {
+            reportLines.forEach { logger.lifecycle(it) }
+            logger.lifecycle("")
+            throw GradleException("Some language files are missing keys or have extra keys. See output above.")
+        } else {
+            logger.lifecycle("")
+            logger.lifecycle("✅ All ${languageFiles.size} language files have all required keys!")
+        }
+    }
+}
+
 // Task to detect unused localization keys
 tasks.register("detectUnusedLocalizations") {
     group = "verification"
-    description = "Detect unused localization keys in properties files"
+    description = "Detect unused localization keys in properties files. Use -Pdelete=true to remove them."
 
     doLast {
         val i18nDir = file("src/main/resources/i18n")
         val desktopSrcDir = file("src/main/kotlin")
         val sharedSrcDir = file("../shared/src/main/kotlin")
         val reportFile = file("${layout.buildDirectory.get()}/reports/unused-localizations.txt")
+
+        // Check if delete mode is enabled
+        val deleteMode = project.findProperty("delete")?.toString()?.toBoolean() ?: false
+
+        if (deleteMode) {
+            println("🗑️  DELETE MODE ENABLED - Unused keys will be removed from all properties files")
+        }
 
         // Read all keys from messages.properties
         val basePropertiesFile = file("$i18nDir/messages.properties")
@@ -412,6 +503,17 @@ tasks.register("detectUnusedLocalizations") {
                         usedKeys.add(key)
                         keyUsageMap.getOrPut(key) { mutableListOf() }.add(relativePath)
                     }
+
+                    // Pattern 3: String literals that look like i18n keys (in lists, assignments, etc.)
+                    // Matches: "export.format.html.benefit.1", "settings.model.name", etc.
+                    Regex(""""([a-z][a-z0-9._-]*[a-z0-9])"""").findAll(content).forEach { match ->
+                        val potentialKey = match.groupValues[1]
+                        // Check if this string matches a known key pattern and exists in our keys
+                        if (potentialKey in allKeys && potentialKey.contains(".")) {
+                            usedKeys.add(potentialKey)
+                            keyUsageMap.getOrPut(potentialKey) { mutableListOf() }.add(relativePath)
+                        }
+                    }
                 }
 
             println("   Scanned $fileCount Kotlin files")
@@ -426,6 +528,46 @@ tasks.register("detectUnusedLocalizations") {
         // Find unused keys
         val unusedKeys = allKeys.keys - usedKeys
 
+        // Delete unused keys if requested
+        if (deleteMode && unusedKeys.isNotEmpty()) {
+            println("\n🗑️  Removing ${unusedKeys.size} unused keys from all properties files...")
+
+            val propertiesFiles =
+                i18nDir.listFiles { file ->
+                    file.name.endsWith(".properties")
+                } ?: emptyArray()
+
+            propertiesFiles.forEach { propsFile ->
+                val lines = propsFile.readLines()
+                val filteredLines = mutableListOf<String>()
+                var removedCount = 0
+
+                lines.forEach { line ->
+                    val trimmed = line.trim()
+                    // Keep comments, empty lines, and used keys
+                    if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                        filteredLines.add(line)
+                    } else if ("=" in trimmed) {
+                        val key = trimmed.substringBefore("=").trim()
+                        if (key !in unusedKeys) {
+                            filteredLines.add(line)
+                        } else {
+                            removedCount++
+                        }
+                    } else {
+                        filteredLines.add(line)
+                    }
+                }
+
+                if (removedCount > 0) {
+                    propsFile.writeText(filteredLines.joinToString("\n") + "\n")
+                    println("   ✓ ${propsFile.name}: removed $removedCount key(s)")
+                }
+            }
+
+            println("\n✅ Successfully removed unused keys from all properties files")
+        }
+
         // Generate report
         reportFile.parentFile.mkdirs()
         reportFile.writeText(
@@ -437,6 +579,9 @@ tasks.register("detectUnusedLocalizations") {
                 appendLine("Total keys: ${allKeys.size}")
                 appendLine("Used keys: ${usedKeys.size}")
                 appendLine("Unused keys: ${unusedKeys.size}")
+                if (deleteMode) {
+                    appendLine("Delete mode: ENABLED (keys were removed)")
+                }
                 appendLine("=".repeat(80))
                 appendLine()
 
@@ -480,6 +625,11 @@ tasks.register("detectUnusedLocalizations") {
             }
             if (unusedKeys.size > 10) {
                 println("  ... and ${unusedKeys.size - 10} more (see report)")
+            }
+
+            if (!deleteMode) {
+                println("\n💡 To automatically remove these keys, run:")
+                println("   ./gradlew detectUnusedLocalizations -Pdelete=true")
             }
         }
     }

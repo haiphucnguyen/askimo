@@ -23,9 +23,12 @@ import java.util.UUID
 sealed class KnowledgeSourceItem {
     abstract val id: String
     abstract val displayName: String
-    abstract val icon: ImageVector
     abstract val isValid: Boolean
-    abstract val typeLabel: String
+
+    /**
+     * Get the type information for this knowledge source
+     */
+    abstract val typeInfo: TypeInfo
 
     data class Folder(
         override val id: String,
@@ -33,8 +36,7 @@ sealed class KnowledgeSourceItem {
         override val isValid: Boolean,
     ) : KnowledgeSourceItem() {
         override val displayName = path
-        override val icon = Icons.Default.Folder
-        override val typeLabel = "Folder (watched)"
+        override val typeInfo = TypeInfo.FOLDER
     }
 
     data class File(
@@ -43,8 +45,7 @@ sealed class KnowledgeSourceItem {
         override val isValid: Boolean,
     ) : KnowledgeSourceItem() {
         override val displayName = path
-        override val icon = Icons.AutoMirrored.Filled.InsertDriveFile
-        override val typeLabel = "File (static)"
+        override val typeInfo = TypeInfo.FILE
     }
 
     data class Url(
@@ -53,21 +54,27 @@ sealed class KnowledgeSourceItem {
         override val isValid: Boolean,
     ) : KnowledgeSourceItem() {
         override val displayName = url
-        override val icon = Icons.Default.Language
-        override val typeLabel = "URL (web content)"
+        override val typeInfo = TypeInfo.URL
     }
-}
 
-/**
- * Enum representing available knowledge source types
- */
-enum class KnowledgeSourceType(
-    val displayName: String,
-    val icon: ImageVector,
-) {
-    FOLDER("Folder (watched for changes)", Icons.Default.Folder),
-    FILE("Files (static)", Icons.AutoMirrored.Filled.InsertDriveFile),
-    URL("URL (web content)", Icons.Default.Language),
+    /**
+     * Type information for knowledge sources (icon and label key)
+     */
+    enum class TypeInfo(
+        val icon: ImageVector,
+        val typeLabelKey: String,
+    ) {
+        FOLDER(Icons.Default.Folder, "knowledge.source.type.folder"),
+        FILE(Icons.AutoMirrored.Filled.InsertDriveFile, "knowledge.source.type.file"),
+        URL(Icons.Default.Language, "knowledge.source.type.url"),
+    }
+
+    companion object {
+        /**
+         * All available knowledge source types for UI selection
+         */
+        val availableTypes: List<TypeInfo> = TypeInfo.entries
+    }
 }
 
 /**
