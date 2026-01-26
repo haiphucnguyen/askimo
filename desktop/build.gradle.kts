@@ -514,6 +514,35 @@ tasks.register("detectUnusedLocalizations") {
                             keyUsageMap.getOrPut(potentialKey) { mutableListOf() }.add(relativePath)
                         }
                     }
+
+                    // Pattern 4: Keys with variable interpolation
+                    // Matches: stringResource("log.level.${variable}"), stringResource("prefix.${var}.suffix")
+                    Regex("""stringResource\s*\(\s*"([a-z][a-z0-9._-]*)\$\{[^}]+\}([a-z0-9._-]*)"""").findAll(content).forEach { match ->
+                        val prefix = match.groupValues[1]
+                        val suffix = match.groupValues[2]
+                        // Find all keys that start with the prefix and end with the suffix
+                        allKeys.keys.forEach { key ->
+                            if (key.startsWith(prefix) && (suffix.isEmpty() || key.endsWith(suffix))) {
+                                usedKeys.add(key)
+                                keyUsageMap.getOrPut(key) { mutableListOf() }.add(relativePath)
+                            }
+                        }
+                    }
+
+                    // Pattern 5: LocalizationManager.getString with interpolation
+                    Regex(
+                        """LocalizationManager\.getString\s*\(\s*"([a-z][a-z0-9._-]*)\$\{[^}]+\}([a-z0-9._-]*)"""",
+                    ).findAll(content).forEach { match ->
+                        val prefix = match.groupValues[1]
+                        val suffix = match.groupValues[2]
+                        // Find all keys that start with the prefix and end with the suffix
+                        allKeys.keys.forEach { key ->
+                            if (key.startsWith(prefix) && (suffix.isEmpty() || key.endsWith(suffix))) {
+                                usedKeys.add(key)
+                                keyUsageMap.getOrPut(key) { mutableListOf() }.add(relativePath)
+                            }
+                        }
+                    }
                 }
 
             println("   Scanned $fileCount Kotlin files")
@@ -620,11 +649,8 @@ tasks.register("detectUnusedLocalizations") {
         } else {
             println("⚠️  Found ${unusedKeys.size} unused localization keys\n")
             println("Unused keys:")
-            unusedKeys.sorted().take(10).forEach { key ->
+            unusedKeys.sorted().forEach { key ->
                 println("  - $key = ${allKeys[key]}")
-            }
-            if (unusedKeys.size > 10) {
-                println("  ... and ${unusedKeys.size - 10} more (see report)")
             }
 
             if (!deleteMode) {
