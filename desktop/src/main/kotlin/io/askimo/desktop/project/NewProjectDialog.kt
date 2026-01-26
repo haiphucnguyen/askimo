@@ -138,11 +138,11 @@ fun newProjectDialog(
     }
 
     // Handle adding a source based on type
-    fun handleAddSource(type: KnowledgeSourceType) {
-        when (type) {
-            KnowledgeSourceType.FOLDER -> browseForFolder()
-            KnowledgeSourceType.FILE -> browseForFiles()
-            KnowledgeSourceType.URL -> showUrlInputDialog = true
+    fun handleAddSource(typeInfo: KnowledgeSourceItem.TypeInfo) {
+        when (typeInfo) {
+            KnowledgeSourceItem.TypeInfo.FOLDER -> browseForFolder()
+            KnowledgeSourceItem.TypeInfo.FILE -> browseForFiles()
+            KnowledgeSourceItem.TypeInfo.URL -> showUrlInputDialog = true
         }
     }
 
@@ -331,21 +331,21 @@ fun newProjectDialog(
                                 expanded = showAddSourceMenu,
                                 onDismissRequest = { showAddSourceMenu = false },
                             ) {
-                                KnowledgeSourceType.entries.forEach { type ->
+                                KnowledgeSourceItem.availableTypes.forEach { typeInfo ->
                                     DropdownMenuItem(
                                         text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
-                                                    type.icon,
+                                                    typeInfo.icon,
                                                     contentDescription = null,
                                                     modifier = Modifier.padding(end = 8.dp).size(20.dp),
                                                 )
-                                                Text(type.displayName)
+                                                Text(stringResource(typeInfo.typeLabelKey))
                                             }
                                         },
                                         onClick = {
                                             showAddSourceMenu = false
-                                            handleAddSource(type)
+                                            handleAddSource(typeInfo)
                                         },
                                     )
                                 }

@@ -82,6 +82,8 @@ fun exportSessionDialog(
     var filePath by remember { mutableStateOf("") }
     var showFileBrowser by remember { mutableStateOf(false) }
 
+    val fileChooserTitle = stringResource("session.export.file.chooser.title")
+
     // Update file path when format changes
     LaunchedEffect(defaultFilename) {
         if (filePath.isEmpty() || filePath.substringAfterLast('/').substringBeforeLast('.') ==
@@ -101,7 +103,7 @@ fun exportSessionDialog(
     if (showFileBrowser) {
         LaunchedEffect(Unit) {
             val fileChooser = JFileChooser().apply {
-                dialogTitle = "Save Export File"
+                dialogTitle = fileChooserTitle
                 selectedFile = File(filePath)
                 fileSelectionMode = JFileChooser.FILES_ONLY
             }
@@ -132,7 +134,6 @@ fun exportSessionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Title with session name
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {

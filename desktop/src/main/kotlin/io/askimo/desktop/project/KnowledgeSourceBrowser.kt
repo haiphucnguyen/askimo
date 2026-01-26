@@ -51,20 +51,20 @@ class KnowledgeSourceBrowser(
     }
 
     /**
-     * Handle adding sources based on type
+     * Handle adding sources based on type info
      * Returns a list of new sources to add (empty list for URL type, which needs separate dialog)
      */
     fun handleAddSource(
-        type: KnowledgeSourceType,
+        typeInfo: KnowledgeSourceItem.TypeInfo,
         onShowUrlDialog: () -> Unit,
-    ): List<KnowledgeSourceItem> = when (type) {
-        KnowledgeSourceType.FOLDER -> {
+    ): List<KnowledgeSourceItem> = when (typeInfo) {
+        KnowledgeSourceItem.TypeInfo.FOLDER -> {
             browseForFolder()?.let { listOf(it) } ?: emptyList()
         }
-        KnowledgeSourceType.FILE -> {
+        KnowledgeSourceItem.TypeInfo.FILE -> {
             browseForFiles()
         }
-        KnowledgeSourceType.URL -> {
+        KnowledgeSourceItem.TypeInfo.URL -> {
             onShowUrlDialog()
             emptyList()
         }

@@ -189,8 +189,8 @@ private fun editProjectForm(
     }
 
     // Handle adding a source based on type
-    fun handleAddSource(type: KnowledgeSourceType) {
-        val newSources = sourceBrowser.handleAddSource(type) {
+    fun handleAddSource(typeInfo: KnowledgeSourceItem.TypeInfo) {
+        val newSources = sourceBrowser.handleAddSource(typeInfo) {
             showUrlInputDialog = true
         }
         knowledgeSources = knowledgeSources + newSources
@@ -320,21 +320,21 @@ private fun editProjectForm(
                             expanded = showAddSourceMenu,
                             onDismissRequest = { showAddSourceMenu = false },
                         ) {
-                            KnowledgeSourceType.entries.forEach { type ->
+                            KnowledgeSourceItem.availableTypes.forEach { typeInfo ->
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
-                                                type.icon,
+                                                typeInfo.icon,
                                                 contentDescription = null,
                                                 modifier = Modifier.padding(end = 8.dp).size(20.dp),
                                             )
-                                            Text(type.displayName)
+                                            Text(stringResource(typeInfo.typeLabelKey))
                                         }
                                     },
                                     onClick = {
                                         showAddSourceMenu = false
-                                        handleAddSource(type)
+                                        handleAddSource(typeInfo)
                                     },
                                 )
                             }
@@ -403,7 +403,7 @@ fun knowledgeSourceRow(
             modifier = Modifier.weight(1f),
         ) {
             Icon(
-                source.icon,
+                source.typeInfo.icon,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 8.dp).size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
