@@ -197,6 +197,18 @@ data class ChatConfig(
 )
 
 /**
+ * Backup and restore configuration
+ */
+data class BackupConfig(
+    val autoBackupEnabled: Boolean = false,
+    val autoBackupOnStartup: Boolean = false,
+    val autoBackupIntervalHours: Int = 24,
+    val maxAutoBackupsToKeep: Int = 5,
+    val createBackupOnUpgrade: Boolean = true,
+    val createBackupBeforeRestore: Boolean = true,
+)
+
+/**
  * RAG (Retrieval-Augmented Generation) configuration.
  * Controls how relevant documents are retrieved from the knowledge base.
  */
@@ -294,6 +306,7 @@ data class AppConfigData(
     val indexing: IndexingConfig = IndexingConfig(),
     val developer: DeveloperConfig = DeveloperConfig(),
     val chat: ChatConfig = ChatConfig(),
+    val backup: BackupConfig = BackupConfig(),
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
 )
@@ -554,6 +567,16 @@ object AppConfig {
                 ),
             )
 
+        val backup =
+            BackupConfig(
+                autoBackupEnabled = System.getenv("ASKIMO_BACKUP_AUTO_ENABLED")?.toBoolean() ?: true,
+                autoBackupOnStartup = System.getenv("ASKIMO_BACKUP_ON_STARTUP")?.toBoolean() ?: false,
+                autoBackupIntervalHours = envInt("ASKIMO_BACKUP_INTERVAL_HOURS", 24),
+                maxAutoBackupsToKeep = envInt("ASKIMO_BACKUP_MAX_TO_KEEP", 5),
+                createBackupOnUpgrade = System.getenv("ASKIMO_BACKUP_ON_UPGRADE")?.toBoolean() ?: true,
+                createBackupBeforeRestore = System.getenv("ASKIMO_BACKUP_BEFORE_RESTORE")?.toBoolean() ?: true,
+            )
+
         val rag =
             RagConfig(
                 vectorSearchMaxResults = envInt("ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS", 20),
@@ -628,7 +651,7 @@ object AppConfig {
                 xai = xaiModelConfig,
             )
 
-        return AppConfigData(emb, r, t, idx, dev, chat, rag, models)
+        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models)
     }
 
     /** Load proxy configuration from environment variables only - never persisted to file */
@@ -666,6 +689,7 @@ object AppConfig {
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
+                "backup" -> current.copy(backup = updateBackupField(current.backup, field, value))
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
                 else -> {
@@ -726,6 +750,16 @@ object AppConfig {
             )
             config.copy(defaultResponseAILocale = newLocale)
         }
+        else -> config
+    }
+
+    private fun updateBackupField(config: BackupConfig, field: String, value: Any): BackupConfig = when (field) {
+        "autoBackupEnabled" -> config.copy(autoBackupEnabled = value as Boolean)
+        "autoBackupOnStartup" -> config.copy(autoBackupOnStartup = value as Boolean)
+        "autoBackupIntervalHours" -> config.copy(autoBackupIntervalHours = value as Int)
+        "maxAutoBackupsToKeep" -> config.copy(maxAutoBackupsToKeep = value as Int)
+        "createBackupOnUpgrade" -> config.copy(createBackupOnUpgrade = value as Boolean)
+        "createBackupBeforeRestore" -> config.copy(createBackupBeforeRestore = value as Boolean)
         else -> config
     }
 

@@ -61,6 +61,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.backup.BackupManager
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
@@ -138,9 +139,15 @@ import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
 import java.awt.Desktop
+import java.io.File
 import java.net.URI
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import javax.swing.JFileChooser
 import kotlin.system.exitProcess
 
 /**
@@ -296,6 +303,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var fileViewerPath by remember { mutableStateOf("") }
     var fileViewerContent by remember { mutableStateOf("") }
     var fileViewerTitle by remember { mutableStateOf("File Viewer") }
+    var showImportBackupConfirm by remember { mutableStateOf(false) }
+    var pendingImportBackupPath by remember { mutableStateOf<Path?>(null) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -374,6 +383,77 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     }
 
     val scope = rememberCoroutineScope()
+
+    // Backup and restore helper functions
+    fun exportBackup() {
+        scope.launch {
+            try {
+                val timestamp = withContext(Dispatchers.IO) {
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                }
+                val defaultFileName = "askimo_backup_$timestamp.zip"
+
+                val fileChooser = JFileChooser().apply {
+                    dialogTitle = LocalizationManager.getString("backup.export.title")
+                    selectedFile = File(System.getProperty("user.home"), defaultFileName)
+                    fileSelectionMode = JFileChooser.FILES_ONLY
+                }
+
+                val result = fileChooser.showSaveDialog(null)
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    var selectedPath = fileChooser.selectedFile.absolutePath
+                    // Ensure .zip extension
+                    if (!selectedPath.endsWith(".zip")) {
+                        selectedPath = "$selectedPath.zip"
+                    }
+
+                    val backupFile = withContext(Dispatchers.IO) {
+                        BackupManager.exportBackup(Paths.get(selectedPath))
+                    }
+
+                    errorDialogTitle = LocalizationManager.getString("backup.export.success.title")
+                    errorDialogMessage = LocalizationManager.getString("backup.export.success.message", backupFile.toString())
+                    errorDialogLinkText = null
+                    errorDialogLinkUrl = null
+                    showErrorDialog = true
+                }
+            } catch (e: Exception) {
+                errorDialogTitle = LocalizationManager.getString("backup.export.error.title")
+                errorDialogMessage = LocalizationManager.getString("backup.export.error.message", e.message ?: "Unknown error")
+                errorDialogLinkText = null
+                errorDialogLinkUrl = null
+                showErrorDialog = true
+                log.error("Error exporting backup", e)
+            }
+        }
+    }
+
+    fun importBackup() {
+        scope.launch {
+            try {
+                val fileChooser = JFileChooser().apply {
+                    dialogTitle = LocalizationManager.getString("backup.import.title")
+                    fileSelectionMode = JFileChooser.FILES_ONLY
+                    currentDirectory = File(System.getProperty("user.home"))
+                }
+
+                val result = fileChooser.showOpenDialog(null)
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    val selectedPath = fileChooser.selectedFile.absolutePath
+
+                    pendingImportBackupPath = Paths.get(selectedPath)
+                    showImportBackupConfirm = true
+                }
+            } catch (e: Exception) {
+                errorDialogTitle = LocalizationManager.getString("backup.import.error.title")
+                errorDialogMessage = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error")
+                errorDialogLinkText = null
+                errorDialogLinkUrl = null
+                showErrorDialog = true
+                log.error("Error importing backup", e)
+            }
+        }
+    }
 
     val koin = get()
 
@@ -540,6 +620,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 },
                 onInvalidateCaches = {
                     showInvalidateCacheDialog = true
+                },
+                onExportBackup = {
+                    exportBackup()
+                },
+                onImportBackup = {
+                    importBackup()
                 },
             )
         }
@@ -1011,6 +1097,64 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.ok"))
+                            }
+                        },
+                    )
+                }
+
+                // Import backup confirmation dialog
+                if (showImportBackupConfirm) {
+                    ComponentColors.themedAlertDialog(
+                        onDismissRequest = {
+                            showImportBackupConfirm = false
+                            pendingImportBackupPath = null
+                        },
+                        title = { Text(stringResource("backup.import.confirm.title")) },
+                        text = { Text(stringResource("backup.import.confirm.message")) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showImportBackupConfirm = false
+                                    pendingImportBackupPath?.let { path ->
+                                        scope.launch {
+                                            try {
+                                                withContext(Dispatchers.IO) {
+                                                    BackupManager.importBackup(path)
+                                                }
+
+                                                errorDialogTitle = LocalizationManager.getString("backup.import.success.title")
+                                                errorDialogMessage = LocalizationManager.getString("backup.import.success.message")
+                                                errorDialogLinkText = null
+                                                errorDialogLinkUrl = null
+                                                showErrorDialog = true
+                                            } catch (e: Exception) {
+                                                errorDialogTitle = LocalizationManager.getString("backup.import.error.title")
+                                                errorDialogMessage = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error")
+                                                errorDialogLinkText = null
+                                                errorDialogLinkUrl = null
+                                                showErrorDialog = true
+                                                log.error("Error importing backup.", e)
+                                            } finally {
+                                                pendingImportBackupPath = null
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.yes"))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showImportBackupConfirm = false
+                                    pendingImportBackupPath = null
+                                },
+                                colors = ComponentColors.primaryTextButtonColors(),
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Text(stringResource("action.cancel"))
                             }
                         },
                     )

@@ -54,6 +54,10 @@ object KeyMapManager {
         // Project shortcuts
         CREATE_PROJECT("shortcut.create.project", Key.N, requiresPrimaryModifier = true, requiresShift = true),
 
+        // Backup shortcuts
+        EXPORT_BACKUP("shortcut.export.backup", Key.E, requiresPrimaryModifier = true, requiresShift = true),
+        IMPORT_BACKUP("shortcut.import.backup", Key.I, requiresPrimaryModifier = true, requiresShift = true),
+
         // Search shortcuts (platform-specific)
         CLOSE_SEARCH("shortcut.close.search", Key.Escape),
         NEXT_SEARCH_RESULT("shortcut.next.search.result", Key.G, requiresPrimaryModifier = true),
@@ -139,6 +143,10 @@ object KeyMapManager {
             AppShortcut.OPEN_SETTINGS,
             AppShortcut.STOP_AI_RESPONSE,
             AppShortcut.QUIT_APPLICATION,
+        ),
+        LocalizationManager.getString("shortcut.category.file") to listOf(
+            AppShortcut.EXPORT_BACKUP,
+            AppShortcut.IMPORT_BACKUP,
         ),
         LocalizationManager.getString("shortcut.category.view") to listOf(
             AppShortcut.NAVIGATE_TO_SESSIONS,
