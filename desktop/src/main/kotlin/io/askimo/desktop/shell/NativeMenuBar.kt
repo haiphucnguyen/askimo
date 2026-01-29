@@ -46,11 +46,13 @@ object NativeMenuBar {
         onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
         onInvalidateCaches: () -> Unit,
+        onExportBackup: () -> Unit,
+        onImportBackup: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -87,6 +89,8 @@ object NativeMenuBar {
         onNavigateToProjects: () -> Unit,
         onToggleSidebar: () -> Unit,
         onInvalidateCaches: () -> Unit,
+        onExportBackup: () -> Unit,
+        onImportBackup: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -128,6 +132,30 @@ object NativeMenuBar {
                 },
             )
             fileMenu.add(searchSessionsItem)
+
+            fileMenu.addSeparator()
+
+            val exportBackupItem = MenuItem(
+                LocalizationManager.getString("menu.export.backup"),
+                MenuShortcut(KeyEvent.VK_E, true), // Shift+Ctrl+E (or Shift+Cmd+E on Mac)
+            )
+            exportBackupItem.addActionListener(
+                ActionListener {
+                    onExportBackup()
+                },
+            )
+            fileMenu.add(exportBackupItem)
+
+            val importBackupItem = MenuItem(
+                LocalizationManager.getString("menu.import.backup"),
+                MenuShortcut(KeyEvent.VK_I, true), // Shift+Ctrl+I (or Shift+Cmd+I on Mac)
+            )
+            importBackupItem.addActionListener(
+                ActionListener {
+                    onImportBackup()
+                },
+            )
+            fileMenu.add(importBackupItem)
 
             fileMenu.addSeparator()
 

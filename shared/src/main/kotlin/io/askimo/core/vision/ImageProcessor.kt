@@ -22,12 +22,14 @@ object ImageProcessor {
     private val log = logger<ImageProcessor>()
 
     // ===== Tunables (safe for GPT-4o vision) =====
-    const val DEFAULT_MAX_WIDTH = 1024
-    const val DEFAULT_MAX_HEIGHT = 1024
-    const val DEFAULT_JPEG_QUALITY = 0.80f
+    const val DEFAULT_MAX_WIDTH = 2048 // Increased for better detail preservation
+    const val DEFAULT_MAX_HEIGHT = 2048 // Increased for better detail preservation
+    const val DEFAULT_JPEG_QUALITY = 0.90f // Higher initial quality
     private const val MIN_WIDTH = 640
-    private const val MAX_TARGET_BYTES = 120_000
-    private const val MIN_JPEG_QUALITY = 0.65f
+    private const val MAX_TARGET_BYTES = 500_000 // 500KB - better quality budget
+    private const val MIN_JPEG_QUALITY = 0.75f // Higher quality floor
+    private const val QUALITY_STEP = 0.03f // Finer quality adjustments
+    private const val MAX_SCALE_DOWN_RATIO = 0.5 // Never scale down more than 50% for detail preservation
 
     /**
      * Process an image to reduce token usage and keep vision accuracy.
@@ -60,27 +62,59 @@ object ImageProcessor {
                     normalizeImage(originalImage)
                 }
 
+            // Adaptive compression: prioritize quality over file size
             var quality = jpegQuality
             var compressed: ByteArray
+            var attempts = 0
+            val maxAttempts = 15
 
             do {
                 compressed = compressJpeg(resizedImage, quality)
-                quality -= 0.05f
-            } while (
-                compressed.size > MAX_TARGET_BYTES &&
-                quality >= MIN_JPEG_QUALITY
-            )
+                attempts++
+
+                // Accept result if within reasonable size or quality floor reached
+                if (compressed.size <= MAX_TARGET_BYTES || quality <= MIN_JPEG_QUALITY) {
+                    break
+                }
+
+                quality -= QUALITY_STEP
+            } while (attempts < maxAttempts)
 
             val savedBytes = imageBytes.size - compressed.size
             val savedPercent =
                 ((1.0 - compressed.size.toDouble() / imageBytes.size) * 100).toInt()
 
+            // Warn if compression is too aggressive
+            if (savedPercent > 90) {
+                log.warn(
+                    "Aggressive compression detected ($savedPercent% reduction). " +
+                        "Consider using higher quality images or reducing resolution before upload. " +
+                        "Final quality: ${"%.2f".format(quality)}",
+                )
+            }
+
             log.debug(
                 "Image processed: ${originalWidth}x$originalHeight → " +
                     "${resizedImage.width}x${resizedImage.height}, " +
                     "size ${imageBytes.size} → ${compressed.size} bytes " +
-                    "(-$savedBytes, $savedPercent%)",
+                    "(-$savedBytes, $savedPercent%), quality=${"%.2f".format(quality)}",
             )
+
+            // Save to temp file for debugging if debug logging is enabled
+            if (log.isDebugEnabled) {
+                try {
+                    val tempDir = java.io.File(System.getProperty("java.io.tmpdir"), "askimo-images")
+                    tempDir.mkdirs()
+                    val timestamp = java.time.LocalDateTime.now().format(
+                        java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"),
+                    )
+                    val debugFile = java.io.File(tempDir, "processed_${timestamp}_${newWidth}x${newHeight}_q${String.format("%.2f", quality)}.jpg")
+                    debugFile.writeBytes(compressed)
+                    log.debug("Saved processed image to: ${debugFile.absolutePath}")
+                } catch (e: Exception) {
+                    log.debug("Failed to save debug image: ${e.message}")
+                }
+            }
 
             return ProcessedImage(
                 bytes = compressed,
@@ -118,17 +152,23 @@ object ImageProcessor {
         maxWidth: Int,
         maxHeight: Int,
     ): Pair<Int, Int> {
+        // Don't downscale if already within limits
         if (width <= maxWidth && height <= maxHeight) {
             return width to height
         }
 
+        // Calculate normal scaling ratio
         val ratio = min(
             maxWidth.toDouble() / width,
             maxHeight.toDouble() / height,
         )
 
-        val newWidth = max((width * ratio).toInt(), MIN_WIDTH)
-        val newHeight = max((height * ratio).toInt(), 1)
+        // Smart scaling: preserve detail by never scaling down more than 50%
+        // This prevents excessive quality loss on high-resolution images
+        val safeRatio = max(ratio, MAX_SCALE_DOWN_RATIO)
+
+        val newWidth = max((width * safeRatio).toInt(), MIN_WIDTH)
+        val newHeight = max((height * safeRatio).toInt(), 1)
 
         return newWidth to newHeight
     }
@@ -199,7 +239,10 @@ object ImageProcessor {
         val params = writer.defaultWriteParam
 
         params.compressionMode = ImageWriteParam.MODE_EXPLICIT
-        params.compressionQuality = quality
+        params.compressionQuality = quality.coerceIn(0f, 1f)
+
+        // Enable progressive JPEG for better quality perception at same file size
+        params.progressiveMode = ImageWriteParam.MODE_DEFAULT
 
         MemoryCacheImageOutputStream(out).use {
             writer.output = it
