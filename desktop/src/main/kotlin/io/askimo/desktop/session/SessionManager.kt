@@ -239,6 +239,13 @@ class SessionManager(
                 val savedMessage = chatSessionService.saveAiResponse(sessionId, failedResponse, isFailed = true)
                 thread.setSavedMessage(savedMessage)
 
+                if (failedResponse != partialResponse) {
+                    val remainingContent = failedResponse.substring(partialResponse.length)
+                    if (remainingContent.isNotEmpty()) {
+                        thread.appendChunk(remainingContent)
+                    }
+                }
+
                 // Mark as complete so the ChatViewModel's completion monitoring triggers
                 // and replaces the temporary message with the saved one from database
                 thread.markComplete()

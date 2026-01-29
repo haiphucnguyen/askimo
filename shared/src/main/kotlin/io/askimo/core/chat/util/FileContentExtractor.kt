@@ -38,7 +38,7 @@ object FileContentExtractor {
         if (FileTypeSupport.isTextExtractable(extension) &&
             extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
         ) {
-            return file.readText()
+            return ContentSanitizer.sanitizeTemplateVariables(file.readText())
         }
 
         val mimeType = detectMimeType(file)
@@ -63,19 +63,19 @@ object FileContentExtractor {
                 mimeType.contains("application/vnd.ms-outlook") ||
                 // RTF
                 mimeType.contains("rtf") -> {
-                extractUsingTika(file)
+                ContentSanitizer.sanitizeTemplateVariables(extractUsingTika(file))
             }
             // Plain text files (includes CSV, TSV, etc.)
             mimeType.startsWith("text/") ||
                 mimeType in SUPPORTED_APPLICATION_TYPES -> {
-                file.readText()
+                ContentSanitizer.sanitizeTemplateVariables(file.readText())
             }
             // Fallback: Extension-based check for files Tika misdetects
             // This handles .md, .gradle.kts, .gitignore, and other text files
             mimeType == "application/octet-stream" ||
                 mimeType.startsWith("application/x-") -> {
                 if (extension in FileTypeSupport.DOCUMENT_EXTENSIONS) {
-                    extractUsingTika(file)
+                    ContentSanitizer.sanitizeTemplateVariables(extractUsingTika(file))
                 } else {
                     throw UnsupportedOperationException("Cannot extract content from: $mimeType (extension: .$extension)")
                 }
