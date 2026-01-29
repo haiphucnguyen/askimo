@@ -48,11 +48,12 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
+        onShowMcpConnectors: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowMcpConnectors)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -91,6 +92,7 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
+        onShowMcpConnectors: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -294,6 +296,22 @@ object NativeMenuBar {
             viewMenu.add(fullScreenItem)
 
             menuBar.add(viewMenu)
+
+            // Tools Menu
+            val toolsMenu = Menu(LocalizationManager.getString("menu.tools"))
+
+            val mcpConnectorsItem = MenuItem(
+                LocalizationManager.getString("menu.tools.mcp.connectors"),
+                MenuShortcut(KeyEvent.VK_M, true), // Ctrl+Shift+M (or Cmd+Shift+M on Mac)
+            )
+            mcpConnectorsItem.addActionListener(
+                ActionListener {
+                    onShowMcpConnectors()
+                },
+            )
+            toolsMenu.add(mcpConnectorsItem)
+
+            menuBar.add(toolsMenu)
 
             // Help Menu
             val helpMenu = Menu(LocalizationManager.getString("menu.help"))

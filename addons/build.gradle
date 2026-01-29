@@ -1,0 +1,15 @@
+// Umbrella project for Askimo plugin connectors
+// This module contains MCP server implementations for external integrations
+//
+// Structure:
+// - addons/postgres: PostgreSQL MCP connector
+// - addons/mongodb: MongoDB MCP connector (future)
+// - addons/git: Git MCP connector (future)
+// - addons/github: GitHub MCP connector (future)
+// - addons/slack: Slack MCP connector (future)
+
+group = projectGroup + '.addons'
+version = projectVersion
+
+// This is an umbrella project - no direct dependencies
+// Each submodule has its own build configuration
