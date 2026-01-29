@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -61,6 +62,7 @@ enum class SettingsSection {
     APPEARANCE,
     SHORTCUTS,
     ADVANCED,
+    MCP_CONNECTORS,
     ABOUT,
 }
 
@@ -190,6 +192,12 @@ fun settingsViewWithSidebar(
                         onClick = { selectedSection = SettingsSection.ADVANCED },
                     )
                     settingsSidebarItem(
+                        title = "MCP Connectors",
+                        icon = Icons.Default.Extension,
+                        isSelected = selectedSection == SettingsSection.MCP_CONNECTORS,
+                        onClick = { selectedSection = SettingsSection.MCP_CONNECTORS },
+                    )
+                    settingsSidebarItem(
                         title = stringResource("settings.about"),
                         icon = Icons.Default.Info,
                         isSelected = selectedSection == SettingsSection.ABOUT,
@@ -250,6 +258,7 @@ fun settingsViewWithSidebar(
                         SettingsSection.APPEARANCE -> appearanceSettingsSection()
                         SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
                         SettingsSection.ADVANCED -> advancedSettingsSection()
+                        SettingsSection.MCP_CONNECTORS -> mcpConnectorsSettingsSection()
                         SettingsSection.ABOUT -> aboutSettingsSection()
                     }
                 } // End Box (main content)

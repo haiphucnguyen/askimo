@@ -1,0 +1,27 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group = projectGroup + '.addons'
+version = projectVersion
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api libs.langchain4j.mcp
+
+    // Kotlin coroutines
+    implementation libs.kotlinx.coroutines.core
+
+    // Testing - postgres connector for ServiceLoader tests
+    testImplementation project(':addons:postgres')
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testImplementation libs.kotlin.test
+}
+
+test {
+    useJUnitPlatform()
+}

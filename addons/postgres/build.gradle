@@ -1,0 +1,15 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group = projectGroup + '.addons'
+version = projectVersion
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':addons:mcp-connector')
+}
+

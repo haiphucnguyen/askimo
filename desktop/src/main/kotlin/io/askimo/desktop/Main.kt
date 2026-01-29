@@ -113,6 +113,7 @@ import io.askimo.desktop.session.exportSessionDialog
 import io.askimo.desktop.session.renameSessionDialog
 import io.askimo.desktop.session.sessionMemoryDialog
 import io.askimo.desktop.session.sessionsView
+import io.askimo.desktop.settings.SettingsSection
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.settings.aboutDialog
 import io.askimo.desktop.settings.fileViewerDialog
@@ -288,6 +289,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showEventLogWindow by remember { mutableStateOf(false) }
     var showEventLogPanel by remember { mutableStateOf(false) }
     var eventLogDockPosition by remember { mutableStateOf(EventLogDockPosition.BOTTOM) }
+    var settingsInitialSection by remember { mutableStateOf(SettingsSection.GENERAL) }
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
@@ -627,6 +629,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onImportBackup = {
                     importBackup()
                 },
+                onShowMcpConnectors = {
+                    settingsInitialSection = SettingsSection.MCP_CONNECTORS
+                    currentView = View.SETTINGS
+                },
             )
         }
     }
@@ -697,8 +703,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             settingsViewWithSidebar(
                                 onClose = {
                                     currentView = previousView
+                                    settingsInitialSection = SettingsSection.GENERAL
                                 },
                                 settingsViewModel = settingsViewModel,
+                                initialSection = settingsInitialSection,
                             )
                         } else {
                             // Main View - With sidebar and content
