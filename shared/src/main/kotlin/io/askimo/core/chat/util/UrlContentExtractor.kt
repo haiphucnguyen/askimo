@@ -82,7 +82,7 @@ object UrlContentExtractor {
                     ExtractedUrlContent(
                         url = normalizedUrl,
                         title = extractTitleFromUrl(normalizedUrl),
-                        content = text.trim(),
+                        content = ContentSanitizer.sanitizeTemplateVariables(text.trim()),
                         contentType = contentType,
                     )
                 }
@@ -120,7 +120,7 @@ object UrlContentExtractor {
         return ExtractedUrlContent(
             url = url,
             title = title,
-            content = finalContent,
+            content = ContentSanitizer.sanitizeTemplateVariables(finalContent),
             contentType = "text/html",
         )
     }
@@ -155,7 +155,7 @@ object UrlContentExtractor {
                 return ExtractedUrlContent(
                     url = url,
                     title = title,
-                    content = extractedText,
+                    content = ContentSanitizer.sanitizeTemplateVariables(extractedText),
                     contentType = contentType,
                 )
             }
