@@ -105,7 +105,27 @@ fun chatInputField(
     val inputFocusRequester = remember { FocusRequester() }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
-    var textFieldHeight by remember { mutableStateOf(60.dp) }
+    val defaultTextFieldHeight = 60.dp
+    var textFieldHeight by remember { mutableStateOf(defaultTextFieldHeight) }
+    var manuallyResized by remember { mutableStateOf(false) }
+
+    // Calculate desired height based on text content
+    val lineCount = remember(inputText.text) {
+        if (inputText.text.isEmpty()) 1 else inputText.text.count { it == '\n' } + 1
+    }
+
+    // Approximate height per line (can be adjusted based on your text style)
+    val lineHeight = 24.dp
+    val padding = 36.dp // Top and bottom padding for the text field
+    val calculatedHeight = (lineHeight * lineCount) + padding
+
+    // Reset height to default when message is sent (detected by empty input text)
+    LaunchedEffect(inputText.text) {
+        if (inputText.text.isEmpty()) {
+            textFieldHeight = defaultTextFieldHeight
+            manuallyResized = false
+        }
+    }
 
     // Focus input field when entering edit mode
     LaunchedEffect(editingMessage) {
@@ -257,8 +277,15 @@ fun chatInputField(
                 modifier = Modifier.weight(1f),
             ) {
                 val maxAvailableHeight = maxHeight
-                val minTextFieldHeight = 60.dp
+                val minTextFieldHeight = defaultTextFieldHeight
                 val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(minTextFieldHeight)
+
+                // Auto-calculate height if not manually resized
+                LaunchedEffect(calculatedHeight, manuallyResized) {
+                    if (!manuallyResized) {
+                        textFieldHeight = calculatedHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                    }
+                }
 
                 Column {
                     // Resize handle
@@ -275,6 +302,7 @@ fun chatInputField(
                                     change.consume()
                                     val newHeight = textFieldHeight - dragAmount.toDp()
                                     textFieldHeight = newHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                                    manuallyResized = true
                                 }
                             },
                         contentAlignment = Alignment.Center,
