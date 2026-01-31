@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.addons.postgres
+package io.askimo.addons.mcp.mongo
 
 import dev.langchain4j.mcp.client.transport.McpTransport
 import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport
@@ -14,7 +14,7 @@ import io.askimo.addons.mcp.McpConnector
  * Multiple instances can exist with different configs (different databases, schemas, etc.).
  * This allows multiple projects to connect to different PostgreSQL servers.
  */
-class PostgresMcpConnector(
+class MongoMcpConnector(
     private val config: Map<String, String>,
 ) : McpConnector() {
 

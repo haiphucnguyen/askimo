@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
@@ -28,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,11 +36,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.askimo.addons.mcp.McpConnectorLoader
 import io.askimo.addons.mcp.McpConnectorProvider
+import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
 
 @Composable
@@ -57,16 +61,16 @@ fun mcpConnectorsSettingsSection() {
     ) {
         // Header
         Text(
-            text = "MCP Connectors",
+            text = stringResource("settings.mcp.connectors"),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = Spacing.small),
         )
 
         Text(
-            text = "Manage Model Context Protocol integrations",
+            text = stringResource("settings.mcp.connectors.description"),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
         )
 
         if (providers.isEmpty()) {
@@ -105,7 +109,7 @@ fun mcpConnectorsSettingsSection() {
 @Composable
 private fun emptyStateView() {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.extraLarge),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -116,19 +120,19 @@ private fun emptyStateView() {
                 imageVector = Icons.Default.Extension,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
             )
             Spacer(modifier = Modifier.height(Spacing.large))
             Text(
-                text = "No MCP Connectors Found",
+                text = stringResource("settings.mcp.connectors.empty.title"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(modifier = Modifier.height(Spacing.small))
             Text(
-                text = "Add connector modules to the addons directory to get started",
+                text = stringResource("settings.mcp.connectors.empty.description"),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
         }
     }
@@ -143,9 +147,11 @@ private fun connectorCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier.padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
             // Header with icon and name
             Row(
@@ -168,36 +174,31 @@ private fun connectorCard(
                         Text(
                             text = provider.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Text(
                             text = "v${provider.version}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(Spacing.medium))
-
             // Description
             Text(
                 text = provider.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
             )
-
-            Spacer(modifier = Modifier.height(Spacing.medium))
 
             // Configuration requirements
             if (provider.configSchema.isNotEmpty()) {
                 Text(
-                    text = "Configuration required:",
+                    text = stringResource("settings.mcp.connectors.configuration.required"),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
-                Spacer(modifier = Modifier.height(Spacing.small))
 
                 provider.configSchema.entries.take(3).forEach { (key, field) ->
                     Row(
@@ -211,13 +212,13 @@ private fun connectorCard(
                             tint = if (field.required) {
                                 MaterialTheme.colorScheme.primary
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
                             },
                         )
                         Text(
                             text = field.label + if (field.required) " (required)" else " (optional)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                         )
                     }
                 }
@@ -226,13 +227,11 @@ private fun connectorCard(
                     Text(
                         text = "... and ${provider.configSchema.size - 3} more",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                         modifier = Modifier.padding(start = 24.dp),
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(Spacing.medium))
 
             // Actions
             Row(
@@ -242,28 +241,32 @@ private fun connectorCard(
                 // Configure button
                 OutlinedButton(
                     onClick = onConfigure,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.subtleButtonColors(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
-                    Spacer(modifier = Modifier.width(Spacing.small))
-                    Text("Configure")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource("settings.mcp.connectors.configure"))
                 }
 
                 // Homepage link
                 provider.homepage?.let { homepage ->
                     OutlinedButton(
                         onClick = { uriHandler.openUri(homepage) },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = ComponentColors.subtleButtonColors(),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
-                        Spacer(modifier = Modifier.width(Spacing.small))
-                        Text("Documentation")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource("settings.mcp.connectors.documentation"))
                     }
                 }
             }
@@ -280,7 +283,7 @@ private fun connectorConfigDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Configure ${provider.name}",
+                text = stringResource("settings.mcp.connectors.configure.title", provider.name),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         },
@@ -289,7 +292,7 @@ private fun connectorConfigDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.medium),
             ) {
                 Text(
-                    text = "Configuration schema for ${provider.name}:",
+                    text = stringResource("settings.mcp.connectors.configure.schema", provider.name),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -307,13 +310,13 @@ private fun connectorConfigDialog(
                             Text(
                                 text = desc,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             )
                         }
                         Text(
                             text = "Key: $key",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontFamily = FontFamily.Monospace,
                         )
                     }
@@ -322,16 +325,18 @@ private fun connectorConfigDialog(
                 Spacer(modifier = Modifier.height(Spacing.small))
 
                 Text(
-                    text = "Note: Connector configuration is managed per-project. " +
-                        "Go to Project Settings to enable and configure this connector for specific projects.",
+                    text = stringResource("settings.mcp.connectors.configure.note"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Text(stringResource("dialog.close"))
             }
         },
     )

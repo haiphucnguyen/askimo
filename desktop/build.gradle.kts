@@ -46,6 +46,7 @@ dependencies {
     implementation(compose.materialIconsExtended)
     implementation(project(":shared"))
     implementation(project(":addons:mcp-connector"))
+    implementation(project(":addons:mcp-connector-mongo"))
     implementation(libs.bundles.commonmark)
     implementation(libs.commonmark.ext.autolink)
     implementation(libs.coil.compose)

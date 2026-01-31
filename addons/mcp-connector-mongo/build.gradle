@@ -12,4 +12,3 @@ repositories {
 dependencies {
     implementation project(':addons:mcp-connector')
 }
-

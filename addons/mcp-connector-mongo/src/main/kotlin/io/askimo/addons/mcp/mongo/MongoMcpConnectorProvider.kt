@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2025 Hai Nguyen
  */
-package io.askimo.addons.postgres
+package io.askimo.addons.mcp.mongo
 
 import io.askimo.addons.mcp.ConfigField
 import io.askimo.addons.mcp.ConfigFieldType
@@ -18,22 +18,22 @@ import io.askimo.addons.mcp.McpConnectorProvider
  *
  * Registered via META-INF/services to enable automatic discovery by Java's ServiceLoader.
  */
-class PostgresMcpConnectorProvider : McpConnectorProvider {
+class MongoMcpConnectorProvider : McpConnectorProvider {
 
-    override val id = "io.askimo.addons.postgres"
+    override val id = "io.askimo.addons.mcp.mongo"
 
-    override val name = "PostgreSQL"
+    override val name = "Mongo"
 
     override val version = "1.2.12"
 
-    override val description = "Query and manage PostgreSQL databases using natural language"
+    override val description = "Query and manage Mongo databases using natural language"
 
-    override val homepage = "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres"
+    override val homepage = "https://github.com/mongodb-js/mongodb-mcp-server"
 
     override val configSchema = mapOf(
-        "postgres.uri" to ConfigField(
+        "mongo.uri" to ConfigField(
             type = ConfigFieldType.TEXT,
-            label = "PostgreSQL Connection URI",
+            label = "Mongo Connection URI",
             description = "Format: postgresql://username:password@hostname:port/database",
             required = true,
             secret = true,
@@ -47,5 +47,5 @@ class PostgresMcpConnectorProvider : McpConnectorProvider {
         ),
     )
 
-    override fun createConnector(config: Map<String, String>): McpConnector = PostgresMcpConnector(config)
+    override fun createConnector(config: Map<String, String>): McpConnector = MongoMcpConnector(config)
 }

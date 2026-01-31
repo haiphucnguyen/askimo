@@ -16,7 +16,7 @@ dependencies {
     implementation libs.kotlinx.coroutines.core
 
     // Testing - postgres connector for ServiceLoader tests
-    testImplementation project(':addons:postgres')
+    testImplementation project(':addons:mcp-connector-mongo')
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testImplementation libs.kotlin.test
