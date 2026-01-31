@@ -11,6 +11,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.desktop.common.monitoring.SystemResourceMonitor
 import io.askimo.desktop.project.ProjectViewModel
 import io.askimo.desktop.project.ProjectsViewModel
+import io.askimo.desktop.service.ProjectConnectorService
 import io.askimo.desktop.service.UpdateService
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.session.SessionsViewModel
@@ -34,6 +35,7 @@ val desktopModule = module {
     single { get<DatabaseManager>().getChatMessageRepository() }
     single { get<DatabaseManager>().getChatDirectiveRepository() }
     single { get<DatabaseManager>().getProjectRepository() }
+    single { get<DatabaseManager>().getProjectConnectorRepository() }
 
     single {
         ChatSessionService(
@@ -49,6 +51,12 @@ val desktopModule = module {
         )
     }
     single { ChatDirectiveService(repository = get()) }
+
+    single {
+        ProjectConnectorService(
+            repository = get(),
+        )
+    }
 
     single { SystemResourceMonitor() }
 

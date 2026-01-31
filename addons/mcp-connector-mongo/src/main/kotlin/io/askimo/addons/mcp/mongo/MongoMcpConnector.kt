@@ -9,25 +9,34 @@ import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport
 import io.askimo.addons.mcp.McpConnector
 
 /**
- * PostgreSQL MCP connector instance with specific configuration.
+ * MongoDB MCP connector instance with specific configuration.
  *
- * Multiple instances can exist with different configs (different databases, schemas, etc.).
- * This allows multiple projects to connect to different PostgreSQL servers.
+ * Multiple instances can exist with different configs (different databases, collections, etc.).
+ * This allows multiple projects to connect to different MongoDB servers.
  */
 class MongoMcpConnector(
     private val config: Map<String, String>,
 ) : McpConnector() {
 
     override suspend fun createTransport(): McpTransport {
-        val uri = config["postgres.uri"]
-            ?: throw IllegalArgumentException("Missing required config: postgres.uri")
+        val uri = config["mongo.uri"]
+            ?: throw IllegalArgumentException("Missing required config: mongo.uri")
 
-        val schema = config["postgres.schema"] ?: "public"
+        val database = config["mongo.database"]
 
-        // Create stdio transport for the official PostgreSQL MCP server
+        // Create stdio transport for the MongoDB MCP server
+        // https://github.com/mongodb-js/mongodb-mcp-server
+        val command = buildList {
+            add("npx")
+            add("-y")
+            add("mongodb-mcp-server@latest")
+            add("--readOnly")
+            add(uri)
+            database?.let { add(it) }
+        }
+
         return StdioMcpTransport.builder()
-            .command(listOf("npx", "-y", "@modelcontextprotocol/server-postgres", uri))
-            .environment(mapOf("PGSCHEMA" to schema))
+            .command(command)
             .build()
     }
 }

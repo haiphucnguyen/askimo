@@ -11,6 +11,7 @@ import io.askimo.core.chat.repository.ChatMessageAttachmentRepository
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ModelClassificationRepository
+import io.askimo.core.chat.repository.ProjectConnectorRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
@@ -93,6 +94,7 @@ class DatabaseManager private constructor(
     private fun initializeTables(connection: Connection) {
         // Create tables in dependency order (respecting foreign key constraints)
         createProjectsTable(connection)
+        createProjectConnectorsTable(connection)
         createSessionsTable(connection)
         createMessagesTable(connection)
         createAttachmentsTable(connection)
@@ -116,6 +118,43 @@ class DatabaseManager private constructor(
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
+                """,
+            )
+        }
+    }
+
+    private fun createProjectConnectorsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.execute("PRAGMA foreign_keys = ON")
+
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS project_connectors (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    connector_provider_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    config TEXT NOT NULL,
+                    enabled INTEGER DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+                """,
+            )
+
+            // Create indexes for efficient lookups
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_project_connectors_project_id
+                ON project_connectors(project_id)
+                """,
+            )
+
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_project_connectors_provider_id
+                ON project_connectors(connector_provider_id)
                 """,
             )
         }
@@ -419,6 +458,10 @@ class DatabaseManager private constructor(
         ProjectRepository(this)
     }
 
+    private val _projectConnectorRepository: ProjectConnectorRepository by lazy {
+        ProjectConnectorRepository(this)
+    }
+
     private val _resourceSegmentRepository: ResourceSegmentRepository by lazy {
         ResourceSegmentRepository(this)
     }
@@ -464,6 +507,12 @@ class DatabaseManager private constructor(
     fun getProjectRepository(): ProjectRepository = _projectRepository
 
     /**
+     * Get the singleton ProjectConnectorRepository instance.
+     * All access to project connectors should go through this repository.
+     */
+    fun getProjectConnectorRepository(): ProjectConnectorRepository = _projectConnectorRepository
+
+    /**
      * Get the singleton ResourceSegmentRepository instance.
      * All access to resource-segment mappings should go through this repository.
      */
@@ -474,14 +523,6 @@ class DatabaseManager private constructor(
      * All access to model classifications should go through this repository.
      */
     fun getModelClassificationRepository(): ModelClassificationRepository = _modelClassificationRepository
-
-    /**
-     * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).
-     * All access to file-segment mappings should go through this repository.
-     * @deprecated Use getResourceSegmentRepository() instead
-     */
-    @Deprecated("Use getResourceSegmentRepository() instead", ReplaceWith("getResourceSegmentRepository()"))
-    fun getFileSegmentRepository(): ResourceSegmentRepository = _resourceSegmentRepository
 
     /**
      * Closes the HikariCP connection pool and releases all database resources.

@@ -10,9 +10,9 @@ import io.askimo.addons.mcp.McpConnector
 import io.askimo.addons.mcp.McpConnectorProvider
 
 /**
- * ServiceLoader provider for PostgreSQL MCP connector.
+ * ServiceLoader provider for MongoDB MCP connector.
  *
- * This class defines WHAT the PostgreSQL connector is and what config it needs,
+ * This class defines WHAT the MongoDB connector is and what config it needs,
  * but NOT the actual connection details. Each project provides its own config
  * when creating a connector instance.
  *
@@ -33,17 +33,16 @@ class MongoMcpConnectorProvider : McpConnectorProvider {
     override val configSchema = mapOf(
         "mongo.uri" to ConfigField(
             type = ConfigFieldType.TEXT,
-            label = "Mongo Connection URI",
-            description = "Format: postgresql://username:password@hostname:port/database",
+            label = "MongoDB Connection URI",
+            description = "Format: mongodb://username:password@hostname:port/database or mongodb+srv://...",
             required = true,
             secret = true,
         ),
-        "postgres.schema" to ConfigField(
+        "mongo.database" to ConfigField(
             type = ConfigFieldType.TEXT,
-            label = "Default Schema",
-            description = "Default schema to use (e.g., 'public')",
+            label = "Database Name",
+            description = "Default database to use",
             required = false,
-            defaultValue = "public",
         ),
     )
 
