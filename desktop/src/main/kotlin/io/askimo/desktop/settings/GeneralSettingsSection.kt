@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -24,11 +23,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
 import io.askimo.core.i18n.LocalizationManager
@@ -485,198 +482,54 @@ private fun samplingSettingsCard() {
             if (AppConfig.chat.sampling.enabled) {
                 HorizontalDivider()
 
-                // Temperature Setting
+                // Creativity Slider (Temperature 0.0 - 1.0)
+                var sliderValue by remember { mutableStateOf(AppConfig.chat.sampling.temperature.toFloat()) }
+
+                // Sync slider with AppConfig when AppConfig changes externally
+                sliderValue = AppConfig.chat.sampling.temperature.toFloat()
+
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource("settings.sampling.temperature"),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Text(
-                            text = "(${stringResource("settings.sampling.range")}: 0.0 - 2.0)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                        )
-                    }
                     Text(
-                        text = stringResource("settings.sampling.temperature.description"),
+                        text = stringResource("settings.sampling.creativity"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+
+                    Text(
+                        text = stringResource("settings.sampling.creativity.description"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                     )
 
-                    doubleValueControl(
-                        value = AppConfig.chat.sampling.temperature,
+                    Slider(
+                        value = sliderValue,
                         onValueChange = { newValue ->
-                            AppConfig.updateField("chat.sampling.temperature", newValue.coerceIn(0.0, 2.0))
+                            sliderValue = newValue
+                            AppConfig.updateField("chat.sampling.temperature", newValue.toDouble())
+                            // Keep topP at 1.0
+                            AppConfig.updateField("chat.sampling.topP", 1.0)
                         },
-                        min = 0.0,
-                        max = 2.0,
-                        step = 0.1,
+                        valueRange = 0f..1f,
                     )
-                }
 
-                HorizontalDivider()
-
-                // TopP Setting
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                    // Slider labels
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource("settings.sampling.topP"),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            text = stringResource("settings.sampling.creativity.strict"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                         )
                         Text(
-                            text = "(${stringResource("settings.sampling.range")}: 0.0 - 1.0)",
+                            text = stringResource("settings.sampling.creativity.creative"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                         )
                     }
-                    Text(
-                        text = stringResource("settings.sampling.topP.description"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    )
-
-                    doubleValueControl(
-                        value = AppConfig.chat.sampling.topP,
-                        onValueChange = { newValue ->
-                            AppConfig.updateField("chat.sampling.topP", newValue.coerceIn(0.0, 1.0))
-                        },
-                        min = 0.0,
-                        max = 1.0,
-                        step = 0.1,
-                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun doubleValueControl(
-    value: Double,
-    onValueChange: (Double) -> Unit,
-    min: Double,
-    max: Double,
-    step: Double,
-) {
-    // Use value as key to recreate state when external value changes
-    var internalValue by remember(value) { mutableStateOf(value) }
-    var textValue by remember(value) { mutableStateOf(String.format("%.1f", value)) }
-    var isEditing by remember { mutableStateOf(false) }
-
-    // Compact stepper: Decrement button - Text field - Increment button
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Decrement button
-        IconButton(
-            onClick = {
-                val newValue = ((internalValue - step) * 10 + 0.5).toLong() / 10.0
-                val clamped = newValue.coerceIn(min, max)
-                internalValue = clamped
-                onValueChange(clamped)
-            },
-            enabled = internalValue > min,
-            modifier = Modifier.width(36.dp),
-        ) {
-            Text(
-                text = "−",
-                style = MaterialTheme.typography.titleMedium,
-                color = if (internalValue > min) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
-            )
-        }
-
-        // Editable text field
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
-        ) {
-            if (isEditing) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                ) {
-                    TextField(
-                        value = textValue,
-                        onValueChange = { textValue = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.width(60.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                        ),
-                    )
-                    IconButton(
-                        onClick = {
-                            val parsed = textValue.toDoubleOrNull()
-                            if (parsed != null) {
-                                val rounded = ((parsed * 10) + 0.5).toLong() / 10.0
-                                val clamped = rounded.coerceIn(min, max)
-                                internalValue = clamped
-                                onValueChange(clamped)
-                            }
-                            isEditing = false
-                        },
-                        modifier = Modifier.width(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Apply",
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = String.format("%.1f", internalValue),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickableCard {
-                            isEditing = true
-                            textValue = String.format("%.1f", internalValue)
-                        },
-                )
-            }
-        }
-
-        // Increment button
-        IconButton(
-            onClick = {
-                val newValue = ((internalValue + step) * 10 + 0.5).toLong() / 10.0
-                val clamped = newValue.coerceIn(min, max)
-                internalValue = clamped
-                onValueChange(clamped)
-            },
-            enabled = internalValue < max,
-            modifier = Modifier.width(36.dp),
-        ) {
-            Text(
-                text = "+",
-                style = MaterialTheme.typography.titleMedium,
-                color = if (internalValue < max) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
-            )
         }
     }
 }

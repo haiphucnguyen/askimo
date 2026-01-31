@@ -182,8 +182,8 @@ data class DeveloperConfig(
 )
 
 data class SamplingConfig(
-    val temperature: Double = 1.0, // Default value supported by all models
-    val topP: Double = 1.0, // Default value supported by all models
+    val temperature: Double = 0.7, // Balanced default: not too strict, not too creative
+    val topP: Double = 1.0, // Keep at 1.0 (no nucleus sampling by default)
     val enabled: Boolean = true, // Allow users to disable sampling parameters
 )
 

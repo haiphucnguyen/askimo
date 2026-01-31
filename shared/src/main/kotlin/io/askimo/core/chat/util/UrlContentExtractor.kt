@@ -34,7 +34,15 @@ object UrlContentExtractor {
 
     private val log = logger<UrlContentExtractor>()
 
-    private val parser = AutoDetectParser()
+    // Lazy initialization to avoid GraalVM native image initialization issues
+    private val parser: AutoDetectParser by lazy {
+        try {
+            AutoDetectParser()
+        } catch (e: Exception) {
+            log.error("Failed to initialize Apache Tika parser", e)
+            throw IllegalStateException("Tika parser initialization failed. This may be a GraalVM native image configuration issue.", e)
+        }
+    }
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
