@@ -709,7 +709,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -887,6 +888,9 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "com.github.luben.zstd.ZstdInputStream"
+  },
+  {
     "name": "com.sun.crypto.provider.AESCipher$General",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -916,6 +920,10 @@
   },
   {
     "name": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "com.sun.crypto.provider.HmacCore$HmacSHA256",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -1531,6 +1539,26 @@
       { "name": "delimiter", "parameterTypes": [] },
       { "name": "fromResource", "parameterTypes": [] },
       { "name": "value", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.cli.UrlContentExtractorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "should check if URL is supported", "parameterTypes": [] },
+      { "name": "should detect valid URLs", "parameterTypes": [] },
+      { "name": "should extract URLs from text", "parameterTypes": [] },
+      { "name": "should extract content from HTML page", "parameterTypes": [] },
+      {
+        "name": "should extract content from PDF using Tika",
+        "parameterTypes": []
+      },
+      { "name": "should extract content from plain text", "parameterTypes": [] }
     ]
   },
   {
@@ -2611,6 +2639,7 @@
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig"
         ]
@@ -2624,6 +2653,7 @@
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
+          "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "int",
@@ -2668,6 +2698,25 @@
       {
         "name": "updateRagField should handle useAbsolutePathInCitations",
         "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.BackupConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "int",
+          "int",
+          "boolean",
+          "boolean"
+        ]
       }
     ]
   },
@@ -3259,7 +3308,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$ElQNQDgQ",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$DvsNcRB4",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4055,6 +4104,15 @@
         ]
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
+      {
+        "name": "runCommand",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.lang.Boolean"
+        ]
+      },
       {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
@@ -5062,6 +5120,389 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "org.apache.commons.logging.LogFactory"
+  },
+  {
+    "name": "org.apache.commons.logging.impl.Log4jApiLogFactory",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.apache.commons.logging.impl.WeakHashtable",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.apache.logging.slf4j.SLF4JProvider"
+  },
+  {
+    "name": "org.apache.tika.detect.microsoft.POIFSContainerDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.microsoft.ooxml.OPCPackageDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.DefaultZipContainerDetector",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.FrictionlessPackageDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.IPADetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.JarDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.KMZDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.OpenDocumentDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.detect.zip.StarOfficeDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.csv.TextAndCSVParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.html.HtmlEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.html.JSoupParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.EMFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.JackcessParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.MSOwnerFileParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.OfficeParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.OldExcelParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.TNEFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.WMFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.activemime.ActiveMimeParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.chm.ChmParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.onenote.OneNoteParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.ooxml.OOXMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.ooxml.xwpf.ml2006.Word2006MLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.pst.OutlookPSTParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.pst.PSTMailItemParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.rtf.RTFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.xml.SpreadsheetMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.microsoft.xml.WordMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.pdf.PDFParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.tmx.TMXParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.txt.Icu4jEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.txt.UniversalEncodingDetector",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xliff.XLIFF12Parser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xliff.XLZParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xml.DcXMLParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
+    "name": "org.apache.tika.parser.xml.FictionBookParser",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["org.apache.tika.config.ServiceLoader"]
+      }
+    ]
+  },
+  {
     "name": "org.jline.reader.ParsedLine",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -5078,9 +5519,12 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$aGpr9We1",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$iyguPHTY",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.osgi.framework.FrameworkUtil"
   },
   {
     "name": "org.slf4j.Logger"
@@ -5091,6 +5535,13 @@
   },
   {
     "name": "sun.misc.SharedSecrets"
+  },
+  {
+    "name": "sun.misc.Unsafe",
+    "fields": [{ "name": "theUnsafe" }],
+    "methods": [
+      { "name": "invokeCleaner", "parameterTypes": ["java.nio.ByteBuffer"] }
+    ]
   },
   {
     "name": "sun.security.pkcs12.PKCS12KeyStore",
@@ -5194,6 +5645,10 @@
   },
   {
     "name": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.ssl.SSLContextImpl$TLSContext",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
