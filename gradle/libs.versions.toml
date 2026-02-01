@@ -70,9 +70,6 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # Caffeine Cache
 caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
 
-# HTTP Client
-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
-
 # HTML Parser
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 

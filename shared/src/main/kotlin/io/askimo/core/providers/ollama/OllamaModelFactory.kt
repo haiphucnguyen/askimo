@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.ollama
 
+import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -20,6 +21,8 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
+import io.askimo.core.util.ProxyUtil
+import java.net.http.HttpClient
 import java.time.Duration
 
 class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
@@ -58,9 +61,14 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     ): ChatClient {
         val telemetry = AppContext.getInstance().telemetry
 
+        // Configure HTTP client with proxy (automatically skips proxy for localhost)
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
+                .httpClientBuilder(jdkHttpClientBuilder)
                 .baseUrl(settings.baseUrl)
                 .modelName(model)
                 .timeout(Duration.ofMinutes(5))
@@ -80,14 +88,20 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         )
     }
 
-    private fun createSecondaryChatModel(settings: OllamaSettings): ChatModel = OpenAiChatModel.builder()
-        .baseUrl(settings.baseUrl)
-        .apiKey("ollama")
-        .modelName(AppContext.getInstance().params.model)
-        .timeout(Duration.ofSeconds(AppConfig.models.ollama.utilityModelTimeoutSeconds))
-        .logger(log)
-        .logRequests(log.isDebugEnabled)
-        .build()
+    private fun createSecondaryChatModel(settings: OllamaSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey("ollama")
+            .modelName(AppContext.getInstance().params.model)
+            .timeout(Duration.ofSeconds(AppConfig.models.ollama.utilityModelTimeoutSeconds))
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .build()
+    }
 
     override fun createUtilityClient(
         settings: OllamaSettings,

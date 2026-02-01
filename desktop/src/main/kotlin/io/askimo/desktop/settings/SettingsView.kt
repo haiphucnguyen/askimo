@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ enum class SettingsSection {
     GENERAL,
     AI_PROVIDER,
     APPEARANCE,
+    NETWORK,
     SHORTCUTS,
     ADVANCED,
     ABOUT,
@@ -178,6 +180,12 @@ fun settingsViewWithSidebar(
                         onClick = { selectedSection = SettingsSection.APPEARANCE },
                     )
                     settingsSidebarItem(
+                        title = stringResource("settings.network"),
+                        icon = Icons.Outlined.NetworkCheck,
+                        isSelected = selectedSection == SettingsSection.NETWORK,
+                        onClick = { selectedSection = SettingsSection.NETWORK },
+                    )
+                    settingsSidebarItem(
                         title = stringResource("settings.shortcuts"),
                         icon = Icons.Outlined.Keyboard,
                         isSelected = selectedSection == SettingsSection.SHORTCUTS,
@@ -248,6 +256,7 @@ fun settingsViewWithSidebar(
                         SettingsSection.GENERAL -> generalSettingsSection()
                         SettingsSection.AI_PROVIDER -> aiProviderSettingsSection(settingsViewModel)
                         SettingsSection.APPEARANCE -> appearanceSettingsSection()
+                        SettingsSection.NETWORK -> networkSettingsSection()
                         SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
                         SettingsSection.ADVANCED -> advancedSettingsSection()
                         SettingsSection.ABOUT -> aboutSettingsSection()

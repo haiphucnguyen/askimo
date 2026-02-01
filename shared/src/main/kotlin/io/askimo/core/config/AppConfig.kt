@@ -187,6 +187,22 @@ data class SamplingConfig(
     val enabled: Boolean = true, // Allow users to disable sampling parameters
 )
 
+enum class ProxyType {
+    NONE,
+    HTTP,
+    HTTPS,
+    SOCKS5,
+    SYSTEM,
+}
+
+data class ProxyConfig(
+    val type: ProxyType = ProxyType.NONE,
+    val host: String = "",
+    val port: Int = 8080,
+    val username: String = "",
+    val password: String = "",
+)
+
 data class ChatConfig(
     val maxTokens: Int = 8000,
     val summarizationThreshold: Double = 0.75,
@@ -223,12 +239,6 @@ data class RagConfig(
     val rankFusionConstant: Int = 60,
     /** Use absolute file paths in citations (true) or relative filenames (false) */
     val useAbsolutePathInCitations: Boolean = true,
-)
-
-data class ProxyConfig(
-    val enabled: Boolean = false,
-    val url: String = "",
-    val authToken: String = "",
 )
 
 data class AnthropicModelConfig(
@@ -309,6 +319,7 @@ data class AppConfigData(
     val backup: BackupConfig = BackupConfig(),
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
+    val proxy: ProxyConfig = ProxyConfig(),
 )
 
 object AppConfig {
@@ -319,8 +330,7 @@ object AppConfig {
     val chat: ChatConfig get() = delegate.chat
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
-
-    val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
+    val proxy: ProxyConfig get() = delegate.proxy
 
     @Volatile private var cached: AppConfigData? = null
 
@@ -409,6 +419,13 @@ object AppConfig {
           xai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
+
+        proxy:
+          type: ${'$'}{ASKIMO_PROXY_TYPE:NONE}
+          host: ${'$'}{ASKIMO_PROXY_HOST:}
+          port: ${'$'}{ASKIMO_PROXY_PORT:8080}
+          username: ${'$'}{ASKIMO_PROXY_USERNAME:}
+          password: ${'$'}{ASKIMO_PROXY_PASSWORD:}
 
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
@@ -651,15 +668,17 @@ object AppConfig {
                 xai = xaiModelConfig,
             )
 
-        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models)
-    }
+        val proxy =
+            ProxyConfig(
+                type = System.getenv("ASKIMO_PROXY_TYPE")?.let { ProxyType.valueOf(it) } ?: ProxyType.NONE,
+                host = env("ASKIMO_PROXY_HOST", ""),
+                port = envInt("ASKIMO_PROXY_PORT", 8080),
+                username = env("ASKIMO_PROXY_USERNAME", ""),
+                password = env("ASKIMO_PROXY_PASSWORD", ""),
+            )
 
-    /** Load proxy configuration from environment variables only - never persisted to file */
-    private fun loadProxyFromEnv(): ProxyConfig = ProxyConfig(
-        enabled = System.getenv("ASKIMO_PROXY_ENABLED")?.toBoolean() ?: false,
-        url = System.getenv("ASKIMO_PROXY_URL") ?: "",
-        authToken = System.getenv("ASKIMO_PROXY_AUTH_TOKEN") ?: "",
-    )
+        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models, proxy)
+    }
 
     /**
      * Generic method to update any config field and persist to YAML file.
@@ -692,6 +711,7 @@ object AppConfig {
                 "backup" -> current.copy(backup = updateBackupField(current.backup, field, value))
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
+                "proxy" -> current.copy(proxy = updateProxyField(current.proxy, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -870,6 +890,18 @@ object AppConfig {
                 log.displayError("Unknown provider: $provider", null)
                 config
             }
+        }
+    }
+
+    private fun updateProxyField(config: ProxyConfig, field: String, value: Any): ProxyConfig = when (field) {
+        "type" -> config.copy(type = if (value is String) ProxyType.valueOf(value) else value as ProxyType)
+        "host" -> config.copy(host = value as String)
+        "port" -> config.copy(port = value as Int)
+        "username" -> config.copy(username = value as String)
+        "password" -> config.copy(password = value as String)
+        else -> {
+            log.displayError("Unknown proxy field: $field", null)
+            config
         }
     }
 }

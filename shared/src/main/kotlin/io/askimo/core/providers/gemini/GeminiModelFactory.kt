@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.gemini
 
+import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
@@ -22,6 +23,8 @@ import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.ProxyUtil
+import java.net.http.HttpClient
 import java.time.Duration
 
 class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
@@ -55,9 +58,14 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     ): ChatClient {
         val telemetry = AppContext.getInstance().telemetry
 
+        // Configure HTTP client with proxy (external service)
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
         val chatModel =
             GoogleAiGeminiStreamingChatModel
                 .builder()
+                .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
                 .logger(log)
@@ -108,11 +116,17 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
           manually (for example, using the command line or a file manager).
     """.trimIndent()
 
-    private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel = GoogleAiGeminiChatModel.builder()
-        .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.gemini.utilityModel)
-        .timeout(Duration.ofSeconds(AppConfig.models.gemini.utilityModelTimeoutSeconds))
-        .build()
+    private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
+        return GoogleAiGeminiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(AppConfig.models.gemini.utilityModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.gemini.utilityModelTimeoutSeconds))
+            .build()
+    }
 
     override fun createUtilityClient(
         settings: GeminiSettings,
