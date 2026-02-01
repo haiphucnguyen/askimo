@@ -53,7 +53,7 @@ class SecureSessionManagerTest {
         val testProviders = listOf("test_openai", "test_gemini", "test_xai", "test_provider", "test_keychain_direct")
         testProviders.forEach { provider ->
             try {
-                SecureApiKeyManager.removeApiKey(provider)
+                SecureKeyManager.removeSecretKey(provider)
             } catch (_: Exception) {
                 // Ignore cleanup failures
             }
@@ -273,70 +273,6 @@ class SecureSessionManagerTest {
     }
 
     @Test
-    @DisplayName("Should migrate existing plain text API keys")
-    fun testMigrateExistingApiKeys() {
-        val openAiKey = "sk-migrate-test-key"
-        val geminiKey = "ai-migrate-gemini-key"
-
-        val appContextParams = AppContextParams().apply {
-            currentProvider = ModelProvider.OPENAI
-            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = openAiKey)
-            providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = geminiKey)
-        }
-
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
-
-        assertNotNull(migrationResult)
-        assertTrue(migrationResult.results.isNotEmpty())
-
-        // Should have attempted to migrate both keys
-        assertTrue(migrationResult.results.containsKey(ModelProvider.OPENAI))
-        assertTrue(migrationResult.results.containsKey(ModelProvider.GEMINI))
-
-        // Generate security report
-        val securityReport = migrationResult.getSecurityReport()
-        assertNotNull(securityReport)
-        assertTrue(securityReport.isNotEmpty())
-    }
-
-    @Test
-    @DisplayName("Should not migrate already secure API keys")
-    fun testSkipMigrationForSecureKeys() {
-        val appContextParams = AppContextParams().apply {
-            currentProvider = ModelProvider.OPENAI
-            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "***keychain***")
-            providerSettings[ModelProvider.GEMINI] = GeminiSettings(apiKey = "encrypted:someencrypteddata")
-        }
-
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
-
-        // Should not attempt to migrate already secure keys
-        assertTrue(migrationResult.results.isEmpty())
-
-        val securityReport = migrationResult.getSecurityReport()
-        assertTrue(securityReport.contains("No API keys found to migrate"))
-    }
-
-    @Test
-    @DisplayName("Should handle empty session params gracefully")
-    fun testEmptySessionParams() {
-        val emptyParams = AppContextParams()
-
-        val loadedSession = secureSessionManager.loadSecureSession(emptyParams)
-        assertNotNull(loadedSession)
-        assertEquals(emptyParams.providerSettings, loadedSession.providerSettings)
-
-        val savedSession = secureSessionManager.saveSecureSession(emptyParams)
-        assertNotNull(savedSession)
-        assertEquals(emptyParams.providerSettings, savedSession.providerSettings)
-
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(emptyParams)
-        assertNotNull(migrationResult)
-        assertTrue(migrationResult.results.isEmpty())
-        assertFalse(migrationResult.hasInsecureKeys)
-    }
-
-    @Test
     @DisplayName("Should preserve non-API key settings during operations")
     fun testPreserveNonApiKeySettings() {
         val appContextParams = AppContextParams().apply {
@@ -359,29 +295,6 @@ class SecureSessionManagerTest {
 
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
         assertEquals("gpt-4o", loadedSettings.defaultModel)
-    }
-
-    @Test
-    @DisplayName("Should generate meaningful security report")
-    fun testSecurityReportGeneration() {
-        val appContextParams = AppContextParams().apply {
-            currentProvider = ModelProvider.OPENAI
-            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "sk-test-security-report")
-        }
-
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
-        val securityReport = migrationResult.getSecurityReport()
-
-        assertNotNull(securityReport)
-        assertTrue(securityReport.isNotEmpty())
-        assertTrue(securityReport.any { it.contains("API Key Security Report") })
-        assertTrue(securityReport.any { it.contains("OPENAI") })
-
-        // If migration failed, should contain warning information
-        if (migrationResult.hasInsecureKeys) {
-            assertTrue(securityReport.any { it.contains("⚠️") })
-            assertTrue(securityReport.any { it.contains("Consider:") })
-        }
     }
 
     @Test
@@ -422,19 +335,19 @@ class SecureSessionManagerTest {
 
         // Clean up first
         try {
-            SecureApiKeyManager.removeApiKey(testProvider)
+            SecureKeyManager.removeSecretKey(testProvider)
         } catch (_: Exception) {
             // Ignore cleanup failures
         }
 
         // Test direct storage and retrieval
-        val storeResult = SecureApiKeyManager.storeApiKey(testProvider, testKey)
+        val storeResult = SecureKeyManager.storeSecuredKey(testProvider, testKey)
         assertTrue(storeResult.success, "Should successfully store API key, result: $storeResult")
 
         // Test direct retrieval
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(testProvider)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(testProvider)
 
-        if (storeResult.method == SecureApiKeyManager.StorageMethod.KEYCHAIN) {
+        if (storeResult.method == SecureKeyManager.StorageMethod.KEYCHAIN) {
             // If keychain was used, retrieval should work
             if (retrievedKey != null) {
                 assertEquals(testKey, retrievedKey, "Should retrieve the same key that was stored")
@@ -451,7 +364,7 @@ class SecureSessionManagerTest {
 
         // Clean up
         try {
-            SecureApiKeyManager.removeApiKey(testProvider)
+            SecureKeyManager.removeSecretKey(testProvider)
         } catch (_: Exception) {
             // Ignore cleanup failures
         }

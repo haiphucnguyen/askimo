@@ -21,20 +21,20 @@ object KeychainManager {
     private const val SERVICE_NAME = "askimo-cli"
 
     /**
-     * Stores an API key securely in the system keychain.
+     * Stores an secret key securely in the system keychain.
      *
-     * @param provider The provider name (e.g., "openai", "anthropic")
-     * @param apiKey The API key to store
+     * @param keyIdentifier The keyIdentifier name that is unique
+     * @param secretKey The secret key to store
      * @return true if stored successfully in keychain, false if keychain failed
      */
-    fun storeApiKey(
-        provider: String,
-        apiKey: String,
+    fun storeSecretKey(
+        keyIdentifier: String,
+        secretKey: String,
     ): Boolean = try {
         when (getOperatingSystem()) {
-            MACOS -> storeMacOSKeychain(provider, apiKey)
-            LINUX -> storeLinuxKeyring(provider, apiKey)
-            WINDOWS -> storeWindowsCredentialManager(provider, apiKey)
+            MACOS -> storeMacOSKeychain(keyIdentifier, secretKey)
+            LINUX -> storeLinuxKeyring(keyIdentifier, secretKey)
+            WINDOWS -> storeWindowsCredentialManager(keyIdentifier, secretKey)
             UNKNOWN -> {
                 log.warn("Unknown operating system, keychain storage not available")
                 false
@@ -46,12 +46,12 @@ object KeychainManager {
     }
 
     /**
-     * Retrieves an API key from the system keychain.
+     * Retrieves an secret key from the system keychain.
      *
      * @param provider The provider name
-     * @return The API key if found, null if not found or keychain failed
+     * @return The secret key if found, null if not found or keychain failed
      */
-    fun retrieveApiKey(provider: String): String? = try {
+    fun retrieveSecretKey(provider: String): String? = try {
         when (getOperatingSystem()) {
             MACOS -> retrieveMacOSKeychain(provider)
             LINUX -> retrieveLinuxKeyring(provider)
@@ -69,14 +69,14 @@ object KeychainManager {
     /**
      * Removes an API key from the system keychain.
      *
-     * @param provider The provider name
+     * @param keyIdentifier The unique name
      * @return true if removed successfully, false otherwise
      */
-    fun removeApiKey(provider: String): Boolean = try {
+    fun removeSecretKey(keyIdentifier: String): Boolean = try {
         when (getOperatingSystem()) {
-            MACOS -> removeMacOSKeychain(provider)
-            LINUX -> removeLinuxKeyring(provider)
-            WINDOWS -> removeWindowsCredentialManager(provider)
+            MACOS -> removeMacOSKeychain(keyIdentifier)
+            LINUX -> removeLinuxKeyring(keyIdentifier)
+            WINDOWS -> removeWindowsCredentialManager(keyIdentifier)
             UNKNOWN -> false
         }
     } catch (e: Exception) {
@@ -85,10 +85,10 @@ object KeychainManager {
     }
 
     private fun storeMacOSKeychain(
-        provider: String,
-        apiKey: String,
+        keyIdentifier: String,
+        secretKey: String,
     ): Boolean {
-        val account = "askimo-$provider"
+        val account = "askimo-$keyIdentifier"
         val process =
             ProcessBuilderExt(
                 "security",
@@ -98,7 +98,7 @@ object KeychainManager {
                 "-s",
                 SERVICE_NAME,
                 "-w",
-                apiKey,
+                secretKey,
                 "-U", // Update if exists
             ).start()
 
@@ -106,8 +106,8 @@ object KeychainManager {
         return exitCode == 0
     }
 
-    private fun retrieveMacOSKeychain(provider: String): String? {
-        val account = "askimo-$provider"
+    private fun retrieveMacOSKeychain(keyIdentifier: String): String? {
+        val account = "askimo-$keyIdentifier"
         val process =
             ProcessBuilderExt(
                 "security",
@@ -130,8 +130,8 @@ object KeychainManager {
         }
     }
 
-    private fun removeMacOSKeychain(provider: String): Boolean {
-        val account = "askimo-$provider"
+    private fun removeMacOSKeychain(keyIdentifier: String): Boolean {
+        val account = "askimo-$keyIdentifier"
         val process =
             ProcessBuilderExt(
                 "security",
@@ -147,8 +147,8 @@ object KeychainManager {
     }
 
     private fun storeLinuxKeyring(
-        provider: String,
-        apiKey: String,
+        keyIdentifier: String,
+        secretKey: String,
     ): Boolean {
         // Try secret-tool first (libsecret)
         if (isCommandAvailable("secret-tool")) {
@@ -158,15 +158,15 @@ object KeychainManager {
                         "secret-tool",
                         "store",
                         "--label",
-                        "Askimo API Key for $provider",
+                        "Askimo API Key for $keyIdentifier",
                         "service",
                         SERVICE_NAME,
                         "account",
-                        "askimo-$provider",
+                        "askimo-$keyIdentifier",
                     ).start()
 
                 process.outputStream.bufferedWriter().use { writer ->
-                    writer.write(apiKey)
+                    writer.write(secretKey)
                     writer.flush()
                 }
 
@@ -190,7 +190,7 @@ object KeychainManager {
         return false
     }
 
-    private fun retrieveLinuxKeyring(provider: String): String? {
+    private fun retrieveLinuxKeyring(keyIdentifier: String): String? {
         if (isCommandAvailable("secret-tool")) {
             try {
                 val process =
@@ -200,7 +200,7 @@ object KeychainManager {
                         "service",
                         SERVICE_NAME,
                         "account",
-                        "askimo-$provider",
+                        "askimo-$keyIdentifier",
                     ).start()
 
                 val exitCode = process.waitFor()
@@ -211,7 +211,7 @@ object KeychainManager {
                         .trim()
                         .takeIf { it.isNotBlank() }
                 } else {
-                    log.debug("secret-tool lookup failed with exit code $exitCode for provider $provider")
+                    log.debug("secret-tool lookup failed with exit code $exitCode for provider $keyIdentifier")
                     null
                 }
             } catch (e: Exception) {
@@ -224,7 +224,7 @@ object KeychainManager {
         return null
     }
 
-    private fun removeLinuxKeyring(provider: String): Boolean {
+    private fun removeLinuxKeyring(keyIdentifier: String): Boolean {
         if (isCommandAvailable("secret-tool")) {
             try {
                 val process =
@@ -234,7 +234,7 @@ object KeychainManager {
                         "service",
                         SERVICE_NAME,
                         "account",
-                        "askimo-$provider",
+                        "askimo-$keyIdentifier",
                     ).start()
 
                 val exitCode = process.waitFor()
@@ -250,10 +250,10 @@ object KeychainManager {
     }
 
     private fun storeWindowsCredentialManager(
-        provider: String,
-        apiKey: String,
+        keyIdentifier: String,
+        secretKey: String,
     ): Boolean {
-        val target = "$SERVICE_NAME:askimo-$provider"
+        val target = "$SERVICE_NAME:askimo-$keyIdentifier"
 
         try {
             val process =
@@ -261,7 +261,7 @@ object KeychainManager {
                     "cmdkey",
                     "/generic:$target",
                     "/user:askimo",
-                    "/pass:$apiKey",
+                    "/pass:$secretKey",
                 ).start()
 
             val exitCode = process.waitFor()
@@ -272,8 +272,8 @@ object KeychainManager {
         }
     }
 
-    private fun retrieveWindowsCredentialManager(provider: String): String? {
-        val target = "$SERVICE_NAME:askimo-$provider"
+    private fun retrieveWindowsCredentialManager(keyIdentifier: String): String? {
+        val target = "$SERVICE_NAME:askimo-$keyIdentifier"
 
         // Try PowerShell approach using CredentialManager API
         try {
@@ -370,8 +370,8 @@ public class CredentialManager {
         return null
     }
 
-    private fun removeWindowsCredentialManager(provider: String): Boolean {
-        val target = "$SERVICE_NAME:askimo-$provider"
+    private fun removeWindowsCredentialManager(keyIdentifier: String): Boolean {
+        val target = "$SERVICE_NAME:askimo-$keyIdentifier"
 
         try {
             val process =

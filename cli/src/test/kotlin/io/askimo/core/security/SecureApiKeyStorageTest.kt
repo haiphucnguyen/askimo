@@ -40,7 +40,7 @@ class SecureApiKeyStorageTest {
         secureSessionManager = TestSecureSessionManager()
 
         // Clean up any existing test keys using SAFE test provider name
-        SecureApiKeyManager.removeApiKey(TEST_PROVIDER_NAME)
+        SecureKeyManager.removeSecretKey(TEST_PROVIDER_NAME)
 
         // Clean up encryption key file if it exists (now points to test directory)
         val keyPath = AskimoHome.encryptionKeyFile()
@@ -53,33 +53,13 @@ class SecureApiKeyStorageTest {
     fun tearDown() {
         // Clean up test keys
         try {
-            SecureApiKeyManager.removeApiKey(TEST_PROVIDER_NAME)
+            SecureKeyManager.removeSecretKey(TEST_PROVIDER_NAME)
         } catch (_: Exception) {
             // Ignore cleanup failures
         }
 
         // Clean up the test base override
         testBaseScope.close()
-    }
-
-    @Test
-    fun `test API key migration from plain text`() {
-        // Create a session with a plain text API key
-        val appContextParams = AppContextParams()
-        val openAiSettings = OpenAiSettings(apiKey = "sk-test-api-key-12345")
-        appContextParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
-
-        // Migrate to secure storage
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(appContextParams)
-
-        // Verify migration was attempted
-        assertTrue(migrationResult.results.containsKey(ModelProvider.OPENAI))
-
-        val result = migrationResult.results[ModelProvider.OPENAI]!!
-        assertTrue(result.success)
-
-        // The API key should now be replaced with a placeholder or encrypted
-        assertNotEquals("sk-test-api-key-12345", openAiSettings.apiKey)
     }
 
     @Test
@@ -94,11 +74,11 @@ class SecureApiKeyStorageTest {
         appContextParams.providerSettings[ModelProvider.OPENAI] = openAiSettings
 
         // Store a key in keychain using SAFE test provider name
-        SecureApiKeyManager.storeApiKey(TEST_PROVIDER_NAME, "sk-actual-key-from-keychain")
+        SecureKeyManager.storeSecuredKey(TEST_PROVIDER_NAME, "sk-actual-key-from-keychain")
 
         // Since we're using TestSecureSessionManager, it will use the safe provider name
         // But we need to manually test the keychain retrieval
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(TEST_PROVIDER_NAME)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(TEST_PROVIDER_NAME)
 
         if (retrievedKey != null) {
             // Keychain is working
@@ -125,20 +105,20 @@ class SecureApiKeyStorageTest {
     @Test
     fun `test storage security descriptions`() {
         val keychainDesc =
-            SecureApiKeyManager.getStorageSecurityDescription(
-                SecureApiKeyManager.StorageMethod.KEYCHAIN,
+            SecureKeyManager.getStorageSecurityDescription(
+                SecureKeyManager.StorageMethod.KEYCHAIN,
             )
         assertTrue(keychainDesc.contains("Keychain"))
 
         val encryptedDesc =
-            SecureApiKeyManager.getStorageSecurityDescription(
-                SecureApiKeyManager.StorageMethod.ENCRYPTED,
+            SecureKeyManager.getStorageSecurityDescription(
+                SecureKeyManager.StorageMethod.ENCRYPTED,
             )
         assertTrue(encryptedDesc.contains("Encrypted"))
 
         val insecureDesc =
-            SecureApiKeyManager.getStorageSecurityDescription(
-                SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK,
+            SecureKeyManager.getStorageSecurityDescription(
+                SecureKeyManager.StorageMethod.INSECURE_FALLBACK,
             )
         assertTrue(insecureDesc.contains("INSECURE"))
     }

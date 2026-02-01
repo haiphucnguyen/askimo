@@ -28,7 +28,12 @@ object EncryptionManager {
     private const val GCM_IV_LENGTH = 12
     private const val GCM_TAG_LENGTH = 16
 
-    private val keyPath: Path = AskimoHome.encryptionKeyFile()
+    /**
+     * Gets the path to the encryption key file.
+     * This is a function rather than a property to ensure the path is always fresh,
+     * especially important for tests that may modify the file system.
+     */
+    private fun keyPath(): Path = AskimoHome.encryptionKeyFile()
 
     /**
      * Encrypts an API key using AES-256-GCM.
@@ -85,7 +90,7 @@ object EncryptionManager {
     /**
      * Gets the secret key from file, or creates a new one if it doesn't exist.
      */
-    private fun getOrCreateSecretKey(): SecretKey = if (Files.exists(keyPath)) {
+    private fun getOrCreateSecretKey(): SecretKey = if (Files.exists(keyPath())) {
         loadSecretKey()
     } else {
         createAndSaveSecretKey()
@@ -100,15 +105,15 @@ object EncryptionManager {
         val secretKey = keyGenerator.generateKey()
 
         // Create directory if it doesn't exist
-        Files.createDirectories(keyPath.parent)
+        Files.createDirectories(keyPath().parent)
 
         // Save the key (this is still a security risk, but better than plain text)
         val encoded = Base64.getEncoder().encodeToString(secretKey.encoded)
-        Files.write(keyPath, encoded.toByteArray())
+        Files.write(keyPath(), encoded.toByteArray())
 
         // Set restrictive permissions (owner only)
         try {
-            val file = keyPath.toFile()
+            val file = keyPath().toFile()
             file.setReadable(false, false)
             file.setWritable(false, false)
             file.setExecutable(false, false)
@@ -125,7 +130,7 @@ object EncryptionManager {
      * Loads the secret key from file.
      */
     private fun loadSecretKey(): SecretKey {
-        val encoded = String(Files.readAllBytes(keyPath))
+        val encoded = String(Files.readAllBytes(keyPath()))
         val keyBytes = Base64.getDecoder().decode(encoded)
         return SecretKeySpec(keyBytes, ALGORITHM)
     }
@@ -134,8 +139,8 @@ object EncryptionManager {
      * Deletes the encryption key file.
      */
     fun deleteKey(): Boolean = try {
-        if (Files.exists(keyPath)) {
-            Files.delete(keyPath)
+        if (Files.exists(keyPath())) {
+            Files.delete(keyPath())
             true
         } else {
             false

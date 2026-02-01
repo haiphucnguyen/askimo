@@ -5,9 +5,9 @@
 package io.askimo.core.security
 
 import io.askimo.core.logging.logger
-import io.askimo.core.security.SecureApiKeyManager.StorageMethod.ENCRYPTED
-import io.askimo.core.security.SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK
-import io.askimo.core.security.SecureApiKeyManager.StorageMethod.KEYCHAIN
+import io.askimo.core.security.SecureKeyManager.StorageMethod.ENCRYPTED
+import io.askimo.core.security.SecureKeyManager.StorageMethod.INSECURE_FALLBACK
+import io.askimo.core.security.SecureKeyManager.StorageMethod.KEYCHAIN
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Files
 import java.nio.file.Path
@@ -17,8 +17,8 @@ import java.util.Properties
  * Secure API key storage manager that tries keychain first, then falls back to encryption.
  * Provides warnings when API keys are stored insecurely.
  */
-object SecureApiKeyManager {
-    private val log = logger<SecureApiKeyManager>()
+object SecureKeyManager {
+    private val log = logger<SecureKeyManager>()
 
     private fun encryptedStorageFile(): Path = AskimoHome.base().resolve(".encrypted-keys")
 
@@ -37,25 +37,25 @@ object SecureApiKeyManager {
     /**
      * Stores an API key securely, trying keychain first, then encryption fallback.
      *
-     * @param provider The provider name (e.g., "openai", "anthropic")
-     * @param apiKey The API key to store
+     * @param keyIdentifier The unique name (e.g., "openai", "anthropic")
+     * @param secretKey The API key to store
      * @return StorageResult indicating success/failure and storage method used
      */
-    fun storeApiKey(
-        provider: String,
-        apiKey: String,
+    fun storeSecuredKey(
+        keyIdentifier: String,
+        secretKey: String,
     ): StorageResult {
         // Try keychain first
-        if (KeychainManager.storeApiKey(provider, apiKey)) {
-            log.debug("✅ API key for $provider stored securely in system keychain")
+        if (KeychainManager.storeSecretKey(keyIdentifier, secretKey)) {
+            log.debug("✅ API key for $keyIdentifier stored securely in system keychain")
             return StorageResult(true, KEYCHAIN)
         }
 
         // Fallback to encryption
-        val encryptedKey = EncryptionManager.encrypt(apiKey)
+        val encryptedKey = EncryptionManager.encrypt(secretKey)
         if (encryptedKey != null) {
-            if (storeEncryptedKey(provider, encryptedKey)) {
-                log.warn("⚠️ System keychain not available. API key for $provider stored with encryption (less secure than keychain)")
+            if (storeEncryptedKey(keyIdentifier, encryptedKey)) {
+                log.warn("⚠️ System keychain not available. API key for $keyIdentifier stored with encryption (less secure than keychain)")
                 return StorageResult(
                     success = true,
                     method = ENCRYPTED,
@@ -65,7 +65,7 @@ object SecureApiKeyManager {
         }
 
         // Both methods failed
-        log.warn("❌ Both keychain and encryption failed. API key for $provider will be stored as plain text")
+        log.warn("❌ Both keychain and encryption failed. API key for $keyIdentifier will be stored as plain text")
         return StorageResult(
             success = false,
             method = INSECURE_FALLBACK,
@@ -74,67 +74,41 @@ object SecureApiKeyManager {
     }
 
     /**
-     * Retrieves an API key, trying keychain first, then encryption fallback.
+     * Retrieves an secret key, trying keychain first, then encryption fallback.
      *
-     * @param provider The provider name
-     * @return The API key if found, null otherwise
+     * @param keyIdentifier The unique name
+     * @return The secret key if found, null otherwise
      */
-    fun retrieveApiKey(provider: String): String? {
+    fun retrieveSecretKey(keyIdentifier: String): String? {
         // Try keychain first
-        KeychainManager.retrieveApiKey(provider)?.let { return it }
+        KeychainManager.retrieveSecretKey(keyIdentifier)?.let { return it }
 
         // Try encrypted storage
-        return retrieveEncryptedKey(provider)
+        return retrieveEncryptedKey(keyIdentifier)
     }
 
     /**
-     * Removes an API key from secure storage.
+     * Removes an secret key from secure storage.
      *
-     * @param provider The provider name
+     * @param keyIdentifier The unique name
      * @return true if removed from any secure storage method
      */
-    fun removeApiKey(provider: String): Boolean {
-        val keychainRemoved = KeychainManager.removeApiKey(provider)
-        val encryptedRemoved = removeEncryptedKey(provider)
+    fun removeSecretKey(keyIdentifier: String): Boolean {
+        val keychainRemoved = KeychainManager.removeSecretKey(keyIdentifier)
+        val encryptedRemoved = removeEncryptedKey(keyIdentifier)
         return keychainRemoved || encryptedRemoved
-    }
-
-    /**
-     * Checks if an API key exists in secure storage.
-     *
-     * @param provider The provider name
-     * @return true if found in keychain or encrypted storage
-     */
-    fun hasSecureApiKey(provider: String): Boolean = retrieveApiKey(provider) != null
-
-    /**
-     * Migrates an existing plain text API key to secure storage.
-     *
-     * @param provider The provider name
-     * @param plainTextApiKey The existing plain text API key
-     * @return StorageResult indicating migration success and method used
-     */
-    fun migrateToSecureStorage(
-        provider: String,
-        plainTextApiKey: String,
-    ): StorageResult {
-        if (plainTextApiKey.isBlank()) {
-            return StorageResult(false, INSECURE_FALLBACK, "No API key to migrate")
-        }
-
-        return storeApiKey(provider, plainTextApiKey)
     }
 
     /**
      * Stores an encrypted key to the encrypted storage file.
      */
-    private fun storeEncryptedKey(provider: String, encryptedKey: String): Boolean = try {
+    private fun storeEncryptedKey(keyIdentifier: String, encryptedKey: String): Boolean = try {
         val properties = loadEncryptedStorage()
-        properties.setProperty(provider, encryptedKey)
+        properties.setProperty(keyIdentifier, encryptedKey)
         saveEncryptedStorage(properties)
         true
     } catch (e: Exception) {
-        log.error("Failed to store encrypted key for $provider: ${e.message}", e)
+        log.error("Failed to store encrypted key for $keyIdentifier: ${e.message}", e)
         false
     }
 
@@ -153,15 +127,15 @@ object SecureApiKeyManager {
     /**
      * Removes an encrypted key from the storage file.
      */
-    private fun removeEncryptedKey(provider: String): Boolean = try {
+    private fun removeEncryptedKey(keyIdentifier: String): Boolean = try {
         val properties = loadEncryptedStorage()
-        val removed = properties.remove(provider) != null
+        val removed = properties.remove(keyIdentifier) != null
         if (removed) {
             saveEncryptedStorage(properties)
         }
         removed
     } catch (e: Exception) {
-        log.error("Failed to remove encrypted key for $provider: ${e.message}", e)
+        log.error("Failed to remove encrypted key for $keyIdentifier: ${e.message}", e)
         false
     }
 

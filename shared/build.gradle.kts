@@ -35,7 +35,6 @@ dependencies {
         exclude(group = "org.eclipse.angus", module = "angus-activation")
     }
 
-    implementation(libs.okhttp)
     implementation(libs.jsoup)
 
     implementation(libs.bundles.commonmark)
