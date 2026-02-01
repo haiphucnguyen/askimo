@@ -82,36 +82,6 @@ class TestSecureSessionManager {
         return sanitizedParams
     }
 
-    /**
-     * Migrates existing plain text API keys to secure storage using test-safe provider names.
-     */
-    fun migrateExistingApiKeys(appContextParams: AppContextParams): MigrationResult {
-        val results = mutableMapOf<ModelProvider, SecureApiKeyManager.StorageResult>()
-        var hasInsecureKeys = false
-
-        appContextParams.providerSettings.forEach { (provider, settings) ->
-            if (settings is HasApiKey && settings.apiKey.isNotBlank()) {
-                if (isUsingSecureStorage(settings.apiKey)) {
-                    return@forEach
-                }
-
-                val safeProviderName = getSafeProviderName(provider)
-                val result = SecureApiKeyManager.migrateToSecureStorage(safeProviderName, settings.apiKey)
-                results[provider] = result
-
-                if (!result.success) {
-                    hasInsecureKeys = true
-                    log.warn("Failed to migrate API key for test provider $safeProviderName to secure storage")
-                } else {
-                    log.debug("Migrated API key for test provider $safeProviderName to ${result.method.name}")
-                    updateApiKeyPlaceholder(settings, result.method)
-                }
-            }
-        }
-
-        return MigrationResult(results, hasInsecureKeys)
-    }
-
     private fun isUsingSecureStorage(apiKey: String): Boolean = apiKey == KEYCHAIN_API_KEY_PLACEHOLDER ||
         apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
 
@@ -127,7 +97,7 @@ class TestSecureSessionManager {
         val safeProviderName = getSafeProviderName(provider)
 
         // Try to load from secure storage
-        val secureKey = SecureApiKeyManager.retrieveApiKey(safeProviderName)
+        val secureKey = SecureKeyManager.retrieveSecretKey(safeProviderName)
         if (secureKey != null) {
             settings.apiKey = secureKey
             log.debug("Loaded API key for test provider $safeProviderName from secure storage")
@@ -156,7 +126,7 @@ class TestSecureSessionManager {
         // Use test-safe provider name
         val safeProviderName = getSafeProviderName(provider)
 
-        val result = SecureApiKeyManager.storeApiKey(safeProviderName, apiKey)
+        val result = SecureKeyManager.storeSecuredKey(safeProviderName, apiKey)
 
         if (result.success) {
             // Replace with appropriate placeholder
@@ -178,11 +148,11 @@ class TestSecureSessionManager {
 
     private fun getSafeProviderName(provider: ModelProvider): String = "$TEST_PROVIDER_PREFIX${provider.name.lowercase()}"
 
-    private fun updateApiKeyPlaceholder(settings: HasApiKey, method: SecureApiKeyManager.StorageMethod) {
+    private fun updateApiKeyPlaceholder(settings: HasApiKey, method: SecureKeyManager.StorageMethod) {
         settings.apiKey = when (method) {
-            SecureApiKeyManager.StorageMethod.KEYCHAIN -> KEYCHAIN_API_KEY_PLACEHOLDER
-            SecureApiKeyManager.StorageMethod.ENCRYPTED -> KEYCHAIN_API_KEY_PLACEHOLDER
-            SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK -> settings.apiKey // Keep as-is
+            SecureKeyManager.StorageMethod.KEYCHAIN -> KEYCHAIN_API_KEY_PLACEHOLDER
+            SecureKeyManager.StorageMethod.ENCRYPTED -> KEYCHAIN_API_KEY_PLACEHOLDER
+            SecureKeyManager.StorageMethod.INSECURE_FALLBACK -> settings.apiKey // Keep as-is
         }
     }
 
@@ -224,39 +194,5 @@ class TestSecureSessionManager {
             lmStudioSettings.copy()
         }
         ModelProvider.UNKNOWN -> settings // Unknown settings, return as-is
-    }
-
-    data class MigrationResult(
-        val results: Map<ModelProvider, SecureApiKeyManager.StorageResult>,
-        val hasInsecureKeys: Boolean,
-    ) {
-        fun getSecurityReport(): List<String> {
-            val report = mutableListOf<String>()
-
-            if (results.isEmpty()) {
-                report.add("No API keys found to migrate")
-                return report
-            }
-
-            report.add("API Key Security Report:")
-            results.forEach { (provider, result) ->
-                val security = SecureApiKeyManager.getStorageSecurityDescription(result.method)
-                report.add("  ${provider.name}: $security")
-                result.warningMessage?.let {
-                    report.add("    ⚠️ $it")
-                }
-            }
-
-            if (hasInsecureKeys) {
-                report.add("")
-                report.add("⚠️ Some API keys could not be stored securely!")
-                report.add("Consider:")
-                report.add("  - Installing system keychain utilities")
-                report.add("  - Setting proper file permissions")
-                report.add("  - Using environment variables instead")
-            }
-
-            return report
-        }
     }
 }

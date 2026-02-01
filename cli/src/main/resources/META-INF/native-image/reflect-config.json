@@ -923,10 +923,6 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
-    "name": "com.sun.crypto.provider.HmacCore$HmacSHA256",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
     "name": "com.sun.crypto.provider.HmacCore$HmacSHA384",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -1291,13 +1287,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "customParameters", "parameterTypes": [] }]
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1355,8 +1344,7 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "build", "parameterTypes": [] },
       { "name": "content", "parameterTypes": ["java.lang.String"] },
-      { "name": "role", "parameterTypes": ["java.lang.String"] },
-      { "name": "toolCalls", "parameterTypes": ["java.util.List"] }
+      { "name": "role", "parameterTypes": ["java.lang.String"] }
     ]
   },
   {
@@ -1366,22 +1354,10 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "arguments", "parameterTypes": ["java.lang.String"] },
-      { "name": "build", "parameterTypes": [] },
-      { "name": "name", "parameterTypes": ["java.lang.String"] }
-    ]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Message",
@@ -1399,32 +1375,7 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolCall",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "dev.langchain4j.model.openai.internal.chat.ToolCall$Builder",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "build", "parameterTypes": [] },
-      {
-        "name": "function",
-        "parameterTypes": [
-          "dev.langchain4j.model.openai.internal.chat.FunctionCall"
-        ]
-      },
-      { "name": "id", "parameterTypes": ["java.lang.String"] },
-      { "name": "index", "parameterTypes": ["java.lang.Integer"] },
-      { "name": "type", "parameterTypes": ["java.lang.String"] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.chat.ToolMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -1540,6 +1491,10 @@
       { "name": "fromResource", "parameterTypes": [] },
       { "name": "value", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "double",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "io.askimo.cli.UrlContentExtractorTest",
@@ -2576,7 +2531,11 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getAvailableModels", "parameterTypes": [] },
+      { "name": "getUtilityModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -2615,6 +2574,14 @@
         ]
       },
       {
+        "name": "updateProxyField",
+        "parameterTypes": [
+          "io.askimo.core.config.ProxyConfig",
+          "java.lang.String",
+          "java.lang.Object"
+        ]
+      },
+      {
         "name": "updateRagField",
         "parameterTypes": [
           "io.askimo.core.config.RagConfig",
@@ -2641,7 +2608,8 @@
           "io.askimo.core.config.ChatConfig",
           "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
-          "io.askimo.core.config.ModelsConfig"
+          "io.askimo.core.config.ModelsConfig",
+          "io.askimo.core.config.ProxyConfig"
         ]
       },
       {
@@ -2656,10 +2624,21 @@
           "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
+          "io.askimo.core.config.ProxyConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getBackup", "parameterTypes": [] },
+      { "name": "getChat", "parameterTypes": [] },
+      { "name": "getDeveloper", "parameterTypes": [] },
+      { "name": "getEmbedding", "parameterTypes": [] },
+      { "name": "getIndexing", "parameterTypes": [] },
+      { "name": "getModels", "parameterTypes": [] },
+      { "name": "getProxy", "parameterTypes": [] },
+      { "name": "getRag", "parameterTypes": [] },
+      { "name": "getRetry", "parameterTypes": [] },
+      { "name": "getThrottle", "parameterTypes": [] }
     ]
   },
   {
@@ -2671,6 +2650,18 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "ProxyConfig getStorageKey should be unique per proxy type",
+        "parameterTypes": []
+      },
+      {
+        "name": "ProxyConfig isActualPassword should detect actual passwords",
+        "parameterTypes": []
+      },
+      {
+        "name": "ProxyConfig should have placeholder constant",
+        "parameterTypes": []
+      },
       {
         "name": "updateChatField should handle all fields including nested sampling",
         "parameterTypes": []
@@ -2689,6 +2680,26 @@
       },
       {
         "name": "updateModelsField should handle embedding models",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateProxyField should handle all basic fields",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateProxyField should handle type changes correctly",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateProxyField should preserve empty password",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateProxyField should preserve placeholder when placeholder provided",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateProxyField should store password as placeholder when actual password provided",
         "parameterTypes": []
       },
       {
@@ -2717,7 +2728,26 @@
           "boolean",
           "boolean"
         ]
-      }
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "int",
+          "int",
+          "boolean",
+          "boolean",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getAutoBackupEnabled", "parameterTypes": [] },
+      { "name": "getAutoBackupIntervalHours", "parameterTypes": [] },
+      { "name": "getAutoBackupOnStartup", "parameterTypes": [] },
+      { "name": "getCreateBackupBeforeRestore", "parameterTypes": [] },
+      { "name": "getCreateBackupOnUpgrade", "parameterTypes": [] },
+      { "name": "getMaxAutoBackupsToKeep", "parameterTypes": [] }
     ]
   },
   {
@@ -2749,7 +2779,13 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getDefaultResponseAILocale", "parameterTypes": [] },
+      { "name": "getEnableAsyncSummarization", "parameterTypes": [] },
+      { "name": "getMaxTokens", "parameterTypes": [] },
+      { "name": "getSampling", "parameterTypes": [] },
+      { "name": "getSummarizationThreshold", "parameterTypes": [] },
+      { "name": "getSummarizationTimeoutSeconds", "parameterTypes": [] }
     ]
   },
   {
@@ -2767,7 +2803,9 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getActive", "parameterTypes": [] },
+      { "name": "getEnabled", "parameterTypes": [] }
     ]
   },
   {
@@ -2789,7 +2827,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -2811,7 +2852,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getChunkOverlap", "parameterTypes": [] },
+      { "name": "getMaxCharsPerChunk", "parameterTypes": [] },
+      { "name": "getPreferredDim", "parameterTypes": [] }
     ]
   },
   {
@@ -2830,7 +2874,26 @@
           "boolean",
           "boolean"
         ]
-      }
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getBinary", "parameterTypes": [] },
+      { "name": "getCustom", "parameterTypes": [] },
+      { "name": "getDockerignore", "parameterTypes": [] },
+      { "name": "getFilesize", "parameterTypes": [] },
+      { "name": "getGitignore", "parameterTypes": [] },
+      { "name": "getProjecttype", "parameterTypes": [] }
     ]
   },
   {
@@ -2858,7 +2921,11 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -2896,7 +2963,16 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getBinaryExtensions", "parameterTypes": [] },
+      { "name": "getCommonExcludes", "parameterTypes": [] },
+      { "name": "getConcurrentIndexingThreads", "parameterTypes": [] },
+      { "name": "getCustomExcludes", "parameterTypes": [] },
+      { "name": "getExcludeFileNames", "parameterTypes": [] },
+      { "name": "getFilters", "parameterTypes": [] },
+      { "name": "getMaxFileBytes", "parameterTypes": [] },
+      { "name": "getProjectTypes", "parameterTypes": [] },
+      { "name": "getSupportedExtensions", "parameterTypes": [] }
     ]
   },
   {
@@ -2918,7 +2994,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -2940,7 +3019,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -2976,7 +3058,15 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getAnthropic", "parameterTypes": [] },
+      { "name": "getDocker", "parameterTypes": [] },
+      { "name": "getGemini", "parameterTypes": [] },
+      { "name": "getLmstudio", "parameterTypes": [] },
+      { "name": "getLocalai", "parameterTypes": [] },
+      { "name": "getOllama", "parameterTypes": [] },
+      { "name": "getOpenai", "parameterTypes": [] },
+      { "name": "getXai", "parameterTypes": [] }
     ]
   },
   {
@@ -2998,7 +3088,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3026,7 +3119,11 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getUtilityModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3038,8 +3135,71 @@
       {
         "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.util.Set", "java.util.Set"]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.util.Set",
+          "java.util.Set",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getExcludePaths", "parameterTypes": [] },
+      { "name": "getMarkers", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ProxyConfig",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.ProxyType",
+          "java.lang.String",
+          "int",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.config.ProxyType",
+          "java.lang.String",
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getHost", "parameterTypes": [] },
+      { "name": "getPassword", "parameterTypes": [] },
+      { "name": "getPort", "parameterTypes": [] },
+      { "name": "getType", "parameterTypes": [] },
+      { "name": "getUsername", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ProxyConfig$Companion",
+    "methods": [
+      {
+        "name": "getStorageKey",
+        "parameterTypes": ["io.askimo.core.config.ProxyType"]
       }
     ]
+  },
+  {
+    "name": "io.askimo.core.config.ProxyType",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "io.askimo.core.config.RagConfig",
@@ -3062,7 +3222,12 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getHybridMaxResults", "parameterTypes": [] },
+      { "name": "getRankFusionConstant", "parameterTypes": [] },
+      { "name": "getUseAbsolutePathInCitations", "parameterTypes": [] },
+      { "name": "getVectorSearchMaxResults", "parameterTypes": [] },
+      { "name": "getVectorSearchMinScore", "parameterTypes": [] }
     ]
   },
   {
@@ -3080,7 +3245,9 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getAttempts", "parameterTypes": [] },
+      { "name": "getBaseDelayMs", "parameterTypes": [] }
     ]
   },
   {
@@ -3099,7 +3266,10 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getEnabled", "parameterTypes": [] },
+      { "name": "getTemperature", "parameterTypes": [] },
+      { "name": "getTopP", "parameterTypes": [] }
     ]
   },
   {
@@ -3116,7 +3286,8 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getPerRequestSleepMs", "parameterTypes": [] }
     ]
   },
   {
@@ -3134,7 +3305,9 @@
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
-      }
+      },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3308,7 +3481,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$DvsNcRB4",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$g6SNGR1d",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -3441,6 +3614,29 @@
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.providers.openai.OpenAiModelFactoryProxyTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "canConfigureHttpProxy", "parameterTypes": [] },
+      { "name": "canConfigureHttpsProxy", "parameterTypes": [] },
+      { "name": "canConfigureProxyAuth", "parameterTypes": [] },
+      { "name": "canConfigureSocks5Proxy", "parameterTypes": [] },
+      { "name": "modelListRespectsProxy", "parameterTypes": [] },
+      { "name": "proxyConfigPersistsAcrossRequests", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "streamingModelRespectsProxy", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "utilityModelRespectsProxy", "parameterTypes": [] },
+      { "name": "worksWithNoProxy", "parameterTypes": [] },
+      { "name": "worksWithSystemProxy", "parameterTypes": [] }
     ]
   },
   {
@@ -3843,7 +4039,29 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerLinuxIntegrationTest",
+    "name": "io.askimo.core.security.SecureApiKeyStorageTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] },
+      { "name": "test encryption fallback", "parameterTypes": [] },
+      { "name": "test secure session loading", "parameterTypes": [] },
+      { "name": "test storage security descriptions", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.security.SecureApiKeyStorageTest$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.security.SecureKeyManagerLinuxIntegrationTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
@@ -3856,13 +4074,13 @@
     ]
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerLinuxIntegrationTest$Companion",
+    "name": "io.askimo.core.security.SecureKeyManagerLinuxIntegrationTest$Companion",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerMacOSIntegrationTest",
+    "name": "io.askimo.core.security.SecureKeyManagerMacOSIntegrationTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
@@ -3888,13 +4106,13 @@
     ]
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerMacOSIntegrationTest$Companion",
+    "name": "io.askimo.core.security.SecureKeyManagerMacOSIntegrationTest$Companion",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerWindowsIntegrationTest",
+    "name": "io.askimo.core.security.SecureKeyManagerWindowsIntegrationTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
@@ -3907,33 +4125,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyManagerWindowsIntegrationTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.security.SecureApiKeyStorageTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] },
-      {
-        "name": "test API key migration from plain text",
-        "parameterTypes": []
-      },
-      { "name": "test encryption fallback", "parameterTypes": [] },
-      { "name": "test secure session loading", "parameterTypes": [] },
-      { "name": "test storage security descriptions", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.security.SecureApiKeyStorageTest$Companion",
+    "name": "io.askimo.core.security.SecureKeyManagerWindowsIntegrationTest$Companion",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -3950,19 +4142,15 @@
       { "name": "setUp", "parameterTypes": [] },
       { "name": "tearDown", "parameterTypes": [] },
       { "name": "testCorruptedEncryptedApiKey", "parameterTypes": [] },
-      { "name": "testEmptySessionParams", "parameterTypes": [] },
       { "name": "testEncryptedApiKeyHandling", "parameterTypes": [] },
       { "name": "testKeychainOperationsDirectly", "parameterTypes": [] },
       { "name": "testKeychainPlaceholderHandling", "parameterTypes": [] },
       { "name": "testLoadSessionWithEmptyApiKeys", "parameterTypes": [] },
-      { "name": "testMigrateExistingApiKeys", "parameterTypes": [] },
       { "name": "testMultipleProvidersWithApiKeys", "parameterTypes": [] },
       { "name": "testPreserveNonApiKeySettings", "parameterTypes": [] },
       { "name": "testRoundTripSaveAndLoad", "parameterTypes": [] },
       { "name": "testSaveSessionWithApiKeys", "parameterTypes": [] },
-      { "name": "testSecurityReportGeneration", "parameterTypes": [] },
-      { "name": "testSessionParamsCopyBehavior", "parameterTypes": [] },
-      { "name": "testSkipMigrationForSecureKeys", "parameterTypes": [] }
+      { "name": "testSessionParamsCopyBehavior", "parameterTypes": [] }
     ]
   },
   {
@@ -3991,12 +4179,6 @@
   },
   {
     "name": "io.askimo.core.security.TestSecureSessionManager$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.security.TestSecureSessionManager$MigrationResult",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -4105,15 +4287,6 @@
       },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
-        "name": "runCommand",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.Map",
-          "java.lang.Boolean"
-        ]
-      },
-      {
         "name": "writeFile",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
       }
@@ -4170,6 +4343,9 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.io.ObjectInputStream"
+  },
+  {
     "name": "java.io.Serializable",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4223,7 +4399,17 @@
   },
   {
     "name": "java.lang.Comparable",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.Deprecated",
+    "queryAllDeclaredMethods": true,
+    "methods": [
+      { "name": "forRemoval", "parameterTypes": [] },
+      { "name": "since", "parameterTypes": [] }
+    ]
   },
   {
     "name": "java.lang.Double",
@@ -4233,7 +4419,12 @@
   },
   {
     "name": "java.lang.Enum",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.Enum$EnumDesc"
   },
   {
     "name": "java.lang.Exception",
@@ -4406,6 +4597,8 @@
   },
   {
     "name": "java.lang.constant.Constable",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
   },
   {
@@ -4771,6 +4964,9 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.util.Optional"
+  },
+  {
     "name": "java.util.RandomAccess",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4862,6 +5058,9 @@
     ]
   },
   {
+    "name": "jdk.internal.ValueBased"
+  },
+  {
     "name": "jdk.internal.misc.Unsafe"
   },
   {
@@ -4874,7 +5073,16 @@
     "name": "kotlin.Boolean"
   },
   {
+    "name": "kotlin.Comparable"
+  },
+  {
+    "name": "kotlin.Deprecated"
+  },
+  {
     "name": "kotlin.Double"
+  },
+  {
+    "name": "kotlin.Enum"
   },
   {
     "name": "kotlin.Float"
@@ -4918,7 +5126,11 @@
     "name": "kotlin.Unit"
   },
   {
+    "name": "kotlin.annotation.AnnotationTarget"
+  },
+  {
     "name": "kotlin.annotation.MustBeDocumented",
+    "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
   },
   {
@@ -4927,7 +5139,9 @@
   },
   {
     "name": "kotlin.annotation.Target",
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "methods": [{ "name": "allowedTargets", "parameterTypes": [] }]
   },
   {
     "name": "kotlin.collections.Collection"
@@ -5519,7 +5733,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$iyguPHTY",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$1BboxqJk",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5645,10 +5859,6 @@
   },
   {
     "name": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.ssl.SSLContextImpl$TLSContext",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

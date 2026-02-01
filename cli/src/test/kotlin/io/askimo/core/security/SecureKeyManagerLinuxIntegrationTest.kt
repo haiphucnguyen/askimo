@@ -17,7 +17,7 @@ import org.junit.jupiter.api.TestInstance
 import java.io.IOException
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SecureApiKeyManagerLinuxIntegrationTest {
+class SecureKeyManagerLinuxIntegrationTest {
 
     private val testProviders = mutableSetOf<String>()
 
@@ -40,7 +40,7 @@ class SecureApiKeyManagerLinuxIntegrationTest {
         // Clean up all test providers that were created during tests
         testProviders.forEach { provider ->
             try {
-                SecureApiKeyManager.removeApiKey(provider)
+                SecureKeyManager.removeSecretKey(provider)
             } catch (e: Exception) {
                 println("Warning: Failed to clean up test provider $provider: ${e.message}")
             }
@@ -52,16 +52,16 @@ class SecureApiKeyManagerLinuxIntegrationTest {
     fun `test SecureApiKeyManager end-to-end with long OpenAI API key`() {
         val provider = generateTestProvider("openai-e2e")
 
-        println("=== SecureApiKeyManager End-to-End Test (Linux) ===")
+        println("=== SecureKeyManager End-to-End Test (Linux) ===")
         println("Testing with long API key:")
         println("Original length: ${LONG_API_KEY.length}")
         println("Original prefix: ${LONG_API_KEY.take(20)}...")
         println("Original suffix: ...${LONG_API_KEY.takeLast(20)}")
 
-        // Store using SecureApiKeyManager (this is what the application uses)
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, LONG_API_KEY)
+        // Store using SecureKeyManager (this is what the application uses)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, LONG_API_KEY)
         println("Store result: $storeResult")
-        assertTrue(storeResult.success, "SecureApiKeyManager should successfully store the API key")
+        assertTrue(storeResult.success, "SecureKeyManager should successfully store the API key")
 
         // On Linux, it might use different storage methods depending on what's available
         println("Storage method used: ${storeResult.method}")
@@ -69,8 +69,8 @@ class SecureApiKeyManagerLinuxIntegrationTest {
             println("Warning: ${storeResult.warningMessage}")
         }
 
-        // Retrieve using SecureApiKeyManager
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        // Retrieve using SecureKeyManager
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         println("Retrieved key is null: ${retrievedKey == null}")
         assertNotNull(retrievedKey, "Retrieved API key should not be null")
 
@@ -108,7 +108,7 @@ class SecureApiKeyManagerLinuxIntegrationTest {
     fun `test retrieve non-existent key through SecureApiKeyManager`() {
         val provider = generateTestProvider("non-existent")
 
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         assertNull(retrievedKey, "Non-existent API key should return null")
     }
 
@@ -118,19 +118,19 @@ class SecureApiKeyManagerLinuxIntegrationTest {
         val testKey = "sk-test-key-123"
 
         // Store the key
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, testKey)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, testKey)
         assertTrue(storeResult.success, "Should store key successfully")
 
         // Verify it's stored
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         assertEquals(testKey, retrievedKey, "Key should be retrievable after storing")
 
         // Remove the key
-        val removeResult = SecureApiKeyManager.removeApiKey(provider)
+        val removeResult = SecureKeyManager.removeSecretKey(provider)
         assertTrue(removeResult, "Should remove key successfully")
 
         // Verify it's removed
-        val retrievedAfterRemoval = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedAfterRemoval = SecureKeyManager.retrieveSecretKey(provider)
         assertNull(retrievedAfterRemoval, "Key should not be retrievable after removal")
     }
 
@@ -138,7 +138,7 @@ class SecureApiKeyManagerLinuxIntegrationTest {
     fun `test storage method detection on Linux`() {
         val provider = generateTestProvider("storage-method")
 
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, LONG_API_KEY)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, LONG_API_KEY)
         assertTrue(storeResult.success, "Should store successfully")
 
         // On Linux, the storage method depends on what's available
@@ -147,9 +147,9 @@ class SecureApiKeyManagerLinuxIntegrationTest {
         // Common storage methods on Linux: KEYCHAIN (if secret-tool works), ENCRYPTED, or INSECURE_FALLBACK
         assertTrue(
             storeResult.method in listOf(
-                SecureApiKeyManager.StorageMethod.KEYCHAIN,
-                SecureApiKeyManager.StorageMethod.ENCRYPTED,
-                SecureApiKeyManager.StorageMethod.INSECURE_FALLBACK,
+                SecureKeyManager.StorageMethod.KEYCHAIN,
+                SecureKeyManager.StorageMethod.ENCRYPTED,
+                SecureKeyManager.StorageMethod.INSECURE_FALLBACK,
             ),
             "Should use a valid storage method",
         )

@@ -40,11 +40,11 @@ The original security tests in `io.askimo.core.security` package were using real
 ### 3. Verified Existing Tests
 
 **Integration Tests (Already Safe)**
-- `SecureApiKeyManagerLinuxIntegrationTest.kt` ✅
-- `SecureApiKeyManagerMacOSIntegrationTest.kt` ✅ 
+- `SecureKeyManagerLinuxIntegrationTest.kt` ✅
+- `SecureKeyManagerMacOSIntegrationTest.kt` ✅ 
 - `KeychainManagerLinuxIntegrationTest.kt` ✅
 - `KeychainManagerMacOSIntegrationTest.kt` ✅
-- `SecureApiKeyManagerWindowsIntegrationTest.kt` ✅
+- `SecureKeyManagerWindowsIntegrationTest.kt` ✅
 
 These were already using safe patterns with `TEST_PROVIDER_PREFIX` and `generateTestProvider()` methods.
 

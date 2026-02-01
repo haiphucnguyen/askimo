@@ -21,6 +21,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
+import io.askimo.core.util.ProxyUtil
 import java.net.http.HttpClient
 import java.time.Duration
 
@@ -48,8 +49,11 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     ): ChatClient {
         val telemetry = AppContext.getInstance().telemetry
 
-        // LMStudio requires HTTP/1.1
-        val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        // Configure HTTP client with proxy (automatically skips proxy for localhost)
+        val httpClientBuilder = ProxyUtil.configureProxy(
+            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1),
+            settings.baseUrl,
+        )
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
         val chatModel =
@@ -80,8 +84,11 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
     private fun createSecondaryChatModel(
         settings: LmStudioSettings,
     ): ChatModel {
-        // LMStudio requires HTTP/1.1
-        val httpClientBuilder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        // Configure HTTP client with proxy (automatically skips proxy for localhost)
+        val httpClientBuilder = ProxyUtil.configureProxy(
+            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1),
+            settings.baseUrl,
+        )
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
         return OpenAiChatModel.builder()

@@ -60,14 +60,6 @@ object AppContextConfigManager {
                 AppContextParams.noOp()
             }
 
-        // Migrate existing API keys to secure storage
-        val migrationResult = secureSessionManager.migrateExistingApiKeys(loaded)
-
-        // Show security report if there were API keys to migrate
-        if (migrationResult.results.isNotEmpty()) {
-            migrationResult.getSecurityReport().forEach { log.debug(it) }
-        }
-
         // Load API keys from secure storage
         val secureLoaded = secureSessionManager.loadSecureSession(loaded)
 

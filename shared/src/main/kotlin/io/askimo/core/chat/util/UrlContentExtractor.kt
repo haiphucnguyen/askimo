@@ -4,16 +4,18 @@
  */
 package io.askimo.core.chat.util
 
-import io.askimo.core.logging.logger
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.util.ProxyUtil
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.sax.BodyContentHandler
 import org.jsoup.Jsoup
 import java.io.ByteArrayInputStream
 import java.net.URI
-import java.util.concurrent.TimeUnit
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 
 /**
  * Result of URL content extraction.
@@ -27,12 +29,12 @@ data class ExtractedUrlContent(
 
 /**
  * Utility for extracting text content from URLs.
- * Uses OkHttp for fetching, Jsoup for HTML parsing, and Apache Tika for other formats.
+ * Uses java.net.http.HttpClient for fetching (with proxy support), Jsoup for HTML parsing, and Apache Tika for other formats.
  * Supports HTML pages, PDF documents, plain text, and other text-based formats.
  */
 object UrlContentExtractor {
 
-    private val log = logger<UrlContentExtractor>()
+    private val log = currentFileLogger()
 
     // Lazy initialization to avoid GraalVM native image initialization issues
     private val parser: AutoDetectParser by lazy {
@@ -44,11 +46,14 @@ object UrlContentExtractor {
         }
     }
 
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .build()
+    private val httpClient: HttpClient by lazy {
+        // Configure HTTP client with proxy support (consistent with AI model factories)
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+
+        httpClientBuilder.build()
+    }
 
     /**
      * Extract text content from a URL.
@@ -61,42 +66,42 @@ object UrlContentExtractor {
     fun extractContent(url: String): ExtractedUrlContent {
         val normalizedUrl = normalizeUrl(url)
 
-        val request = Request.Builder()
-            .url(normalizedUrl)
+        val request = HttpRequest.newBuilder()
+            .uri(URI(normalizedUrl))
             .header("User-Agent", "Mozilla/5.0 (compatible; Askimo/1.0; +https://askimo.chat)")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
             .build()
 
-        httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw Exception("Failed to fetch URL: HTTP ${response.code}")
-            }
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
 
-            val contentType = response.header("Content-Type") ?: "application/octet-stream"
-            val bytes = response.body.use { body ->
-                body.source().readByteArray()
-            }
+        if (response.statusCode() !in 200..299) {
+            throw Exception("Failed to fetch URL: HTTP ${response.statusCode()}")
+        }
 
-            return when {
-                contentType.contains("text/html", ignoreCase = true) -> {
-                    extractHtmlContent(normalizedUrl, bytes)
-                }
-                contentType.contains("application/pdf", ignoreCase = true) -> {
-                    extractPdfContent(normalizedUrl, bytes)
-                }
-                contentType.startsWith("text/", ignoreCase = true) ||
-                    contentType.contains("json", ignoreCase = true) ||
-                    contentType.contains("xml", ignoreCase = true) -> {
-                    val text = String(bytes, Charsets.UTF_8)
-                    ExtractedUrlContent(
-                        url = normalizedUrl,
-                        title = extractTitleFromUrl(normalizedUrl),
-                        content = ContentSanitizer.sanitizeTemplateVariables(text.trim()),
-                        contentType = contentType,
-                    )
-                }
-                else -> {
-                    extractUsingTika(normalizedUrl, bytes, contentType)
-                }
+        val contentType = response.headers().firstValue("Content-Type").orElse("application/octet-stream")
+        val bytes = response.body()
+
+        return when {
+            contentType.contains("text/html", ignoreCase = true) -> {
+                extractHtmlContent(normalizedUrl, bytes)
+            }
+            contentType.contains("application/pdf", ignoreCase = true) -> {
+                extractPdfContent(normalizedUrl, bytes)
+            }
+            contentType.startsWith("text/", ignoreCase = true) ||
+                contentType.contains("json", ignoreCase = true) ||
+                contentType.contains("xml", ignoreCase = true) -> {
+                val text = String(bytes, Charsets.UTF_8)
+                ExtractedUrlContent(
+                    url = normalizedUrl,
+                    title = extractTitleFromUrl(normalizedUrl),
+                    content = ContentSanitizer.sanitizeTemplateVariables(text.trim()),
+                    contentType = contentType,
+                )
+            }
+            else -> {
+                extractUsingTika(normalizedUrl, bytes, contentType)
             }
         }
     }

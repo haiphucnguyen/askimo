@@ -4,6 +4,7 @@
  */
 package io.askimo.core.providers.openai
 
+import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -22,6 +23,8 @@ import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ApiKeyUtils.safeApiKey
+import io.askimo.core.util.ProxyUtil
+import java.net.http.HttpClient
 import java.time.Duration
 
 class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
@@ -60,9 +63,15 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     ): ChatClient {
         val telemetry = AppContext.getInstance().telemetry
 
+        // Configure HTTP client with proxy (external service, always use proxy if configured)
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder()
+            .httpClientBuilder(httpClientBuilder)
+
         val chatModel =
             OpenAiStreamingChatModel
                 .builder()
+                .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(model)
                 .logger(log)
@@ -82,11 +91,17 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         )
     }
 
-    private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel = OpenAiChatModel.builder()
-        .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.openai.utilityModel)
-        .timeout(Duration.ofSeconds(AppConfig.models.openai.utilityModelTimeoutSeconds))
-        .build()
+    private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(AppConfig.models.openai.utilityModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.openai.utilityModelTimeoutSeconds))
+            .build()
+    }
 
     override fun createUtilityClient(
         settings: OpenAiSettings,

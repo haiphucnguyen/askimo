@@ -13,6 +13,8 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.security.SecureKeyManager
+import io.askimo.core.security.SecureKeyManager.StorageMethod
 import io.askimo.core.util.AskimoHome
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -187,6 +189,48 @@ data class SamplingConfig(
     val enabled: Boolean = true, // Allow users to disable sampling parameters
 )
 
+enum class ProxyType {
+    NONE,
+    HTTP,
+    HTTPS,
+    SOCKS5,
+    SYSTEM,
+}
+
+data class ProxyConfig(
+    val type: ProxyType = ProxyType.NONE,
+    val host: String = "",
+    val port: Int = 8080,
+    val username: String = "",
+    val password: String = "",
+) {
+    companion object {
+        private const val KEYCHAIN_PASSWORD_PLACEHOLDER = "***keychain***"
+
+        private fun getStorageKey(proxyType: ProxyType): String = "proxy.${proxyType.name.lowercase()}.password"
+
+        fun isActualPassword(password: String): Boolean = password.isNotBlank() && password != KEYCHAIN_PASSWORD_PLACEHOLDER
+
+        fun getSecurePassword(proxyType: ProxyType): String? = SecureKeyManager.retrieveSecretKey(getStorageKey(proxyType))
+
+        fun setSecurePassword(proxyType: ProxyType, password: String): SecureKeyManager.StorageResult = if (password.isEmpty()) {
+            // Remove password if empty
+            SecureKeyManager.removeSecretKey(getStorageKey(proxyType))
+            SecureKeyManager.StorageResult(
+                success = true,
+                method = StorageMethod.KEYCHAIN,
+            )
+        } else {
+            SecureKeyManager.storeSecuredKey(getStorageKey(proxyType), password)
+        }
+
+        /**
+         * Get the placeholder to use in YAML for securely stored password.
+         */
+        fun getPasswordPlaceholder(): String = KEYCHAIN_PASSWORD_PLACEHOLDER
+    }
+}
+
 data class ChatConfig(
     val maxTokens: Int = 8000,
     val summarizationThreshold: Double = 0.75,
@@ -223,12 +267,6 @@ data class RagConfig(
     val rankFusionConstant: Int = 60,
     /** Use absolute file paths in citations (true) or relative filenames (false) */
     val useAbsolutePathInCitations: Boolean = true,
-)
-
-data class ProxyConfig(
-    val enabled: Boolean = false,
-    val url: String = "",
-    val authToken: String = "",
 )
 
 data class AnthropicModelConfig(
@@ -309,6 +347,7 @@ data class AppConfigData(
     val backup: BackupConfig = BackupConfig(),
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
+    val proxy: ProxyConfig = ProxyConfig(),
 )
 
 object AppConfig {
@@ -320,7 +359,25 @@ object AppConfig {
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
 
-    val proxy: ProxyConfig by lazy { loadProxyFromEnv() }
+    /**
+     * Proxy configuration with password loaded from secure storage.
+     * If password is a placeholder (***keychain***), loads actual password from keychain/encrypted storage.
+     */
+    val proxy: ProxyConfig
+        get() {
+            val config = delegate.proxy
+            val currentPassword = config.password
+
+            // If password is a placeholder, load from secure storage
+            if (!ProxyConfig.isActualPassword(currentPassword)) {
+                val securePassword = ProxyConfig.getSecurePassword(config.type)
+                if (securePassword != null) {
+                    return config.copy(password = securePassword)
+                }
+            }
+
+            return config
+        }
 
     @Volatile private var cached: AppConfigData? = null
 
@@ -409,6 +466,13 @@ object AppConfig {
           xai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
+
+        proxy:
+          type: ${'$'}{ASKIMO_PROXY_TYPE:NONE}
+          host: ${'$'}{ASKIMO_PROXY_HOST:}
+          port: ${'$'}{ASKIMO_PROXY_PORT:8080}
+          username: ${'$'}{ASKIMO_PROXY_USERNAME:}
+          password: ${'$'}{ASKIMO_PROXY_PASSWORD:}
 
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
@@ -651,15 +715,17 @@ object AppConfig {
                 xai = xaiModelConfig,
             )
 
-        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models)
-    }
+        val proxy =
+            ProxyConfig(
+                type = System.getenv("ASKIMO_PROXY_TYPE")?.let { ProxyType.valueOf(it) } ?: ProxyType.NONE,
+                host = env("ASKIMO_PROXY_HOST", ""),
+                port = envInt("ASKIMO_PROXY_PORT", 8080),
+                username = env("ASKIMO_PROXY_USERNAME", ""),
+                password = env("ASKIMO_PROXY_PASSWORD", ""),
+            )
 
-    /** Load proxy configuration from environment variables only - never persisted to file */
-    private fun loadProxyFromEnv(): ProxyConfig = ProxyConfig(
-        enabled = System.getenv("ASKIMO_PROXY_ENABLED")?.toBoolean() ?: false,
-        url = System.getenv("ASKIMO_PROXY_URL") ?: "",
-        authToken = System.getenv("ASKIMO_PROXY_AUTH_TOKEN") ?: "",
-    )
+        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models, proxy)
+    }
 
     /**
      * Generic method to update any config field and persist to YAML file.
@@ -692,6 +758,7 @@ object AppConfig {
                 "backup" -> current.copy(backup = updateBackupField(current.backup, field, value))
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
+                "proxy" -> current.copy(proxy = updateProxyField(current.proxy, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -870,6 +937,42 @@ object AppConfig {
                 log.displayError("Unknown provider: $provider", null)
                 config
             }
+        }
+    }
+
+    private fun updateProxyField(config: ProxyConfig, field: String, value: Any): ProxyConfig = when (field) {
+        "type" -> config.copy(type = if (value is String) ProxyType.valueOf(value) else value as ProxyType)
+        "host" -> config.copy(host = value as String)
+        "port" -> config.copy(port = value as Int)
+        "username" -> config.copy(username = value as String)
+        "password" -> {
+            val password = value as String
+
+            // Only store if it's an actual password (not a placeholder)
+            if (ProxyConfig.isActualPassword(password)) {
+                val result = ProxyConfig.setSecurePassword(config.type, password)
+
+                when (result.method) {
+                    StorageMethod.KEYCHAIN -> {
+                        log.debug("Proxy password stored securely in system keychain")
+                    }
+                    StorageMethod.ENCRYPTED -> {
+                        log.warn("Proxy password stored with encryption (${result.warningMessage})")
+                    }
+                    StorageMethod.INSECURE_FALLBACK -> {
+                        log.warn("⚠️ Proxy password storage: ${result.warningMessage}")
+                    }
+                }
+
+                config.copy(password = ProxyConfig.getPasswordPlaceholder())
+            } else {
+                // Keep placeholder or empty as-is
+                config.copy(password = password)
+            }
+        }
+        else -> {
+            log.displayError("Unknown proxy field: $field", null)
+            config
         }
     }
 }

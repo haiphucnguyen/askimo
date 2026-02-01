@@ -9,7 +9,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.security.SecureApiKeyManager.StorageMethod
+import io.askimo.core.security.SecureKeyManager.StorageMethod
 
 /**
  * Secure wrapper for AppContextParams that handles API key storage/retrieval transparently.
@@ -67,39 +67,6 @@ class SecureSessionManager {
         return sanitizedParams
     }
 
-    /**
-     * Migrates existing plain text API keys to secure storage.
-     */
-    fun migrateExistingApiKeys(appContextParams: AppContextParams): MigrationResult {
-        val results = mutableMapOf<ModelProvider, SecureApiKeyManager.StorageResult>()
-        var hasInsecureKeys = false
-
-        appContextParams.providerSettings.forEach { (provider, settings) ->
-            if (settings is HasApiKey && settings.apiKey.isNotBlank()) {
-                if (isUsingSecureStorage(settings.apiKey)) {
-                    return@forEach
-                }
-
-                val result =
-                    SecureApiKeyManager.migrateToSecureStorage(
-                        provider.name.lowercase(),
-                        settings.apiKey,
-                    )
-                results[provider] = result
-
-                if (!result.success) {
-                    hasInsecureKeys = true
-                    log.warn("Failed to migrate API key for ${provider.name} to secure storage")
-                } else {
-                    log.debug("Migrated API key for ${provider.name} to ${result.method.name}")
-                    updateApiKeyPlaceholder(settings, result.method)
-                }
-            }
-        }
-
-        return MigrationResult(results, hasInsecureKeys)
-    }
-
     private fun loadApiKeyForProvider(
         provider: ModelProvider,
         settings: HasApiKey,
@@ -112,7 +79,7 @@ class SecureSessionManager {
         }
 
         // Try to load from secure storage
-        val secureKey = SecureApiKeyManager.retrieveApiKey(provider.name.lowercase())
+        val secureKey = SecureKeyManager.retrieveSecretKey(provider.name.lowercase())
         if (secureKey != null) {
             settings.apiKey = secureKey
             log.trace("Loaded API key for ${provider.name} from secure storage")
@@ -141,7 +108,7 @@ class SecureSessionManager {
             return
         }
 
-        val result = SecureApiKeyManager.storeApiKey(provider.name.lowercase(), apiKey)
+        val result = SecureKeyManager.storeSecuredKey(provider.name.lowercase(), apiKey)
 
         if (result.success) {
             // Replace with appropriate placeholder
@@ -173,9 +140,6 @@ class SecureSessionManager {
             }
     }
 
-    private fun isUsingSecureStorage(apiKey: String): Boolean = apiKey == KEYCHAIN_API_KEY_PLACEHOLDER ||
-        apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
-
     private fun isActualApiKey(apiKey: String): Boolean = apiKey.isNotBlank() &&
         apiKey != KEYCHAIN_API_KEY_PLACEHOLDER &&
         !apiKey.startsWith(ENCRYPTED_API_KEY_PREFIX)
@@ -184,38 +148,4 @@ class SecureSessionManager {
      * Creates a deep copy of provider settings to avoid shared mutable state.
      */
     private fun deepCopyProviderSettings(settings: ProviderSettings): ProviderSettings = settings.deepCopy()
-
-    data class MigrationResult(
-        val results: Map<ModelProvider, SecureApiKeyManager.StorageResult>,
-        val hasInsecureKeys: Boolean,
-    ) {
-        fun getSecurityReport(): List<String> {
-            val report = mutableListOf<String>()
-
-            if (results.isEmpty()) {
-                report.add("No API keys found to migrate")
-                return report
-            }
-
-            report.add("API Key Security Report:")
-            results.forEach { (provider, result) ->
-                val security = SecureApiKeyManager.getStorageSecurityDescription(result.method)
-                report.add("  ${provider.name}: $security")
-                result.warningMessage?.let {
-                    report.add("    ⚠️ $it")
-                }
-            }
-
-            if (hasInsecureKeys) {
-                report.add("")
-                report.add("⚠️ Some API keys could not be stored securely!")
-                report.add("Consider:")
-                report.add("  - Installing system keychain utilities")
-                report.add("  - Setting proper file permissions")
-                report.add("  - Using environment variables instead")
-            }
-
-            return report
-        }
-    }
 }

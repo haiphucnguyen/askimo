@@ -7,17 +7,17 @@ package io.askimo.core.security
 import io.askimo.core.util.ProcessBuilderExt
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import java.io.IOException
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SecureApiKeyManagerMacOSIntegrationTest {
+class SecureKeyManagerWindowsIntegrationTest {
 
     private val testProviders = mutableSetOf<String>()
 
@@ -28,11 +28,11 @@ class SecureApiKeyManagerMacOSIntegrationTest {
 
     @BeforeEach
     fun setUp() {
-        // Skip tests if not running on macOS
-        assumeTrue(isMacOS(), "Tests only run on macOS")
+        // Skip tests if not running on Windows
+        assumeTrue(isWindows(), "Tests only run on Windows")
 
-        // Verify security command is available
-        assumeTrue(isSecurityCommandAvailable(), "macOS security command not available")
+        // Verify cmdkey command is available
+        assumeTrue(isCmdKeyCommandAvailable(), "Windows cmdkey command not available")
     }
 
     @AfterEach
@@ -40,7 +40,7 @@ class SecureApiKeyManagerMacOSIntegrationTest {
         // Clean up all test providers that were created during tests
         testProviders.forEach { provider ->
             try {
-                SecureApiKeyManager.removeApiKey(provider)
+                SecureKeyManager.removeSecretKey(provider)
             } catch (e: Exception) {
                 println("Warning: Failed to clean up test provider $provider: ${e.message}")
             }
@@ -52,20 +52,25 @@ class SecureApiKeyManagerMacOSIntegrationTest {
     fun `test SecureApiKeyManager end-to-end with long OpenAI API key`() {
         val provider = generateTestProvider("openai-e2e")
 
-        println("=== SecureApiKeyManager End-to-End Test ===")
+        println("=== SecureKeyManager End-to-End Test (Windows) ===")
         println("Testing with long API key:")
         println("Original length: ${LONG_API_KEY.length}")
         println("Original prefix: ${LONG_API_KEY.take(20)}...")
         println("Original suffix: ...${LONG_API_KEY.takeLast(20)}")
 
-        // Store using SecureApiKeyManager (this is what the application uses)
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, LONG_API_KEY)
+        // Store using SecureKeyManager (this is what the application uses)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, LONG_API_KEY)
         println("Store result: $storeResult")
-        assertTrue(storeResult.success, "SecureApiKeyManager should successfully store the API key")
-        assertEquals(SecureApiKeyManager.StorageMethod.KEYCHAIN, storeResult.method, "Should use keychain storage on macOS")
+        assertTrue(storeResult.success, "SecureKeyManager should successfully store the API key")
 
-        // Retrieve using SecureApiKeyManager
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        // On Windows, it might use different storage methods depending on what's available
+        println("Storage method used: ${storeResult.method}")
+        if (storeResult.warningMessage != null) {
+            println("Warning: ${storeResult.warningMessage}")
+        }
+
+        // Retrieve using SecureKeyManager
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         println("Retrieved key is null: ${retrievedKey == null}")
         assertNotNull(retrievedKey, "Retrieved API key should not be null")
 
@@ -103,7 +108,7 @@ class SecureApiKeyManagerMacOSIntegrationTest {
     fun `test retrieve non-existent key through SecureApiKeyManager`() {
         val provider = generateTestProvider("non-existent")
 
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         assertNull(retrievedKey, "Non-existent API key should return null")
     }
 
@@ -113,30 +118,41 @@ class SecureApiKeyManagerMacOSIntegrationTest {
         val testKey = "sk-test-key-123"
 
         // Store the key
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, testKey)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, testKey)
         assertTrue(storeResult.success, "Should store key successfully")
 
         // Verify it's stored
-        val retrievedKey = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(provider)
         assertEquals(testKey, retrievedKey, "Key should be retrievable after storing")
 
         // Remove the key
-        val removeResult = SecureApiKeyManager.removeApiKey(provider)
+        val removeResult = SecureKeyManager.removeSecretKey(provider)
         assertTrue(removeResult, "Should remove key successfully")
 
         // Verify it's removed
-        val retrievedAfterRemoval = SecureApiKeyManager.retrieveApiKey(provider)
+        val retrievedAfterRemoval = SecureKeyManager.retrieveSecretKey(provider)
         assertNull(retrievedAfterRemoval, "Key should not be retrievable after removal")
     }
 
     @Test
-    fun `test storage method detection`() {
+    fun `test storage method detection on Windows`() {
         val provider = generateTestProvider("storage-method")
 
-        val storeResult = SecureApiKeyManager.storeApiKey(provider, LONG_API_KEY)
+        val storeResult = SecureKeyManager.storeSecuredKey(provider, LONG_API_KEY)
         assertTrue(storeResult.success, "Should store successfully")
-        assertEquals(SecureApiKeyManager.StorageMethod.KEYCHAIN, storeResult.method, "Should use keychain on macOS")
-        assertNull(storeResult.warningMessage, "Should not have warning message for keychain storage")
+
+        // On Windows, the storage method depends on what's available
+        println("Storage method used on Windows: ${storeResult.method}")
+
+        // Common storage methods on Windows: KEYCHAIN (if cmdkey works), ENCRYPTED, or INSECURE_FALLBACK
+        assertTrue(
+            storeResult.method in listOf(
+                SecureKeyManager.StorageMethod.KEYCHAIN,
+                SecureKeyManager.StorageMethod.ENCRYPTED,
+                SecureKeyManager.StorageMethod.INSECURE_FALLBACK,
+            ),
+            "Should use a valid storage method",
+        )
     }
 
     private fun generateTestProvider(suffix: String): String {
@@ -145,13 +161,13 @@ class SecureApiKeyManagerMacOSIntegrationTest {
         return provider
     }
 
-    private fun isMacOS(): Boolean {
+    private fun isWindows(): Boolean {
         val osName = System.getProperty("os.name").lowercase()
-        return osName.contains("mac") || osName.contains("darwin")
+        return osName.contains("windows")
     }
 
-    private fun isSecurityCommandAvailable(): Boolean = try {
-        val process = ProcessBuilderExt("which", "security").start()
+    private fun isCmdKeyCommandAvailable(): Boolean = try {
+        val process = ProcessBuilderExt("where", "cmdkey").start()
         process.waitFor() == 0
     } catch (e: IOException) {
         false

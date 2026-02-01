@@ -207,4 +207,119 @@ class AppConfigTest {
         method.isAccessible = true
         return method.invoke(AppConfig, config, field, value) as DeveloperConfig
     }
+
+    private fun updateProxyFieldHelper(config: ProxyConfig, field: String, value: Any): ProxyConfig {
+        val method = AppConfig::class.java.getDeclaredMethod(
+            "updateProxyField",
+            ProxyConfig::class.java,
+            String::class.java,
+            Any::class.java,
+        )
+        method.isAccessible = true
+        return method.invoke(AppConfig, config, field, value) as ProxyConfig
+    }
+
+    // Proxy Configuration Tests
+
+    @Test
+    fun `updateProxyField should handle all basic fields`() {
+        var config = ProxyConfig()
+
+        config = updateProxyFieldHelper(config, "type", ProxyType.HTTP)
+        assertEquals(ProxyType.HTTP, config.type)
+
+        config = updateProxyFieldHelper(config, "host", "proxy.example.com")
+        assertEquals("proxy.example.com", config.host)
+
+        config = updateProxyFieldHelper(config, "port", 8080)
+        assertEquals(8080, config.port)
+
+        config = updateProxyFieldHelper(config, "username", "john.doe")
+        assertEquals("john.doe", config.username)
+    }
+
+    @Test
+    fun `updateProxyField should store password as placeholder when actual password provided`() {
+        val config = ProxyConfig(type = ProxyType.HTTP)
+
+        // When actual password is provided, it should be stored as placeholder in config
+        val updated = updateProxyFieldHelper(config, "password", "actual-password")
+
+        // The config should have the placeholder, not the actual password
+        assertEquals(ProxyConfig.getPasswordPlaceholder(), updated.password)
+    }
+
+    @Test
+    fun `updateProxyField should preserve placeholder when placeholder provided`() {
+        val config = ProxyConfig(type = ProxyType.HTTP)
+
+        // When placeholder is provided, it should be preserved
+        val updated = updateProxyFieldHelper(config, "password", ProxyConfig.getPasswordPlaceholder())
+
+        assertEquals(ProxyConfig.getPasswordPlaceholder(), updated.password)
+    }
+
+    @Test
+    fun `updateProxyField should preserve empty password`() {
+        val config = ProxyConfig(type = ProxyType.HTTP)
+
+        val updated = updateProxyFieldHelper(config, "password", "")
+
+        assertEquals("", updated.password)
+    }
+
+    @Test
+    fun `ProxyConfig isActualPassword should detect actual passwords`() {
+        // Actual passwords
+        assertTrue(ProxyConfig.isActualPassword("my-password"))
+        assertTrue(ProxyConfig.isActualPassword("secret123"))
+
+        // Not actual passwords (placeholders or empty)
+        assertFalse(ProxyConfig.isActualPassword(""))
+        assertFalse(ProxyConfig.isActualPassword("   "))
+        assertFalse(ProxyConfig.isActualPassword(ProxyConfig.getPasswordPlaceholder()))
+    }
+
+    @Test
+    fun `ProxyConfig should have placeholder constant`() {
+        val placeholder = ProxyConfig.getPasswordPlaceholder()
+
+        assertEquals("***keychain***", placeholder)
+    }
+
+    @Test
+    fun `ProxyConfig getStorageKey should be unique per proxy type`() {
+        // Use reflection to access private getStorageKey method
+        val method = ProxyConfig::class.java.declaredClasses
+            .first { it.simpleName == "Companion" }
+            .getDeclaredMethod("getStorageKey", ProxyType::class.java)
+        method.isAccessible = true
+        val companion = ProxyConfig::class.java.getDeclaredField("Companion").get(null)
+
+        val httpKey = method.invoke(companion, ProxyType.HTTP) as String
+        val httpsKey = method.invoke(companion, ProxyType.HTTPS) as String
+        val socks5Key = method.invoke(companion, ProxyType.SOCKS5) as String
+        val systemKey = method.invoke(companion, ProxyType.SYSTEM) as String
+
+        // Each proxy type should have a unique storage key
+        assertEquals("proxy.http.password", httpKey)
+        assertEquals("proxy.https.password", httpsKey)
+        assertEquals("proxy.socks5.password", socks5Key)
+        assertEquals("proxy.system.password", systemKey)
+
+        // All keys should be different
+        val keys = setOf(httpKey, httpsKey, socks5Key, systemKey)
+        assertEquals(4, keys.size)
+    }
+
+    @Test
+    fun `updateProxyField should handle type changes correctly`() {
+        var config = ProxyConfig(type = ProxyType.HTTP)
+
+        config = updateProxyFieldHelper(config, "type", ProxyType.SOCKS5)
+        assertEquals(ProxyType.SOCKS5, config.type)
+
+        config = updateProxyFieldHelper(config, "type", "HTTPS")
+        assertEquals(ProxyType.HTTPS, config.type)
+    }
 }
