@@ -50,7 +50,7 @@
 
 <p align="center">
   <a href="https://github.com/haiphucnguyen/askimo/releases/latest"><strong>📥 Download</strong></a> •
-  <a href="https://askimo.chat/docs"><strong>📖 Documentation</strong></a> •
+  <a href="https://askimo.chat/docs/"><strong>📖 Documentation</strong></a> •
   <a href="https://github.com/haiphucnguyen/askimo/discussions"><strong>💬 Discussions</strong></a> •
   <a href="https://github.com/haiphucnguyen/askimo/stargazers"><strong>⭐ Star on GitHub</strong></a>
 </p>
@@ -95,7 +95,7 @@ Download the installer for your operating system:
 - **Linux**: 
   - [ARM64.deb](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-linux-arm64.deb)
   - [x64.deb](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-linux-x64.deb)
-  - **Other distributions**: See [Linux installation guide](https://askimo.chat/docs/desktop/installation/linux) for installing using the universal JAR file
+  - **Other distributions**: See [Linux installation guide](https://askimo.chat/docs/desktop/installation/linux/) for installing using the universal JAR file
 
 Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) for all available versions.
 
@@ -112,7 +112,7 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 
 ---
 
-[![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/desktop)
+[![Askimo Desktop Demo](public/desktop-demo.gif)](https://askimo.chat/app/)
 
 ### 🎯 What You Get
 
@@ -162,7 +162,7 @@ curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/inst
 iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex
 ```
 
-[**Learn more about the command line tool →**](https://askimo.chat/cli)
+[**Learn more about the command line tool →**](https://askimo.chat/cli/)
 
 ---
 
@@ -217,7 +217,7 @@ More languages coming soon. Want to help translate? [Let us know!](https://githu
 
 ### Get Help
 
-- 📖 **[User Guide](https://askimo.chat/docs)** - Step-by-step instructions and tips
+- 📖 **[User Guide](https://askimo.chat/docs/)** - Step-by-step instructions and tips
 - 💬 **[Community Forum](https://github.com/haiphucnguyen/askimo/discussions)** - Ask questions, share your experience, get help from other users
 - 🐛 **[Report a Problem](https://github.com/haiphucnguyen/askimo/issues)** - Something not working? Let us know
 - 📧 **Email Us** - Need private help? Contact support@askimo.chat
