@@ -53,30 +53,30 @@ object ProxyUtil {
     private fun isLocalHost(host: String?): Boolean {
         if (host.isNullOrBlank()) return false
 
-//        val normalizedHost = host.lowercase().trim()
-//        return normalizedHost == "localhost" ||
-//            normalizedHost == "127.0.0.1" ||
-//            normalizedHost.startsWith("192.168.") ||
-//            normalizedHost.startsWith("10.") ||
-//            normalizedHost.startsWith("172.16.") ||
-//            normalizedHost.startsWith("172.17.") ||
-//            normalizedHost.startsWith("172.18.") ||
-//            normalizedHost.startsWith("172.19.") ||
-//            normalizedHost.startsWith("172.20.") ||
-//            normalizedHost.startsWith("172.21.") ||
-//            normalizedHost.startsWith("172.22.") ||
-//            normalizedHost.startsWith("172.23.") ||
-//            normalizedHost.startsWith("172.24.") ||
-//            normalizedHost.startsWith("172.25.") ||
-//            normalizedHost.startsWith("172.26.") ||
-//            normalizedHost.startsWith("172.27.") ||
-//            normalizedHost.startsWith("172.28.") ||
-//            normalizedHost.startsWith("172.29.") ||
-//            normalizedHost.startsWith("172.30.") ||
-//            normalizedHost.startsWith("172.31.") ||
-//            normalizedHost == "::1" ||
-//            normalizedHost == "[::1]" ||
-//            normalizedHost.endsWith(".local")
+        val normalizedHost = host.lowercase().trim()
+        return normalizedHost == "localhost" ||
+            normalizedHost == "127.0.0.1" ||
+            normalizedHost.startsWith("192.168.") ||
+            normalizedHost.startsWith("10.") ||
+            normalizedHost.startsWith("172.16.") ||
+            normalizedHost.startsWith("172.17.") ||
+            normalizedHost.startsWith("172.18.") ||
+            normalizedHost.startsWith("172.19.") ||
+            normalizedHost.startsWith("172.20.") ||
+            normalizedHost.startsWith("172.21.") ||
+            normalizedHost.startsWith("172.22.") ||
+            normalizedHost.startsWith("172.23.") ||
+            normalizedHost.startsWith("172.24.") ||
+            normalizedHost.startsWith("172.25.") ||
+            normalizedHost.startsWith("172.26.") ||
+            normalizedHost.startsWith("172.27.") ||
+            normalizedHost.startsWith("172.28.") ||
+            normalizedHost.startsWith("172.29.") ||
+            normalizedHost.startsWith("172.30.") ||
+            normalizedHost.startsWith("172.31.") ||
+            normalizedHost == "::1" ||
+            normalizedHost == "[::1]" ||
+            normalizedHost.endsWith(".local")
         return false
     }
 
