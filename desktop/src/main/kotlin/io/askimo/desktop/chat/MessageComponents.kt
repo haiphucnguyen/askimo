@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.common.i18n.stringResource
@@ -79,8 +80,10 @@ import io.askimo.desktop.common.ui.asyncImage
 import io.askimo.desktop.common.ui.markdownText
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.common.ui.util.highlightSearchText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 
 private val log = currentFileLogger()
@@ -100,11 +103,19 @@ fun messageList(
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
     onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
-    userAvatarPath: String? = null,
     aiAvatarPath: String? = null,
     onRetryMessage: ((String) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
+
+    // Load user avatar from UserProfile
+    var userAvatarPath by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        userAvatarPath = withContext(Dispatchers.IO) {
+            DatabaseManager.getInstance().getUserProfileRepository()
+                .getProfile().preferences["avatarPath"]
+        }
+    }
 
     // Retry confirmation dialog state
     var showRetryConfirmDialog by remember { mutableStateOf(false) }

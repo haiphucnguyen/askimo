@@ -7,8 +7,10 @@ package io.askimo.desktop.shell
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
@@ -29,8 +32,10 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenuItem
@@ -48,10 +53,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -62,6 +69,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
+import io.askimo.core.user.domain.UserProfile
 import io.askimo.desktop.View
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -74,6 +82,8 @@ import io.askimo.desktop.session.SessionActionMenu
 import io.askimo.desktop.session.SessionsViewModel
 import io.askimo.desktop.util.Platform
 import org.jetbrains.skia.Image
+import java.io.File
+import org.jetbrains.skia.Image as SkiaImage
 
 /**
  * Navigation sidebar component with collapsible/expandable functionality.
@@ -90,6 +100,7 @@ fun navigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
+    userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -103,7 +114,9 @@ fun navigationSidebar(
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
+    onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     // Animated width for smooth transition
     val targetWidth = if (isExpanded) width else 72.dp
@@ -121,6 +134,7 @@ fun navigationSidebar(
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
             currentSessionId = currentSessionId,
+            userProfile = userProfile,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onToggleProjects = onToggleProjects,
@@ -134,7 +148,9 @@ fun navigationSidebar(
             onRenameSession = onRenameSession,
             onExportSession = onExportSession,
             onShowSessionSummary = onShowSessionSummary,
+            onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
+            onNavigateToAbout = onNavigateToAbout,
         )
     } else {
         collapsedNavigationSidebar(
@@ -143,7 +159,9 @@ fun navigationSidebar(
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onNavigateToSessions = onNavigateToSessions,
+            onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
+            onNavigateToAbout = onNavigateToAbout,
         )
     }
 }
@@ -157,6 +175,7 @@ private fun expandedNavigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
+    userProfile: io.askimo.core.user.domain.UserProfile?, // Add this
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -170,7 +189,9 @@ private fun expandedNavigationSidebar(
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
+    onEditUserProfile: () -> Unit, // Add this
     onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit, // Add this
 ) {
     val fontScale = LocalFontScale.current
 
@@ -330,17 +351,17 @@ private fun expandedNavigationSidebar(
             }
         }
 
-        // Settings at bottom
+        // User Profile Section at bottom (replaces settings button)
         HorizontalDivider()
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-            label = { Text(stringResource("settings.title"), style = MaterialTheme.typography.labelLarge) },
-            selected = currentView == View.SETTINGS,
-            onClick = onNavigateToSettings,
+        userProfileSection(
+            profile = userProfile,
+            currentView = currentView,
+            onEditUserProfile = onEditUserProfile,
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToAbout = onNavigateToAbout,
             modifier = Modifier
-                .padding(horizontal = (12 * fontScale).dp, vertical = (8 * fontScale).dp)
-                .pointerHoverIcon(PointerIcon.Hand),
-            colors = ComponentColors.navigationDrawerItemColors(),
+                .fillMaxWidth()
+                .padding(horizontal = (12 * fontScale).dp, vertical = (8 * fontScale).dp),
         )
     }
 }
@@ -352,7 +373,9 @@ private fun collapsedNavigationSidebar(
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
+    onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     val fontScale = LocalFontScale.current
 
@@ -428,21 +451,64 @@ private fun collapsedNavigationSidebar(
             }
         }
 
-        // Settings at bottom
+        // User Profile Icon at bottom (shows menu on click)
         HorizontalDivider()
-        themedTooltip(
-            text = stringResource("settings.title"),
-        ) {
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = stringResource("settings.title")) },
-                label = null,
-                selected = currentView == View.SETTINGS,
-                onClick = onNavigateToSettings,
-                modifier = Modifier
-                    .padding(vertical = (8 * fontScale).dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationRailItemColors(),
-            )
+        var showUserMenu by remember { mutableStateOf(false) }
+
+        Box {
+            themedTooltip(
+                text = stringResource("user.profile.menu"),
+            ) {
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = stringResource("user.profile.menu"),
+                        )
+                    },
+                    label = null,
+                    selected = false,
+                    onClick = { showUserMenu = true },
+                    modifier = Modifier
+                        .padding(vertical = (8 * fontScale).dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ComponentColors.navigationRailItemColors(),
+                )
+            }
+
+            // User menu dropdown
+            ComponentColors.themedDropdownMenu(
+                expanded = showUserMenu,
+                onDismissRequest = { showUserMenu = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource("user.menu.edit_profile")) },
+                    leadingIcon = { Icon(Icons.Default.Person, null) },
+                    onClick = {
+                        showUserMenu = false
+                        onEditUserProfile()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("user.menu.settings")) },
+                    leadingIcon = { Icon(Icons.Default.Settings, null) },
+                    onClick = {
+                        showUserMenu = false
+                        onNavigateToSettings()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("user.menu.about")) },
+                    leadingIcon = { Icon(Icons.Default.Info, null) },
+                    onClick = {
+                        showUserMenu = false
+                        onNavigateToAbout()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+            }
         }
     }
 }
@@ -889,5 +955,160 @@ private fun sessionItemWithMenu(
                 sessionIdToMove = null
             },
         )
+    }
+}
+
+/**
+ * User profile section at bottom of navigation sidebar.
+ * Shows user avatar, name, occupation, and a menu for Edit Profile, Settings, and About.
+ */
+@Composable
+private fun userProfileSection(
+    profile: UserProfile?,
+    currentView: View,
+    onEditUserProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val fontScale = LocalFontScale.current
+
+    // Load avatar image if available
+    val avatarImage = remember(profile?.preferences?.get("avatarPath")) {
+        profile?.preferences?.get("avatarPath")?.let { path ->
+            try {
+                val file = File(path)
+                if (file.exists()) {
+                    val bytes = file.readBytes()
+                    SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+                } else {
+                    null
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = { showMenu = true })
+                .pointerHoverIcon(PointerIcon.Hand)
+                .padding((8 * fontScale).dp),
+            horizontalArrangement = Arrangement.spacedBy((12 * fontScale).dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // User Avatar
+            Box(
+                modifier = Modifier
+                    .size((40 * fontScale).dp)
+                    .clip(CircleShape)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (avatarImage != null) {
+                    Image(
+                        bitmap = avatarImage,
+                        contentDescription = stringResource("user.profile.avatar"),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    val initials = profile?.name?.split(" ")
+                        ?.mapNotNull { it.firstOrNull()?.uppercase() }
+                        ?.take(2)
+                        ?.joinToString("") ?: "?"
+
+                    Text(
+                        text = initials,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+
+            // User Info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy((2 * fontScale).dp),
+            ) {
+                Text(
+                    text = profile?.name ?: stringResource("user.profile.default_name"),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                profile?.occupation?.let { occupation ->
+                    Text(
+                        text = occupation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        // Dropdown Menu
+        ComponentColors.themedDropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource("user.menu.edit_profile")) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onEditUserProfile()
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource("user.menu.settings")) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onNavigateToSettings()
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource("user.menu.about")) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onNavigateToAbout()
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+        }
     }
 }

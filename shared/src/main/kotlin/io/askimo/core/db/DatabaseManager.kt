@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ModelClassificationRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.user.repository.UserProfileRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
 import javax.sql.DataSource
@@ -92,6 +93,9 @@ class DatabaseManager private constructor(
      */
     private fun initializeTables(connection: Connection) {
         // Create tables in dependency order (respecting foreign key constraints)
+        createUserProfilesTable(connection)
+        createUserInterestsTable(connection)
+        createUserPreferencesTable(connection)
         createProjectsTable(connection)
         createSessionsTable(connection)
         createMessagesTable(connection)
@@ -102,6 +106,62 @@ class DatabaseManager private constructor(
         createFileSegmentsTable(connection)
         createModelClassificationsTable(connection)
         createIndexFileStateTable(connection)
+    }
+
+    private fun createUserProfilesTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS user_profiles (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    email TEXT,
+                    preferred_title TEXT,
+                    occupation TEXT,
+                    location TEXT,
+                    timezone TEXT,
+                    bio TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
+    private fun createUserInterestsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS user_interests (
+                    id TEXT PRIMARY KEY,
+                    profile_id TEXT NOT NULL,
+                    interest TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
+    private fun createUserPreferencesTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS user_preferences (
+                    id TEXT PRIMARY KEY,
+                    profile_id TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+                    UNIQUE(profile_id, key)
+                )
+                """.trimIndent(),
+            )
+        }
     }
 
     private fun createProjectsTable(conn: Connection) {
@@ -427,6 +487,10 @@ class DatabaseManager private constructor(
         ModelClassificationRepository(this)
     }
 
+    private val _userProfileRepository: UserProfileRepository by lazy {
+        UserProfileRepository(this)
+    }
+
     /**
      * Get the singleton ChatSessionRepository instance.
      * All access to chat sessions should go through this repository.
@@ -474,6 +538,12 @@ class DatabaseManager private constructor(
      * All access to model classifications should go through this repository.
      */
     fun getModelClassificationRepository(): ModelClassificationRepository = _modelClassificationRepository
+
+    /**
+     * Get the singleton UserProfileRepository instance.
+     * All access to user profiles should go through this repository.
+     */
+    fun getUserProfileRepository(): UserProfileRepository = _userProfileRepository
 
     /**
      * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).

@@ -86,7 +86,22 @@ class AppContext private constructor(
      * System directive for the AI, typically used for language instructions or global behavior.
      * This can be updated when the user changes locale or wants to modify AI's behavior.
      */
-    var systemDirective: String? = null
+    var systemLanguageDirective: String? = null
+
+    /**
+     * User profile directive for AI personalization.
+     * This contains user information (name, occupation, interests) to help AI provide
+     * more personalized and context-aware responses.
+     * Updated when the user changes their profile information via setUserProfileDirective().
+     */
+    private var _userProfileDirective: String? = null
+
+    /**
+     * Get the current user profile directive for reading.
+     * Use setUserProfileDirective() to update this value.
+     */
+    val userProfileDirective: String?
+        get() = _userProfileDirective
 
     /**
      * Telemetry collector for tracking RAG and LLM metrics.
@@ -279,7 +294,7 @@ class AppContext private constructor(
      * @param locale The user's selected locale (e.g., Locale.JAPANESE, Locale.ENGLISH)
      */
     fun setLanguageDirective(locale: Locale?) {
-        systemDirective = buildLanguageDirective(locale)
+        systemLanguageDirective = buildLanguageDirective(locale)
     }
 
     /**
@@ -309,5 +324,45 @@ class AppContext private constructor(
             "respond in English and let the user know that %s support may be limited."
 
         return instruction + "\n" + fallback
+    }
+
+    /**
+     * Set the user profile directive for AI personalization.
+     * This retrieves personalization context from the user profile and constructs
+     * a directive instructing the AI to use this information for more personalized responses.
+     *
+     * @param personalizationContext The personalization context from UserProfileRepository.getPersonalizationContext()
+     *                               or null to clear the directive
+     */
+    fun setUserProfileDirective(personalizationContext: String?) {
+        _userProfileDirective = buildUserProfileDirective(personalizationContext)
+    }
+
+    /**
+     * Build a user profile directive instruction based on the personalization context.
+     * This instruction tells the AI how to use the user's profile information naturally.
+     *
+     * @param personalizationContext The formatted personalization context from the user's profile
+     * @return A complete user profile directive with usage guidelines
+     */
+    private fun buildUserProfileDirective(personalizationContext: String?): String? {
+        if (personalizationContext.isNullOrBlank()) return null
+
+        return """
+            VERIFIED USER PROFILE:
+            The following information is from the user's authenticated profile in this application.
+            This is verified user data, not assumptions or guesses.
+
+            $personalizationContext
+
+            PERSONALIZATION GUIDELINES:
+            - Treat this profile information as factual and verified
+            - Address the user by their name naturally when appropriate
+            - Consider their occupation and interests when providing examples or explanations
+            - Tailor recommendations and suggestions based on their background
+            - Use this context to make responses more relevant and engaging
+            - When asked "who am I" or similar identity questions, confidently refer to this profile information
+            - Don't add disclaimers about not knowing the user - you have their verified profile
+        """.trimIndent()
     }
 }
