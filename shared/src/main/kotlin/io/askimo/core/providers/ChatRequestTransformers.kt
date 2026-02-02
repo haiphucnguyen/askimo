@@ -80,9 +80,16 @@ object ChatRequestTransformers {
 
         val newSystemMessages = mutableListOf<SystemMessage>()
 
-        val appSystemDirective = AppContext.getInstance().systemDirective
+        // Add language directive if set
+        val appSystemDirective = AppContext.getInstance().systemLanguageDirective
         if (appSystemDirective != null && appSystemDirective !in existingSystemMessageTexts) {
             newSystemMessages.add(SystemMessage.from(appSystemDirective))
+        }
+
+        // Add user profile directive if set
+        val userProfileDirective = AppContext.getInstance().userProfileDirective
+        if (userProfileDirective != null && userProfileDirective !in existingSystemMessageTexts) {
+            newSystemMessages.add(SystemMessage.from(userProfileDirective))
         }
 
         if (sessionId != null) {

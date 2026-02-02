@@ -253,8 +253,7 @@ fun chatView(
         chatViewFocusRequester.requestFocus()
     }
 
-    // Load avatar paths
-    val userAvatarPath = remember { ThemePreferences.getUserAvatarPath() }
+    // Load AI avatar path (user avatar is now in UserProfile)
     val aiAvatarPath = remember { ThemePreferences.getAIAvatarPath() }
 
     // Show new directive dialog
@@ -944,7 +943,6 @@ fun chatView(
                             }
                         },
                         onDownloadAttachment = downloadAttachment,
-                        userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
                         onRetryMessage = actions::retryMessage,
                     )
@@ -981,7 +979,6 @@ fun chatView(
                             }
                         },
                         onDownloadAttachment = downloadAttachment,
-                        userAvatarPath = userAvatarPath,
                         aiAvatarPath = aiAvatarPath,
                         onRetryMessage = actions::retryMessage,
                     )

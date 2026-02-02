@@ -127,6 +127,8 @@ import io.askimo.desktop.shell.footerBar
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
+import io.askimo.desktop.user.userProfileDialog
+import io.askimo.desktop.user.welcomeProfileDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
@@ -306,9 +308,33 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showImportBackupConfirm by remember { mutableStateOf(false) }
     var pendingImportBackupPath by remember { mutableStateOf<Path?>(null) }
 
+    // User Profile
+    var userProfile by remember { mutableStateOf<io.askimo.core.user.domain.UserProfile?>(null) }
+    var showUserProfileDialog by remember { mutableStateOf(false) }
+    var showWelcomeProfileDialog by remember { mutableStateOf(false) }
+
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
     val eventLogEvents = remember { mutableStateListOf<Event>() }
+
+    // Load user profile on startup and detect first run
+    LaunchedEffect(Unit) {
+        val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
+        userProfile = withContext(Dispatchers.IO) {
+            profileRepo.getProfile()
+        }
+
+        // Check if this is first run (no name set)
+        if (userProfile?.name.isNullOrBlank()) {
+            showWelcomeProfileDialog = true
+        }
+
+        // Set user profile directive in AppContext for AI personalization
+        val personalizationContext = withContext(Dispatchers.IO) {
+            profileRepo.getPersonalizationContext()
+        }
+        AppContext.getInstance().setUserProfileDirective(personalizationContext)
+    }
 
     LaunchedEffect(Unit) {
         EventBus.developerEvents.collect { event ->
@@ -822,6 +848,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                 projectsViewModel = projectsViewModel,
                                                 sessionsViewModel = sessionsViewModel,
                                                 currentSessionId = activeSessionId,
+                                                userProfile = userProfile,
                                                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                                 onNewChat = {
                                                     chatViewModel?.clearChat()
@@ -854,9 +881,15 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     sessionMemorySessionId = sessionId
                                                     showSessionMemoryDialog = true
                                                 },
+                                                onEditUserProfile = {
+                                                    showUserProfileDialog = true
+                                                },
                                                 onNavigateToSettings = {
                                                     previousView = currentView
                                                     currentView = View.SETTINGS
+                                                },
+                                                onNavigateToAbout = {
+                                                    showAboutDialog = true
                                                 },
                                             )
                                         } // End BoxWithConstraints
@@ -1205,6 +1238,60 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 // About Dialog
                 if (showAboutDialog) {
                     aboutDialog(onDismiss = { showAboutDialog = false })
+                }
+
+                // User Profile Dialog
+                if (showUserProfileDialog) {
+                    userProfile?.let { currentProfile ->
+                        userProfileDialog(
+                            profile = currentProfile,
+                            onDismiss = { showUserProfileDialog = false },
+                            onSave = { updatedProfile ->
+                                scope.launch {
+                                    val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
+                                    withContext(Dispatchers.IO) {
+                                        profileRepo.saveProfile(updatedProfile)
+                                    }
+                                    userProfile = updatedProfile
+
+                                    // Update AppContext with new personalization directive
+                                    val personalizationContext = withContext(Dispatchers.IO) {
+                                        profileRepo.getPersonalizationContext()
+                                    }
+                                    AppContext.getInstance().setUserProfileDirective(personalizationContext)
+
+                                    showUserProfileDialog = false
+                                }
+                            },
+                        )
+                    }
+                }
+
+                // Welcome Profile Dialog (First Run)
+                if (showWelcomeProfileDialog) {
+                    welcomeProfileDialog(
+                        onComplete = { newProfile ->
+                            scope.launch {
+                                val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
+                                withContext(Dispatchers.IO) {
+                                    profileRepo.saveProfile(newProfile)
+                                }
+                                userProfile = newProfile
+
+                                // Update AppContext with personalization directive
+                                val personalizationContext = withContext(Dispatchers.IO) {
+                                    profileRepo.getPersonalizationContext()
+                                }
+                                AppContext.getInstance().setUserProfileDirective(personalizationContext)
+
+                                showWelcomeProfileDialog = false
+                            }
+                        },
+                        onSkip = {
+                            // User chose to skip - create default profile with no name
+                            showWelcomeProfileDialog = false
+                        },
+                    )
                 }
 
                 if (updateViewModel.showUpdateDialog || updateViewModel.errorMessage != null) {

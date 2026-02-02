@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -137,8 +136,8 @@ fun appearanceSettingsSection() {
             }
         }
 
-        // Avatars Section
-        avatarSettingsSection()
+        // AI Avatar Section (User avatar moved to User Profile)
+        aiAvatarSettingsSection()
     }
 }
 
@@ -207,9 +206,8 @@ private fun themeOption(
 }
 
 @Composable
-private fun avatarSettingsSection() {
+private fun aiAvatarSettingsSection() {
     val avatarService = remember { AvatarService() }
-    var userAvatarPath by remember { mutableStateOf(ThemePreferences.getUserAvatarPath()) }
     var aiAvatarPath by remember { mutableStateOf(ThemePreferences.getAIAvatarPath()) }
 
     Column(
@@ -219,39 +217,20 @@ private fun avatarSettingsSection() {
         Spacer(modifier = Modifier.height(Spacing.small))
 
         Text(
-            text = stringResource("settings.appearance.avatars"),
+            text = stringResource("settings.appearance.avatar.ai"),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
 
         Text(
-            text = stringResource("settings.appearance.avatars.description"),
+            text = stringResource("settings.appearance.avatar.ai.description"),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        // User avatar
+        // AI avatar only (user avatar is in User Profile now)
         avatarSetting(
-            label = stringResource("settings.appearance.avatar.user"),
-            currentAvatar = userAvatarPath,
-            defaultIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            onSelectAvatar = { path ->
-                val savedPath = avatarService.saveUserAvatar(path)
-                if (savedPath != null) {
-                    ThemePreferences.setUserAvatarPath(savedPath)
-                    userAvatarPath = savedPath
-                }
-            },
-            onRemoveAvatar = {
-                avatarService.removeUserAvatar()
-                ThemePreferences.setUserAvatarPath(null)
-                userAvatarPath = null
-            },
-        )
-
-        // AI avatar
-        avatarSetting(
-            label = stringResource("settings.appearance.avatar.ai"),
+            label = stringResource("settings.appearance.avatar.ai.label"),
             currentAvatar = aiAvatarPath,
             defaultIcon = { Icon(Icons.Default.SmartToy, contentDescription = null) },
             onSelectAvatar = { path ->
