@@ -6,6 +6,7 @@ package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
@@ -245,6 +246,7 @@ class AppContext private constructor(
     fun createStatefulChatSession(
         sessionId: String,
         retriever: ContentRetriever? = null,
+        toolProvider: ToolProvider? = null,
         memory: ChatMemory,
         useVision: Boolean = false,
     ): ChatClient {
@@ -266,6 +268,7 @@ class AppContext private constructor(
             model = modelName,
             settings = settings,
             retriever = retriever,
+            toolProvider = toolProvider,
             executionMode = executionMode,
             chatMemory = memory,
         )

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Tune
@@ -62,6 +63,7 @@ enum class SettingsSection {
     APPEARANCE,
     NETWORK,
     SHORTCUTS,
+    MCP_SERVERS,
     ADVANCED,
     ABOUT,
 }
@@ -192,6 +194,12 @@ fun settingsViewWithSidebar(
                         onClick = { selectedSection = SettingsSection.SHORTCUTS },
                     )
                     settingsSidebarItem(
+                        title = stringResource("settings.mcp.servers"),
+                        icon = Icons.Outlined.Cable,
+                        isSelected = selectedSection == SettingsSection.MCP_SERVERS,
+                        onClick = { selectedSection = SettingsSection.MCP_SERVERS },
+                    )
+                    settingsSidebarItem(
                         title = stringResource("settings.advanced"),
                         icon = Icons.Outlined.Tune,
                         isSelected = selectedSection == SettingsSection.ADVANCED,
@@ -258,6 +266,7 @@ fun settingsViewWithSidebar(
                         SettingsSection.APPEARANCE -> appearanceSettingsSection()
                         SettingsSection.NETWORK -> networkSettingsSection()
                         SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
+                        SettingsSection.MCP_SERVERS -> mcpServerTemplatesSection()
                         SettingsSection.ADVANCED -> advancedSettingsSection()
                         SettingsSection.ABOUT -> aboutSettingsSection()
                     }

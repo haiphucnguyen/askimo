@@ -57,10 +57,19 @@
     "name": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
   },
   {
+    "name": "[Ldev.langchain4j.model.anthropic.internal.api.AnthropicTextContent;"
+  },
+  {
     "name": "[Ldev.langchain4j.model.googleai.GeminiContent;"
   },
   {
     "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
+  },
+  {
+    "name": "[Lio.askimo.core.mcp.McpServerDefinition;"
+  },
+  {
+    "name": "[Lio.askimo.core.mcp.Parameter;"
   },
   {
     "name": "[Ljava.lang.Object;"
@@ -950,6 +959,87 @@
     "fields": [{ "name": "state" }]
   },
   {
+    "name": "dev.langchain4j.mcp.protocol.McpClientMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpClientMethod",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpImplementation",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getTitle", "parameterTypes": [] },
+      { "name": "getVersion", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpInitializationNotification",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpInitializeParams",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getCapabilities", "parameterTypes": [] },
+      { "name": "getClientInfo", "parameterTypes": [] },
+      { "name": "getProtocolVersion", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpInitializeParams$Capabilities",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getRoots", "parameterTypes": [] },
+      { "name": "getSampling", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpInitializeParams$Capabilities$Roots",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "isListChanged", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpInitializeRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "getParams", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpJsonRpcMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "methods": [{ "name": "getId", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpPingRequest",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.mcp.protocol.McpRootsListResponse",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "getResult", "parameterTypes": [] }]
+  },
+  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicContent",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -967,7 +1057,7 @@
       { "name": "getMessages", "parameterTypes": [] },
       { "name": "getMetadata", "parameterTypes": [] },
       { "name": "getModel", "parameterTypes": [] },
-      { "name": "getOutputFormat", "parameterTypes": [] },
+      { "name": "getOutputConfig", "parameterTypes": [] },
       { "name": "getStopSequences", "parameterTypes": [] },
       { "name": "getSystem", "parameterTypes": [] },
       { "name": "getTemperature", "parameterTypes": [] },
@@ -1061,7 +1151,8 @@
           "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiExecutableCode",
           "dev.langchain4j.model.googleai.GeminiContent$GeminiPart$GeminiCodeExecutionResult",
           "java.lang.Boolean",
-          "java.lang.String"
+          "java.lang.String",
+          "dev.langchain4j.model.googleai.GeminiMediaResolution"
         ]
       },
       { "name": "codeExecutionResult", "parameterTypes": [] },
@@ -1070,6 +1161,7 @@
       { "name": "functionCall", "parameterTypes": [] },
       { "name": "functionResponse", "parameterTypes": [] },
       { "name": "inlineData", "parameterTypes": [] },
+      { "name": "mediaResolution", "parameterTypes": [] },
       { "name": "text", "parameterTypes": [] },
       { "name": "thought", "parameterTypes": [] },
       { "name": "thoughtSignature", "parameterTypes": [] }
@@ -1166,11 +1258,32 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "codeExecution", "parameterTypes": [] },
-      { "name": "functionDeclarations", "parameterTypes": [] }
+      { "name": "functionDeclarations", "parameterTypes": [] },
+      { "name": "googleMaps", "parameterTypes": [] },
+      { "name": "googleSearch", "parameterTypes": [] },
+      { "name": "urlContext", "parameterTypes": [] }
     ]
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiCodeExecution",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiGoogleMaps",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiGoogleSearchRetrieval",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentRequest$GeminiTool$GeminiUrlContext",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -1193,7 +1306,8 @@
           "java.lang.String",
           "java.lang.String",
           "java.util.List",
-          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUsageMetadata"
+          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUsageMetadata",
+          "dev.langchain4j.model.googleai.GroundingMetadata"
         ]
       }
     ]
@@ -1208,13 +1322,32 @@
         "name": "<init>",
         "parameterTypes": [
           "dev.langchain4j.model.googleai.GeminiContent",
-          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate$GeminiFinishReason"
+          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate$GeminiFinishReason",
+          "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUrlContextMetadata",
+          "dev.langchain4j.model.googleai.GroundingMetadata"
         ]
       }
     ]
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiCandidate$GeminiFinishReason",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUrlContextMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUrlMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerateContentResponse$GeminiUrlRetrievalStatus",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
   },
@@ -1243,12 +1376,15 @@
       { "name": "candidateCount", "parameterTypes": [] },
       { "name": "enableEnhancedCivicAnswers", "parameterTypes": [] },
       { "name": "frequencyPenalty", "parameterTypes": [] },
+      { "name": "imageConfig", "parameterTypes": [] },
       { "name": "logprobs", "parameterTypes": [] },
       { "name": "maxOutputTokens", "parameterTypes": [] },
+      { "name": "mediaResolution", "parameterTypes": [] },
       { "name": "presencePenalty", "parameterTypes": [] },
       { "name": "responseJsonSchema", "parameterTypes": [] },
       { "name": "responseLogprobs", "parameterTypes": [] },
       { "name": "responseMimeType", "parameterTypes": [] },
+      { "name": "responseModalities", "parameterTypes": [] },
       { "name": "responseSchema", "parameterTypes": [] },
       { "name": "seed", "parameterTypes": [] },
       { "name": "stopSequences", "parameterTypes": [] },
@@ -1257,6 +1393,23 @@
       { "name": "topK", "parameterTypes": [] },
       { "name": "topP", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiGenerationConfig$GeminiImageConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiMediaResolution",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GeminiMediaResolutionLevel",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiSchema",
@@ -1285,6 +1438,72 @@
     "name": "dev.langchain4j.model.googleai.GeminiType",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk$Maps",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk$Maps$PlaceAnswerSources",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk$Maps$ReviewSnippet",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk$RetrievedContext",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingChunk$Web",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$GroundingSupport",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$RetrievalMetadata",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$SearchEntryPoint",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.googleai.GroundingMetadata$Segment",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
@@ -3359,6 +3578,303 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "io.askimo.core.mcp.McpFilesystemConnectorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "cleanup", "parameterTypes": [] },
+      { "name": "setup", "parameterTypes": [] },
+      { "name": "testConnectionTest", "parameterTypes": [] },
+      { "name": "testConnectorValidationErrorHandling", "parameterTypes": [] },
+      { "name": "testCreateFilesystemInstance", "parameterTypes": [] },
+      { "name": "testCreateInstanceWithInvalidPath", "parameterTypes": [] },
+      { "name": "testDeleteInstance", "parameterTypes": [] },
+      { "name": "testDirectTransportCreation", "parameterTypes": [] },
+      { "name": "testGetInstanceStats", "parameterTypes": [] },
+      { "name": "testGetToolProvider", "parameterTypes": [] },
+      {
+        "name": "testGetToolProviderWithDisabledInstance",
+        "parameterTypes": []
+      },
+      {
+        "name": "testGetToolProviderWithMixedValidation",
+        "parameterTypes": []
+      },
+      { "name": "testGetToolProviderWithNoInstances", "parameterTypes": [] },
+      { "name": "testNpxAvailability", "parameterTypes": [] },
+      { "name": "testUpdateInstanceParameters", "parameterTypes": [] },
+      { "name": "testValidateConnector", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.McpServerDefinition",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.TransportType",
+          "io.askimo.core.mcp.StdioConfig",
+          "java.util.List",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.List",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.TransportType",
+          "io.askimo.core.mcp.StdioConfig",
+          "java.util.List",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.List"
+        ]
+      },
+      { "name": "getAuthor", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getId", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getParameters", "parameterTypes": [] },
+      { "name": "getStdioConfig", "parameterTypes": [] },
+      { "name": "getTags", "parameterTypes": [] },
+      { "name": "getTransportType", "parameterTypes": [] },
+      { "name": "getVersion", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.McpServerDefinition$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.McpServerDefinition$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterType",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterLocation",
+          "boolean",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterType",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterLocation",
+          "boolean"
+        ]
+      },
+      { "name": "getAllowMultiple", "parameterTypes": [] },
+      { "name": "getDefaultValue", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getKey", "parameterTypes": [] },
+      { "name": "getLabel", "parameterTypes": [] },
+      { "name": "getLocation", "parameterTypes": [] },
+      { "name": "getPlaceholder", "parameterTypes": [] },
+      { "name": "getRequired", "parameterTypes": [] },
+      { "name": "getType", "parameterTypes": [] },
+      { "name": "getValidationPattern", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterLocation",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterLocation$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterType",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterType$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ProjectMcpInstance"
+  },
+  {
+    "name": "io.askimo.core.mcp.ProjectMcpInstanceData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getCreatedAt", "parameterTypes": [] },
+      { "name": "getEnabled", "parameterTypes": [] },
+      { "name": "getId", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getParameterValues", "parameterTypes": [] },
+      { "name": "getProjectId", "parameterTypes": [] },
+      { "name": "getServerId", "parameterTypes": [] },
+      { "name": "getUpdatedAt", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.ProjectMcpInstanceData$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.ProjectMcpInstanceData$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.StdioConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.util.List",
+          "java.util.Map",
+          "java.lang.String",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.util.Map",
+          "java.lang.String"
+        ]
+      },
+      { "name": "getCommandTemplate", "parameterTypes": [] },
+      { "name": "getEnvTemplate", "parameterTypes": [] },
+      { "name": "getWorkingDirectory", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.StdioConfig$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.StdioConfig$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.TransportType",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.mcp.TransportType$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.config.InstancesWrapper",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["java.util.List"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getInstances", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.config.McpServersWrapper",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["java.util.List"] },
+      { "name": "getServers", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.memory.TokenAwareSummarizingMemoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3481,7 +3997,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$yiROHIRc",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$2qnuYoGx",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4552,7 +5068,8 @@
   },
   {
     "name": "java.lang.Thread",
-    "fields": [{ "name": "threadLocalRandomProbe" }]
+    "fields": [{ "name": "threadLocalRandomProbe" }],
+    "methods": [{ "name": "isVirtual", "parameterTypes": [] }]
   },
   {
     "name": "java.lang.Throwable",
@@ -4856,6 +5373,11 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.util.AbstractList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "java.util.AbstractMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
@@ -4866,10 +5388,22 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "java.util.Arrays$ArrayList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
     "name": "java.util.Collection",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "java.util.Collections$SingletonList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "java.util.Collections$SingletonMap",
@@ -4986,6 +5520,12 @@
   },
   {
     "name": "java.util.concurrent.ArrayBlockingQueue"
+  },
+  {
+    "name": "java.util.concurrent.Executors",
+    "methods": [
+      { "name": "newVirtualThreadPerTaskExecutor", "parameterTypes": [] }
+    ]
   },
   {
     "name": "java.util.concurrent.ForkJoinTask",
@@ -5329,9 +5869,18 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "kotlinx.serialization.descriptors.SerialDescriptor"
+  },
+  {
+    "name": "kotlinx.serialization.encoding.CompositeEncoder"
+  },
+  {
     "name": "kotlinx.serialization.internal.GeneratedSerializer",
     "allDeclaredClasses": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "kotlinx.serialization.internal.SerializationConstructorMarker"
   },
   {
     "name": "org.apache.commons.logging.LogFactory"
@@ -5733,7 +6282,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$NlS5Vtxr",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$pIKEqAyz",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

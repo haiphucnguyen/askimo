@@ -11,6 +11,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
@@ -56,6 +57,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         model: String,
         settings: OllamaSettings,
         retriever: ContentRetriever?,
+        toolProvider: ToolProvider?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -84,6 +86,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
             retriever = retriever,
+            toolProvider = toolProvider,
             executionMode = executionMode,
         )
     }
