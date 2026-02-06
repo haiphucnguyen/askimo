@@ -9,6 +9,7 @@ import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport
 import io.askimo.core.mcp.McpConnector
 import io.askimo.core.mcp.StdioMcpTransportConfig
 import io.askimo.core.mcp.ValidationResult
+import io.askimo.core.util.ExecutableResolver
 import java.io.File
 
 /**
@@ -19,8 +20,11 @@ class StdioMcpConnector(
 ) : McpConnector() {
 
     override suspend fun createTransport(): McpTransport {
+        // Resolve executable paths (handles Windows .cmd/.bat extensions, macOS PATH issues, etc.)
+        val command = ExecutableResolver.resolveCommand(config.command)
+
         val builder = StdioMcpTransport.builder()
-            .command(config.command)
+            .command(command)
 
         // Add environment variables if any
         if (config.env.isNotEmpty()) {

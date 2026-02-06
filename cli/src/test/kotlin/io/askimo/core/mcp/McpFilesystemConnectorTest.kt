@@ -155,9 +155,16 @@ class McpFilesystemConnectorTest {
         runBlocking {
             // Given
             val rootPath = testRootDir.resolve("documents").toString()
+            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+
             println("Test root path: $rootPath")
+            println("Operating System: ${System.getProperty("os.name")}")
             println("⚠️  This test may timeout on first run if npx needs to download @modelcontextprotocol/server-filesystem")
             println("   To avoid timeout, pre-install: npm install -g @modelcontextprotocol/server-filesystem")
+
+            if (isWindows) {
+                println("⚠️  Running on Windows - NPX behavior may differ from Unix systems")
+            }
 
             val createResult = mcpInstanceService.createInstance(
                 projectId = projectId,
@@ -166,6 +173,12 @@ class McpFilesystemConnectorTest {
                 parameterValues = mapOf("rootPath" to rootPath),
             )
             println("Instance created: ${createResult.isSuccess}")
+
+            if (createResult.isFailure) {
+                println("ERROR creating instance: ${createResult.exceptionOrNull()?.message}")
+                createResult.exceptionOrNull()?.printStackTrace()
+                throw AssertionError("Failed to create instance", createResult.exceptionOrNull())
+            }
 
             // When
             println("Calling getToolProvider for project: $projectId")
@@ -177,6 +190,16 @@ class McpFilesystemConnectorTest {
             if (result.isFailure) {
                 println("ERROR: ${result.exceptionOrNull()?.message}")
                 result.exceptionOrNull()?.printStackTrace()
+
+                if (isWindows) {
+                    println("\n⚠️  This failure occurred on Windows.")
+                    println("   Common Windows issues:")
+                    println("   1. NPX may not be in PATH or may use .cmd/.bat extension")
+                    println("   2. Node.js/npm may not be properly installed")
+                    println("   3. MCP server may fail to start due to Windows-specific issues")
+                    println("   4. Path separators (backslash vs forward slash)")
+                }
+
                 throw AssertionError("Failed to get tool provider: ${result.exceptionOrNull()?.message}", result.exceptionOrNull())
             }
 
@@ -192,7 +215,7 @@ class McpFilesystemConnectorTest {
                   1. MCP server initialization timed out (npx downloading package on first run)
                   2. MCP server failed to start or crashed
                   3. Transport communication failed
-
+                ${if (isWindows) "\n  4. Windows-specific NPX or path issues\n" else ""}
                 To fix: Pre-install the MCP server globally:
                   npm install -g @modelcontextprotocol/server-filesystem
 
@@ -255,6 +278,12 @@ class McpFilesystemConnectorTest {
         runBlocking {
             // Given - One valid and one invalid instance
             val validPath = testRootDir.resolve("documents").toString()
+            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+
+            println("Operating System: ${System.getProperty("os.name")}")
+            if (isWindows) {
+                println("⚠️  Running on Windows - NPX behavior may differ from Unix systems")
+            }
 
             // Valid instance
             mcpInstanceService.createInstance(
@@ -294,7 +323,7 @@ class McpFilesystemConnectorTest {
                 Null result likely means:
                   1. MCP server initialization timed out
                   2. Valid instance also failed (unexpected)
-
+                ${if (isWindows) "  3. Windows-specific NPX or path issues\n" else ""}
                 Pre-install the MCP server: npm install -g @modelcontextprotocol/server-filesystem
                 """.trimIndent(),
             )
@@ -336,7 +365,7 @@ class McpFilesystemConnectorTest {
         // Given - Create 3 instances, 2 enabled, 1 disabled
         val rootPath = testRootDir.resolve("documents").toString()
 
-        val instance1 = mcpInstanceService.createInstance(
+        mcpInstanceService.createInstance(
             projectId = projectId,
             serverId = "filesystem-mcp-server",
             name = "Filesystem 1",
@@ -425,28 +454,42 @@ class McpFilesystemConnectorTest {
     fun testNpxAvailability() {
         println("\n=== NPX Availability Check ===")
 
-        val process = ProcessBuilder("which", "npx")
-            .redirectErrorStream(true)
-            .start()
+        // Use 'where' on Windows, 'which' on Unix
+        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+        val whichCommand = if (isWindows) "where" else "which"
 
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+        try {
+            val process = ProcessBuilder(whichCommand, "npx")
+                .redirectErrorStream(true)
+                .start()
 
-        println("which npx exit code: $exitCode")
-        println("npx location: ${output.trim()}")
+            val output = process.inputStream.bufferedReader().readText()
+            val exitCode = process.waitFor()
 
-        println("✅ npx is available at: ${output.trim()}")
+            println("$whichCommand npx exit code: $exitCode")
+            println("npx location: ${output.trim()}")
 
-        // Try to get npx version
-        val versionProcess = ProcessBuilder("npx", "--version")
-            .redirectErrorStream(true)
-            .start()
+            if (exitCode == 0) {
+                println("✅ npx is available at: ${output.trim()}")
+            } else {
+                println("⚠️  npx not found in PATH")
+            }
 
-        val versionOutput = versionProcess.inputStream.bufferedReader().readText()
-        val versionExitCode = versionProcess.waitFor()
+            // Try to get npx version
+            val versionProcess = ProcessBuilder("npx", "--version")
+                .redirectErrorStream(true)
+                .start()
 
-        println("npx --version exit code: $versionExitCode")
-        println("npx version: ${versionOutput.trim()}")
+            val versionOutput = versionProcess.inputStream.bufferedReader().readText()
+            val versionExitCode = versionProcess.waitFor()
+
+            println("npx --version exit code: $versionExitCode")
+            println("npx version: ${versionOutput.trim()}")
+        } catch (e: Exception) {
+            println("⚠️  Error checking npx availability: ${e.message}")
+            println("This is a diagnostic test - failing here indicates npx is not available or not in PATH")
+            throw e
+        }
 
         println("=== End NPX Check ===\n")
     }
