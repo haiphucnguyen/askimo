@@ -1,7 +1,7 @@
 [versions]
 graalvm-plugin = "0.11.3"
 jline = "3.30.6"
-langchain4j = "1.10.0"
+langchain4j = "1.11.0"
 commonmark = "0.27.0"
 kotlinxSerializationJson = "1.9.0"
 kotlinxCoroutines = "1.9.0"
@@ -24,9 +24,8 @@ koin = "4.1.1"
 jlatexmath = "1.0.7"
 tika = "3.2.3"
 lucene = "10.3.2"
-langchain4j-extra = "1.10.0-beta18"
+langchain4j-extra = "1.11.0-beta19"
 caffeine = "3.2.3"
-okhttp = "5.3.2"
 jsoup = "1.22.1"
 
 [libraries]
@@ -45,6 +44,7 @@ langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthrop
 langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
 langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
 langchain4j-agentic = { group = "dev.langchain4j", name = "langchain4j-agentic", version.ref = "langchain4j-extra" }
+langchain4j-mcp = { group = "dev.langchain4j", name = "langchain4j-mcp", version.ref = "langchain4j-extra" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
@@ -119,7 +119,8 @@ langchain4j = [
     "langchain4j-anthropic",
     "langchain4j-http-client",
     "langchain4j-jvector",
-    "langchain4j-agentic"
+    "langchain4j-agentic",
+    "langchain4j-mcp"
 ]
 
 lucene = [

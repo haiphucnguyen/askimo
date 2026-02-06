@@ -11,6 +11,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
@@ -44,6 +45,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         model: String,
         settings: LmStudioSettings,
         retriever: ContentRetriever?,
+        toolProvider: ToolProvider?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -77,6 +79,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
             retriever = retriever,
+            toolProvider = toolProvider,
             executionMode = executionMode,
         )
     }

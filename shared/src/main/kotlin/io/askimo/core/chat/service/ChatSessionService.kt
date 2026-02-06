@@ -34,6 +34,7 @@ import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.memory.MemoryMessage
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
@@ -47,6 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.minutes
@@ -95,6 +97,8 @@ data class ResumeSessionPaginatedResult(
  * @param sessionRepository The chat session repository
  * @param messageRepository The chat message repository
  * @param sessionMemoryRepository The session memory repository
+ * @param projectRepository The project repository
+ * @param mcpInstanceService The MCP instance service for getting tool providers
  * @param appContext The application context
  */
 class ChatSessionService(
@@ -102,6 +106,7 @@ class ChatSessionService(
     private val messageRepository: ChatMessageRepository = DatabaseManager.getInstance().getChatMessageRepository(),
     private val sessionMemoryRepository: SessionMemoryRepository = DatabaseManager.getInstance().getSessionMemoryRepository(),
     private val projectRepository: ProjectRepository = DatabaseManager.getInstance().getProjectRepository(),
+    private val mcpInstanceService: ProjectMcpInstanceService = ProjectMcpInstanceService(),
     private val appContext: AppContext,
 ) {
     private val log = logger<ChatSessionService>()
@@ -198,12 +203,29 @@ class ChatSessionService(
                 null
             }
 
+            // Get MCP tool provider if session belongs to a project
+            val mcpToolProvider = if (project != null) {
+                runBlocking {
+                    mcpInstanceService.getToolProvider(project.id)
+                        .onSuccess { _ ->
+                            log.debug("Loaded MCP tool provider for project ${project.id}")
+                        }
+                        .onFailure { error ->
+                            log.warn("Failed to load MCP tool provider for project ${project.id}: ${error.message}")
+                        }
+                        .getOrNull()
+                }
+            } else {
+                null
+            }
+
             // Create client with vision support if requested
             val chatClient = appContext.createStatefulChatSession(
                 sessionId = sessionId,
                 retriever = retriever,
+                toolProvider = mcpToolProvider,
                 memory = sharedMemory,
-                useVision = needsVision, // ← Pass vision flag
+                useVision = needsVision,
             )
 
             SessionChatContext(chatClient, sharedMemory)

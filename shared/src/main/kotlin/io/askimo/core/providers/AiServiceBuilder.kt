@@ -13,6 +13,7 @@ import dev.langchain4j.rag.DefaultRetrievalAugmentor
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.query.transformer.CompressingQueryTransformer
 import dev.langchain4j.service.AiServices
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
@@ -58,6 +59,7 @@ object AiServiceBuilder {
         secondaryChatModel: ChatModel,
         chatMemory: ChatMemory?,
         retriever: ContentRetriever?,
+        toolProvider: ToolProvider?,
         executionMode: ExecutionMode,
         toolInstructions: String = defaultToolResponseFormatInstructions(),
     ): ChatClient {
@@ -89,6 +91,7 @@ object AiServiceBuilder {
             secondaryChatModel = secondaryChatModel,
             chatMemory = chatMemory,
             retriever = retriever,
+            toolProvider = toolProvider,
             executionMode = finalExecutionMode,
             toolInstructions = toolInstructions,
             enableTools = toolsSupported,
@@ -168,6 +171,7 @@ object AiServiceBuilder {
         secondaryChatModel: ChatModel,
         chatMemory: ChatMemory?,
         retriever: ContentRetriever?,
+        toolProvider: ToolProvider?,
         executionMode: ExecutionMode,
         toolInstructions: String,
         enableTools: Boolean,
@@ -186,6 +190,7 @@ object AiServiceBuilder {
                     if (executionMode.isChartEnabled()) {
                         tools(ChartTools)
                     }
+                    maxSequentialToolsInvocations(3) // TODO: Limit to prevent infinite loops in case of unsupported tools, in the future we will design the better strategy
                 }
             }
             .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
@@ -216,6 +221,9 @@ object AiServiceBuilder {
 
             builder.retrievalAugmentor(retrievalAugmentor)
                 .storeRetrievedContentInChatMemory(false)
+        }
+        if (toolProvider != null) {
+            builder.toolProvider(toolProvider)
         }
 
         return builder.build()

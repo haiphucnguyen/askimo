@@ -6,6 +6,7 @@ package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.context.ExecutionMode
 
 /**
@@ -42,10 +43,10 @@ interface ChatModelFactory<T : ProviderSettings> {
      *
      * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
-     * @param presets Global presets controlling style, independent of provider
      * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
      * If provided, the factory will create a RetrievalAugmentor internally with appropriate
      * configuration. Pass null to disable retrieval augmentation.
+     * @toolProvider Optional tool provider for providing tools to the model. If provided, the factory will integrate the tools into the model configuration. Pass null to disable tools.
      * @param executionMode The execution mode indicating how the user is running the application.
      * Tools are disabled for DESKTOP mode.
      * @param chatMemory Optional chat memory for conversation context. If provided, memory will be
@@ -57,6 +58,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         model: String,
         settings: T,
         retriever: ContentRetriever? = null,
+        toolProvider: ToolProvider? = null,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient

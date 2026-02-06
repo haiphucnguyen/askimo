@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.pathString
 
 /**
  * Coordinates the indexing process for local files.
@@ -209,7 +210,7 @@ class LocalFoldersIndexingCoordinator(
                         collectIndexableFiles(entry, result)
                     }
                 } catch (e: Exception) {
-                    log.warn("Failed to list directory ${path.fileName}: ${e.message}")
+                    log.warn("Failed to list directory ${path.pathString}: ${e.message}")
                 }
             }
         }
@@ -273,7 +274,7 @@ class LocalFoldersIndexingCoordinator(
 
             // Skip if file hasn't changed (incremental indexing)
             if (previousHashes[absolutePath] == hash) {
-                log.trace("Skipping unchanged file: {}", filePath.fileName)
+                log.trace("Skipping unchanged file: {}", filePath.pathString)
                 updateProgressAtomic()
                 return true
             }
@@ -282,7 +283,7 @@ class LocalFoldersIndexingCoordinator(
 
             // Skip files that can't be read or have blank content
             if (text.isNullOrBlank()) {
-                log.debug("Skipping file with no extractable content: {}", filePath.fileName)
+                log.debug("Skipping file with no extractable content: {}", filePath.pathString)
                 updateProgressAtomic()
                 return true
             }
@@ -296,12 +297,12 @@ class LocalFoldersIndexingCoordinator(
 
                 // Skip if no valid chunks were created
                 if (chunksWithLineNumbers.isEmpty()) {
-                    log.debug("No valid chunks created for file: {}", filePath.fileName)
+                    log.debug("No valid chunks created for file: {}", filePath.pathString)
                     updateProgressAtomic()
                     return true
                 }
 
-                log.debug("Start indexing {} ({} chunks, text file)", filePath.fileName, chunksWithLineNumbers.size)
+                log.debug("Start indexing {} ({} chunks, text file)", filePath.pathString, chunksWithLineNumbers.size)
                 for ((idx, chunkData) in chunksWithLineNumbers.withIndex()) {
                     val segment = resourceContentProcessor.createTextSegmentWithMetadata(
                         chunk = chunkData.text,
@@ -320,7 +321,7 @@ class LocalFoldersIndexingCoordinator(
                 val elapsedTime = System.currentTimeMillis() - startTime
                 log.debug(
                     "Indexed {} ({} chunks, lines tracked) in {}ms",
-                    filePath.fileName,
+                    filePath.pathString,
                     chunksWithLineNumbers.size,
                     elapsedTime,
                 )
@@ -330,12 +331,12 @@ class LocalFoldersIndexingCoordinator(
 
                 // Skip if no valid chunks were created
                 if (chunks.isEmpty()) {
-                    log.debug("No valid chunks created for file: {}", filePath.fileName)
+                    log.debug("No valid chunks created for file: {}", filePath.pathString)
                     updateProgressAtomic()
                     return true
                 }
 
-                log.debug("Start indexing {} ({} chunks, binary file)", filePath.fileName, chunks.size)
+                log.debug("Start indexing {} ({} chunks, binary file)", filePath.pathString, chunks.size)
                 for ((idx, chunk) in chunks.withIndex()) {
                     val segment = resourceContentProcessor.createTextSegmentWithMetadata(
                         chunk = chunk,
@@ -350,14 +351,14 @@ class LocalFoldersIndexingCoordinator(
                 }
 
                 val elapsedTime = System.currentTimeMillis() - startTime
-                log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+                log.debug("Indexed {} ({} chunks) in {}ms", filePath.pathString, chunks.size, elapsedTime)
             }
 
             updateProgressAtomic()
             return true
         } catch (e: Exception) {
             val elapsedTime = System.currentTimeMillis() - startTime
-            log.error("Failed to index file {} after {}ms: {}", filePath.fileName, elapsedTime, e.message, e)
+            log.error("Failed to index file {} after {}ms: {}", filePath.pathString, elapsedTime, e.message, e)
             return false
         }
     }
