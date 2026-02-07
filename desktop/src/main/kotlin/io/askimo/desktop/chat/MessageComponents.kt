@@ -7,6 +7,7 @@ package io.askimo.desktop.chat
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -393,6 +394,11 @@ fun messageBubble(
                                 .background(
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = CircleShape,
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    shape = CircleShape,
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -565,6 +571,11 @@ fun messageBubble(
                                 .size(32.dp)
                                 .background(
                                     color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape,
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                     shape = CircleShape,
                                 ),
                             contentAlignment = Alignment.Center,
