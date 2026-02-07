@@ -204,7 +204,7 @@ fun chatInputField(
                         Icon(
                             Icons.Default.Edit,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = editingMessage.timestamp?.let { timestamp ->
@@ -266,6 +266,7 @@ fun chatInputField(
                     Icon(
                         Icons.Default.AttachFile,
                         contentDescription = "Attach file",
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -400,6 +401,7 @@ fun chatInputField(
                             } else {
                                 stringResource("message.send")
                             },
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -433,13 +435,13 @@ private fun fileAttachmentItem(
                     imageVector = Icons.Default.AttachFile,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Column {
                     Text(
                         text = attachment.fileName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = formatFileSize(attachment.size),
@@ -458,7 +460,7 @@ private fun fileAttachmentItem(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource("chat.attachment.remove"),
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }

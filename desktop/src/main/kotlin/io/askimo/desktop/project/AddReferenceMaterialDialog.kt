@@ -14,15 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectRefreshEvent
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import java.util.UUID
@@ -129,7 +128,7 @@ fun addReferenceMaterialDialog(
                                     Icon(
                                         imageVector = typeInfo.icon,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -165,17 +164,15 @@ fun addReferenceMaterialDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        colors = ComponentColors.primaryTextButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("project.new.dialog.button.cancel"))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             if (knowledgeSources.isNotEmpty()) {
                                 onAdd(knowledgeSources)
@@ -191,10 +188,6 @@ fun addReferenceMaterialDialog(
                             }
                         },
                         enabled = knowledgeSources.isNotEmpty(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("projects.sources.add.dialog.button.add"))
                     }

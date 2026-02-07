@@ -20,15 +20,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.config.McpServersConfig
+import io.askimo.desktop.common.components.dangerButton
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -79,7 +79,7 @@ fun mcpServerTemplatesSection() {
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.small),
         ) {
-            OutlinedButton(
+            primaryButton(
                 onClick = { showAddDialog = true },
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
@@ -87,7 +87,7 @@ fun mcpServerTemplatesSection() {
                 Text(stringResource("mcp.servers.add"))
             }
 
-            OutlinedButton(
+            secondaryButton(
                 onClick = { showResetConfirm = true },
             ) {
                 Icon(Icons.Default.RestartAlt, contentDescription = null)
@@ -162,7 +162,7 @@ fun mcpServerTemplatesSection() {
             title = { Text(stringResource("mcp.servers.delete.confirm.title")) },
             text = { Text(stringResource("mcp.servers.delete.confirm.message", server.name)) },
             confirmButton = {
-                Button(
+                dangerButton(
                     onClick = {
                         McpServersConfig.remove(server.id)
                         servers = McpServersConfig.getAll()
@@ -173,7 +173,7 @@ fun mcpServerTemplatesSection() {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deletingServer = null }) {
+                secondaryButton(onClick = { deletingServer = null }) {
                     Text(stringResource("dialog.cancel"))
                 }
             },
@@ -187,7 +187,7 @@ fun mcpServerTemplatesSection() {
             title = { Text(stringResource("mcp.servers.reset.confirm.title")) },
             text = { Text(stringResource("mcp.servers.reset.confirm.message")) },
             confirmButton = {
-                Button(
+                dangerButton(
                     onClick = {
                         McpServersConfig.resetToDefaults()
                         servers = McpServersConfig.getAll()
@@ -198,7 +198,7 @@ fun mcpServerTemplatesSection() {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) {
+                secondaryButton(onClick = { showResetConfirm = false }) {
                     Text(stringResource("dialog.cancel"))
                 }
             },
@@ -248,7 +248,7 @@ private fun mcpServerTemplateCard(
                         Icon(
                             Icons.Filled.CheckCircle,
                             contentDescription = "Valid",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     } else {
                         Icon(

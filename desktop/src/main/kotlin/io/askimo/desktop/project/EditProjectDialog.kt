@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -33,7 +32,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +53,8 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectReIndexEvent
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
@@ -132,7 +132,7 @@ fun editProjectDialog(
                             text = loadError!!,
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Button(
+                        primaryButton(
                             onClick = onDismiss,
                             modifier = Modifier.align(Alignment.End),
                         ) {
@@ -348,20 +348,17 @@ private fun editProjectForm(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        colors = ComponentColors.primaryTextButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.cancel"))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = ::performSave,
                         enabled = projectName.trim().isNotEmpty(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.save"))
                     }
@@ -418,7 +415,7 @@ fun knowledgeSourceRow(
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = "Valid",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(16.dp).padding(start = 4.dp),
                 )
             } else {

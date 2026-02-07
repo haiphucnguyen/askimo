@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +27,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 
@@ -129,14 +130,13 @@ fun newDirectiveDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("settings.cancel"))
                     }
 
-                    TextButton(
+                    primaryButton(
                         onClick = {
                             // Validate inputs
                             var hasError = false
@@ -155,8 +155,6 @@ fun newDirectiveDialog(
                                 onConfirm(name.trim(), content.trim(), applyToCurrent)
                             }
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        colors = ComponentColors.primaryTextButtonColors(),
                     ) {
                         Text(stringResource("directive.new.create"))
                     }

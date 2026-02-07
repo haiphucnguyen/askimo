@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -31,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +52,8 @@ import io.askimo.core.mcp.config.McpRuntimeValidator
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.RuntimeValidationResult
 import io.askimo.core.mcp.config.ValidationSeverity
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -177,11 +177,9 @@ fun addMcpIntegrationDialog(
                                 onClick = {
                                     selectedServer = server
                                     showServerDropdown = false
-                                    // Initialize parameter values with defaults
                                     parameterValues.value = server.parameters.associate { param ->
                                         param.key to (param.defaultValue ?: "")
                                     }
-                                    // Generate default instance name
                                     instanceName = server.name
                                 },
                             )
@@ -324,16 +322,15 @@ fun addMcpIntegrationDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("dialog.cancel"))
                     }
 
                     Spacer(modifier = Modifier.width(Spacing.small))
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             selectedServer?.let { server ->
                                 // Start validation
@@ -358,7 +355,6 @@ fun addMcpIntegrationDialog(
                             }
                         },
                         enabled = selectedServer != null && instanceName.isNotBlank() && !isValidating,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         if (isValidating) {
                             Text(stringResource("mcp.validation.validating"))

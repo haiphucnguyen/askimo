@@ -23,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -35,6 +34,7 @@ import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.event.Event
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.common.components.linkButton
 
 /**
  * Developer Event Log Window - Shows ONLY developer events (isDeveloperEvent = true).
@@ -83,7 +83,7 @@ fun eventLogWindow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onReattach) {
+                    linkButton(onClick = onReattach) {
                         Text(LocalizationManager.getString("eventlog.window.attach"))
                     }
 

@@ -172,13 +172,24 @@ val DarkColorScheme = darkColorScheme(
 fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
     val baseScheme = LightColorScheme
     return baseScheme.copy(
+        // Keep primary as accent color for backgrounds/highlights
         primary = accentColor.lightColor,
+        onPrimary = Color.White, // White text on primary background
         primaryContainer = accentColor.lightColor.copy(alpha = 0.3f),
         onPrimaryContainer = Color.Black,
         secondaryContainer = accentColor.lightColor.copy(alpha = 0.15f),
         onSecondaryContainer = Color.Black,
         inversePrimary = accentColor.darkColor,
         surfaceTint = accentColor.lightColor,
+
+        // Error colors for danger buttons - darker red with white text
+        error = Color(0xFFD32F2F), // Material Design Red 700
+        onError = Color.White, // White text on error background
+
+        // Text colors should always be black in light mode
+        onSurface = Color.Black,
+        onBackground = Color.Black,
+        onSurfaceVariant = Color(0xFF424242), // Slightly lighter for secondary text
     )
 }
 
@@ -188,13 +199,24 @@ fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
 fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
     val baseScheme = DarkColorScheme
     return baseScheme.copy(
+        // Keep primary as accent color for backgrounds/highlights
         primary = accentColor.darkColor,
+        onPrimary = Color.White, // White text on primary background
         primaryContainer = accentColor.darkColor.copy(alpha = 0.3f),
         onPrimaryContainer = Color.White,
         secondaryContainer = accentColor.darkColor.copy(alpha = 0.15f),
         onSecondaryContainer = Color.White,
         inversePrimary = accentColor.lightColor,
         surfaceTint = accentColor.darkColor,
+
+        // Error colors for danger buttons - darker red with white text
+        error = Color(0xFFD32F2F), // Material Design Red 700 (same as light mode for consistency)
+        onError = Color.White, // White text on error background
+
+        // Text colors should always be white in dark mode
+        onSurface = Color.White,
+        onBackground = Color.White,
+        onSurfaceVariant = Color(0xFFE0E0E0), // Slightly darker white for secondary text
     )
 }
 

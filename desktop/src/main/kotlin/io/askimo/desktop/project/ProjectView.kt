@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Cable
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,6 +77,7 @@ import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.chat.chatInputField
+import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.themedTooltip
@@ -158,7 +158,7 @@ fun projectView(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = stringResource("project.menu.tooltip"),
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -239,7 +239,7 @@ fun projectView(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp),
                                 )
 
@@ -247,7 +247,7 @@ fun projectView(
                                     text = stringResource("projects.sources.count", currentProject.knowledgeSources.size),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
 
                                 val rotation by animateFloatAsState(
@@ -262,7 +262,7 @@ fun projectView(
                                     } else {
                                         stringResource("projects.sources.expand")
                                     },
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.rotate(rotation),
                                 )
 
@@ -272,7 +272,7 @@ fun projectView(
                                     Icon(
                                         imageVector = Icons.Default.Info,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                         modifier = Modifier
                                             .size(20.dp)
                                             .pointerHoverIcon(PointerIcon.Hand),
@@ -289,7 +289,7 @@ fun projectView(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp),
                                 )
 
@@ -300,7 +300,7 @@ fun projectView(
                                         text = stringResource("projects.sources.empty.title"),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
                                         text = stringResource("projects.sources.empty.description"),
@@ -316,7 +316,7 @@ fun projectView(
                                     Icon(
                                         imageVector = Icons.Default.Info,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                         modifier = Modifier
                                             .size(20.dp)
                                             .pointerHoverIcon(PointerIcon.Hand),
@@ -336,7 +336,7 @@ fun projectView(
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = stringResource("projects.sources.add.tooltip"),
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -376,7 +376,7 @@ fun projectView(
                                         text = groupName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                                     )
 
@@ -763,7 +763,7 @@ private fun mcpIntegrationsPanel(
                         Icon(
                             imageVector = Icons.Outlined.Cable,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(20.dp),
                         )
 
@@ -771,7 +771,7 @@ private fun mcpIntegrationsPanel(
                             text = stringResource("mcp.integrations.count", mcpInstances.size),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         val rotation by animateFloatAsState(
@@ -786,7 +786,7 @@ private fun mcpIntegrationsPanel(
                             } else {
                                 stringResource("mcp.integrations.expand")
                             },
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.rotate(rotation),
                         )
 
@@ -796,7 +796,7 @@ private fun mcpIntegrationsPanel(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 modifier = Modifier
                                     .size(20.dp)
                                     .pointerHoverIcon(PointerIcon.Hand),
@@ -813,7 +813,7 @@ private fun mcpIntegrationsPanel(
                         Icon(
                             imageVector = Icons.Outlined.Cable,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(20.dp),
                         )
 
@@ -824,7 +824,7 @@ private fun mcpIntegrationsPanel(
                                 text = stringResource("mcp.integrations.empty.title"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = stringResource("mcp.integrations.empty.description"),
@@ -840,7 +840,7 @@ private fun mcpIntegrationsPanel(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 modifier = Modifier
                                     .size(20.dp)
                                     .pointerHoverIcon(PointerIcon.Hand),
@@ -860,7 +860,7 @@ private fun mcpIntegrationsPanel(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = stringResource("mcp.integrations.add.tooltip"),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -933,7 +933,7 @@ private fun mcpIntegrationsPanel(
             title = { Text(stringResource("mcp.integrations.error.title")) },
             text = { Text(message) },
             confirmButton = {
-                Button(onClick = { errorMessage = null }) {
+                primaryButton(onClick = { errorMessage = null }) {
                     Text(stringResource("dialog.close"))
                 }
             },
@@ -1012,7 +1012,7 @@ private fun mcpInstanceCard(
                         Icon(
                             imageVector = Icons.Default.Build,
                             contentDescription = stringResource("mcp.integrations.view.tools.tooltip"),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -1109,7 +1109,7 @@ private fun mcpToolsDialog(
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = stringResource("mcp.tools.dialog.loading"),
@@ -1210,9 +1210,8 @@ private fun mcpToolsDialog(
             }
         },
         confirmButton = {
-            Button(
+            primaryButton(
                 onClick = onDismiss,
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("dialog.close"))
             }

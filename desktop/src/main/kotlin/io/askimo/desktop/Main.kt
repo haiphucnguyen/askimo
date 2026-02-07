@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,13 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -86,6 +82,9 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.desktop.chat.ChatViewModel
 import io.askimo.desktop.chat.chatView
+import io.askimo.desktop.common.components.dangerButton
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.dialog.errorDialog
 import io.askimo.desktop.common.dialog.updateCheckDialog
 import io.askimo.desktop.common.i18n.provideLocalization
@@ -1064,21 +1063,18 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         title = { Text(stringResource("menu.quit") + "?") },
                         text = { Text(stringResource("session.delete.confirm")) },
                         confirmButton = {
-                            Button(
+                            dangerButton(
                                 onClick = {
                                     showQuitDialog = false
                                     exitProcess(0)
                                 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.yes"))
                             }
                         },
                         dismissButton = {
-                            TextButton(
+                            secondaryButton(
                                 onClick = { showQuitDialog = false },
-                                colors = ComponentColors.primaryTextButtonColors(),
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.no"))
                             }
@@ -1093,7 +1089,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         title = { Text(stringResource("menu.invalidate.caches.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.message")) },
                         confirmButton = {
-                            Button(
+                            dangerButton(
                                 onClick = {
                                     showInvalidateCacheDialog = false
                                     // Post the invalidate cache event
@@ -1101,16 +1097,13 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                     // Show success dialog
                                     showCacheDeletedDialog = true
                                 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.yes"))
                             }
                         },
                         dismissButton = {
-                            TextButton(
+                            secondaryButton(
                                 onClick = { showInvalidateCacheDialog = false },
-                                colors = ComponentColors.primaryTextButtonColors(),
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.cancel"))
                             }
@@ -1125,9 +1118,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         title = { Text(stringResource("menu.invalidate.caches.success.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.success.message")) },
                         confirmButton = {
-                            Button(
+                            primaryButton(
                                 onClick = { showCacheDeletedDialog = false },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.ok"))
                             }
@@ -1145,7 +1137,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         title = { Text(stringResource("backup.import.confirm.title")) },
                         text = { Text(stringResource("backup.import.confirm.message")) },
                         confirmButton = {
-                            Button(
+                            primaryButton(
                                 onClick = {
                                     showImportBackupConfirm = false
                                     pendingImportBackupPath?.let { path ->
@@ -1173,19 +1165,16 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                         }
                                     }
                                 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.yes"))
                             }
                         },
                         dismissButton = {
-                            TextButton(
+                            secondaryButton(
                                 onClick = {
                                     showImportBackupConfirm = false
                                     pendingImportBackupPath = null
                                 },
-                                colors = ComponentColors.primaryTextButtonColors(),
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("action.cancel"))
                             }
@@ -1210,16 +1199,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             )
                         },
                         confirmButton = {
-                            Button(
+                            primaryButton(
                                 onClick = {
                                     showProviderSetupDialog = false
                                     settingsViewModel.onChangeProvider(isInitialSetup = true)
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Text(stringResource("provider.setup.required.button"))
                             }
@@ -1356,14 +1340,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                     }
                                 }
 
-                                Button(
+                                primaryButton(
                                     onClick = { sessionsViewModel.dismissSuccessMessage() },
-                                    modifier = Modifier
-                                        .align(Alignment.End)
-                                        .pointerHoverIcon(PointerIcon.Hand),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
+                                    modifier = Modifier.align(Alignment.End),
                                 ) {
                                     Text(stringResource("action.ok"))
                                 }
@@ -1421,24 +1400,17 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    TextButton(
+                                    secondaryButton(
                                         onClick = { sessionsViewModel.cancelOverwrite() },
-                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                     ) {
                                         Text(stringResource("action.cancel"))
                                     }
 
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    Button(
+                                    dangerButton(
                                         onClick = { sessionsViewModel.confirmOverwrite() },
-                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.error,
-                                        ),
                                     ) {
                                         Text(stringResource("file.overwrite.confirm"))
                                     }

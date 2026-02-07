@@ -14,20 +14,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.service.UpdateInfo
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.markdownText
@@ -119,7 +117,7 @@ private fun newVersionDialog(
                     text = stringResource("update.dialog.new.version.available"),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 // Version info card
@@ -200,17 +198,15 @@ private fun newVersionDialog(
             }
         },
         confirmButton = {
-            Button(
+            primaryButton(
                 onClick = onDownload,
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("update.dialog.download"))
             }
         },
         dismissButton = {
-            OutlinedButton(
+            secondaryButton(
                 onClick = onLater,
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("update.dialog.later"))
             }
@@ -260,9 +256,8 @@ private fun upToDateDialog(
             }
         },
         confirmButton = {
-            Button(
+            primaryButton(
                 onClick = onDismiss,
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("action.ok"))
             }
@@ -298,9 +293,8 @@ private fun errorDialog(
             }
         },
         confirmButton = {
-            Button(
+            primaryButton(
                 onClick = onDismiss,
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("action.ok"))
             }

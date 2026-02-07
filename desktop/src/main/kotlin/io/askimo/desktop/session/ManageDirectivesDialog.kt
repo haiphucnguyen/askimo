@@ -31,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 
@@ -141,7 +142,7 @@ fun manageDirectivesDialog(
                                         Text(
                                             text = directive.name,
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
 
                                         if (editingDirective != directive.id) {
@@ -160,7 +161,7 @@ fun manageDirectivesDialog(
                                                     Icon(
                                                         Icons.Default.Edit,
                                                         contentDescription = stringResource("action.edit"),
-                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        tint = MaterialTheme.colorScheme.onSurface,
                                                     )
                                                 }
                                                 IconButton(
@@ -217,14 +218,13 @@ fun manageDirectivesDialog(
                                                 horizontalArrangement = Arrangement.End,
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
-                                                TextButton(
+                                                secondaryButton(
                                                     onClick = {
                                                         editingDirective = null
                                                         editName = ""
                                                         editContent = ""
                                                         editError = null
                                                     },
-                                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Close,
@@ -234,7 +234,7 @@ fun manageDirectivesDialog(
                                                     Text(stringResource("settings.cancel"))
                                                 }
 
-                                                TextButton(
+                                                primaryButton(
                                                     onClick = {
                                                         if (editName.isBlank()) {
                                                             editError = nameRequiredError
@@ -248,8 +248,6 @@ fun manageDirectivesDialog(
                                                             editError = null
                                                         }
                                                     },
-                                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                                    colors = ComponentColors.primaryTextButtonColors(),
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Check,
@@ -281,7 +279,7 @@ fun manageDirectivesDialog(
                                                         Text(
                                                             text = stringResource("directive.tooltip.full.content"),
                                                             style = MaterialTheme.typography.labelMedium,
-                                                            color = MaterialTheme.colorScheme.primary,
+                                                            color = MaterialTheme.colorScheme.onSurface,
                                                         )
                                                         Text(
                                                             text = directive.content,
@@ -320,9 +318,8 @@ fun manageDirectivesDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.close"))
                     }

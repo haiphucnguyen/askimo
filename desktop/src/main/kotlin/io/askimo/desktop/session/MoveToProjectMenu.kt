@@ -69,14 +69,14 @@ fun moveToProjectMenuItem(
                 Icon(
                     Icons.AutoMirrored.Filled.DriveFileMove,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             },
             trailingIcon = {
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             },
             modifier = Modifier
@@ -108,7 +108,7 @@ fun moveToProjectMenuItem(
                                 Icon(
                                     Icons.Default.Add,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -134,7 +134,7 @@ fun moveToProjectMenuItem(
                                     Icon(
                                         Icons.Default.Folder,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
