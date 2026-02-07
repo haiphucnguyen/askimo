@@ -420,5 +420,37 @@ class ChatRequestTransformersTest {
             assertNotNull(result)
             assertTrue(result.messages().size >= 2)
         }
+
+        @Test
+        @DisplayName("should place system messages before user messages")
+        fun shouldPlaceSystemMessagesBeforeUserMessages() {
+            // Given - create a request with user messages first
+            val messages = listOf(
+                UserMessage.from("Hello"),
+                AiMessage.from("Hi there!"),
+                UserMessage.from("How are you?"),
+            )
+            val chatRequest = ChatRequest.builder().messages(messages).build()
+
+            // When - transform with custom system messages (simulating user profile directive)
+            val result = ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
+                sessionId = null,
+                chatRequest = chatRequest,
+                memoryId = null,
+                provider = ModelProvider.OPENAI,
+                model = "gpt-4",
+            )
+
+            // Then - all system messages should come before any user/ai messages
+            val resultMessages = result.messages()
+            var foundNonSystemMessage = false
+            for (msg in resultMessages) {
+                if (msg is SystemMessage) {
+                    assertTrue(!foundNonSystemMessage, "System message found after non-system message: ${msg.text()}")
+                } else {
+                    foundNonSystemMessage = true
+                }
+            }
+        }
     }
 }
