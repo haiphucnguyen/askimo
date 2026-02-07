@@ -427,7 +427,7 @@ private fun mermaidSetupInstructions(
             Text(
                 text = setupLink,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(

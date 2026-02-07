@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +33,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,7 +68,10 @@ import io.askimo.core.search.DateFilter
 import io.askimo.core.search.SearchResult
 import io.askimo.core.search.SessionSearchService
 import io.askimo.core.search.SortBy
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -267,6 +268,7 @@ fun globalSearchDialog(
                             }
                         },
                     singleLine = true,
+                    colors = ComponentColors.outlinedTextFieldColors(),
                 )
 
                 // Filters Row
@@ -290,6 +292,7 @@ fun globalSearchDialog(
                                 .fillMaxWidth()
                                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                                 .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                            colors = ComponentColors.outlinedTextFieldColors(),
                         )
                         ExposedDropdownMenu(
                             expanded = dateFilterExpanded,
@@ -324,6 +327,7 @@ fun globalSearchDialog(
                                 .fillMaxWidth()
                                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                                 .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                            colors = ComponentColors.outlinedTextFieldColors(),
                         )
                         ExposedDropdownMenu(
                             expanded = sortByExpanded,
@@ -396,7 +400,6 @@ fun globalSearchDialog(
                             }
                         }
                         searchResults.isNotEmpty() -> {
-                            // Results list
                             Column(modifier = Modifier.fillMaxSize()) {
                                 Text(
                                     text = if (searchResults.size == 1) {
@@ -426,7 +429,6 @@ fun globalSearchDialog(
                             }
                         }
                         else -> {
-                            // Initial state - no search yet
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
@@ -436,7 +438,7 @@ fun globalSearchDialog(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
@@ -453,22 +455,18 @@ fun globalSearchDialog(
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                     ) {
                         Text(stringResource("dialog.cancel"))
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Button(
+                    primaryButton(
                         onClick = { performSearch() },
                         enabled = searchQuery.isNotBlank() && !isSearching,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -530,7 +528,7 @@ private fun searchResultItem(
                     text = result.sessionTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

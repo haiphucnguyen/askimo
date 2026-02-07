@@ -140,19 +140,22 @@ object ComponentColors {
     )
 
     /**
-     * Outlined text field colors that match the theme's divider colors
-     * - Unfocused border: outlineVariant (matches dividers)
-     * - Focused border: primary (accent color)
-     * - Text: onSurface
-     * - Placeholder: onSurfaceVariant
+     * Provides themed colors for outlined text fields with good contrast.
+     * - Focused border: onSurface (matches text color for consistency)
+     * - Unfocused border: outlineVariant (subtle)
+     * - Focused label: onSurface (matches text color)
+     * - Unfocused label: onSurfaceVariant (muted)
+     * - Cursor: onSurface (matches text color)
+     * - Text: onSurface (default, good contrast)
+     * - Placeholder: onSurfaceVariant (muted)
      */
     @Composable
     fun outlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedBorderColor = MaterialTheme.colorScheme.onSurface,
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
         unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        cursorColor = MaterialTheme.colorScheme.primary,
+        cursorColor = MaterialTheme.colorScheme.onSurface,
     )
 
     /**

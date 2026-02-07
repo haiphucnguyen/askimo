@@ -6,6 +6,7 @@ package io.askimo.desktop.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -280,6 +282,7 @@ fun chatView(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
             .focusRequester(chatViewFocusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
@@ -435,7 +438,9 @@ fun chatView(
                                             onClick = {
                                                 onNavigateToProject?.invoke(project.id)
                                             },
-                                            colors = ComponentColors.primaryTextButtonColors(),
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            ),
                                         ) {
                                             Text(
                                                 text = project.name.take(3).uppercase(),
@@ -450,7 +455,7 @@ fun chatView(
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -468,7 +473,7 @@ fun chatView(
 
                             val statusColor = when (ragIndexingStatus) {
                                 "failed" -> MaterialTheme.colorScheme.error
-                                "completed" -> MaterialTheme.colorScheme.primary
+                                "completed" -> MaterialTheme.colorScheme.onSurface
                                 "inprogress" -> MaterialTheme.colorScheme.tertiary
                                 "started" -> MaterialTheme.colorScheme.onSurfaceVariant
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -514,7 +519,7 @@ fun chatView(
                         // Session title
                         Text(
                             text = sessionTitle ?: "New Chat",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -560,7 +565,8 @@ fun chatView(
                                                 Text(
                                                     text = selectedDirectiveObj.name,
                                                     style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.primary,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    fontWeight = FontWeight.Bold,
                                                 )
                                                 Text(
                                                     text = selectedDirectiveObj.content,
@@ -575,7 +581,9 @@ fun chatView(
                                 TextButton(
                                     onClick = { directiveDropdownExpanded = true },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                    colors = ComponentColors.primaryTextButtonColors(),
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
                                 ) {
                                     Text(
                                         text = selectedDirectiveObj?.name?.take(30)?.let {
@@ -613,7 +621,7 @@ fun chatView(
                                             Icon(
                                                 Icons.Default.Check,
                                                 contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
                                     } else {
@@ -640,7 +648,8 @@ fun chatView(
                                                         Text(
                                                             text = directive.name,
                                                             style = MaterialTheme.typography.labelMedium,
-                                                            color = MaterialTheme.colorScheme.primary,
+                                                            color = MaterialTheme.colorScheme.onSurface,
+                                                            fontWeight = FontWeight.Bold,
                                                         )
                                                         Text(
                                                             text = directive.content,
@@ -667,7 +676,7 @@ fun chatView(
                                                         Icon(
                                                             Icons.Default.Check,
                                                             contentDescription = "Selected",
-                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            tint = MaterialTheme.colorScheme.onSurface,
                                                         )
                                                     }
                                                 } else {
@@ -694,13 +703,13 @@ fun chatView(
                                             Icon(
                                                 Icons.Default.Add,
                                                 contentDescription = "New directive",
-                                                tint = MaterialTheme.colorScheme.primary,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                                 modifier = Modifier.size(20.dp),
                                             )
                                             Text(
                                                 text = stringResource("chat.directive.new"),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
                                     },
@@ -721,13 +730,13 @@ fun chatView(
                                             Icon(
                                                 Icons.Default.Edit,
                                                 contentDescription = "Manage directives",
-                                                tint = MaterialTheme.colorScheme.primary,
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                                 modifier = Modifier.size(20.dp),
                                             )
                                             Text(
                                                 text = stringResource("chat.directive.manage"),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                color = MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
                                     },

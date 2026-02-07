@@ -530,6 +530,22 @@ private fun projectsList(
             bottom = (4 * fontScale).dp,
         ),
     ) {
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            label = {
+                Text(
+                    stringResource("project.new"),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            selected = false,
+            onClick = onNewProject,
+            modifier = Modifier
+                .padding(vertical = (2 * fontScale).dp)
+                .pointerHoverIcon(PointerIcon.Hand),
+            colors = ComponentColors.navigationDrawerItemColors(),
+        )
+
         if (projectsViewModel.projects.isEmpty()) {
             // No projects yet
             Text(
@@ -551,23 +567,6 @@ private fun projectsList(
                 )
             }
         }
-
-        // New Project button
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-            label = {
-                Text(
-                    stringResource("project.new"),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            selected = false,
-            onClick = onNewProject,
-            modifier = Modifier
-                .padding(vertical = (2 * fontScale).dp)
-                .pointerHoverIcon(PointerIcon.Hand),
-            colors = ComponentColors.navigationDrawerItemColors(),
-        )
     }
 
     // Delete confirmation dialog
@@ -737,7 +736,7 @@ private fun sessionsList(
                         Icon(
                             Icons.Default.Star,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     label = {
@@ -825,7 +824,7 @@ private fun sessionsList(
                             text = "More...",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     selected = false,

@@ -4,7 +4,9 @@
  */
 package io.askimo.desktop.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -68,7 +70,7 @@ fun groupedModelListAsCards(
             Text(
                 text = category.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(
                     horizontal = 0.dp,
@@ -105,7 +107,7 @@ fun groupedModelListAsCards(
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = "Selected model",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -136,16 +138,22 @@ fun groupedModelListAsMenuItems(
     groupedModels.forEach { (category, categoryModels) ->
         // Category header
         if (shouldShowHeaders && categoryModels.isNotEmpty()) {
-            Text(
-                text = category.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(
-                    horizontal = 16.dp,
-                    vertical = 8.dp,
-                ),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 8.dp,
+                    ),
+            ) {
+                Text(
+                    text = category.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
 
         // Models in this category
@@ -163,7 +171,7 @@ fun groupedModelListAsMenuItems(
                         Icon(
                             Icons.Default.Check,
                             contentDescription = "Current model",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 } else {

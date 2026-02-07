@@ -93,7 +93,7 @@ fun projectsView(
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Refresh projects",
-                    tint = MaterialTheme.colorScheme.onBackground,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -122,7 +122,7 @@ fun projectsView(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = message,
@@ -312,7 +312,7 @@ private fun projectCard(
                         Icon(
                             Icons.Default.MoreVert,
                             contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -330,7 +330,7 @@ private fun projectCard(
                                 Icon(
                                     Icons.Default.Edit,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             },
                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -382,7 +382,7 @@ private fun projectCard(
                         text = stringResource("projects.sources.count", project.knowledgeSources.size),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     val rotation by animateFloatAsState(
@@ -397,7 +397,7 @@ private fun projectCard(
                         } else {
                             stringResource("projects.sources.expand")
                         },
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.rotate(rotation),
                     )
                 }
@@ -487,14 +487,14 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronLeft,
                 contentDescription = stringResource("projects.page.previous"),
-                tint = if (hasPrevious) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                tint = if (hasPrevious) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
 
         Text(
             text = stringResource("projects.page", currentPage, totalPages),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -506,7 +506,7 @@ private fun paginationControls(
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = stringResource("projects.page.next"),
-                tint = if (hasNext) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                tint = if (hasNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
     }

@@ -7,6 +7,9 @@ package io.askimo.desktop.common.theme
 import androidx.compose.ui.graphics.Color
 
 enum class AccentColor(val displayName: String, val lightColor: Color, val darkColor: Color) {
+    // Modern neutral - gray in light mode, darker in dark mode
+    MODERN_GRAY("Modern Gray", Color(0xFF707070), Color(0xFF0D0D0D)),
+
     // Deep/Dark variants - rich, bold colors
     DEEP_BLUE("Deep Blue", Color(0xFF003D82), Color(0xFF1E88E5)),
     DEEP_PURPLE("Deep Purple", Color(0xFF5B21B6), Color(0xFF9333EA)),

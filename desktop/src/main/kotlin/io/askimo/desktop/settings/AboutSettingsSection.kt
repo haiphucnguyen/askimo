@@ -26,16 +26,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
+import io.askimo.desktop.common.components.linkButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -77,7 +75,7 @@ fun aboutSettingsSection() {
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                     Column {
                         Text(
@@ -109,11 +107,10 @@ fun aboutSettingsSection() {
                 )
 
                 // Website Link
-                TextButton(
+                linkButton(
                     onClick = {
                         openUrl("https://askimo.chat")
                     },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Language,
@@ -234,23 +231,20 @@ fun aboutSettingsSection() {
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
 
-                TextButton(
+                linkButton(
                     onClick = { openUrl("https://github.com/haiphucnguyen/askimo") },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text("GitHub Repository")
                 }
 
-                TextButton(
+                linkButton(
                     onClick = { openUrl("https://github.com/haiphucnguyen/askimo/issues") },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text("Report Issues")
                 }
 
-                TextButton(
+                linkButton(
                     onClick = { openUrl("https://github.com/haiphucnguyen/askimo/blob/main/LICENSE") },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text("View License")
                 }

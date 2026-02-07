@@ -148,7 +148,9 @@ private fun proxyConfigurationCard() {
                         ProxyType.entries.forEach { type ->
                             DropdownMenuItem(
                                 text = {
-                                    Column {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
                                         Text(
                                             text = stringResource("settings.proxy.type.${type.name.lowercase()}"),
                                             style = MaterialTheme.typography.bodyMedium,
@@ -170,7 +172,7 @@ private fun proxyConfigurationCard() {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = MaterialTheme.colorScheme.onSurface,
                                         )
                                     }
                                 } else {

@@ -30,7 +30,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,8 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -54,6 +51,8 @@ import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -201,7 +200,7 @@ private fun logLevelCard() {
                                     Icon(
                                         Icons.Default.Check,
                                         contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             } else {
@@ -247,10 +246,8 @@ private fun logViewerCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 // View Logs Button
-                OutlinedButton(
+                primaryButton(
                     onClick = onViewLogs,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.subtleButtonColors(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Visibility,
@@ -262,13 +259,11 @@ private fun logViewerCard(
                 }
 
                 // Open Log Folder Button
-                OutlinedButton(
+                secondaryButton(
                     onClick = {
                         val logDir = LoggingService.getLogDirectory()
                         openInFileManager(logDir.toFile())
                     },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.subtleButtonColors(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
@@ -978,7 +973,7 @@ private fun ragEmbeddingModelSelector() {
                                     Icon(
                                         Icons.Default.Check,
                                         contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             } else {
@@ -1188,7 +1183,7 @@ private fun visionModelSelector() {
                                     Icon(
                                         Icons.Default.Check,
                                         contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             } else {

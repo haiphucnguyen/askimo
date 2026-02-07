@@ -14,13 +14,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
+import io.askimo.desktop.common.components.linkButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -71,7 +70,7 @@ fun aboutDialog(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
-                        TextButton(
+                        linkButton(
                             onClick = {
                                 try {
                                     Desktop.getDesktop().browse(URI("https://askimo.chat"))
@@ -79,12 +78,10 @@ fun aboutDialog(
                                     // Silently fail if browser cannot be opened
                                 }
                             },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             Text(
                                 text = "https://askimo.chat",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -141,10 +138,8 @@ fun aboutDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            secondaryButton(
                 onClick = onDismiss,
-                colors = ComponentColors.primaryTextButtonColors(),
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("action.close"))
             }

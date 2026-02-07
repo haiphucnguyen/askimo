@@ -174,7 +174,7 @@ private fun providerButton(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = currentProvider.name.lowercase().replaceFirstChar { it.uppercase() },
@@ -495,7 +495,7 @@ fun footerBar(
                                 stringResource("telemetry.show")
                             },
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -513,7 +513,7 @@ fun footerBar(
                     Text(
                         text = stringResource("system.share.feedback"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -691,6 +691,7 @@ private fun eventPopupContent(
                 text = "Notifications (${events.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             if (events.isNotEmpty()) {
@@ -702,7 +703,7 @@ private fun eventPopupContent(
                     Text(
                         text = stringResource("event.notification.clear.all"),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -714,7 +715,7 @@ private fun eventPopupContent(
             Text(
                 text = stringResource("event.notification.empty"),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(16.dp),
             )
         } else {
@@ -800,11 +801,7 @@ private fun eventItem(
                     fontWeight = FontWeight.Bold,
                     color = when {
                         isIndexingFailure -> MaterialTheme.colorScheme.error
-                        isIndexingSuccess -> MaterialTheme.colorScheme.primary
-                        isIndexingInProgress -> MaterialTheme.colorScheme.tertiary
-                        isIndexingStarted -> MaterialTheme.colorScheme.onSurfaceVariant
-                        isSystemEvent -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSurface
                     },
                 )
 
@@ -816,7 +813,7 @@ private fun eventItem(
                     Text(
                         text = stringResource("event.notification.clear"),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -824,7 +821,7 @@ private fun eventItem(
             Text(
                 text = formatInstantDisplay(event.timestamp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Text(
@@ -833,7 +830,7 @@ private fun eventItem(
                 color = if (isIndexingFailure) {
                     MaterialTheme.colorScheme.error
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MaterialTheme.colorScheme.onSurface
                 },
             )
 
@@ -855,7 +852,7 @@ private fun eventItem(
                         Text(
                             text = stringResource("event.details.action"),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -900,7 +897,7 @@ private fun telemetryPanel(metrics: TelemetryMetrics, maxHeight: Dp) {
                     Text(
                         text = stringResource("telemetry.title"),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold,
                     )
 
@@ -1059,7 +1056,7 @@ private fun telemetryMetricCard(
                     Text(
                         text = value,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -1067,7 +1064,7 @@ private fun telemetryMetricCard(
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                 )
             }

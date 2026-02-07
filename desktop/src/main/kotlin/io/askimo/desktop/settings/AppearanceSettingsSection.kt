@@ -27,12 +27,10 @@ import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,9 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import io.askimo.desktop.common.components.dangerButton
+import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.AccentColor
 import io.askimo.desktop.common.theme.ComponentColors
@@ -313,8 +311,7 @@ private fun avatarSetting(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Select button
-                TextButton(
+                primaryButton(
                     onClick = {
                         val fileDialog = FileDialog(
                             null as Frame?,
@@ -335,19 +332,13 @@ private fun avatarSetting(
                             onSelectAvatar(File(selectedDir, selectedFile).absolutePath)
                         }
                     },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text(stringResource("settings.appearance.avatar.select"))
                 }
 
-                // Remove button (only show if avatar exists)
                 if (currentAvatar != null) {
-                    TextButton(
+                    dangerButton(
                         onClick = onRemoveAvatar,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.remove"))
                     }

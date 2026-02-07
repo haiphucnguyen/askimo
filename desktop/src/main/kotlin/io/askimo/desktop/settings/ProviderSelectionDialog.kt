@@ -7,7 +7,6 @@ package io.askimo.desktop.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,10 +31,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,12 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
+import io.askimo.desktop.common.components.linkButton
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -288,7 +285,7 @@ fun providerSelectionDialog(
                                                     Icon(
                                                         Icons.Default.CheckCircle,
                                                         contentDescription = "Selected",
-                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        tint = MaterialTheme.colorScheme.onSurface,
                                                     )
                                                 }
                                             } else {
@@ -302,10 +299,10 @@ fun providerSelectionDialog(
 
                         // Help link for provider setup instructions
                         if (viewModel.selectedProvider != null) {
-                            TextButton(
+                            linkButton(
                                 onClick = {
                                     try {
-                                        val providerName = viewModel.selectedProvider?.name?.lowercase() ?: return@TextButton
+                                        val providerName = viewModel.selectedProvider?.name?.lowercase() ?: return@linkButton
                                         Desktop.getDesktop().browse(
                                             URI("https://askimo.chat/docs/desktop/providers/$providerName/"),
                                         )
@@ -313,8 +310,7 @@ fun providerSelectionDialog(
                                         // Silently fail if browser cannot be opened
                                     }
                                 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier.padding(0.dp),
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Help,
@@ -325,7 +321,6 @@ fun providerSelectionDialog(
                                 Text(
                                     text = stringResource("provider.setup.guide", viewModel.selectedProvider?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
@@ -377,7 +372,7 @@ fun providerSelectionDialog(
                                                             Icon(
                                                                 Icons.Default.CheckCircle,
                                                                 contentDescription = stringResource("provider.apikey.already.stored"),
-                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                tint = MaterialTheme.colorScheme.onSurface,
                                                             )
                                                         }
                                                         Spacer(modifier = Modifier.width(8.dp))
@@ -407,7 +402,7 @@ fun providerSelectionDialog(
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
-                                                    TextButton(
+                                                    linkButton(
                                                         onClick = {
                                                             try {
                                                                 Desktop.getDesktop().browse(
@@ -417,13 +412,11 @@ fun providerSelectionDialog(
                                                                 // Silently fail if browser cannot be opened
                                                             }
                                                         },
-                                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                                        contentPadding = PaddingValues(0.dp),
+                                                        modifier = Modifier.padding(0.dp),
                                                     ) {
                                                         Text(
                                                             text = stringResource("provider.apikey.security.link"),
                                                             style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.primary,
                                                         )
                                                     }
                                                 }
@@ -526,7 +519,7 @@ fun providerSelectionDialog(
 
                                         // Show download button for Ollama if model can be pulled
                                         if (viewModel.canPullEmbeddingModel && viewModel.embeddingModelProvider == "OLLAMA") {
-                                            Button(
+                                            primaryButton(
                                                 onClick = {
                                                     val baseUrl = viewModel.providerFieldValues["baseUrl"] ?: ""
                                                     if (baseUrl.isNotBlank()) {
@@ -534,7 +527,6 @@ fun providerSelectionDialog(
                                                     }
                                                 },
                                                 enabled = !viewModel.isCheckingEmbeddingModel,
-                                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                             ) {
                                                 if (viewModel.isCheckingEmbeddingModel) {
                                                     CircularProgressIndicator(
@@ -559,18 +551,16 @@ fun providerSelectionDialog(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.small),
             ) {
                 if (viewModel.showModelSelectionInProviderDialog) {
-                    OutlinedButton(
+                    secondaryButton(
                         onClick = { viewModel.backToProviderConfiguration() },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.back"))
                     }
                 } else {
                     if (viewModel.selectedProvider != null && viewModel.providerConfigFields.isNotEmpty()) {
-                        OutlinedButton(
+                        secondaryButton(
                             onClick = { viewModel.testConnection() },
                             enabled = !viewModel.isTestingConnection,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             if (viewModel.isTestingConnection) {
                                 CircularProgressIndicator(
@@ -587,25 +577,21 @@ fun providerSelectionDialog(
                 }
 
                 // Save button
-                Button(
+                primaryButton(
                     onClick = onSave,
                     enabled = if (viewModel.showModelSelectionInProviderDialog) {
                         viewModel.pendingModelForNewProvider != null
                     } else {
                         false
                     },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.subtleButtonColors(),
                 ) {
                     Text(stringResource("settings.save"))
                 }
             }
         },
         dismissButton = {
-            TextButton(
+            secondaryButton(
                 onClick = onDismiss,
-                colors = ComponentColors.primaryTextButtonColors(),
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Text(stringResource("settings.cancel"))
             }

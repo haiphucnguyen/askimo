@@ -162,7 +162,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null) {
 @Composable
 private fun renderParagraph(paragraph: Paragraph) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    val linkColor = MaterialTheme.colorScheme.primary
+    val linkColor = MaterialTheme.colorScheme.tertiary
 
     // Extract raw text to check for LaTeX
     val rawText = extractTextContent(paragraph)
@@ -399,7 +399,7 @@ private fun fixMarkdownMangledLatex(latex: String): String {
 @Composable
 private fun renderHeading(heading: Heading) {
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    val linkColor = MaterialTheme.colorScheme.primary
+    val linkColor = MaterialTheme.colorScheme.tertiary
 
     val style = when (heading.level) {
         1 -> MaterialTheme.typography.headlineMedium
@@ -459,7 +459,7 @@ private fun renderListItem(
     marker: String,
     inlineCodeBg: Color,
 ) {
-    val linkColor = MaterialTheme.colorScheme.primary
+    val linkColor = MaterialTheme.colorScheme.tertiary
 
     Column(modifier = Modifier.padding(vertical = 2.dp)) {
         // First, collect inline content and nested blocks

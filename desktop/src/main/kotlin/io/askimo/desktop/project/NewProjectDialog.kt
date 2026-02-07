@@ -20,9 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +27,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +46,8 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.logging.logger
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.util.FileDialogUtils
@@ -216,7 +214,7 @@ fun newProjectDialog(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Success",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(64.dp),
                     )
 
@@ -244,12 +242,8 @@ fun newProjectDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = onDismiss,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("project.new.dialog.success.close"))
                     }
@@ -259,19 +253,17 @@ fun newProjectDialog(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // Title
                     Text(
                         text = stringResource("project.new.dialog.title"),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
 
-                    // Project Name Field
                     OutlinedTextField(
                         value = projectName,
                         onValueChange = {
                             projectName = it
-                            nameError = null // Clear error on change
+                            nameError = null
                         },
                         label = { Text(stringResource("project.new.dialog.name.label")) },
                         placeholder = { Text(stringResource("project.new.dialog.name.placeholder")) },
@@ -327,7 +319,7 @@ fun newProjectDialog(
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                             }
 
-                            DropdownMenu(
+                            ComponentColors.themedDropdownMenu(
                                 expanded = showAddSourceMenu,
                                 onDismissRequest = { showAddSourceMenu = false },
                             ) {
@@ -338,6 +330,7 @@ fun newProjectDialog(
                                                 Icon(
                                                     typeInfo.icon,
                                                     contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurface,
                                                     modifier = Modifier.padding(end = 8.dp).size(20.dp),
                                                 )
                                                 Text(stringResource(typeInfo.typeLabelKey))
@@ -347,6 +340,7 @@ fun newProjectDialog(
                                             showAddSourceMenu = false
                                             handleAddSource(typeInfo)
                                         },
+                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                     )
                                 }
                             }
@@ -358,25 +352,17 @@ fun newProjectDialog(
                     // Action buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(
+                        secondaryButton(
                             onClick = onDismiss,
-                            colors = ComponentColors.primaryTextButtonColors(),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             Text(stringResource("project.new.dialog.button.cancel"))
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Button(
+                        primaryButton(
                             onClick = { handleCreate() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             Text(stringResource("project.new.dialog.button.create"))
                         }

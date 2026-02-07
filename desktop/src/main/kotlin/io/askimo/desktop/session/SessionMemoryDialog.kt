@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,18 +37,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.util.JsonUtils
 import io.askimo.core.util.JsonUtils.prettyJson
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Dialog to display session memory information including memory messages and summary.
@@ -137,7 +136,7 @@ fun sessionMemoryDialog(
                                 text = stringResource("developer.session.memory.summary"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = stringResource(
@@ -213,7 +212,7 @@ fun sessionMemoryDialog(
                                 text = stringResource("developer.session.memory.messages"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
 
                             if (messages.isNotEmpty()) {
@@ -289,21 +288,31 @@ fun sessionMemoryDialog(
                             ) {
                                 val scrollState = rememberScrollState()
                                 SelectionContainer {
-                                    Text(
-                                        text = if (currentMessages.isEmpty()) {
-                                            stringResource("developer.session.memory.empty")
-                                        } else {
-                                            currentMessages.joinToString("\n\n") { msg ->
-                                                formatJson(msg)
-                                            }
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    Column(
                                         modifier = Modifier
                                             .padding(16.dp)
                                             .fillMaxWidth()
                                             .verticalScroll(scrollState),
-                                    )
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    ) {
+                                        if (currentMessages.isEmpty()) {
+                                            Text(
+                                                text = stringResource("developer.session.memory.empty"),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        } else {
+                                            currentMessages.forEach { msg ->
+                                                memoryMessageItem(msg)
+                                                if (msg != currentMessages.last()) {
+                                                    HorizontalDivider(
+                                                        modifier = Modifier.padding(vertical = 8.dp),
+                                                        color = MaterialTheme.colorScheme.outlineVariant,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 VerticalScrollbar(
                                     modifier = Modifier
@@ -320,16 +329,75 @@ fun sessionMemoryDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        colors = ComponentColors.primaryTextButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.close"))
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Render a single memory message in a formatted, readable way.
+ */
+@Composable
+private fun memoryMessageItem(messageJson: String) {
+    // Parse JSON outside of composable context
+    val parsedMessage = remember(messageJson) {
+        try {
+            val jsonElement = JsonUtils.json.parseToJsonElement(messageJson)
+            val content = jsonElement.jsonObject["content"]?.toString()?.trim('"')?.replace("\\n", "\n") ?: ""
+            val type = jsonElement.jsonObject["type"]?.toString()?.trim('"') ?: "unknown"
+            val createdAt = jsonElement.jsonObject["createdAt"]?.toString()?.trim('"') ?: ""
+            Triple(content, type, createdAt)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    if (parsedMessage != null) {
+        val (content, type, createdAt) = parsedMessage
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = type.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = when (type) {
+                        "user" -> MaterialTheme.colorScheme.tertiary
+                        "assistant" -> MaterialTheme.colorScheme.secondary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                Text(
+                    text = createdAt,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    } else {
+        // Fallback for invalid JSON
+        Text(
+            text = messageJson,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }
 

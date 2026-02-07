@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,9 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -74,10 +72,8 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                     }
-                    Button(
+                    secondaryButton(
                         onClick = { viewModel.onChangeProvider() },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        colors = ComponentColors.subtleButtonColors(),
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = null)
                         Text(
@@ -107,10 +103,8 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                     }
-                    Button(
+                    secondaryButton(
                         onClick = { viewModel.onChangeModel() },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        colors = ComponentColors.subtleButtonColors(),
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = null)
                         Text(
@@ -145,10 +139,8 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                                 )
                             }
                         }
-                        Button(
+                        secondaryButton(
                             onClick = { viewModel.onChangeSettings() },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null)
                             Text(
