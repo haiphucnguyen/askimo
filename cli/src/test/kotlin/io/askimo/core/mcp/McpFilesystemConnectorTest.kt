@@ -5,6 +5,7 @@
 package io.askimo.core.mcp
 
 import io.askimo.core.mcp.config.McpServersConfig
+import io.askimo.core.util.ProcessBuilderExt
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -459,7 +460,7 @@ class McpFilesystemConnectorTest {
         val whichCommand = if (isWindows) "where" else "which"
 
         try {
-            val process = ProcessBuilder(whichCommand, "npx")
+            val process = ProcessBuilderExt(whichCommand, "npx")
                 .redirectErrorStream(true)
                 .start()
 
@@ -475,8 +476,8 @@ class McpFilesystemConnectorTest {
                 println("⚠️  npx not found in PATH")
             }
 
-            // Try to get npx version
-            val versionProcess = ProcessBuilder("npx", "--version")
+            // Try to get npx version using ProcessBuilderExt (handles .cmd files on Windows)
+            val versionProcess = ProcessBuilderExt("npx", "--version")
                 .redirectErrorStream(true)
                 .start()
 
