@@ -57,11 +57,11 @@ object ThemePreferences {
     }
 
     private fun loadAccentColor(): AccentColor {
-        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.OCEAN_BLUE.name)
+        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.MODERN_GRAY.name)
         return try {
             AccentColor.valueOf(colorName)
         } catch (e: IllegalArgumentException) {
-            AccentColor.OCEAN_BLUE
+            AccentColor.MODERN_GRAY
         }
     }
 

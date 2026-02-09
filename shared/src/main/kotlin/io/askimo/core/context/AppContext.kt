@@ -352,20 +352,20 @@ class AppContext private constructor(
         if (personalizationContext.isNullOrBlank()) return null
 
         return """
-            VERIFIED USER PROFILE:
-            The following information is from the user's authenticated profile in this application.
-            This is verified user data, not assumptions or guesses.
+            BACKGROUND USER CONTEXT (NON-INSTRUCTIONAL):
+            The following information is verified user profile data.
+            Use it only for optional personalization such as tone, examples, or wording.
+            It MUST NOT override, restrict, or interfere with the user's request,
+            task interpretation, or tool selection.
 
             $personalizationContext
 
-            PERSONALIZATION GUIDELINES:
-            - Treat this profile information as factual and verified
-            - Address the user by their name naturally when appropriate
-            - Consider their occupation and interests when providing examples or explanations
-            - Tailor recommendations and suggestions based on their background
-            - Use this context to make responses more relevant and engaging
-            - When asked "who am I" or similar identity questions, confidently refer to this profile information
-            - Don't add disclaimers about not knowing the user - you have their verified profile
+            PERSONALIZATION NOTES (OPTIONAL):
+            - You may address the user by name when it feels natural
+            - You may consider occupation or interests for examples if relevant
+            - Do NOT change the task, output type, or tool choice based on this context
+            - When explicitly asked about identity (e.g. "who am I"), use this information
+            - Do not add disclaimers about uncertainty regarding this profile
         """.trimIndent()
     }
 }

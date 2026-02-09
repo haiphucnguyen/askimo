@@ -37,6 +37,10 @@ import io.askimo.core.mcp.Parameter
 import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TransportType
+import io.askimo.core.mcp.getFirstError
+import io.askimo.core.mcp.mcpServerDefinitionValidator
+import io.askimo.desktop.common.components.inlineErrorMessage
+import io.askimo.desktop.common.components.rememberDialogState
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -49,6 +53,8 @@ fun mcpServerTemplateDialog(
     onDismiss: () -> Unit,
     onSave: (McpServerDefinition) -> Unit,
 ) {
+    val dialogState = rememberDialogState()
+
     // Edit mode - initialize with existing values
     var id by remember { mutableStateOf(server?.id ?: "") }
     var name by remember { mutableStateOf(server?.name ?: "") }
@@ -178,6 +184,9 @@ fun mcpServerTemplateDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
 
+                // Error Message Display
+                inlineErrorMessage(errorMessage = dialogState.errorMessage)
+
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -194,6 +203,7 @@ fun mcpServerTemplateDialog(
 
                     Button(
                         onClick = {
+                            dialogState.clearError()
                             try {
                                 // Parse command template
                                 val commandList = commandTemplate.trim().split("\\s+".toRegex())
@@ -249,9 +259,16 @@ fun mcpServerTemplateDialog(
                                     tags = tagsList,
                                 )
 
+                                // Validate before saving
+                                val validationResult = mcpServerDefinitionValidator(serverDefinition)
+                                if (validationResult.errors.isNotEmpty()) {
+                                    dialogState.setError(validationResult.getFirstError() ?: "Validation failed")
+                                    return@Button
+                                }
+
                                 onSave(serverDefinition)
                             } catch (e: Exception) {
-                                // TODO: Show error message to user
+                                dialogState.setError(e, "Failed to save server template")
                                 log.error("Save failed", e)
                             }
                         },

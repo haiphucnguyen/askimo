@@ -5,6 +5,7 @@
 package io.askimo.core.mcp
 
 import io.askimo.core.mcp.config.McpServersConfig
+import io.askimo.core.util.ProcessBuilderExt
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.LocalDateTime
@@ -146,6 +148,10 @@ class McpFilesystemConnectorTest {
         assertTrue(testResult.isSuccess, "Connection test should succeed with valid path")
     }
 
+    @DisabledIfEnvironmentVariable(
+        named = "DISABLE_DOCKER_TESTS",
+        matches = "(?i)true|1|yes",
+    )
     @Test
     @Tag("slow")
     @Tag("integration")
@@ -269,6 +275,10 @@ class McpFilesystemConnectorTest {
         }
     }
 
+    @DisabledIfEnvironmentVariable(
+        named = "DISABLE_DOCKER_TESTS",
+        matches = "(?i)true|1|yes",
+    )
     @Test
     @Tag("slow")
     @Tag("integration")
@@ -459,7 +469,7 @@ class McpFilesystemConnectorTest {
         val whichCommand = if (isWindows) "where" else "which"
 
         try {
-            val process = ProcessBuilder(whichCommand, "npx")
+            val process = ProcessBuilderExt(whichCommand, "npx")
                 .redirectErrorStream(true)
                 .start()
 
@@ -475,8 +485,8 @@ class McpFilesystemConnectorTest {
                 println("⚠️  npx not found in PATH")
             }
 
-            // Try to get npx version
-            val versionProcess = ProcessBuilder("npx", "--version")
+            // Try to get npx version using ProcessBuilderExt (handles .cmd files on Windows)
+            val versionProcess = ProcessBuilderExt("npx", "--version")
                 .redirectErrorStream(true)
                 .start()
 

@@ -123,7 +123,6 @@ object ChatRequestTransformers {
         model: String,
     ): ChatRequest {
         val messages = chatRequest.messages()
-
         // Reserve percentage of context for AI response
         val reservedForResponse = (maxTokens * RESPONSE_RESERVE_PERCENT).toInt()
         val availableForMessages = maxTokens - reservedForResponse
@@ -159,11 +158,14 @@ object ChatRequestTransformers {
             return chatRequest.toBuilder().messages(keptMessages).build()
         }
 
+        // Track the index where system messages end, so we can insert conversation messages after them
+        val systemMessagesEndIndex = keptMessages.size
+
         // Always add the first (most recent) message, even if it exceeds budget
         // Better to get a context length error than send no user input
         val firstMessage = recentMessages.first()
         val firstMessageTokens = estimateTokens(getMessageText(firstMessage))
-        keptMessages.add(0, firstMessage)
+        keptMessages.add(systemMessagesEndIndex, firstMessage) // Insert after system messages
         totalTokens += firstMessageTokens
 
         // Now add remaining messages if they fit within budget
@@ -181,7 +183,7 @@ object ChatRequestTransformers {
                 break
             }
 
-            keptMessages.add(0, msg) // Add to beginning to maintain chronological order
+            keptMessages.add(systemMessagesEndIndex, msg) // Insert after system messages, maintaining chronological order
             totalTokens += msgTokens
         }
 

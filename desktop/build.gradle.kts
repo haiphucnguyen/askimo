@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.jlatexmath)
+    implementation(libs.konform)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.koin.test)

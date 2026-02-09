@@ -112,7 +112,10 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         onToken(chunk)
                     }.onCompleteResponse {
                         done.countDown()
-                    }.onError { e ->
+                    }.onToolExecuted { toolHasExecuted ->
+                        log.debug("Tool executed $toolHasExecuted")
+                    }
+                    .onError { e ->
                         errorOccurred = true
                         capturedError = e
 
