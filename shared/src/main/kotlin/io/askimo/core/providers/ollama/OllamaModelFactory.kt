@@ -76,6 +76,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase()))).build()
 
         return AiServiceBuilder.buildChatClient(

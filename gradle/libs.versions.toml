@@ -27,6 +27,7 @@ lucene = "10.3.2"
 langchain4j-extra = "1.11.0-beta19"
 caffeine = "3.2.3"
 jsoup = "1.22.1"
+konform = "0.11.1"
 
 [libraries]
 # JLine
@@ -100,6 +101,9 @@ exposed-java-time = { group = "org.jetbrains.exposed", name = "exposed-java-time
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
 koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", version.ref = "koin" }
+
+# Konform Validation
+konform = { group = "io.konform", name = "konform", version.ref = "konform" }
 
 # Testing
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
