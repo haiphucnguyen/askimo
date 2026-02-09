@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.LocalDateTime
@@ -147,6 +148,10 @@ class McpFilesystemConnectorTest {
         assertTrue(testResult.isSuccess, "Connection test should succeed with valid path")
     }
 
+    @DisabledIfEnvironmentVariable(
+        named = "DISABLE_DOCKER_TESTS",
+        matches = "(?i)true|1|yes",
+    )
     @Test
     @Tag("slow")
     @Tag("integration")
@@ -270,6 +275,10 @@ class McpFilesystemConnectorTest {
         }
     }
 
+    @DisabledIfEnvironmentVariable(
+        named = "DISABLE_DOCKER_TESTS",
+        matches = "(?i)true|1|yes",
+    )
     @Test
     @Tag("slow")
     @Tag("integration")
