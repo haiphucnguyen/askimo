@@ -56,8 +56,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         sessionId: String?,
         model: String,
         settings: OllamaSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -76,7 +76,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase()))).build()
 
         return AiServiceBuilder.buildChatClient(
@@ -86,8 +86,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

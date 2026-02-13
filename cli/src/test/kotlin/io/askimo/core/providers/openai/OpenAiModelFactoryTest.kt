@@ -8,6 +8,7 @@ import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -40,6 +41,7 @@ class OpenAiModelFactoryTest {
         return OpenAiModelFactory().create(
             model = "gpt-3.5-turbo",
             settings = settings,
+            toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,
             executionMode = ExecutionMode.STATELESS_MODE,
         )

@@ -57,8 +57,8 @@ interface ChatModelFactory<T : ProviderSettings> {
         sessionId: String? = null,
         model: String,
         settings: T,
-        retriever: ContentRetriever? = null,
         toolProvider: ToolProvider? = null,
+        retriever: ContentRetriever? = null,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient

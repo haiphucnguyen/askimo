@@ -73,8 +73,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         sessionId: String?,
         model: String,
         settings: DockerAiSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -103,8 +103,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

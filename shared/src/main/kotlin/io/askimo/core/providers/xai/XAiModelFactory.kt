@@ -50,8 +50,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         sessionId: String?,
         model: String,
         settings: XAiSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -80,8 +80,8 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

@@ -52,8 +52,8 @@ object ChatRequestTransformers {
         provider: ModelProvider,
         model: String,
     ): ChatRequest {
-        val modelKey = ModelContextSizeCache.modelKey(provider, model)
-        val contextSize = ModelContextSizeCache.get(modelKey)
+        val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
+        val contextSize = ModelCapabilitiesCache.get(modelKey).contextSize
 
         log.debug("Processing chat request for $modelKey with context size: $contextSize tokens")
 

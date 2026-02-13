@@ -3,6 +3,9 @@
     "name": "[B"
   },
   {
+    "name": "[Lcom.fasterxml.jackson.databind.deser.BeanDeserializerModifier;"
+  },
+  {
     "name": "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
   },
   {
@@ -10,6 +13,9 @@
   },
   {
     "name": "[Lcom.fasterxml.jackson.databind.deser.ValueInstantiators;"
+  },
+  {
+    "name": "[Lcom.fasterxml.jackson.databind.ser.BeanSerializerModifier;"
   },
   {
     "name": "[Lcom.fasterxml.jackson.databind.ser.Serializers;"
@@ -718,8 +724,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1109,6 +1114,19 @@
   },
   {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTextContent",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "customParameters", "parameterTypes": [] }]
+  },
+  {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicToolSchema",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -1506,6 +1524,13 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "customParameters", "parameterTypes": [] }]
+  },
+  {
     "name": "dev.langchain4j.model.openai.internal.chat.AssistantMessage$Builder",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1563,7 +1588,8 @@
       { "name": "<init>", "parameterTypes": [] },
       { "name": "build", "parameterTypes": [] },
       { "name": "content", "parameterTypes": ["java.lang.String"] },
-      { "name": "role", "parameterTypes": ["java.lang.String"] }
+      { "name": "role", "parameterTypes": ["java.lang.String"] },
+      { "name": "toolCalls", "parameterTypes": ["java.util.List"] }
     ]
   },
   {
@@ -1573,10 +1599,22 @@
     "queryAllDeclaredConstructors": true
   },
   {
-    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall$Builder",
+    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.chat.FunctionCall$Builder",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "arguments", "parameterTypes": ["java.lang.String"] },
+      { "name": "build", "parameterTypes": [] },
+      { "name": "name", "parameterTypes": ["java.lang.String"] }
+    ]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Message",
@@ -1594,7 +1632,32 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "dev.langchain4j.model.openai.internal.chat.ToolCall",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
     "name": "dev.langchain4j.model.openai.internal.chat.ToolCall$Builder",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "build", "parameterTypes": [] },
+      {
+        "name": "function",
+        "parameterTypes": [
+          "dev.langchain4j.model.openai.internal.chat.FunctionCall"
+        ]
+      },
+      { "name": "id", "parameterTypes": ["java.lang.String"] },
+      { "name": "index", "parameterTypes": ["java.lang.Integer"] },
+      { "name": "type", "parameterTypes": ["java.lang.String"] }
+    ]
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.chat.ToolMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
@@ -3875,6 +3938,19 @@
     ]
   },
   {
+    "name": "io.askimo.core.mcp.config.ToolConfigData"
+  },
+  {
+    "name": "io.askimo.core.mcp.config.ToolsConfigWrapper",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["java.util.List"] },
+      { "name": "getTools", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.memory.TokenAwareSummarizingMemoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3997,7 +4073,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$2qnuYoGx",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$VgrPVug2",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4045,6 +4121,10 @@
           "io.askimo.core.providers.ChatRequestTransformersTest"
         ]
       },
+      {
+        "name": "shouldPlaceSystemMessagesBeforeUserMessages",
+        "parameterTypes": []
+      },
       { "name": "shouldWorkWithAnthropic", "parameterTypes": [] },
       { "name": "shouldWorkWithGemini", "parameterTypes": [] },
       { "name": "shouldWorkWithOllama", "parameterTypes": [] },
@@ -4082,6 +4162,12 @@
   {
     "name": "io.askimo.core.providers.ProviderSettings",
     "allDeclaredClasses": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.providers.TestToolProviderFactory",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
   },
   {
@@ -4788,6 +4874,10 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.tools.chart.ChartTools",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "io.askimo.tools.fs.LocalFsTools",
@@ -6282,7 +6372,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$pIKEqAyz",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$5whxXYTk",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

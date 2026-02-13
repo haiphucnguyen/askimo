@@ -58,8 +58,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         sessionId: String?,
         model: String,
         settings: OpenAiSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -88,8 +88,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

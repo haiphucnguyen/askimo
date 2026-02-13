@@ -10,6 +10,7 @@ import io.askimo.core.context.AppContextParams
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -51,6 +52,7 @@ class AnthropicModelFactoryTest {
             AnthropicModelFactory().create(
                 model = "claude-sonnet-4-5",
                 settings = settings,
+                toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
                 retriever = null,
                 executionMode = ExecutionMode.STATELESS_MODE,
             )

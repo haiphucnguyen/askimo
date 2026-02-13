@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: AGPLv3
+ *
+ * Copyright (c) 2025 Hai Nguyen
+ */
+package io.askimo.core.intent
+
+import dev.langchain4j.agent.tool.ToolSpecification
+import dev.langchain4j.agent.tool.ToolSpecifications
+import io.askimo.core.logging.logger
+import io.askimo.tools.chart.ChartTools
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Registry for managing tool configurations and their strategies.
+ *
+ * Askimo built-in tools are pre-configured with appropriate strategies.
+ * MCP external tools default to FOLLOW_UP_ONLY for safety (v1).
+ */
+object ToolRegistry {
+    private val tools = ConcurrentHashMap<String, ToolConfig>()
+    private val log = logger<ToolRegistry>()
+
+    init {
+        val chartTools = ToolSpecifications.toolSpecificationsFrom(ChartTools)
+        // Askimo built-in tools with pre-classified strategies
+
+        // Register each chart tool
+        chartTools.forEach { toolSpec ->
+            register(
+                ToolConfig(
+                    specification = toolSpec,
+                    category = ToolCategory.VISUALIZE,
+                    strategy = ToolStrategy.FOLLOW_UP_BASED,
+                    source = ToolSource.ASKIMO_BUILTIN,
+                ),
+            )
+        }
+
+        log.debug("Initialized tool registry with ${tools.size} built-in tools")
+    }
+
+    /**
+     * Register a tool configuration.
+     */
+    private fun register(config: ToolConfig) {
+        tools[config.specification.name()] = config
+        log.debug("Registered tool: ${config.specification.name()} [${config.strategy}]")
+    }
+
+    /**
+     * Get all tools with INTENT_BASED flag.
+     * These tools are attached to requests when user intent is detected.
+     */
+    fun getIntentBased(): List<ToolConfig> = tools.values.filter { (it.strategy and ToolStrategy.INTENT_BASED) != 0 }
+
+    /**
+     * Get all tools with FOLLOW_UP_BASED flag.
+     * These tools require user confirmation before use.
+     */
+    fun getFollowUpOnly(): List<ToolConfig> = tools.values.filter { (it.strategy and ToolStrategy.FOLLOW_UP_BASED) != 0 }
+
+    /**
+     * Get all registered tools.
+     */
+    fun getAllTools(): List<ToolConfig> = tools.values.toList()
+
+    /**
+     * Get a specific tool by name.
+     */
+    fun getTool(name: String): ToolConfig? = tools[name]
+
+    /**
+     * Register MCP tools dynamically (for project-specific tools).
+     * MCP tools default to FOLLOW_UP_BASED for safety.
+     *
+     * @param toolSpecs List of MCP tool specifications
+     * @param strategy Strategy to use (defaults to FOLLOW_UP_BASED)
+     * @return List of registered ToolConfig objects
+     */
+    fun registerMcpTools(
+        toolSpecs: List<ToolSpecification>,
+        strategy: Int = ToolStrategy.FOLLOW_UP_BASED,
+    ): List<ToolConfig> = toolSpecs.map { toolSpec ->
+        ToolConfig(
+            specification = toolSpec,
+            category = ToolCategory.EXECUTE, // MCP tools are typically execution-based
+            strategy = strategy,
+            source = ToolSource.MCP_EXTERNAL,
+        )
+    }
+}

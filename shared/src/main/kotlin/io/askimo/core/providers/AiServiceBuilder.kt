@@ -19,7 +19,6 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.MetadataAwareContentInjector
 import io.askimo.core.util.SystemPrompts.systemMessage
-import io.askimo.tools.chart.ChartTools
 import io.askimo.tools.fs.LocalFsTools
 
 /**
@@ -29,13 +28,6 @@ import io.askimo.tools.fs.LocalFsTools
 object AiServiceBuilder {
 
     private val log = logger<AiServiceBuilder>()
-
-    /**
-     * In-memory cache for tool support detection.
-     * Key: model name, Value: whether the model supports tools
-     * This is NOT persisted to avoid issues when models are updated by providers.
-     */
-    private val toolSupportCache = mutableMapOf<String, Boolean>()
 
     /**
      * Builds a ChatClient with common configuration applied.
@@ -58,29 +50,21 @@ object AiServiceBuilder {
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
         chatMemory: ChatMemory?,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         toolInstructions: String = defaultToolResponseFormatInstructions(),
     ): ChatClient {
-        val toolsOrChartsRequested = executionMode.isToolEnabled() || executionMode.isChartEnabled()
+        val toolsRequested = executionMode.isToolEnabled()
 
-        val toolsSupported = if (toolsOrChartsRequested) {
-            toolSupportCache.getOrPut(model) {
-                testToolSupport(model, chatModel, executionMode)
+        if (toolsRequested) {
+            // Check if we've already tested this model's tool support
+            if (!ModelCapabilitiesCache.hasTestedToolSupport(provider, model)) {
+                // Not tested yet - test and save result
+                val supportsTools = testToolSupport(model, chatModel, executionMode)
+                ModelCapabilitiesCache.setToolSupport(provider, model, supportsTools)
             }
-        } else {
-            false
-        }
-
-        val finalExecutionMode = if (toolsSupported) {
-            executionMode // Keep original execution mode with tools
-        } else if (toolsOrChartsRequested) {
-            // Tools were requested but not supported - create new mode without tool flags
-            executionMode - ExecutionMode(ExecutionMode.TOOL_ENABLED or ExecutionMode.CHART_ENABLED)
-        } else {
-            // Tools were never requested
-            executionMode
+            // else: already tested, supportsTools value is cached (true or false)
         }
 
         return buildChatClientInternal(
@@ -90,11 +74,9 @@ object AiServiceBuilder {
             chatModel = chatModel,
             secondaryChatModel = secondaryChatModel,
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
-            executionMode = finalExecutionMode,
+            retriever = retriever,
             toolInstructions = toolInstructions,
-            enableTools = toolsSupported,
         )
     }
 
@@ -117,9 +99,6 @@ object AiServiceBuilder {
 
         if (executionMode.isToolEnabled()) {
             testClientBuilder.tools(LocalFsTools)
-        }
-        if (executionMode.isChartEnabled()) {
-            testClientBuilder.tools(ChartTools)
         }
 
         val testClient = testClientBuilder.build()
@@ -170,11 +149,9 @@ object AiServiceBuilder {
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
         chatMemory: ChatMemory?,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
-        executionMode: ExecutionMode,
+        retriever: ContentRetriever?,
         toolInstructions: String,
-        enableTools: Boolean,
     ): ChatClient {
         val builder = AiServices
             .builder(ChatClient::class.java)
@@ -183,19 +160,14 @@ object AiServiceBuilder {
                 if (chatMemory != null) {
                     chatMemory(chatMemory)
                 }
-                if (enableTools) {
-                    if (executionMode.isToolEnabled()) {
-                        tools(LocalFsTools)
-                    }
-                    if (executionMode.isChartEnabled()) {
-                        tools(ChartTools)
-                    }
-                    maxSequentialToolsInvocations(3) // TODO: Limit to prevent infinite loops in case of unsupported tools, in the future we will design the better strategy
-                }
             }
             .hallucinatedToolNameStrategy(ProviderModelUtils::hallucinatedToolHandler)
             .systemMessageProvider {
-                systemMessage(toolInstructions)
+                if (toolInstructions.isNotBlank()) {
+                    systemMessage(toolInstructions)
+                } else {
+                    systemMessage()
+                }
             }
             .chatRequestTransformer { chatRequest, memoryId ->
                 ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
@@ -206,6 +178,10 @@ object AiServiceBuilder {
                     model,
                 )
             }
+
+        if (toolProvider != null) {
+            builder.toolProvider(toolProvider)
+        }
 
         if (retriever != null) {
             val retrievalAugmentor = DefaultRetrievalAugmentor
@@ -221,9 +197,6 @@ object AiServiceBuilder {
 
             builder.retrievalAugmentor(retrievalAugmentor)
                 .storeRetrievedContentInChatMemory(false)
-        }
-        if (toolProvider != null) {
-            builder.toolProvider(toolProvider)
         }
 
         return builder.build()

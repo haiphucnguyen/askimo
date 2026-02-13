@@ -7,8 +7,11 @@ package io.askimo.core.providers
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.request.ChatRequestParameters
 import io.askimo.core.config.AppConfig
-import io.askimo.core.config.ModelCapabilities
 import io.askimo.core.context.AppContext
+import io.askimo.core.intent.DetectAiResponseIntentCommand
+import io.askimo.core.intent.DetectUserIntentCommand
+import io.askimo.core.intent.FollowUpSuggestion
+import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.util.JsonUtils.json
@@ -56,16 +59,34 @@ private fun Throwable.isUnsupportedSamplingError(): Boolean {
  * - Context length error detection and automatic context size reduction
  * - Memory clearing on context errors to reduce conversation history
  * - User-friendly error messages for configuration issues
+ * - Two-stage intent detection:
+ *   - Stage 1 (Pre-request): Detect user intent to attach relevant tools
+ *   - Stage 2 (Post-response): Detect follow-up opportunities from AI response
  *
  * @param userMessage The input text to send to the language model
  * @param onToken Optional callback function that is invoked for each token received from the model
+ * @param onFollowUpSuggestion Optional callback for follow-up suggestions based on AI response
  * @return The complete response from the language model as a string
  */
 fun ChatClient.sendStreamingMessageWithCallback(
     userMessage: UserMessage,
     onToken: (String) -> Unit = {},
+    onFollowUpSuggestion: ((FollowUpSuggestion) -> Unit)? = null,
 ): String {
     val log = logger<ChatClient>()
+
+    // === STAGE 1: Pre-request - Detect user intent ===
+    // Analyze user message to determine which tools should be made available
+    val userIntent = DetectUserIntentCommand.execute(
+        userMessage.singleText() ?: "",
+        availableTools = ToolRegistry.getIntentBased(),
+    )
+
+    if (userIntent.tools.isNotEmpty()) {
+        log.debug("Detected user intent (Stage 1): ${userIntent.reasoning}")
+        // TODO: In future, attach these specific tools to the AI request
+        // For now, this logs the intent and can be used by AiServiceBuilder
+    }
 
     // Get provider and model from AppContext
     val appContext = AppContext.getInstance()
@@ -81,21 +102,31 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 log.debug("Retrying request with reduced context (attempt ${contextRetryCount + 1}/${maxContextRetries + 1})")
             }
 
-            val customParams = if (AppConfig.chat.sampling.enabled) {
-                val supportsSampling = ModelCapabilities.supportsSampling(provider, model) ?: true
+            // Build combined request parameters with sampling and tools
+            val customParams = run {
+                val builder = ChatRequestParameters.builder()
+                var hasParams = false
 
-                if (supportsSampling) {
-                    AppConfig.chat.sampling.let { samplingConfig ->
-                        ChatRequestParameters.builder()
-                            .temperature(samplingConfig.temperature)
-                            .topP(samplingConfig.topP)
-                            .build()
+                // Add sampling parameters if enabled and supported
+                if (AppConfig.chat.sampling.enabled) {
+                    val supportsSampling = ModelCapabilitiesCache.supportsSampling(provider, model)
+                    if (supportsSampling) {
+                        AppConfig.chat.sampling.let { samplingConfig ->
+                            builder
+                                .temperature(samplingConfig.temperature)
+                                .topP(samplingConfig.topP)
+                            hasParams = true
+                        }
                     }
-                } else {
-                    DEFAULT_PARAMETERS
                 }
-            } else {
-                DEFAULT_PARAMETERS
+
+                // Add tool specifications if user intent detected tools
+                if (userIntent.tools.isNotEmpty()) {
+                    builder.toolSpecifications(userIntent.tools.map { it.specification })
+                    hasParams = true
+                }
+
+                if (hasParams) builder.build() else DEFAULT_PARAMETERS
             }
 
             // Execute the streaming request with retry logic for transient errors
@@ -112,21 +143,18 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         onToken(chunk)
                     }.onCompleteResponse {
                         done.countDown()
-                    }.onToolExecuted { toolHasExecuted ->
-                        log.debug("Tool executed $toolHasExecuted")
-                    }
-                    .onError { e ->
+                    }.onError { e ->
                         errorOccurred = true
                         capturedError = e
 
                         val errorMessage = e.message ?: ""
 
                         // Check for context length errors first - let it bubble up for immediate retry
-                        if (e.isContextLengthError()) {
+                        if (e?.isContextLengthError() == true) {
                             done.countDown()
-                            val modelKey = ModelContextSizeCache.modelKey(provider, model)
-                            val currentSize = ModelContextSizeCache.get(modelKey)
-                            val newSize = ModelContextSizeCache.reduce(modelKey, currentSize)
+                            val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
+                            val currentSize = ModelCapabilitiesCache.get(modelKey).contextSize
+                            val newSize = ModelCapabilitiesCache.reduceContextSize(modelKey, currentSize)
 
                             log.warn("Context length exceeded for $modelKey (attempt $contextRetryCount/${maxContextRetries + 1}). Reducing context size: $currentSize → $newSize tokens. Retrying immediately...")
                             return@onError
@@ -145,7 +173,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         // Check for unsupported sampling parameters (temperature, topP)
                         if (e.isUnsupportedSamplingError()) {
                             log.warn("Unsupported sampling parameters detected. Falling back to non sampling settings.")
-                            ModelCapabilities.setSamplingSupport(provider, model, false)
+                            ModelCapabilitiesCache.setSamplingSupport(provider, model, false)
                             done.countDown()
                             return@onError
                         }
@@ -225,6 +253,19 @@ fun ChatClient.sendStreamingMessageWithCallback(
                 if (errorOccurred) {
                     val errorDetails = capturedError?.message ?: "Unknown streaming error"
                     throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
+                }
+
+                // === STAGE 2: Post-response - Detect follow-up opportunities ===
+                if (onFollowUpSuggestion != null) {
+                    val followUpSuggestion = DetectAiResponseIntentCommand.execute(
+                        result,
+                        availableTools = ToolRegistry.getFollowUpOnly(),
+                    )
+
+                    if (followUpSuggestion != null) {
+                        log.debug("Detected follow-up opportunity (Stage 2): ${followUpSuggestion.question}")
+                        onFollowUpSuggestion(followUpSuggestion)
+                    }
                 }
 
                 result

@@ -40,8 +40,8 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         sessionId: String?,
         model: String,
         settings: AnthropicSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -70,8 +70,8 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

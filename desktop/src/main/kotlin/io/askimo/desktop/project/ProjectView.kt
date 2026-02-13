@@ -76,13 +76,17 @@ import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.chat.chatInputField
+import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.session.SessionActionMenu
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
 import kotlin.collections.emptyList
@@ -906,7 +910,7 @@ private fun mcpIntegrationsPanel(
         addMcpIntegrationDialog(
             projectId = projectId,
             onDismiss = { showAddDialog = false },
-            onSave = { serverId, name, parameters ->
+            onSave = { serverId, name, parameters, toolCategories, toolStrategies ->
                 val result = mcpService.createInstance(
                     projectId = projectId,
                     serverId = serverId,
@@ -915,6 +919,23 @@ private fun mcpIntegrationsPanel(
                 )
 
                 result.onSuccess { instance ->
+                    // Save tool configurations if any tools were loaded
+                    if (toolCategories.isNotEmpty() || toolStrategies.isNotEmpty()) {
+                        println("[DEBUG] Saving tool configurations for ${toolCategories.size} tools")
+
+                        // Use atomic save operation for instance tools
+                        mcpService.saveInstanceTools(
+                            projectId = projectId,
+                            instanceId = instance.id,
+                            toolCategories = toolCategories,
+                            toolStrategies = toolStrategies,
+                        )
+
+                        println("[DEBUG] Successfully saved tools for instance ${instance.id}")
+                    } else {
+                        println("[DEBUG] No tools to save - toolCategories and toolStrategies are empty")
+                    }
+
                     mcpInstances = mcpService.getInstances(projectId)
                     isExpanded = true
                     showAddDialog = false
@@ -948,7 +969,7 @@ private fun mcpInstanceCard(
     onDelete: () -> Unit,
 ) {
     val serverDefinition = remember(instance.serverId) {
-        io.askimo.core.mcp.config.McpServersConfig.get(instance.serverId)
+        McpServersConfig.get(instance.serverId)
     }
     var showToolsDialog by remember { mutableStateOf(false) }
 
@@ -1062,15 +1083,22 @@ private fun mcpToolsDialog(
         isLoading = true
         errorMessage = null
 
-        val result = mcpService.listTools(instance.projectId, instance.id)
-
-        result.onSuccess { toolsList ->
+        try {
+            val toolsList = withContext(Dispatchers.IO) {
+                mcpService.listTools(instance.projectId, instance.id)
+            }
             tools = toolsList
-            isLoading = false
-        }
+        } catch (e: Exception) {
+            val isTimeout = e is java.util.concurrent.TimeoutException ||
+                e.cause is java.util.concurrent.TimeoutException ||
+                e.message?.contains("TimeoutException", ignoreCase = true) == true
 
-        result.onFailure { error ->
-            errorMessage = error.message ?: "Unknown error occurred"
+            errorMessage = if (isTimeout) {
+                "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
+            } else {
+                "Failed to load tools: ${e.message ?: "Unknown error occurred"}"
+            }
+        } finally {
             isLoading = false
         }
     }
@@ -1201,29 +1229,8 @@ private fun mcpToolsDialog(
                         }
 
                         errorMessage != null -> {
-                            // Error state
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                ),
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource("mcp.tools.dialog.error"),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                    )
-                                    Text(
-                                        text = errorMessage!!,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                    )
-                                }
-                            }
+                            // Error state - use the standard error display component
+                            inlineErrorMessage(errorMessage = errorMessage)
                         }
 
                         tools.isNullOrEmpty() -> {
