@@ -17,8 +17,14 @@ import io.askimo.core.logging.logger
  * are handled by DetectAiResponseIntentCommand (Stage 2).
  * Tools with BOTH flags are available in both stages.
  */
+/**
+ * Command for detecting user's intent using Chain of Responsibility pattern.
+ */
 object DetectUserIntentCommand {
     private val log = logger<DetectUserIntentCommand>()
+
+    // Chain of Responsibility for intent detection
+    private val detectionChain = IntentDetectionChain()
 
     /**
      * Execute the command to detect user intent.
@@ -33,77 +39,40 @@ object DetectUserIntentCommand {
         availableTools: List<ToolConfig>,
         mcpTools: List<ToolConfig> = emptyList(),
     ): IntentDetectionResult {
-        val lowerMessage = userMessage.lowercase()
-        val matchedTools = mutableListOf<ToolConfig>()
-
         // Combine built-in and MCP tools, filter only those with INTENT_BASED flag
         val allTools = (availableTools + mcpTools).filter {
             (it.strategy and ToolStrategy.INTENT_BASED) != 0
         }
 
-        // Pattern 1: Visualization intent
-        if (detectVisualizationKeywords(lowerMessage)) {
-            allTools.find { it.category == ToolCategory.VISUALIZE }
-                ?.let { matchedTools.add(it) }
+        // Use Chain of Responsibility to detect all matching categories
+        val matchedCategories = detectionChain.detectAll(userMessage)
+
+        // Map categories to actual tools
+        val matchedTools = matchedCategories.mapNotNull { category ->
+            // For EXECUTE category, we want all matching tools (including MCP tools)
+            if (category == ToolCategory.EXECUTE) {
+                allTools.filter { it.category == category }
+            } else {
+                listOfNotNull(allTools.find { it.category == category })
+            }
+        }.flatten()
+
+        // Calculate confidence
+        val confidence = if (matchedTools.isNotEmpty()) 85 else 0
+
+        val reasoning = if (matchedTools.isNotEmpty()) {
+            "Detected intent from user keywords: ${matchedTools.joinToString { it.category.name }}"
+        } else {
+            "No specific tool intent detected"
         }
 
-        // Pattern 2: File operations
-        if (detectFileOperationKeywords(lowerMessage)) {
-            allTools.find { it.category == ToolCategory.FILE_WRITE }
-                ?.let { matchedTools.add(it) }
-        }
+        log.debug("Intent detection: message='$userMessage', matched=${matchedTools.size} tools, confidence=$confidence")
 
-        // Pattern 3: Command execution (includes MCP tools)
-        if (detectExecutionKeywords(lowerMessage)) {
-            allTools.filter { it.category == ToolCategory.EXECUTE }
-                .forEach { matchedTools.add(it) }
-        }
-
-        val result = IntentDetectionResult(
+        return IntentDetectionResult(
             stage = IntentStage.USER_INPUT,
             tools = matchedTools,
-            confidence = if (matchedTools.isNotEmpty()) 85 else 0,
-            reasoning = if (matchedTools.isNotEmpty()) {
-                "Detected intent from user keywords: ${matchedTools.joinToString { it.category.name }}"
-            } else {
-                "No specific tool intent detected"
-            },
+            confidence = confidence,
+            reasoning = reasoning,
         )
-
-        if (matchedTools.isNotEmpty()) {
-            log.debug(
-                "Detected user intent: {} tools matched with confidence {}",
-                matchedTools.size,
-                result.confidence,
-            )
-        }
-
-        return result
-    }
-
-    private fun detectVisualizationKeywords(text: String): Boolean {
-        val keywords = listOf(
-            "chart", "graph", "plot", "visualize", "visualization",
-            "diagram", "show me", "display", "draw", "create a chart",
-            "generate chart", "make a graph",
-        )
-        return keywords.any { text.contains(it) }
-    }
-
-    private fun detectFileOperationKeywords(text: String): Boolean {
-        val keywords = listOf(
-            "create file", "write file", "save to file", "save as",
-            "generate file", "make a file", "write to disk",
-            "save this", "write this",
-        )
-        return keywords.any { text.contains(it) }
-    }
-
-    private fun detectExecutionKeywords(text: String): Boolean {
-        val keywords = listOf(
-            "run", "execute", "install", "build", "compile", "test",
-            "run the", "execute this", "install package",
-        )
-        return keywords.any { text.contains(it) }
     }
 }

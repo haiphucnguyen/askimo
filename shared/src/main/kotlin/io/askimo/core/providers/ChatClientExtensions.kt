@@ -82,12 +82,6 @@ fun ChatClient.sendStreamingMessageWithCallback(
         availableTools = ToolRegistry.getIntentBased(),
     )
 
-    if (userIntent.tools.isNotEmpty()) {
-        log.debug("Detected user intent (Stage 1): ${userIntent.reasoning}")
-        // TODO: In future, attach these specific tools to the AI request
-        // For now, this logs the intent and can be used by AiServiceBuilder
-    }
-
     // Get provider and model from AppContext
     val appContext = AppContext.getInstance()
     val provider = appContext.getActiveProvider()
