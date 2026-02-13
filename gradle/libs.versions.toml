@@ -62,6 +62,7 @@ coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp"
 # Jackson
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
 jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
+jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jackson" }
 
 # Kotlinx Serialization
 kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
@@ -141,7 +142,8 @@ exposed = [
 
 jackson = [
     "jackson-module-kotlin",
-    "jackson-dataformat-yaml"
+    "jackson-dataformat-yaml",
+    "jackson-datatype-jsr310"
 ]
 
 tika = [

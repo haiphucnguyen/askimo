@@ -22,6 +22,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import java.net.InetSocketAddress
+import kotlin.inc
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -294,10 +295,13 @@ class OpenAiModelFactoryProxyTest {
 
         // Test streaming with proxy
         var chunkCount = 0
-        val output = chatClient.sendStreamingMessageWithCallback(UserMessage("Count to 3.")) { _ ->
-            chunkCount++
-            print(".")
-        }.trim()
+        val output = chatClient.sendStreamingMessageWithCallback(
+            userMessage = UserMessage("Count to 3."),
+            onToken = { token ->
+                chunkCount++
+                print(token)
+            },
+        ).trim()
 
         assertTrue(output.isNotBlank(), "Expected streaming response with proxy")
         assertTrue(chunkCount > 0, "Expected multiple streaming chunks")

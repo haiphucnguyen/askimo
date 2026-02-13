@@ -8,6 +8,7 @@ import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
+import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.BeforeEach
@@ -53,6 +54,7 @@ class OllamaModelFactoryTest {
         return OllamaModelFactory().create(
             model = "qwen2.5:0.5b",
             settings = settings,
+            toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,
             executionMode = ExecutionMode.STATEFUL_TOOLS_MODE,
         )

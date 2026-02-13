@@ -7,9 +7,15 @@ package io.askimo.core.mcp
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.McpToolProvider
 import dev.langchain4j.mcp.client.DefaultMcpClient
+import io.askimo.core.intent.ToolCategory
+import io.askimo.core.intent.ToolConfig
+import io.askimo.core.intent.ToolSource
+import io.askimo.core.intent.ToolStrategy
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.ProjectMcpInstancesConfig
+import io.askimo.core.mcp.config.ProjectMcpToolsConfig
+import io.askimo.core.mcp.config.ToolConfigData
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -111,7 +117,7 @@ class ProjectMcpInstanceService(
     }
 
     /**
-     * Delete an instance
+     * Delete an instance and its associated tools
      */
     fun deleteInstance(projectId: String, instanceId: String): Result<Unit> {
         return try {
@@ -119,7 +125,9 @@ class ProjectMcpInstanceService(
                 ?: return Result.failure(IllegalArgumentException("Instance not found: $instanceId"))
 
             instancesConfig.remove(projectId, instanceId)
-            log.debug("Deleted MCP instance '${instance.name}' (${instance.id})")
+            // Also delete all tools associated with this instance
+            ProjectMcpToolsConfig.deleteByInstance(projectId, instanceId)
+            log.debug("Deleted MCP instance '${instance.name}' (${instance.id}) and its tools")
             Result.success(Unit)
         } catch (e: Exception) {
             log.warn("Failed to delete MCP instance: ${e.message}", e)
@@ -133,11 +141,6 @@ class ProjectMcpInstanceService(
     fun setInstanceEnabled(projectId: String, instanceId: String, enabled: Boolean): Result<ProjectMcpInstance> = updateInstance(projectId, instanceId, enabled = enabled)
 
     /**
-     * Get all instances using a specific server definition
-     */
-    fun getInstancesByServer(projectId: String, serverId: String): List<ProjectMcpInstance> = getInstances(projectId).filter { it.serverId == serverId }
-
-    /**
      * Get all enabled instances for a project
      */
     fun getEnabledInstances(projectId: String): List<ProjectMcpInstance> = getInstances(projectId).filter { it.enabled }
@@ -149,7 +152,7 @@ class ProjectMcpInstanceService(
      * @param clientKey Unique key for the client
      * @return DefaultMcpClient or null if creation fails
      */
-    private suspend fun createMcpClient(
+    suspend fun createMcpClient(
         instance: ProjectMcpInstance,
         clientKey: String,
     ): DefaultMcpClient? {
@@ -236,31 +239,355 @@ class ProjectMcpInstanceService(
     }
 
     /**
+     * Infer tool category from tool specification metadata.
+     * Uses heuristics based on tool name and description to classify functionality.
+     *
+     * @param toolSpec The tool specification to analyze
+     * @return ToolCategory that best matches the tool's purpose
+     */
+    fun inferToolCategory(toolSpec: ToolSpecification): io.askimo.core.intent.ToolCategory {
+        val name = toolSpec.name().lowercase()
+        val description = toolSpec.description()?.lowercase() ?: ""
+
+        // Database operations
+        if (name.contains("database") || name.contains("db") || name.contains("sql") ||
+            name.contains("query") || name.contains("postgres") || name.contains("mysql") ||
+            name.contains("mongo") || name.contains("redis") ||
+            description.contains("database") || description.contains("query") ||
+            description.contains("table") || description.contains("schema")
+        ) {
+            return ToolCategory.DATABASE
+        }
+
+        // Network/API operations
+        if (name.contains("http") || name.contains("api") || name.contains("webhook") ||
+            name.contains("request") || name.contains("fetch") || name.contains("curl") ||
+            description.contains("http") || description.contains("api") ||
+            description.contains("request") || description.contains("endpoint")
+        ) {
+            return ToolCategory.NETWORK
+        }
+
+        // Visualization
+        if (name.contains("chart") || name.contains("graph") || name.contains("plot") ||
+            name.contains("visualiz") || name.contains("diagram") ||
+            description.contains("chart") || description.contains("visualiz") ||
+            description.contains("graph") || description.contains("plot")
+        ) {
+            return ToolCategory.VISUALIZE
+        }
+
+        // Search operations
+        if (name.startsWith("search_") || name.startsWith("find_") || name.startsWith("query_") ||
+            name.contains("lookup") ||
+            description.contains("search") || description.contains("find") && !description.contains("file")
+        ) {
+            return ToolCategory.SEARCH
+        }
+
+        // File read operations
+        if (name.contains("read_file") || name.contains("get_file") || name.contains("list_file") ||
+            name.contains("show_file") || name.contains("cat_") ||
+            (description.contains("read") && description.contains("file")) ||
+            (description.contains("get") && description.contains("file"))
+        ) {
+            return ToolCategory.FILE_READ
+        }
+
+        // File write operations
+        if (name.contains("write_file") || name.contains("create_file") || name.contains("delete_file") ||
+            name.contains("save_file") || name.contains("remove_file") || name.contains("mkdir") ||
+            (description.contains("write") && description.contains("file")) ||
+            (description.contains("create") && description.contains("file")) ||
+            (description.contains("delete") && description.contains("file"))
+        ) {
+            return ToolCategory.FILE_WRITE
+        }
+
+        // Data transformation
+        if (name.contains("convert") || name.contains("transform") || name.contains("parse") ||
+            name.contains("format") || name.contains("encode") || name.contains("decode") ||
+            description.contains("convert") || description.contains("transform") ||
+            description.contains("parse") || description.contains("format")
+        ) {
+            return ToolCategory.TRANSFORM
+        }
+
+        // Version control
+        if (name.contains("git") || name.contains("commit") || name.contains("branch") ||
+            name.contains("merge") || name.contains("pull_request") || name.contains("pr_") ||
+            description.contains("git") || description.contains("version control") ||
+            description.contains("repository") || description.contains("commit")
+        ) {
+            return ToolCategory.VERSION_CONTROL
+        }
+
+        // Communication
+        if (name.contains("email") || name.contains("slack") || name.contains("notify") ||
+            name.contains("message") || name.contains("send") || name.contains("post_") ||
+            description.contains("email") || description.contains("slack") ||
+            description.contains("notification") || description.contains("message")
+        ) {
+            return ToolCategory.COMMUNICATION
+        }
+
+        // Monitoring/Logging
+        if (name.contains("log") || name.contains("monitor") || name.contains("track") ||
+            name.contains("metric") || name.contains("alert") ||
+            description.contains("log") || description.contains("monitor") ||
+            description.contains("track") || description.contains("metric")
+        ) {
+            return ToolCategory.MONITORING
+        }
+
+        // Execute/Command operations
+        if (name.contains("execute") || name.contains("run") || name.contains("command") ||
+            name.contains("shell") || name.contains("script") || name.contains("install") ||
+            description.contains("execute") || description.contains("run") ||
+            description.contains("command") || description.contains("shell")
+        ) {
+            return ToolCategory.EXECUTE
+        }
+
+        // Default to OTHER for unclassified tools
+        log.debug("Tool '${toolSpec.name()}' classified as OTHER (unrecognized category)")
+        return ToolCategory.OTHER
+    }
+
+    /**
+     * Infer execution strategy from tool specification metadata.
+     * Uses heuristics based on tool name and description to determine safety.
+     *
+     * @param toolSpec The tool specification to analyze
+     * @return Strategy flag (INTENT_BASED for read-only, FOLLOW_UP_BASED for writes)
+     */
+    fun inferToolStrategy(toolSpec: ToolSpecification): Int {
+        val name = toolSpec.name().lowercase()
+        val description = toolSpec.description()?.lowercase() ?: ""
+
+        // Read-only operations → INTENT_BASED (safe to auto-attach)
+        val readPrefixes = listOf("search_", "get_", "list_", "read_", "find_", "fetch_", "query_")
+        val readKeywords = listOf("search", "list", "get", "read", "fetch", "find", "query", "retrieve", "show")
+
+        if (readPrefixes.any { name.startsWith(it) } ||
+            readKeywords.any { name.contains(it) || description.contains(it) }
+        ) {
+            log.debug("Tool '${toolSpec.name()}' classified as INTENT_BASED (read-only)")
+            return ToolStrategy.INTENT_BASED
+        }
+
+        // Write/destructive operations → FOLLOW_UP_BASED (require confirmation)
+        val writePrefixes = listOf("delete_", "remove_", "create_", "write_", "update_", "install_", "execute_")
+        val writeKeywords = listOf(
+            "delete", "remove", "create", "write", "update", "install", "execute",
+            "run", "modify", "change", "set", "configure", "deploy", "publish",
+        )
+
+        if (writePrefixes.any { name.startsWith(it) } ||
+            writeKeywords.any { name.contains(it) || description.contains(it) }
+        ) {
+            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (write/destructive)")
+            return ToolStrategy.FOLLOW_UP_BASED
+        }
+
+        // Unknown → default to FOLLOW_UP_BASED (safe default)
+        log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (default/unknown)")
+        return ToolStrategy.FOLLOW_UP_BASED
+    }
+
+    /**
+     * Get all available tools from all enabled MCP instances for a project.
+     *
+     * **Hybrid Mode:**
+     * 1. Load user-customized tool configs from persistence
+     * 2. For tools without user config, auto-infer category/strategy
+     * 3. Auto-save newly inferred tools to allow future customization
+     *
+     * This enables:
+     * - First run: Auto-classification (fast onboarding)
+     * - User correction: Override incorrect classifications
+     * - Performance: Cached classifications, no re-inference
+     *
+     * @param projectId The project ID
+     * @return List of ToolConfig with hybrid user/auto classifications
+     */
+    suspend fun getProjectTools(projectId: String): List<ToolConfig> {
+        val instances = getEnabledInstances(projectId)
+
+        if (instances.isEmpty()) {
+            log.debug("No active MCP connectors for project $projectId, returning empty list")
+            return emptyList()
+        }
+
+        // 1. Load persisted user configurations
+        val userConfigs = ProjectMcpToolsConfig.load(projectId)
+        val newlyInferredConfigs = mutableListOf<ToolConfigData>()
+
+        val allTools = mutableListOf<ToolConfig>()
+
+        // 2. Fetch tools from each instance
+        instances.forEach { instance ->
+            try {
+                val mcpClient = createMcpClient(instance, "tools_${projectId}_${instance.id}")
+                if (mcpClient != null) {
+                    log.debug("Fetching tools from MCP client for '${instance.name}'")
+                    val toolSpecs = mcpClient.listTools()
+
+                    val toolConfigs = toolSpecs.map { toolSpec ->
+                        val toolName = toolSpec.name()
+
+                        // 3. Check if user has customized this tool (use composite key)
+                        val compositeKey = "${instance.id}:$toolName"
+                        val userConfig = userConfigs[compositeKey]
+
+                        if (userConfig != null && !userConfig.autoInferred) {
+                            // ✅ Use user's custom classification
+                            log.debug("Using user-customized config for tool '$toolName': ${userConfig.category}, ${userConfig.strategy}")
+                            ToolConfig(
+                                specification = toolSpec,
+                                category = ToolCategory.valueOf(userConfig.category),
+                                strategy = userConfig.strategy,
+                                source = ToolSource.MCP_EXTERNAL,
+                            )
+                        } else {
+                            // ✅ Auto-infer classification
+                            val inferredCategory = inferToolCategory(toolSpec)
+                            val inferredStrategy = inferToolStrategy(toolSpec)
+
+                            log.debug("Auto-inferred tool '{}': {}, {}", toolName, inferredCategory, inferredStrategy)
+
+                            // Save for future user customization (only if not already persisted)
+                            if (userConfig == null) {
+                                newlyInferredConfigs.add(
+                                    ToolConfigData(
+                                        toolName = toolName,
+                                        instanceId = instance.id,
+                                        category = inferredCategory.name,
+                                        strategy = inferredStrategy,
+                                        autoInferred = true,
+                                    ),
+                                )
+                            }
+
+                            ToolConfig(
+                                specification = toolSpec,
+                                category = inferredCategory,
+                                strategy = inferredStrategy,
+                                source = ToolSource.MCP_EXTERNAL,
+                            )
+                        }
+                    }
+
+                    allTools.addAll(toolConfigs)
+                    log.debug("Successfully fetched ${toolSpecs.size} tools from instance '${instance.name}'")
+                } else {
+                    log.warn("Failed to create MCP client for instance '${instance.name}'")
+                }
+            } catch (e: Exception) {
+                log.error("Failed to fetch tools from instance '${instance.name}': ${e.message}", e)
+            }
+        }
+
+        // 4. Persist newly inferred tools for future customization
+        if (newlyInferredConfigs.isNotEmpty()) {
+            val updatedConfigs = userConfigs.toMutableMap()
+            newlyInferredConfigs.forEach { config ->
+                val compositeKey = "${config.instanceId}:${config.toolName}"
+                updatedConfigs[compositeKey] = config
+            }
+            ProjectMcpToolsConfig.save(projectId, updatedConfigs)
+            log.debug("Persisted ${newlyInferredConfigs.size} auto-inferred tool configs for future customization")
+        }
+
+        log.debug(
+            "Retrieved total of ${allTools.size} MCP tools " +
+                "(${userConfigs.count { !it.value.autoInferred }} user-customized, " +
+                "${newlyInferredConfigs.size} newly auto-inferred)",
+        )
+        return allTools
+    }
+
+    /**
+     * Allow user to customize tool classification.
+     * This overrides auto-inferred category/strategy.
+     *
+     * @param projectId The project ID
+     * @param instanceId The MCP instance ID
+     * @param toolName The tool name to customize
+     * @param category User-selected category
+     * @param strategy User-selected strategy
+     * @return Result with updated ToolConfigData
+     */
+    fun customizeToolConfig(
+        projectId: String,
+        instanceId: String,
+        toolName: String,
+        category: io.askimo.core.intent.ToolCategory,
+        strategy: Int,
+    ): Result<ToolConfigData> {
+        return try {
+            // Get existing config (might be auto-inferred or user-customized)
+            val existing = ProjectMcpToolsConfig.get(projectId, instanceId, toolName)
+                ?: return Result.failure(IllegalArgumentException("Tool not found: $toolName"))
+
+            // Update with user's custom values
+            val updated = existing.copy(
+                category = category.name,
+                strategy = strategy,
+                autoInferred = false, // ✅ Mark as user-customized!
+                updatedAt = LocalDateTime.now(),
+            )
+
+            ProjectMcpToolsConfig.update(projectId, updated)
+            log.debug("User customized tool '$toolName': $category, $strategy")
+            Result.success(updated)
+        } catch (e: Exception) {
+            log.warn("Failed to customize tool config: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Reset tool to auto-inferred classification.
+     * This removes user customization and re-infers on next tool load.
+     *
+     * @param projectId The project ID
+     * @param instanceId The MCP instance ID
+     * @param toolName The tool name to reset
+     */
+    fun resetToolConfig(projectId: String, instanceId: String, toolName: String): Result<Unit> = try {
+        ProjectMcpToolsConfig.delete(projectId, instanceId, toolName)
+        log.debug("Reset tool '$toolName' to auto-inferred classification")
+        Result.success(Unit)
+    } catch (e: Exception) {
+        log.warn("Failed to reset tool config: ${e.message}")
+        Result.failure(e)
+    }
+
+    /**
      * List available tools for a specific MCP server instance.
      *
      * @param projectId The project ID
      * @param instanceId The instance ID to get tools for
-     * @return Result containing list of ToolSpecification, or error
+     * @return List of ToolSpecification
+     * @throws IllegalArgumentException if instance is not found
+     * @throws IllegalStateException if MCP client creation fails
+     * @throws Exception if connection to MCP server fails (e.g., timeout)
      */
-    suspend fun listTools(projectId: String, instanceId: String): Result<List<ToolSpecification>> {
-        return try {
-            val instance = getInstance(projectId, instanceId)
-                ?: return Result.failure(IllegalArgumentException("Instance not found: $instanceId"))
+    suspend fun listTools(projectId: String, instanceId: String): List<ToolSpecification> {
+        val instance = getInstance(projectId, instanceId)
+            ?: throw IllegalArgumentException("Instance not found: $instanceId")
 
-            // Use helper method to create MCP client
-            val mcpClient = createMcpClient(instance, "tools_list_${projectId}_${instance.id}")
-                ?: return Result.failure(IllegalStateException("Failed to create MCP client for instance ${instance.name}"))
+        // Use helper method to create MCP client
+        val mcpClient = createMcpClient(instance, "tools_list_${projectId}_${instance.id}")
+            ?: throw IllegalStateException("Failed to create MCP client for instance ${instance.name}")
 
-            // List tools from MCP client
-            log.debug("Fetching tools from MCP client for '${instance.name}'")
-            val tools = mcpClient.listTools()
+        // List tools from MCP client
+        log.debug("Fetching tools from MCP client for '${instance.name}'")
+        val tools = mcpClient.listTools()
 
-            log.debug("Successfully fetched ${tools.size} tools for instance '${instance.name}'")
-            Result.success(tools)
-        } catch (e: Exception) {
-            log.error("Failed to list tools for instance $instanceId: ${e.message}", e)
-            Result.failure(e)
-        }
+        log.debug("Successfully fetched ${tools.size} tools for instance '${instance.name}'")
+        return tools
     }
 
     /**
@@ -321,7 +648,8 @@ class ProjectMcpInstanceService(
      */
     fun deleteAllInstances(projectId: String) {
         instancesConfig.deleteAll(projectId)
-        log.debug("Deleted all MCP instances for project $projectId")
+        ProjectMcpToolsConfig.deleteAll(projectId)
+        log.debug("Deleted all MCP instances and tool configs for project $projectId")
     }
 
     /**
@@ -338,6 +666,56 @@ class ProjectMcpInstanceService(
             byServer = byServer.mapValues { it.value.size },
         )
     }
+
+    /**
+     * Get combined statistics about instances and their tools.
+     * Provides a complete view of the server-tool hierarchy.
+     */
+    fun getProjectMcpStats(projectId: String): ProjectMcpStats {
+        val instanceStats = getInstanceStats(projectId)
+        val toolStats = ProjectMcpToolsConfig.getStats(projectId)
+
+        return ProjectMcpStats(
+            instances = instanceStats,
+            tools = toolStats,
+        )
+    }
+
+    /**
+     * Get all tools for a specific instance with their configurations.
+     * Makes the server-tool relationship explicit.
+     */
+    fun getInstanceTools(projectId: String, instanceId: String): List<ToolConfigData> = ProjectMcpToolsConfig.getByInstance(projectId, instanceId).values.toList()
+
+    /**
+     * Batch save tools for a newly created instance (atomic operation).
+     * Called after loading tools in AddMcpIntegrationDialog.
+     */
+    fun saveInstanceTools(
+        projectId: String,
+        instanceId: String,
+        toolCategories: Map<String, ToolCategory>,
+        toolStrategies: Map<String, Int>,
+    ) {
+        val allToolNames = (toolCategories.keys + toolStrategies.keys).toSet()
+
+        val toolConfigs = allToolNames.map { toolName ->
+            val category = toolCategories[toolName] ?: ToolCategory.OTHER
+            val strategy = toolStrategies[toolName] ?: ToolStrategy.FOLLOW_UP_BASED
+
+            ToolConfigData(
+                toolName = toolName,
+                instanceId = instanceId,
+                category = category.name,
+                strategy = strategy,
+                autoInferred = false, // User reviewed these
+                updatedAt = LocalDateTime.now(),
+            )
+        }
+
+        ProjectMcpToolsConfig.updateInstanceTools(projectId, instanceId, toolConfigs)
+        log.debug("Saved ${toolConfigs.size} tools for instance $instanceId in project $projectId")
+    }
 }
 
 /**
@@ -348,4 +726,13 @@ data class InstanceStats(
     val enabled: Int,
     val disabled: Int,
     val byServer: Map<String, Int>,
+)
+
+/**
+ * Combined statistics about MCP instances and tools.
+ * Provides complete view of the server-tool hierarchy.
+ */
+data class ProjectMcpStats(
+    val instances: InstanceStats,
+    val tools: io.askimo.core.mcp.config.ToolConfigStats,
 )

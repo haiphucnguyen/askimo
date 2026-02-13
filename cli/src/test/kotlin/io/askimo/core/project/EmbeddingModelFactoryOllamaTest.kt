@@ -43,16 +43,15 @@ class EmbeddingModelFactoryOllamaTest {
         val port = ollama.getMappedPort(11434)
         baseUrl = "http://$host:$port/v1"
 
-        embedModel = "jina/jina-embeddings-v2-small-en:latest"
+        embedModel = "nomic-embed-text:latest"
 
         try {
-            ollama.execInContainer("ollama", "rm", embedModel)
+            ollama.execInContainer("ollama", "pull", embedModel)
         } catch (_: Exception) {
             // no-op
         }
 
         System.setProperty("OLLAMA_URL", baseUrl)
-        System.setProperty("OLLAMA_EMBED_MODEL", embedModel)
 
         // Create a session with OLLAMA provider configured
         val ollamaSettings = OllamaSettings(baseUrl = baseUrl)

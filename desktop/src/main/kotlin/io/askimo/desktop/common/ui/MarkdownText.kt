@@ -1339,7 +1339,7 @@ private fun parseChartData(code: String, language: String?): MermaidChartData? {
         json.decodeFromString<MermaidChartData>(cleanedCode)
     } catch (e: Exception) {
         // JSON is either incomplete (still streaming) or invalid
-        log.debug("Failed to parse Mermaid diagram data (may be incomplete): ${e.message}")
+        log.trace("Failed to parse Mermaid diagram data (may be incomplete): ${e.message}")
         null
     }
 }

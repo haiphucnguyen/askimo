@@ -215,11 +215,19 @@ class SessionManager(
             try {
                 val fullResponse = chatSessionService
                     .getOrCreateClientForSession(sessionId, userMessage.needsVision())
-                    .sendStreamingMessageWithCallback(promptWithContext) { token ->
-                        streamingScope.launch {
-                            thread.appendChunk(token)
-                        }
-                    }
+                    .sendStreamingMessageWithCallback(
+                        userMessage = promptWithContext,
+                        onToken = { token ->
+                            streamingScope.launch {
+                                thread.appendChunk(token)
+                            }
+                        },
+                        onFollowUpSuggestion = { suggestion ->
+                            log.debug("Follow-up suggestion for session $sessionId: ${suggestion.question}")
+                            // TODO: Handle follow-up suggestions in the UI
+                            // This could be shown as a clickable suggestion button in the chat
+                        },
+                    )
 
                 val savedMessage = chatSessionService.saveAiResponse(sessionId, fullResponse)
                 thread.setSavedMessage(savedMessage)

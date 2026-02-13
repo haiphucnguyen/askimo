@@ -49,8 +49,8 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         sessionId: String?,
         model: String,
         settings: LocalAiSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -79,8 +79,8 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

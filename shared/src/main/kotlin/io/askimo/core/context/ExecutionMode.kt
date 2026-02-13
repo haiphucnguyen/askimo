@@ -19,8 +19,6 @@ value class ExecutionMode(val flags: Int) {
 
     fun isToolEnabled(): Boolean = (flags and TOOL_ENABLED) != 0
 
-    fun isChartEnabled(): Boolean = (flags and CHART_ENABLED) != 0
-
     operator fun plus(other: ExecutionMode): ExecutionMode = ExecutionMode(flags or other.flags)
 
     operator fun minus(other: ExecutionMode): ExecutionMode = ExecutionMode(flags and other.flags.inv())
@@ -29,11 +27,9 @@ value class ExecutionMode(val flags: Int) {
         const val STATELESS = 1
         const val STATEFUL = 2
         const val TOOL_ENABLED = 4
-        const val CHART_ENABLED = 8
 
         val STATELESS_MODE = ExecutionMode(STATELESS)
         val STATEFUL_MODE = ExecutionMode(STATEFUL)
         val STATEFUL_TOOLS_MODE = ExecutionMode(STATEFUL xor TOOL_ENABLED)
-        val STATEFUL_CHARTS_MODE = ExecutionMode(STATEFUL xor CHART_ENABLED)
     }
 }

@@ -44,8 +44,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         sessionId: String?,
         model: String,
         settings: LmStudioSettings,
-        retriever: ContentRetriever?,
         toolProvider: ToolProvider?,
+        retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
@@ -78,8 +78,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
-            retriever = retriever,
             toolProvider = toolProvider,
+            retriever = retriever,
             executionMode = executionMode,
         )
     }

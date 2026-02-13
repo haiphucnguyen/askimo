@@ -14,7 +14,7 @@ import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.logger
-import io.askimo.core.providers.ModelContextSizeCache
+import io.askimo.core.providers.ModelCapabilitiesCache
 import io.askimo.core.providers.getSummary
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.KSerializer
@@ -120,7 +120,7 @@ class TokenAwareSummarizingMemory(
     /**
      * Maximum tokens for memory, dynamically calculated from model's context size.
      * This is a computed property that recalculates every time to ensure it always
-     * reflects the latest context size from ModelContextSizeCache (which may be updated
+     * reflects the latest context size from ModelCapabilitiesCache (which may be updated
      * as the system learns the actual model capabilities).
      *
      * Uses 40% of the model's context window, leaving room for:
@@ -133,8 +133,8 @@ class TokenAwareSummarizingMemory(
     private fun calculateMaxTokensFromCurrentModel(): Int {
         val provider = appContext.getActiveProvider()
         val model = appContext.params.model
-        val modelKey = ModelContextSizeCache.modelKey(provider, model)
-        val contextSize = ModelContextSizeCache.get(modelKey)
+        val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
+        val contextSize = ModelCapabilitiesCache.get(modelKey).contextSize
 
         val memoryAllocation = (contextSize * 0.4).toInt()
 
