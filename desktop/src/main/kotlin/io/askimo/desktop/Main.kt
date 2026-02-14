@@ -126,6 +126,9 @@ import io.askimo.desktop.shell.footerBar
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
+import io.askimo.desktop.tutorial.TutorialPreferences
+import io.askimo.desktop.tutorial.languageSelectionDialog
+import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
 import io.askimo.desktop.user.welcomeProfileDialog
 import kotlinx.coroutines.Dispatchers
@@ -312,6 +315,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showUserProfileDialog by remember { mutableStateOf(false) }
     var showWelcomeProfileDialog by remember { mutableStateOf(false) }
 
+    // Tutorial
+    var showLanguageSelectionDialog by remember { mutableStateOf(false) }
+    var showTutorialWizard by remember { mutableStateOf(false) }
+
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
     val eventLogEvents = remember { mutableStateListOf<Event>() }
@@ -323,8 +330,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
             profileRepo.getProfile()
         }
 
-        // Check if this is first run (no name set)
-        if (userProfile?.name.isNullOrBlank()) {
+        // Check if this is the very first launch (language not selected yet)
+        if (TutorialPreferences.isFirstLaunch()) {
+            showLanguageSelectionDialog = true
+        } else if (userProfile?.name.isNullOrBlank()) {
+            // Language already selected, but profile not completed
             showWelcomeProfileDialog = true
         }
 
@@ -651,6 +661,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 },
                 onImportBackup = {
                     importBackup()
+                },
+                onShowTutorial = {
+                    showTutorialWizard = true
                 },
             )
         }
@@ -1269,11 +1282,58 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 AppContext.getInstance().setUserProfileDirective(personalizationContext)
 
                                 showWelcomeProfileDialog = false
+
+                                // Show tutorial after profile setup (only if not completed yet)
+                                if (!TutorialPreferences.isTutorialCompleted()) {
+                                    showTutorialWizard = true
+                                }
                             }
                         },
                         onSkip = {
                             // User chose to skip - create default profile with no name
                             showWelcomeProfileDialog = false
+
+                            // Show tutorial even if profile was skipped (only if not completed yet)
+                            if (!TutorialPreferences.isTutorialCompleted()) {
+                                showTutorialWizard = true
+                            }
+                        },
+                    )
+                }
+
+                // Language Selection Dialog (First Launch Only)
+                if (showLanguageSelectionDialog) {
+                    languageSelectionDialog(
+                        onLanguageSelected = { locale ->
+                            ThemePreferences.setLocale(locale)
+                            TutorialPreferences.markLanguageSelected()
+                            showLanguageSelectionDialog = false
+
+                            // After language selection, check if we need to show profile dialog
+                            scope.launch {
+                                val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
+                                val profile = withContext(Dispatchers.IO) {
+                                    profileRepo.getProfile()
+                                }
+
+                                if (profile?.name.isNullOrBlank()) {
+                                    showWelcomeProfileDialog = true
+                                }
+                            }
+                        },
+                    )
+                }
+
+                // Tutorial Wizard Dialog
+                if (showTutorialWizard) {
+                    tutorialWizardDialog(
+                        onComplete = {
+                            TutorialPreferences.markTutorialCompleted()
+                            showTutorialWizard = false
+                        },
+                        onSkip = {
+                            TutorialPreferences.markTutorialCompleted()
+                            showTutorialWizard = false
                         },
                     )
                 }

@@ -75,6 +75,7 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.asyncImage
@@ -948,10 +949,8 @@ fun aiMessageEditDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        colors = ComponentColors.primaryTextButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.cancel"))
                     }

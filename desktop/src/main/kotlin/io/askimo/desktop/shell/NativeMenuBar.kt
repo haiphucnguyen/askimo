@@ -48,11 +48,12 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
+        onShowTutorial: () -> Unit,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -91,6 +92,7 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
+        onShowTutorial: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -311,6 +313,17 @@ object NativeMenuBar {
                 },
             )
             helpMenu.add(docsItem)
+
+            // Tutorial
+            val tutorialItem = MenuItem(LocalizationManager.getString("menu.help.tutorial"))
+            tutorialItem.addActionListener(
+                ActionListener {
+                    onShowTutorial()
+                },
+            )
+            helpMenu.add(tutorialItem)
+
+            helpMenu.addSeparator()
 
             // Release Notes
             val releaseNotesItem = MenuItem(LocalizationManager.getString("menu.help.release.notes"))
