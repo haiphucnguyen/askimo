@@ -266,7 +266,7 @@ private fun proxyConfigurationCard() {
                     Text(
                         text = stringResource("settings.proxy.socks5.no.auth.info"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
@@ -278,7 +278,7 @@ private fun proxyConfigurationCard() {
                 Text(
                     text = stringResource("settings.proxy.system.info"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
