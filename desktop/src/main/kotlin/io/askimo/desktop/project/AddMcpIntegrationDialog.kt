@@ -280,7 +280,7 @@ fun addMcpIntegrationDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Available Tools",
+                                    text = stringResource("mcp.integrations.tools.title"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -354,11 +354,19 @@ fun addMcpIntegrationDialog(
                                     } else {
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
-                                            contentDescription = "Load Tools",
+                                            contentDescription = stringResource("mcp.integrations.tools.load"),
                                             modifier = Modifier.padding(end = Spacing.small),
                                         )
                                     }
-                                    Text(if (isLoadingTools) "Loading..." else "Load Tools")
+                                    Text(
+                                        text = stringResource(
+                                            if (isLoadingTools) {
+                                                "mcp.integrations.tools.loading"
+                                            } else {
+                                                "mcp.integrations.tools.load"
+                                            },
+                                        ),
+                                    )
                                 }
                             }
 
@@ -382,7 +390,7 @@ fun addMcpIntegrationDialog(
                             // Tools list
                             if (availableTools.isNotEmpty()) {
                                 Text(
-                                    text = "${availableTools.size} tools available",
+                                    text = stringResource("mcp.integrations.tools.count", availableTools.size.toString()),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(vertical = Spacing.small),
@@ -481,7 +489,7 @@ fun addMcpIntegrationDialog(
 
                                         issue.fixCommand?.let { fix ->
                                             Text(
-                                                text = "Fix: $fix",
+                                                text = stringResource("mcp.integrations.validation.fix.prefix", fix),
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                                 ),
@@ -672,11 +680,13 @@ private fun parameterField(
                             } else {
                                 Icons.Default.VisibilityOff
                             },
-                            contentDescription = if (showPassword) {
-                                "Hide password"
-                            } else {
-                                "Show password"
-                            },
+                            contentDescription = stringResource(
+                                if (showPassword) {
+                                    "mcp.integrations.password.hide"
+                                } else {
+                                    "mcp.integrations.password.show"
+                                },
+                            ),
                         )
                     }
                 },
@@ -753,13 +763,13 @@ private fun toolConfigurationRow(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "Category: ${category.name}",
+                        text = stringResource("mcp.integrations.tool.category.label", category.name),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(Modifier.weight(1f))
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select Category",
+                        contentDescription = stringResource("mcp.integrations.tool.category.select"),
                     )
                 }
 
@@ -798,18 +808,20 @@ private fun toolConfigurationRow(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = when (strategy) {
-                            ToolStrategy.INTENT_BASED -> "Intent-Based"
-                            ToolStrategy.FOLLOW_UP_BASED -> "Follow-Up"
-                            ToolStrategy.BOTH -> "Both"
-                            else -> "Unknown"
-                        },
+                        text = stringResource(
+                            when (strategy) {
+                                ToolStrategy.INTENT_BASED -> "mcp.integrations.tool.strategy.intent"
+                                ToolStrategy.FOLLOW_UP_BASED -> "mcp.integrations.tool.strategy.followup"
+                                ToolStrategy.BOTH -> "mcp.integrations.tool.strategy.both"
+                                else -> "mcp.integrations.tool.strategy.unknown"
+                            },
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(Modifier.weight(1f))
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Select Strategy",
+                        contentDescription = stringResource("mcp.integrations.tool.strategy.select"),
                     )
                 }
 
@@ -818,20 +830,31 @@ private fun toolConfigurationRow(
                     onDismissRequest = { showStrategyDropdown = false },
                 ) {
                     listOf(
-                        ToolStrategy.INTENT_BASED to "Intent-Based" to "Auto-attach when user keywords match",
-                        ToolStrategy.FOLLOW_UP_BASED to "Follow-Up" to "Suggest after AI response",
-                        ToolStrategy.BOTH to "Both" to "Available in both stages",
-                    ).forEach { (strategyPair, description) ->
-                        val (strategyValue, strategyName) = strategyPair
+                        Triple(
+                            ToolStrategy.INTENT_BASED,
+                            "mcp.integrations.tool.strategy.intent",
+                            "mcp.integrations.tool.strategy.intent.desc",
+                        ),
+                        Triple(
+                            ToolStrategy.FOLLOW_UP_BASED,
+                            "mcp.integrations.tool.strategy.followup",
+                            "mcp.integrations.tool.strategy.followup.desc",
+                        ),
+                        Triple(
+                            ToolStrategy.BOTH,
+                            "mcp.integrations.tool.strategy.both",
+                            "mcp.integrations.tool.strategy.both.desc",
+                        ),
+                    ).forEach { (strategyValue, strategyKey, descriptionKey) ->
                         DropdownMenuItem(
                             text = {
                                 Column {
                                     Text(
-                                        text = strategyName,
+                                        text = stringResource(strategyKey),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
                                     Text(
-                                        text = description,
+                                        text = stringResource(descriptionKey),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -851,17 +874,20 @@ private fun toolConfigurationRow(
     }
 }
 
-private fun getCategoryDescription(category: ToolCategory): String = when (category) {
-    ToolCategory.DATABASE -> "Database queries and operations"
-    ToolCategory.NETWORK -> "HTTP requests and API calls"
-    ToolCategory.FILE_READ -> "File system read operations"
-    ToolCategory.FILE_WRITE -> "File system write operations"
-    ToolCategory.VISUALIZE -> "Data visualization and charting"
-    ToolCategory.EXECUTE -> "Code execution and commands"
-    ToolCategory.SEARCH -> "Search and retrieval operations"
-    ToolCategory.TRANSFORM -> "Data transformation"
-    ToolCategory.VERSION_CONTROL -> "Git and version control"
-    ToolCategory.COMMUNICATION -> "Email, messaging, notifications"
-    ToolCategory.MONITORING -> "Logging and monitoring"
-    ToolCategory.OTHER -> "Unclassified tools"
-}
+@Composable
+private fun getCategoryDescription(category: ToolCategory): String = stringResource(
+    when (category) {
+        ToolCategory.DATABASE -> "mcp.tool.category.DATABASE.desc"
+        ToolCategory.NETWORK -> "mcp.tool.category.NETWORK.desc"
+        ToolCategory.FILE_READ -> "mcp.tool.category.FILE_READ.desc"
+        ToolCategory.FILE_WRITE -> "mcp.tool.category.FILE_WRITE.desc"
+        ToolCategory.VISUALIZE -> "mcp.tool.category.VISUALIZE.desc"
+        ToolCategory.EXECUTE -> "mcp.tool.category.EXECUTE.desc"
+        ToolCategory.SEARCH -> "mcp.tool.category.SEARCH.desc"
+        ToolCategory.TRANSFORM -> "mcp.tool.category.TRANSFORM.desc"
+        ToolCategory.VERSION_CONTROL -> "mcp.tool.category.VERSION_CONTROL.desc"
+        ToolCategory.COMMUNICATION -> "mcp.tool.category.COMMUNICATION.desc"
+        ToolCategory.MONITORING -> "mcp.tool.category.MONITORING.desc"
+        ToolCategory.OTHER -> "mcp.tool.category.OTHER.desc"
+    },
+)
