@@ -13,18 +13,22 @@ import io.askimo.core.intent.DetectUserIntentCommand
 import io.askimo.core.intent.FollowUpSuggestion
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.RetryPresets
 import io.askimo.core.util.RetryUtils
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import org.koin.java.KoinJavaComponent.get
 import java.nio.channels.UnresolvedAddressException
 import java.util.concurrent.CountDownLatch
+import kotlin.text.get
 
 /**
  * Default chat request parameters with no custom sampling settings.
@@ -78,8 +82,17 @@ fun ChatClient.sendStreamingMessageWithCallback(
 
     // === STAGE 1: Pre-request - Detect user intent ===
     // Analyze user message to determine which tools should be made available
+    val availableTools = if (projectId != null) {
+        val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
 
-    val availableTools = ToolRegistry.getIntentBased()
+        runBlocking {
+            val mcpTools = mcpService.getProjectTools(projectId)
+            ToolRegistry.getIntentBased() + mcpTools
+        }
+    } else {
+        ToolRegistry.getIntentBased()
+    }
+
     val userIntent = DetectUserIntentCommand.execute(
         userMessage.singleText() ?: "",
         availableTools = availableTools,
