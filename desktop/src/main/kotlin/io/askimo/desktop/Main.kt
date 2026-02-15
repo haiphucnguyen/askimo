@@ -91,6 +91,7 @@ import io.askimo.desktop.common.i18n.provideLocalization
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.common.preferences.ApplicationPreferences
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.LocalFontScale
 import io.askimo.desktop.common.theme.ThemeMode
@@ -118,7 +119,6 @@ import io.askimo.desktop.settings.fileViewerDialog
 import io.askimo.desktop.settings.providerSelectionDialog
 import io.askimo.desktop.settings.settingsViewWithSidebar
 import io.askimo.desktop.shell.NativeMenuBar
-import io.askimo.desktop.shell.StarPromptPreferences
 import io.askimo.desktop.shell.UpdateViewModel
 import io.askimo.desktop.shell.eventLogPanel
 import io.askimo.desktop.shell.eventLogWindow
@@ -126,7 +126,6 @@ import io.askimo.desktop.shell.footerBar
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
-import io.askimo.desktop.tutorial.TutorialPreferences
 import io.askimo.desktop.tutorial.languageSelectionDialog
 import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
@@ -331,7 +330,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
 
         // Check if this is the very first launch (language not selected yet)
-        if (TutorialPreferences.isFirstLaunch()) {
+        if (ApplicationPreferences.isFirstLaunch()) {
             showLanguageSelectionDialog = true
         } else if (userProfile?.name.isNullOrBlank()) {
             // Language already selected, but profile not completed
@@ -560,8 +559,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     // Check if we should show star prompt (once on startup)
     LaunchedEffect(Unit) {
-        StarPromptPreferences.recordFirstUseIfNeeded()
-        if (StarPromptPreferences.shouldShowStarPrompt()) {
+        ApplicationPreferences.recordFirstUseIfNeeded()
+        if (ApplicationPreferences.shouldShowStarPrompt()) {
             showStarPromptDialog = true
         }
     }
@@ -1284,7 +1283,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 showWelcomeProfileDialog = false
 
                                 // Show tutorial after profile setup (only if not completed yet)
-                                if (!TutorialPreferences.isTutorialCompleted()) {
+                                if (!ApplicationPreferences.isTutorialCompleted()) {
                                     showTutorialWizard = true
                                 }
                             }
@@ -1294,7 +1293,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             showWelcomeProfileDialog = false
 
                             // Show tutorial even if profile was skipped (only if not completed yet)
-                            if (!TutorialPreferences.isTutorialCompleted()) {
+                            if (!ApplicationPreferences.isTutorialCompleted()) {
                                 showTutorialWizard = true
                             }
                         },
@@ -1306,7 +1305,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     languageSelectionDialog(
                         onLanguageSelected = { locale ->
                             ThemePreferences.setLocale(locale)
-                            TutorialPreferences.markLanguageSelected()
+                            ApplicationPreferences.markLanguageSelected()
                             showLanguageSelectionDialog = false
 
                             // After language selection, check if we need to show profile dialog
@@ -1328,11 +1327,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 if (showTutorialWizard) {
                     tutorialWizardDialog(
                         onComplete = {
-                            TutorialPreferences.markTutorialCompleted()
+                            ApplicationPreferences.markTutorialCompleted()
                             showTutorialWizard = false
                         },
                         onSkip = {
-                            TutorialPreferences.markTutorialCompleted()
+                            ApplicationPreferences.markTutorialCompleted()
                             showTutorialWizard = false
                         },
                     )
@@ -1513,11 +1512,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 if (showStarPromptDialog) {
                     starPromptDialog(
                         onDismiss = {
-                            StarPromptPreferences.markAsPrompted()
+                            ApplicationPreferences.markAsPrompted()
                             showStarPromptDialog = false
                         },
                         onStar = {
-                            StarPromptPreferences.markAsPrompted()
+                            ApplicationPreferences.markAsPrompted()
                             showStarPromptDialog = false
                             try {
                                 if (Desktop.isDesktopSupported()) {
