@@ -348,41 +348,86 @@ class ProjectMcpInstanceService(
      * Infer execution strategy from tool specification metadata.
      * Uses heuristics based on tool name and description to determine safety.
      *
+     * Strategy Philosophy:
+     * - INTENT_BASED: Most operations including safe reads AND writes (default)
+     *   Examples: read, write, save, create, update, edit, search, list
+     * - FOLLOW_UP_BASED: Only truly DANGEROUS destructive operations
+     *   Examples: drop database, delete all, truncate table, system shutdown
+     *
+     * This allows AI to handle common write operations (like "save summary to file")
+     * while still protecting against catastrophic actions.
+     *
      * @param toolSpec The tool specification to analyze
-     * @return Strategy flag (INTENT_BASED for read-only, FOLLOW_UP_BASED for writes)
+     * @return Strategy flag (INTENT_BASED for safe ops, FOLLOW_UP_BASED for dangerous ops)
      */
     fun inferToolStrategy(toolSpec: ToolSpecification): Int {
         val name = toolSpec.name().lowercase()
         val description = toolSpec.description()?.lowercase() ?: ""
 
-        // Read-only operations → INTENT_BASED (safe to auto-attach)
-        val readPrefixes = listOf("search_", "get_", "list_", "read_", "find_", "fetch_", "query_")
-        val readKeywords = listOf("search", "list", "get", "read", "fetch", "find", "query", "retrieve", "show")
+        // === FOLLOW_UP_BASED: Only truly dangerous operations ===
 
-        if (readPrefixes.any { name.startsWith(it) } ||
-            readKeywords.any { name.contains(it) || description.contains(it) }
+        // 1. Database/Schema destruction (drop database, drop table, truncate)
+        if ((name.contains("drop") || name.contains("truncate")) &&
+            (
+                name.contains("database") || name.contains("db") ||
+                    name.contains("table") || name.contains("schema") ||
+                    description.contains("drop database") || description.contains("drop table")
+                )
         ) {
-            log.debug("Tool '${toolSpec.name()}' classified as INTENT_BASED (read-only)")
-            return ToolStrategy.INTENT_BASED
-        }
-
-        // Write/destructive operations → FOLLOW_UP_BASED (require confirmation)
-        val writePrefixes = listOf("delete_", "remove_", "create_", "write_", "update_", "install_", "execute_")
-        val writeKeywords = listOf(
-            "delete", "remove", "create", "write", "update", "install", "execute",
-            "run", "modify", "change", "set", "configure", "deploy", "publish",
-        )
-
-        if (writePrefixes.any { name.startsWith(it) } ||
-            writeKeywords.any { name.contains(it) || description.contains(it) }
-        ) {
-            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (write/destructive)")
+            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (database destruction)")
             return ToolStrategy.FOLLOW_UP_BASED
         }
 
-        // Unknown → default to FOLLOW_UP_BASED (safe default)
-        log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (default/unknown)")
-        return ToolStrategy.FOLLOW_UP_BASED
+        // 2. Bulk/Mass deletion (delete all, remove all, clear all, wipe)
+        if ((
+                name.contains("delete") || name.contains("remove") ||
+                    name.contains("clear") || name.contains("wipe")
+                ) &&
+            (
+                name.contains("all") || name.contains("everything") ||
+                    description.contains("delete all") || description.contains("remove all") ||
+                    description.contains("clear all") || description.contains("wipe all") ||
+                    description.contains("bulk delete") || description.contains("mass delete")
+                )
+        ) {
+            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (bulk deletion)")
+            return ToolStrategy.FOLLOW_UP_BASED
+        }
+
+        // 3. System-level dangerous commands (shutdown, restart, format, irreversible)
+        if (name.contains("shutdown") || name.contains("restart") ||
+            name.contains("reboot") || name.contains("format") ||
+            description.contains("shutdown") || description.contains("restart") ||
+            description.contains("irreversible") || description.contains("cannot be undone") ||
+            description.contains("permanent deletion")
+        ) {
+            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (system danger)")
+            return ToolStrategy.FOLLOW_UP_BASED
+        }
+
+        // 4. Security-critical permission changes (chmod 777, grant admin, security override)
+        if ((name.contains("chmod") || name.contains("permission") || name.contains("grant")) &&
+            (
+                description.contains("777") || description.contains("full access") ||
+                    description.contains("admin rights") || description.contains("root access") ||
+                    description.contains("bypass security")
+                )
+        ) {
+            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (security risk)")
+            return ToolStrategy.FOLLOW_UP_BASED
+        }
+
+        // === INTENT_BASED: Everything else (default - includes safe reads AND writes) ===
+
+        // This includes:
+        // ✅ Read operations: search, get, list, read, find, fetch, query
+        // ✅ Safe write operations: write, save, create, update, modify, edit
+        // ✅ Single-item delete: delete_file, remove_item (not bulk)
+        // ✅ Configuration: set, configure
+        // ✅ Installation: install, deploy (package-level, not system-level)
+
+        log.debug("Tool '${toolSpec.name()}' classified as INTENT_BASED (safe operation)")
+        return ToolStrategy.INTENT_BASED
     }
 
     /**
@@ -528,15 +573,6 @@ class ProjectMcpInstanceService(
     }
 
     /**
-     * Invalidate all project tools caches.
-     * Useful for global refresh scenarios.
-     */
-    fun invalidateAllProjectToolsCaches() {
-        projectToolsCache.invalidateAll()
-        log.debug("Invalidated all project tools caches")
-    }
-
-    /**
      * Allow user to customize tool classification.
      * This overrides auto-inferred category/strategy.
      *
@@ -551,7 +587,7 @@ class ProjectMcpInstanceService(
         projectId: String,
         instanceId: String,
         toolName: String,
-        category: io.askimo.core.intent.ToolCategory,
+        category: ToolCategory,
         strategy: Int,
     ): Result<ToolConfigData> {
         return try {
@@ -669,35 +705,6 @@ class ProjectMcpInstanceService(
     }
 
     /**
-     * Get statistics about MCP instances for a project
-     */
-    fun getInstanceStats(projectId: String): InstanceStats {
-        val instances = getInstances(projectId)
-        val byServer = instances.groupBy { it.serverId }
-
-        return InstanceStats(
-            total = instances.size,
-            enabled = instances.count { it.enabled },
-            disabled = instances.count { !it.enabled },
-            byServer = byServer.mapValues { it.value.size },
-        )
-    }
-
-    /**
-     * Get combined statistics about instances and their tools.
-     * Provides a complete view of the server-tool hierarchy.
-     */
-    fun getProjectMcpStats(projectId: String): ProjectMcpStats {
-        val instanceStats = getInstanceStats(projectId)
-        val toolStats = ProjectMcpToolsConfig.getStats(projectId)
-
-        return ProjectMcpStats(
-            instances = instanceStats,
-            tools = toolStats,
-        )
-    }
-
-    /**
      * Batch save tools for a newly created instance (atomic operation).
      * Called after loading tools in AddMcpIntegrationDialog.
      */
@@ -727,22 +734,3 @@ class ProjectMcpInstanceService(
         log.debug("Saved ${toolConfigs.size} tools for instance $instanceId in project $projectId")
     }
 }
-
-/**
- * Statistics about MCP instances for a project
- */
-data class InstanceStats(
-    val total: Int,
-    val enabled: Int,
-    val disabled: Int,
-    val byServer: Map<String, Int>,
-)
-
-/**
- * Combined statistics about MCP instances and tools.
- * Provides complete view of the server-tool hierarchy.
- */
-data class ProjectMcpStats(
-    val instances: InstanceStats,
-    val tools: io.askimo.core.mcp.config.ToolConfigStats,
-)

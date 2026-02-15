@@ -172,46 +172,6 @@ class McpFilesystemConnectorTest {
     }
 
     @Test
-    @DisplayName("Should get instance statistics")
-    fun testGetInstanceStats() {
-        // Given - Create 3 instances, 2 enabled, 1 disabled
-        val rootPath = testRootDir.resolve("documents").toString()
-
-        mcpInstanceService.createInstance(
-            projectId = projectId,
-            serverId = "filesystem-mcp-server",
-            name = "Filesystem 1",
-            parameterValues = mapOf("rootPath" to rootPath),
-        ).getOrThrow()
-
-        mcpInstanceService.createInstance(
-            projectId = projectId,
-            serverId = "filesystem-mcp-server",
-            name = "Filesystem 2",
-            parameterValues = mapOf("rootPath" to rootPath),
-        )
-
-        val instance3 = mcpInstanceService.createInstance(
-            projectId = projectId,
-            serverId = "filesystem-mcp-server",
-            name = "Filesystem 3",
-            parameterValues = mapOf("rootPath" to rootPath),
-        ).getOrThrow()
-
-        // Disable one instance
-        mcpInstanceService.setInstanceEnabled(projectId, instance3.id, false)
-
-        // When
-        val stats = mcpInstanceService.getInstanceStats(projectId)
-
-        // Then
-        assertEquals(3, stats.total)
-        assertEquals(2, stats.enabled)
-        assertEquals(1, stats.disabled)
-        assertEquals(3, stats.byServer["filesystem-mcp-server"])
-    }
-
-    @Test
     @DisplayName("Should delete filesystem instance")
     fun testDeleteInstance() {
         // Given
