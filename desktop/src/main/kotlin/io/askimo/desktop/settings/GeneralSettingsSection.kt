@@ -133,13 +133,24 @@ private fun languageSelectionCard() {
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = if (locale == currentLocale) "✓ $name" else name,
+                                    text = name,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             },
                             onClick = {
                                 ThemePreferences.setLocale(locale)
                                 languageDropdownExpanded = false
+                            },
+                            leadingIcon = if (locale == currentLocale) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            } else {
+                                null
                             },
                         )
                     }
@@ -228,17 +239,24 @@ private fun preferredAIResponseLanguageField(availableLanguages: Map<java.util.L
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = if (currentAILocale == null) {
-                                "✓ ${stringResource("settings.ai.response.language.auto")}"
-                            } else {
-                                stringResource("settings.ai.response.language.auto")
-                            },
+                            text = stringResource("settings.ai.response.language.auto"),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     },
                     onClick = {
                         AppConfig.updateField("chat.defaultResponseAILocale", "")
                         aiLanguageDropdownExpanded = false
+                    },
+                    leadingIcon = if (currentAILocale == null) {
+                        {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    } else {
+                        null
                     },
                 )
 
@@ -247,13 +265,24 @@ private fun preferredAIResponseLanguageField(availableLanguages: Map<java.util.L
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = if (locale.toString() == currentAILocale) "✓ $name" else name,
+                                text = name,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = {
                             AppConfig.updateField("chat.defaultResponseAILocale", locale.toString())
                             aiLanguageDropdownExpanded = false
+                        },
+                        leadingIcon = if (locale.toString() == currentAILocale) {
+                            {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        } else {
+                            null
                         },
                     )
                 }
@@ -354,7 +383,7 @@ private fun fontSettingsCard() {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = MaterialTheme.colorScheme.onSurface,
                                         )
                                     }
                                 } else {
@@ -426,8 +455,8 @@ private fun fontSettingsCard() {
                                     {
                                         Icon(
                                             Icons.Default.Check,
+                                            tint = MaterialTheme.colorScheme.onSurface,
                                             contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 } else {

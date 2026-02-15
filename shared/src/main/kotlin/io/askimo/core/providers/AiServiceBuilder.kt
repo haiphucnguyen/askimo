@@ -104,7 +104,7 @@ object AiServiceBuilder {
         val testClient = testClientBuilder.build()
 
         // Send a simple test message using the ChatClient.sendMessage method
-        testClient.sendStreamingMessageWithCallback(UserMessage("do you support tools? Answer yes or no only"))
+        testClient.sendStreamingMessageWithCallback(null, UserMessage("do you support tools? Answer yes or no only"))
 
         true
     } catch (e: Exception) {

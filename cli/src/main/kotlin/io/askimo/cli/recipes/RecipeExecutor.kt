@@ -87,7 +87,7 @@ class RecipeExecutor(
         val output =
             appContext
                 .getStatelessChatClient()
-                .sendStreamingMessageWithCallback(UserMessage(prompt)) { _ ->
+                .sendStreamingMessageWithCallback(null, UserMessage(prompt)) { _ ->
                     if (firstTokenSeen.compareAndSet(false, true)) {
                         indicator?.stopWithElapsed()
                         opts.terminal?.flush()

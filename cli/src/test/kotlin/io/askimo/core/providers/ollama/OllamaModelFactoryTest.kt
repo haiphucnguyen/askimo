@@ -63,7 +63,7 @@ class OllamaModelFactoryTest {
     private fun sendPromptAndGetResponse(chatClient: ChatClient, prompt: String): String {
         println("Sending prompt: '$prompt'")
 
-        val output = chatClient.sendStreamingMessageWithCallback(UserMessage(prompt)) { _ ->
+        val output = chatClient.sendStreamingMessageWithCallback(null, UserMessage(prompt)) { _ ->
             print(".")
         }.trim()
 

@@ -13,21 +13,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -40,7 +36,9 @@ import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.getFirstError
 import io.askimo.core.mcp.mcpServerDefinitionValidator
 import io.askimo.desktop.common.components.inlineErrorMessage
+import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.rememberDialogState
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
@@ -192,16 +190,15 @@ fun mcpServerTemplateDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("dialog.cancel"))
                     }
 
                     Spacer(modifier = Modifier.width(Spacing.small))
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             dialogState.clearError()
                             try {
@@ -263,7 +260,7 @@ fun mcpServerTemplateDialog(
                                 val validationResult = mcpServerDefinitionValidator(serverDefinition)
                                 if (validationResult.errors.isNotEmpty()) {
                                     dialogState.setError(validationResult.getFirstError() ?: "Validation failed")
-                                    return@Button
+                                    return@primaryButton
                                 }
 
                                 onSave(serverDefinition)
@@ -273,7 +270,6 @@ fun mcpServerTemplateDialog(
                             }
                         },
                         enabled = id.isNotBlank() && name.isNotBlank() && commandTemplate.isNotBlank(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.save"))
                     }

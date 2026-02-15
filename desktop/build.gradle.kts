@@ -699,10 +699,6 @@ tasks.register("createEntitlements") {
     }
 }
 
-/**
- * Sign dylibs inside JAR files (extract, sign, repack)
- */
-@Suppress("DEPRECATION")
 fun signDylibsInsideJar(
     jarFile: File,
     identity: String,

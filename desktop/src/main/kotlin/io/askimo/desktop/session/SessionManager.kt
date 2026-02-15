@@ -156,6 +156,7 @@ class SessionManager(
      * @return threadId if streaming started successfully, null if session already has active stream or max streams reached
      */
     fun sendMessage(
+        projectId: String?,
         sessionId: String,
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
@@ -216,6 +217,7 @@ class SessionManager(
                 val fullResponse = chatSessionService
                     .getOrCreateClientForSession(sessionId, userMessage.needsVision())
                     .sendStreamingMessageWithCallback(
+                        projectId = projectId,
                         userMessage = promptWithContext,
                         onToken = { token ->
                             streamingScope.launch {
@@ -364,7 +366,7 @@ class SessionManager(
      * @param onComplete Callback when the session is ready (for navigation)
      */
     fun createProjectSessionAndSendMessage(
-        projectId: String,
+        projectId: String?,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         onComplete: () -> Unit,
@@ -392,7 +394,7 @@ class SessionManager(
 
                 // Now send the message - ViewModel is ready
                 val viewModel = getOrCreateChatViewModel(newSession.id)
-                viewModel.sendMessage(message, attachments)
+                viewModel.sendMessage(projectId, message, attachments)
             } catch (e: Exception) {
                 log.error("Failed to create project session and send message", e)
             }

@@ -429,25 +429,22 @@ fun chatView(
                                         }
                                     },
                                 ) {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                    TextButton(
+                                        onClick = {
+                                            onNavigateToProject?.invoke(project.id)
+                                        },
+                                        colors = ButtonDefaults.textButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        ),
                                         shape = RoundedCornerShape(4.dp),
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                     ) {
-                                        TextButton(
-                                            onClick = {
-                                                onNavigateToProject?.invoke(project.id)
-                                            },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            ),
-                                        ) {
-                                            Text(
-                                                text = project.name.take(3).uppercase(),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                        }
+                                        Text(
+                                            text = project.name.take(3).uppercase(),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                        )
                                     }
                                 }
 
