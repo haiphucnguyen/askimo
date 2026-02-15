@@ -324,11 +324,10 @@ class ChatViewModel(
 
             scope.launch {
                 editMessage(originalMessageId, message, attachments)
-
-                sendMessage(message, attachments)
+                sendMessage(projectId = project?.id, message, attachments)
             }
         } else {
-            sendMessage(message, attachments)
+            sendMessage(projectId = project?.id, message, attachments)
         }
 
         return currentSessionId
@@ -406,6 +405,7 @@ class ChatViewModel(
                 currentJob = scope.launch {
                     try {
                         val threadId = sessionManager.sendMessage(
+                            projectId = project?.id,
                             sessionId = sessionId,
                             userMessage = userMessage,
                             willSaveUserMessage = false,
@@ -446,7 +446,7 @@ class ChatViewModel(
      * @param message The user's message
      * @param attachments Optional list of file attachments
      */
-    fun sendMessage(message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
+    fun sendMessage(projectId: String?, message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         if (message.isBlank() || isLoading) return
 
         // Session ID must be set by this point (from resumeSession)
@@ -485,6 +485,7 @@ class ChatViewModel(
         currentJob = scope.launch {
             try {
                 val threadId = sessionManager.sendMessage(
+                    projectId = projectId,
                     sessionId = sessionId,
                     userMessage = userMessage,
                     willSaveUserMessage = true,

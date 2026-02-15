@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -45,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,6 +72,7 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
+import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -301,7 +299,7 @@ fun messageList(
                 Text(stringResource("message.ai.try.again.confirm.message"))
             },
             confirmButton = {
-                Button(
+                primaryButton(
                     onClick = {
                         retryMessageId?.let { messageId ->
                             onRetryMessage?.invoke(messageId)
@@ -309,23 +307,16 @@ fun messageList(
                         showRetryConfirmDialog = false
                         retryMessageId = null
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text(stringResource("message.ai.try.again.confirm.confirm"))
                 }
             },
             dismissButton = {
-                TextButton(
+                secondaryButton(
                     onClick = {
                         showRetryConfirmDialog = false
                         retryMessageId = null
                     },
-                    colors = ComponentColors.primaryTextButtonColors(),
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Text(stringResource("message.ai.try.again.confirm.cancel"))
                 }
@@ -957,16 +948,11 @@ fun aiMessageEditDialog(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             onSave(editedContent)
                             onDismiss()
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.save"))
                     }

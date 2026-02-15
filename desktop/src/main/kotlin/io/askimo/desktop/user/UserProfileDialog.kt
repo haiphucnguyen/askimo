@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.AskimoHome
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -266,6 +267,7 @@ fun userProfileDialog(
                         value = name,
                         onValueChange = { name = it },
                         label = { Text(stringResource("user.profile.name")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
@@ -274,6 +276,7 @@ fun userProfileDialog(
                         value = email,
                         onValueChange = { email = it },
                         label = { Text(stringResource("user.profile.email")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         placeholder = { Text(stringResource("user.profile.email.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -283,6 +286,7 @@ fun userProfileDialog(
                         value = occupation,
                         onValueChange = { occupation = it },
                         label = { Text(stringResource("user.profile.occupation")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         placeholder = { Text(stringResource("user.profile.occupation.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -292,6 +296,7 @@ fun userProfileDialog(
                         value = location,
                         onValueChange = { location = it },
                         label = { Text(stringResource("user.profile.location")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         placeholder = { Text(stringResource("user.profile.location.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -301,6 +306,7 @@ fun userProfileDialog(
                         value = bio,
                         onValueChange = { bio = it },
                         label = { Text(stringResource("user.profile.bio")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         placeholder = { Text(stringResource("user.profile.bio.placeholder")) },
                         modifier = Modifier.fillMaxWidth().height(100.dp),
                         maxLines = 4,
@@ -348,6 +354,7 @@ fun userProfileDialog(
                         value = customInterests,
                         onValueChange = { customInterests = it },
                         label = { Text(stringResource("user.profile.interests.custom")) },
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         placeholder = { Text(stringResource("user.profile.interests.custom.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
                         supportingText = {
@@ -367,16 +374,15 @@ fun userProfileDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.cancel"))
                     }
 
                     Spacer(Modifier.width(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             // Combine selected predefined interests with custom interests
                             val allInterests = selectedInterests.toMutableSet()
@@ -399,7 +405,6 @@ fun userProfileDialog(
                             )
                             onSave(updatedProfile)
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("action.save"))
                     }

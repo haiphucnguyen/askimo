@@ -13,10 +13,6 @@ package io.askimo.core.context
 @JvmInline
 value class ExecutionMode(val flags: Int) {
 
-    fun isStateless(): Boolean = (flags and STATELESS) != 0
-
-    fun isStateful(): Boolean = (flags and STATEFUL) != 0
-
     fun isToolEnabled(): Boolean = (flags and TOOL_ENABLED) != 0
 
     operator fun plus(other: ExecutionMode): ExecutionMode = ExecutionMode(flags or other.flags)

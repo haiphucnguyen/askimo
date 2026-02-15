@@ -89,6 +89,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
+import org.koin.java.KoinJavaComponent.get
 import kotlin.collections.emptyList
 import kotlin.let
 
@@ -728,7 +729,7 @@ private fun mcpIntegrationsPanel(
     projectId: String,
     modifier: Modifier = Modifier,
 ) {
-    val mcpService = remember { ProjectMcpInstanceService() }
+    val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
     var mcpInstances by remember(projectId) { mutableStateOf(mcpService.getInstances(projectId)) }
     var isExpanded by remember(projectId) { mutableStateOf(mcpInstances.isNotEmpty()) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -1074,7 +1075,7 @@ private fun mcpToolsDialog(
     instance: ProjectMcpInstance,
     onDismiss: () -> Unit,
 ) {
-    val mcpService = remember { ProjectMcpInstanceService() }
+    val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
     var tools by remember { mutableStateOf<List<dev.langchain4j.agent.tool.ToolSpecification>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }

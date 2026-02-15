@@ -77,7 +77,6 @@ object ProxyUtil {
             normalizedHost == "::1" ||
             normalizedHost == "[::1]" ||
             normalizedHost.endsWith(".local")
-        return false
     }
 
     /**
@@ -92,6 +91,14 @@ object ProxyUtil {
         builder: HttpClient.Builder,
         baseUrl: String? = null,
     ): HttpClient.Builder {
+        val proxyConfig = AppConfig.proxy
+
+        // Fast path: if proxy is disabled, return immediately (most common case)
+        if (proxyConfig.type == ProxyType.NONE) {
+            log.trace("Proxy disabled")
+            return builder
+        }
+
         // Check if this is a local connection - skip proxy if so
         if (baseUrl != null) {
             try {
@@ -106,14 +113,7 @@ object ProxyUtil {
             }
         }
 
-        val proxyConfig = AppConfig.proxy
-
         when (proxyConfig.type) {
-            ProxyType.NONE -> {
-                // No proxy - use direct connection
-                log.debug("Proxy disabled")
-            }
-
             ProxyType.SYSTEM -> {
                 // Use system proxy settings
                 log.info("Using system proxy settings")
@@ -192,6 +192,11 @@ object ProxyUtil {
                 } catch (e: Exception) {
                     log.error("Failed to configure SOCKS5 proxy: ${e.message}", e)
                 }
+            }
+
+            else -> {
+                // ProxyType.NONE - already handled with early return above
+                log.debug("Proxy disabled (else branch - should not reach here)")
             }
         }
 

@@ -21,8 +21,8 @@ object ToolRegistry {
     private val log = logger<ToolRegistry>()
 
     init {
-        val chartTools = ToolSpecifications.toolSpecificationsFrom(ChartTools)
         // Askimo built-in tools with pre-classified strategies
+        val chartTools = ToolSpecifications.toolSpecificationsFrom(ChartTools)
 
         // Register each chart tool
         chartTools.forEach { toolSpec ->
@@ -30,7 +30,7 @@ object ToolRegistry {
                 ToolConfig(
                     specification = toolSpec,
                     category = ToolCategory.VISUALIZE,
-                    strategy = ToolStrategy.FOLLOW_UP_BASED,
+                    strategy = ToolStrategy.BOTH,
                     source = ToolSource.ASKIMO_BUILTIN,
                 ),
             )

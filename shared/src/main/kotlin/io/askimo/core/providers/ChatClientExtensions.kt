@@ -69,6 +69,7 @@ private fun Throwable.isUnsupportedSamplingError(): Boolean {
  * @return The complete response from the language model as a string
  */
 fun ChatClient.sendStreamingMessageWithCallback(
+    projectId: String? = null,
     userMessage: UserMessage,
     onToken: (String) -> Unit = {},
     onFollowUpSuggestion: ((FollowUpSuggestion) -> Unit)? = null,
@@ -77,9 +78,11 @@ fun ChatClient.sendStreamingMessageWithCallback(
 
     // === STAGE 1: Pre-request - Detect user intent ===
     // Analyze user message to determine which tools should be made available
+
+    val availableTools = ToolRegistry.getIntentBased()
     val userIntent = DetectUserIntentCommand.execute(
         userMessage.singleText() ?: "",
-        availableTools = ToolRegistry.getIntentBased(),
+        availableTools = availableTools,
     )
 
     // Get provider and model from AppContext

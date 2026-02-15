@@ -4,8 +4,9 @@
  */
 package io.askimo.core.mcp
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.agent.tool.ToolSpecification
-import dev.langchain4j.mcp.McpToolProvider
 import dev.langchain4j.mcp.client.DefaultMcpClient
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
@@ -18,17 +19,36 @@ import io.askimo.core.mcp.config.ProjectMcpToolsConfig
 import io.askimo.core.mcp.config.ToolConfigData
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 private val log = logger<ProjectMcpInstanceService>()
 
 /**
  * Service for managing project-specific MCP server instances.
  * Handles loading, persisting, and lifecycle operations for MCP instances.
+ *
+ * This service is registered as a singleton in Koin for dependency injection.
  */
 class ProjectMcpInstanceService(
     private val instancesConfig: ProjectMcpInstancesConfig = ProjectMcpInstancesConfig,
     private val serversConfig: McpServersConfig = McpServersConfig,
 ) {
+    /**
+     * Cache of project tools to avoid repeated fetching from MCP servers.
+     * Cache keys: projectId
+     * Caffeine provides automatic eviction when memory is low or tools are inactive.
+     */
+    private val projectToolsCache: Cache<String, List<ToolConfig>> = Caffeine.newBuilder()
+        .maximumSize(50) // Cache tools for up to 50 projects
+        .expireAfterWrite(10.minutes.toJavaDuration()) // Refresh every 10 minutes
+        .removalListener<String, List<ToolConfig>> { projectId, tools, cause ->
+            if (tools != null && projectId != null) {
+                log.debug("Evicting project tools cache for project {} (cause: {}, {} tools)", projectId, cause, tools.size)
+            }
+        }
+        .build()
+
     /**
      * Get all MCP instances for a project
      */
@@ -71,6 +91,9 @@ class ProjectMcpInstanceService(
             // Save
             instancesConfig.add(instance)
 
+            // Invalidate tools cache since instances changed
+            invalidateProjectToolsCache(projectId)
+
             log.debug("Created MCP instance '${instance.name}' (${instance.id}) for project $projectId")
             Result.success(instance)
         } catch (e: Exception) {
@@ -108,6 +131,10 @@ class ProjectMcpInstanceService(
             }
 
             instancesConfig.update(updated)
+
+            // Invalidate tools cache since instances changed
+            invalidateProjectToolsCache(projectId)
+
             log.debug("Updated MCP instance '${updated.name}' (${updated.id})")
             Result.success(updated)
         } catch (e: Exception) {
@@ -127,6 +154,10 @@ class ProjectMcpInstanceService(
             instancesConfig.remove(projectId, instanceId)
             // Also delete all tools associated with this instance
             ProjectMcpToolsConfig.deleteByInstance(projectId, instanceId)
+
+            // Invalidate tools cache since instances changed
+            invalidateProjectToolsCache(projectId)
+
             log.debug("Deleted MCP instance '${instance.name}' (${instance.id}) and its tools")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -194,47 +225,6 @@ class ProjectMcpInstanceService(
         } catch (e: Exception) {
             log.error("Failed to create MCP client for '${instance.name}': ${e.javaClass.simpleName}: ${e.message}", e)
             null
-        }
-    }
-
-    /**
-     * Get MCP tool provider with all active connectors for a project.
-     *
-     * This creates MCP clients from all enabled connectors and builds a tool provider
-     * that can be used to provide MCP tools to the AI model.
-     *
-     * @param projectId The project ID
-     * @return Result containing the McpToolProvider, or null if no connectors are available
-     */
-    suspend fun getToolProvider(projectId: String): Result<McpToolProvider?> {
-        return try {
-            val instances = getEnabledInstances(projectId)
-
-            if (instances.isEmpty()) {
-                log.debug("No active MCP connectors for project $projectId, returning null")
-                return Result.success(null)
-            }
-
-            // Build MCP clients from instances using helper method
-            val mcpClients = instances.mapNotNull { instance ->
-                createMcpClient(instance, "${projectId}_${instance.name}")
-            }
-
-            if (mcpClients.isEmpty()) {
-                log.warn("All MCP connectors failed to create clients for project $projectId, returning null")
-                return Result.success(null)
-            }
-
-            // Build tool provider
-            val toolProvider = McpToolProvider.builder()
-                .mcpClients(mcpClients)
-                .build()
-
-            log.debug("Created MCP tool provider with ${mcpClients.size} clients for project $projectId")
-            Result.success(toolProvider)
-        } catch (e: Exception) {
-            log.error("Failed to create MCP tool provider for project $projectId: ${e.message}", e)
-            Result.failure(e)
         }
     }
 
@@ -408,10 +398,24 @@ class ProjectMcpInstanceService(
      * - User correction: Override incorrect classifications
      * - Performance: Cached classifications, no re-inference
      *
+     * **Caching:**
+     * - Tools are cached per project for 10 minutes to avoid repeated MCP server calls
+     * - Cache is automatically invalidated when instances are updated
+     * - Call invalidateProjectToolsCache() to manually clear cache
+     *
      * @param projectId The project ID
      * @return List of ToolConfig with hybrid user/auto classifications
      */
     suspend fun getProjectTools(projectId: String): List<ToolConfig> {
+        // Check cache first
+        val cachedTools = projectToolsCache.getIfPresent(projectId)
+        if (cachedTools != null) {
+            log.debug("Returning cached tools for project {} ({} tools)", projectId, cachedTools.size)
+            return cachedTools
+        }
+
+        log.debug("Cache miss for project {}, fetching tools from MCP servers", projectId)
+
         val instances = getEnabledInstances(projectId)
 
         if (instances.isEmpty()) {
@@ -504,7 +508,32 @@ class ProjectMcpInstanceService(
                 "(${userConfigs.count { !it.value.autoInferred }} user-customized, " +
                 "${newlyInferredConfigs.size} newly auto-inferred)",
         )
+
+        // 5. Cache the results for future requests
+        projectToolsCache.put(projectId, allTools)
+        log.debug("Cached {} tools for project {}", allTools.size, projectId)
+
         return allTools
+    }
+
+    /**
+     * Invalidate the tools cache for a specific project.
+     * Call this when instances are added/removed/updated to force a refresh.
+     *
+     * @param projectId The project ID to invalidate cache for
+     */
+    fun invalidateProjectToolsCache(projectId: String) {
+        projectToolsCache.invalidate(projectId)
+        log.debug("Invalidated tools cache for project {}", projectId)
+    }
+
+    /**
+     * Invalidate all project tools caches.
+     * Useful for global refresh scenarios.
+     */
+    fun invalidateAllProjectToolsCaches() {
+        projectToolsCache.invalidateAll()
+        log.debug("Invalidated all project tools caches")
     }
 
     /**
@@ -539,29 +568,16 @@ class ProjectMcpInstanceService(
             )
 
             ProjectMcpToolsConfig.update(projectId, updated)
+
+            // Invalidate tools cache to pick up the customization
+            invalidateProjectToolsCache(projectId)
+
             log.debug("User customized tool '$toolName': $category, $strategy")
             Result.success(updated)
         } catch (e: Exception) {
             log.warn("Failed to customize tool config: ${e.message}")
             Result.failure(e)
         }
-    }
-
-    /**
-     * Reset tool to auto-inferred classification.
-     * This removes user customization and re-infers on next tool load.
-     *
-     * @param projectId The project ID
-     * @param instanceId The MCP instance ID
-     * @param toolName The tool name to reset
-     */
-    fun resetToolConfig(projectId: String, instanceId: String, toolName: String): Result<Unit> = try {
-        ProjectMcpToolsConfig.delete(projectId, instanceId, toolName)
-        log.debug("Reset tool '$toolName' to auto-inferred classification")
-        Result.success(Unit)
-    } catch (e: Exception) {
-        log.warn("Failed to reset tool config: ${e.message}")
-        Result.failure(e)
     }
 
     /**
@@ -680,12 +696,6 @@ class ProjectMcpInstanceService(
             tools = toolStats,
         )
     }
-
-    /**
-     * Get all tools for a specific instance with their configurations.
-     * Makes the server-tool relationship explicit.
-     */
-    fun getInstanceTools(projectId: String, instanceId: String): List<ToolConfigData> = ProjectMcpToolsConfig.getByInstance(projectId, instanceId).values.toList()
 
     /**
      * Batch save tools for a newly created instance (atomic operation).

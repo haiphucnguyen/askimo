@@ -24,12 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,16 +38,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.askimo.core.logging.LoggingService
 import io.askimo.core.logging.currentFileLogger
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -158,7 +155,7 @@ fun logViewerDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // Refresh button
-                        OutlinedButton(
+                        secondaryButton(
                             onClick = {
                                 isLoading = true
                                 errorMessage = null
@@ -176,8 +173,6 @@ fun logViewerDialog(
                                 }
                             },
                             enabled = !isLoading,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
@@ -189,7 +184,7 @@ fun logViewerDialog(
                         }
 
                         // Copy to clipboard button
-                        OutlinedButton(
+                        secondaryButton(
                             onClick = {
                                 copyToClipboard(logContent)
                                 isCopied = true
@@ -200,8 +195,6 @@ fun logViewerDialog(
                                 }
                             },
                             enabled = logContent.isNotEmpty() && !isLoading,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
@@ -312,10 +305,8 @@ fun logViewerDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        Button(
+                        primaryButton(
                             onClick = onDismiss,
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            colors = ComponentColors.subtleButtonColors(),
                         ) {
                             Text(stringResource("action.close"))
                         }

@@ -67,6 +67,8 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.get
+import java.time.LocalDateTime
 
 @Composable
 fun addMcpIntegrationDialog(
@@ -80,6 +82,8 @@ fun addMcpIntegrationDialog(
         toolStrategies: Map<String, Int>,
     ) -> Unit,
 ) {
+    val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
+
     // Load available server templates
     val serverDefinitions = remember { McpServersConfig.getAll() }
     var selectedServer by remember { mutableStateOf<McpServerDefinition?>(null) }
@@ -290,9 +294,8 @@ fun addMcpIntegrationDialog(
 
                                         scope.launch {
                                             try {
-                                                val mcpService = ProjectMcpInstanceService()
                                                 // Create temporary instance to test connection
-                                                val now = java.time.LocalDateTime.now().toString()
+                                                val now = LocalDateTime.now().toString()
                                                 val tempInstanceData = ProjectMcpInstanceData(
                                                     id = "temp-${System.currentTimeMillis()}",
                                                     projectId = projectId,
@@ -532,8 +535,7 @@ fun addMcpIntegrationDialog(
                                         // Automatically load tools if not already loaded
                                         if (toolCategories.isEmpty() && toolStrategies.isEmpty()) {
                                             try {
-                                                val mcpService = ProjectMcpInstanceService()
-                                                val now = java.time.LocalDateTime.now().toString()
+                                                val now = LocalDateTime.now().toString()
                                                 val tempInstanceData = ProjectMcpInstanceData(
                                                     id = "temp-${System.currentTimeMillis()}",
                                                     projectId = projectId,
