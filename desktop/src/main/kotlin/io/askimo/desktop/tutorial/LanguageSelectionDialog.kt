@@ -141,7 +141,6 @@ fun languageSelectionDialog(
                                                     Icon(
                                                         Icons.Default.Check,
                                                         contentDescription = "Selected",
-                                                        tint = MaterialTheme.colorScheme.primary,
                                                     )
                                                 }
                                                 Text(

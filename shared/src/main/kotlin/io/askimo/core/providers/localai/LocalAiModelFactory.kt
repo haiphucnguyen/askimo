@@ -70,6 +70,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase()))).build()
 
         return AiServiceBuilder.buildChatClient(

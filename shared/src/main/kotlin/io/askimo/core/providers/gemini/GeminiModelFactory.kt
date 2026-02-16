@@ -72,6 +72,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, GEMINI.name.lowercase())))
                 .build()
 

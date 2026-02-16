@@ -4,7 +4,6 @@
  */
 package io.askimo.core.intent
 
-import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.agent.tool.ToolSpecifications
 import io.askimo.core.logging.logger
 import io.askimo.tools.chart.ChartTools
@@ -58,34 +57,4 @@ object ToolRegistry {
      * These tools require user confirmation before use.
      */
     fun getFollowUpOnly(): List<ToolConfig> = tools.values.filter { (it.strategy and ToolStrategy.FOLLOW_UP_BASED) != 0 }
-
-    /**
-     * Get all registered tools.
-     */
-    fun getAllTools(): List<ToolConfig> = tools.values.toList()
-
-    /**
-     * Get a specific tool by name.
-     */
-    fun getTool(name: String): ToolConfig? = tools[name]
-
-    /**
-     * Register MCP tools dynamically (for project-specific tools).
-     * MCP tools default to FOLLOW_UP_BASED for safety.
-     *
-     * @param toolSpecs List of MCP tool specifications
-     * @param strategy Strategy to use (defaults to FOLLOW_UP_BASED)
-     * @return List of registered ToolConfig objects
-     */
-    fun registerMcpTools(
-        toolSpecs: List<ToolSpecification>,
-        strategy: Int = ToolStrategy.FOLLOW_UP_BASED,
-    ): List<ToolConfig> = toolSpecs.map { toolSpec ->
-        ToolConfig(
-            specification = toolSpec,
-            category = ToolCategory.EXECUTE, // MCP tools are typically execution-based
-            strategy = strategy,
-            source = ToolSource.MCP_EXTERNAL,
-        )
-    }
 }

@@ -70,6 +70,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
                 .build()
 

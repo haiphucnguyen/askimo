@@ -21,6 +21,7 @@ import kotlinx.serialization.json.jsonObject
  * NOTE: Radar/spider charts are not supported by Mermaid CLI.
  */
 object ChartTools {
+    private const val CLASS_NAME = "io.askimo.tools.chart.ChartTools"
 
     /**
      * Generate a Mermaid diagram for visualizations.
@@ -267,6 +268,7 @@ QUALITY REQUIREMENTS:
 - Use meaningful labels
 - Ensure the diagram renders correctly in Mermaid CLI (mmdc), GitHub Markdown, and Mermaid Live
         """,
+        metadata = "{ \"className\": \"$CLASS_NAME\", \"methodName\": \"generateMermaidDiagram\" }",
     )
     fun generateMermaidDiagram(
         title: String,

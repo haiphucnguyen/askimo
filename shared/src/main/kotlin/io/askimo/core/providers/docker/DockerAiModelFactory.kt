@@ -92,6 +92,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
                 .build()
