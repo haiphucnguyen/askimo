@@ -66,6 +66,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.LMSTUDIO.name.lowercase())))

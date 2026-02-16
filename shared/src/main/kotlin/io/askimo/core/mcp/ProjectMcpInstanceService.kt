@@ -40,11 +40,26 @@ class ProjectMcpInstanceService(
      * Caffeine provides automatic eviction when memory is low or tools are inactive.
      */
     private val projectToolsCache: Cache<String, List<ToolConfig>> = Caffeine.newBuilder()
-        .maximumSize(50) // Cache tools for up to 50 projects
-        .expireAfterWrite(10.minutes.toJavaDuration()) // Refresh every 10 minutes
+        .maximumSize(200)
+        .expireAfterWrite(30.minutes.toJavaDuration()) // Refresh every 10 minutes
         .removalListener<String, List<ToolConfig>> { projectId, tools, cause ->
             if (tools != null && projectId != null) {
                 log.debug("Evicting project tools cache for project {} (cause: {}, {} tools)", projectId, cause, tools.size)
+            }
+        }
+        .build()
+
+    /**
+     * Cache of MCP clients by tool name to avoid recreating connections.
+     * Cache keys: "projectId:toolName"
+     * This allows quick lookup of the client needed to execute a specific tool.
+     */
+    private val mcpClientsByToolCache: Cache<String, DefaultMcpClient> = Caffeine.newBuilder()
+        .maximumSize(200) // Cache clients for up to 200 tools across projects
+        .expireAfterWrite(30.minutes.toJavaDuration())
+        .removalListener<String, DefaultMcpClient> { key, client, cause ->
+            if (client != null && key != null) {
+                log.debug("Evicting MCP client for tool {} (cause: {})", key, cause)
             }
         }
         .build()
@@ -165,11 +180,6 @@ class ProjectMcpInstanceService(
             Result.failure(e)
         }
     }
-
-    /**
-     * Enable/disable an instance
-     */
-    fun setInstanceEnabled(projectId: String, instanceId: String, enabled: Boolean): Result<ProjectMcpInstance> = updateInstance(projectId, instanceId, enabled = enabled)
 
     /**
      * Get all enabled instances for a project
@@ -445,8 +455,13 @@ class ProjectMcpInstanceService(
      *
      * **Caching:**
      * - Tools are cached per project for 10 minutes to avoid repeated MCP server calls
+     * - MCP clients are also cached per tool for 15 minutes to enable tool execution
      * - Cache is automatically invalidated when instances are updated
-     * - Call invalidateProjectToolsCache() to manually clear cache
+     * - Call invalidateProjectToolsCache() to manually clear both caches
+     *
+     * **Tool Execution:**
+     * - After calling this method, use getMcpClientForTool(projectId, toolName) to get the
+     *   client needed to execute a specific MCP tool
      *
      * @param projectId The project ID
      * @return List of ToolConfig with hybrid user/auto classifications
@@ -481,6 +496,12 @@ class ProjectMcpInstanceService(
                 if (mcpClient != null) {
                     log.debug("Fetching tools from MCP client for '${instance.name}'")
                     val toolSpecs = mcpClient.listTools()
+
+                    // ✅ POPULATE CLIENT CACHE for each tool
+                    toolSpecs.forEach { toolSpec ->
+                        val cacheKey = "$projectId:${toolSpec.name()}"
+                        mcpClientsByToolCache.put(cacheKey, mcpClient)
+                    }
 
                     val toolConfigs = toolSpecs.map { toolSpec ->
                         val toolName = toolSpec.name()
@@ -569,7 +590,39 @@ class ProjectMcpInstanceService(
      */
     fun invalidateProjectToolsCache(projectId: String) {
         projectToolsCache.invalidate(projectId)
-        log.debug("Invalidated tools cache for project {}", projectId)
+        invalidateMcpClientCache(projectId)
+        log.debug("Invalidated tools and client cache for project {}", projectId)
+    }
+
+    /**
+     * Invalidate the MCP client cache for a specific project.
+     * Removes all cached clients for tools in this project.
+     *
+     * @param projectId The project ID to invalidate cache for
+     */
+    private fun invalidateMcpClientCache(projectId: String) {
+        // Remove all entries for this project
+        mcpClientsByToolCache.asMap().keys
+            .filter { it.startsWith("$projectId:") }
+            .forEach { mcpClientsByToolCache.invalidate(it) }
+        log.debug("Invalidated MCP client cache for project {}", projectId)
+    }
+
+    /**
+     * Get the MCP client associated with a specific tool.
+     * This method is used when executing MCP tools - it returns the client
+     * needed to call the tool on its originating MCP server.
+     *
+     * **Important:** This should be called AFTER getProjectTools() has populated
+     * the client cache, otherwise it will return null.
+     *
+     * @param projectId The project ID
+     * @param toolName The name of the tool (from ToolSpecification.name())
+     * @return DefaultMcpClient that can execute this tool, or null if not found
+     */
+    fun getMcpClientForTool(projectId: String, toolName: String): DefaultMcpClient? {
+        val cacheKey = "$projectId:$toolName"
+        return mcpClientsByToolCache.getIfPresent(cacheKey)
     }
 
     /**

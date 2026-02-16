@@ -6,6 +6,7 @@ package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
@@ -16,6 +17,7 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.ToolProviderImpl
 import io.askimo.core.telemetry.TelemetryCollector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -265,6 +267,7 @@ class AppContext private constructor(
             sessionId = sessionId,
             model = modelName,
             settings = settings,
+            toolProvider = getToolProvider(),
             retriever = retriever,
             executionMode = executionMode,
             chatMemory = memory,
@@ -364,5 +367,21 @@ class AppContext private constructor(
             - When explicitly asked about identity (e.g. "who am I"), use this information
             - Do not add disclaimers about uncertainty regarding this profile
         """.trimIndent()
+    }
+
+    /**
+     * Get the ToolProvider instance managed by Koin (desktop only).
+     * Returns null if Koin is not initialized (e.g., in CLI mode).
+     *
+     * This is a lazy accessor that retrieves the singleton from Koin on-demand,
+     * avoiding circular dependencies and keeping AppContext independent.
+     *
+     * @return ToolProvider instance or null if not available
+     */
+    fun getToolProvider(): ToolProvider? = try {
+        org.koin.java.KoinJavaComponent.getKoin().getOrNull<ToolProviderImpl>()
+    } catch (e: Exception) {
+        log.debug("ToolProvider not available (Koin not initialized or CLI mode)")
+        null
     }
 }

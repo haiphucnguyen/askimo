@@ -98,3 +98,20 @@ class InvalidRequestException(
 
     override fun getMessageArgs() = mapOf("details" to details.take(200))
 }
+
+/**
+ * Tool execution failed.
+ */
+class ToolExecutionException(
+    val toolName: String,
+    val errorDetails: String? = null,
+    cause: Throwable? = null,
+) : UserException("Tool execution failed", cause) {
+
+    override fun getMessageKey() = "error.tool_execution"
+
+    override fun getMessageArgs() = mapOf(
+        "toolName" to toolName,
+        "details" to (errorDetails ?: ""),
+    )
+}

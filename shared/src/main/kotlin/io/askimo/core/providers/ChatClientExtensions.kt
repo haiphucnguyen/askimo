@@ -8,17 +8,15 @@ import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.request.ChatRequestParameters
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
+import io.askimo.core.exception.ToolExecutionException
 import io.askimo.core.intent.DetectAiResponseIntentCommand
-import io.askimo.core.intent.DetectUserIntentCommand
 import io.askimo.core.intent.FollowUpSuggestion
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.logger
-import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.memory.ConversationSummary
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.RetryPresets
 import io.askimo.core.util.RetryUtils
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -80,148 +78,142 @@ fun ChatClient.sendStreamingMessageWithCallback(
 ): String {
     val log = logger<ChatClient>()
 
-    // === STAGE 1: Pre-request - Detect user intent ===
-    // Analyze user message to determine which tools should be made available
-    val availableTools = if (projectId != null) {
-        val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
+    try {
+        // Set project ID in ThreadLocal for ToolProvider to access
+        ProjectContext.setProjectId(projectId)
 
-        runBlocking {
-            val mcpTools = mcpService.getProjectTools(projectId)
-            ToolRegistry.getIntentBased() + mcpTools
-        }
-    } else {
-        ToolRegistry.getIntentBased()
-    }
+        // Get provider and model from AppContext
+        val appContext = AppContext.getInstance()
+        val provider = appContext.getActiveProvider()
+        val model = appContext.params.model
 
-    val userIntent = DetectUserIntentCommand.execute(
-        userMessage.singleText() ?: "",
-        availableTools = availableTools,
-    )
+        var contextRetryCount = 0
+        val maxContextRetries = 20 // 20 immediate retries for context errors
 
-    // Get provider and model from AppContext
-    val appContext = AppContext.getInstance()
-    val provider = appContext.getActiveProvider()
-    val model = appContext.params.model
+        while (contextRetryCount <= maxContextRetries) {
+            try {
+                if (contextRetryCount > 0) {
+                    log.debug("Retrying request with reduced context (attempt ${contextRetryCount + 1}/${maxContextRetries + 1})")
+                }
 
-    var contextRetryCount = 0
-    val maxContextRetries = 20 // 20 immediate retries for context errors
+                // Build combined request parameters with sampling and tools
+                val customParams = run {
+                    val builder = ChatRequestParameters.builder()
+                    var hasParams = false
 
-    while (contextRetryCount <= maxContextRetries) {
-        try {
-            if (contextRetryCount > 0) {
-                log.debug("Retrying request with reduced context (attempt ${contextRetryCount + 1}/${maxContextRetries + 1})")
-            }
-
-            // Build combined request parameters with sampling and tools
-            val customParams = run {
-                val builder = ChatRequestParameters.builder()
-                var hasParams = false
-
-                // Add sampling parameters if enabled and supported
-                if (AppConfig.chat.sampling.enabled) {
-                    val supportsSampling = ModelCapabilitiesCache.supportsSampling(provider, model)
-                    if (supportsSampling) {
-                        AppConfig.chat.sampling.let { samplingConfig ->
-                            builder
-                                .temperature(samplingConfig.temperature)
-                                .topP(samplingConfig.topP)
-                            hasParams = true
+                    // Add sampling parameters if enabled and supported
+                    if (AppConfig.chat.sampling.enabled) {
+                        val supportsSampling = ModelCapabilitiesCache.supportsSampling(provider, model)
+                        if (supportsSampling) {
+                            AppConfig.chat.sampling.let { samplingConfig ->
+                                builder
+                                    .temperature(samplingConfig.temperature)
+                                    .topP(samplingConfig.topP)
+                                hasParams = true
+                            }
                         }
                     }
+
+                    if (hasParams) builder.build() else DEFAULT_PARAMETERS
                 }
 
-                // Add tool specifications if user intent detected tools
-                if (userIntent.tools.isNotEmpty()) {
-                    builder.toolSpecifications(userIntent.tools.map { it.specification })
-                    hasParams = true
-                }
+                // Execute the streaming request with retry logic for transient errors
+                return RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
+                    val sb = StringBuilder()
+                    val done = CountDownLatch(1)
+                    var errorOccurred = false
+                    var isConfigurationError = false
+                    var capturedError: Throwable? = null
 
-                if (hasParams) builder.build() else DEFAULT_PARAMETERS
-            }
-
-            // Execute the streaming request with retry logic for transient errors
-            return RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
-                val sb = StringBuilder()
-                val done = CountDownLatch(1)
-                var errorOccurred = false
-                var isConfigurationError = false
-                var capturedError: Throwable? = null
-
-                sendMessageStreaming(userMessage, customParams)
-                    .onPartialResponse { chunk ->
-                        sb.append(chunk)
-                        onToken(chunk)
-                    }.onCompleteResponse {
-                        done.countDown()
-                    }.onError { e ->
-                        errorOccurred = true
-                        capturedError = e
-
-                        val errorMessage = e.message ?: ""
-
-                        // Check for context length errors first - let it bubble up for immediate retry
-                        if (e?.isContextLengthError() == true) {
+                    sendMessageStreaming(userMessage, customParams)
+                        .onPartialResponse { chunk ->
+                            sb.append(chunk)
+                            onToken(chunk)
+                        }.onCompleteResponse {
                             done.countDown()
-                            val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
-                            val currentSize = ModelCapabilitiesCache.get(modelKey).contextSize
-                            val newSize = ModelCapabilitiesCache.reduceContextSize(modelKey, currentSize)
+                        }.onToolExecuted { tool ->
+                            if (tool.hasFailed()) {
+                                throw ToolExecutionException(
+                                    toolName = tool.request().name() ?: "unknown",
+                                    errorDetails = tool.result(),
+                                )
+                            }
+                        }.onError { e ->
+                            errorOccurred = true
+                            capturedError = e
 
-                            log.warn("Context length exceeded for $modelKey (attempt $contextRetryCount/${maxContextRetries + 1}). Reducing context size: $currentSize → $newSize tokens. Retrying immediately...")
-                            return@onError
-                        }
+                            val errorMessage = e.message ?: ""
 
-                        // Check for insufficient context window - non-transient, show helpful message
-                        if (e is InsufficientContextException) {
-                            isConfigurationError = true
-                            sb.append(e.message)
-                            onToken(e.message ?: "Insufficient context window")
-                            done.countDown()
-                            contextRetryCount++
-                            return@onError
-                        }
+                            // Check for context length errors first - let it bubble up for immediate retry
+                            if (e?.isContextLengthError() == true) {
+                                done.countDown()
+                                val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
+                                val currentSize = ModelCapabilitiesCache.get(modelKey).contextSize
+                                val newSize = ModelCapabilitiesCache.reduceContextSize(modelKey, currentSize)
 
-                        // Check for unsupported sampling parameters (temperature, topP)
-                        if (e.isUnsupportedSamplingError()) {
-                            log.warn("Unsupported sampling parameters detected. Falling back to non sampling settings.")
-                            ModelCapabilitiesCache.setSamplingSupport(provider, model, false)
-                            done.countDown()
-                            return@onError
-                        }
+                                log.warn("Context length exceeded for $modelKey (attempt $contextRetryCount/${maxContextRetries + 1}). Reducing context size: $currentSize → $newSize tokens. Retrying immediately...")
+                                return@onError
+                            }
 
-                        // Check if the underlying cause is a network connection issue
-                        if (e.cause is UnresolvedAddressException) {
-                            isConfigurationError = true
-                            val connectionErrorMsg = """
+                            // Check for insufficient context window - non-transient, show helpful message
+                            if (e is InsufficientContextException) {
+                                isConfigurationError = true
+                                sb.append(e.message)
+                                onToken(e.message ?: "Insufficient context window")
+                                done.countDown()
+                                contextRetryCount++
+                                return@onError
+                            }
+
+                            // Check for unsupported sampling parameters (temperature, topP)
+                            if (e.isUnsupportedSamplingError()) {
+                                log.warn("Unsupported sampling parameters detected. Falling back to non sampling settings.")
+                                ModelCapabilitiesCache.setSamplingSupport(provider, model, false)
+                                done.countDown()
+                                return@onError
+                            }
+
+                            if (e is ToolExecutionException) {
+                                sb.append(e.errorDetails)
+                                onToken(e.errorDetails ?: "Tool execution failed")
+                                done.countDown()
+                                return@onError
+                            }
+
+                            // Check if the underlying cause is a network connection issue
+                            if (e.cause is UnresolvedAddressException) {
+                                isConfigurationError = true
+                                val connectionErrorMsg = """
                                 ⚠️  Unable to connect to the server!
 
                                 Cannot resolve the server address. Please check:
                                 1. Your internet connection is working
                                 2. The server URL/endpoint is correct
                                 3. There are no firewall or proxy issues blocking the connection
-                            """.trimIndent()
-                            sb.append(connectionErrorMsg)
-                            onToken(connectionErrorMsg)
-                            done.countDown()
-                            return@onError
-                        }
+                                """.trimIndent()
+                                sb.append(connectionErrorMsg)
+                                onToken(connectionErrorMsg)
+                                done.countDown()
+                                return@onError
+                            }
 
-                        val isModelError = errorMessage.contains("model is required") ||
-                            errorMessage.contains("No model provided") ||
-                            errorMessage.contains("model not found") ||
-                            errorMessage.contains("invalid model")
+                            val isModelError = errorMessage.contains("model is required") ||
+                                errorMessage.contains("No model provided") ||
+                                errorMessage.contains("model not found") ||
+                                errorMessage.contains("invalid model")
 
-                        val isApiKeyError = errorMessage.contains("api key") ||
-                            errorMessage.contains("authentication") ||
-                            errorMessage.contains("unauthorized") ||
-                            errorMessage.contains("invalid API key") ||
-                            errorMessage.contains("Incorrect API key provided") ||
-                            errorMessage.contains("invalid_api_key") ||
-                            e is dev.langchain4j.exception.AuthenticationException
+                            val isApiKeyError = errorMessage.contains("api key") ||
+                                errorMessage.contains("authentication") ||
+                                errorMessage.contains("unauthorized") ||
+                                errorMessage.contains("invalid API key") ||
+                                errorMessage.contains("Incorrect API key provided") ||
+                                errorMessage.contains("invalid_api_key") ||
+                                e is dev.langchain4j.exception.AuthenticationException
 
-                        if (isModelError || isApiKeyError) {
-                            isConfigurationError = true
-                            val helpMessage = when {
-                                isModelError -> """
+                            if (isModelError || isApiKeyError) {
+                                isConfigurationError = true
+                                val helpMessage = when {
+                                    isModelError -> """
                                     ⚠️  Model configuration required!
 
                                     It looks like you haven't selected a model yet. Please configure your setup:
@@ -229,75 +221,79 @@ fun ChatClient.sendStreamingMessageWithCallback(
                                     1. Set a provider: :set-provider openai
                                     2. Check available models: :models
                                     3. Select a model from the list
-                                """.trimIndent()
+                                    """.trimIndent()
 
-                                else -> """
+                                    else -> """
                                     ⚠️  API key configuration required!
 
                                     Your API key is missing or invalid. Please configure it:
 
                                     Interactive mode: :set-param api_key YOUR_API_KEY
                                     Command line: --set-param api_key YOUR_API_KEY
-                                """.trimIndent()
+                                    """.trimIndent()
+                                }
+
+                                sb.append(helpMessage)
+                                onToken(helpMessage)
+                            } else {
+                                val errorMsg = "\n[error] ${e.message ?: "unknown error"}\n"
+                                sb.append(errorMsg)
+                                onToken(errorMsg)
                             }
 
-                            sb.append(helpMessage)
-                            onToken(helpMessage)
-                        } else {
-                            val errorMsg = "\n[error] ${e.message ?: "unknown error"}\n"
-                            sb.append(errorMsg)
-                            onToken(errorMsg)
-                        }
+                            done.countDown()
+                        }.start()
 
-                        done.countDown()
-                    }.start()
+                    done.await()
 
-                done.await()
+                    val result = sb.toString()
 
-                val result = sb.toString()
-
-                if (isConfigurationError) {
-                    return@retry result
-                }
-
-                if (errorOccurred) {
-                    val errorDetails = capturedError?.message ?: "Unknown streaming error"
-                    throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
-                }
-
-                // === STAGE 2: Post-response - Detect follow-up opportunities ===
-                if (onFollowUpSuggestion != null) {
-                    val followUpSuggestion = DetectAiResponseIntentCommand.execute(
-                        result,
-                        availableTools = ToolRegistry.getFollowUpOnly(),
-                    )
-
-                    if (followUpSuggestion != null) {
-                        log.debug("Detected follow-up opportunity (Stage 2): ${followUpSuggestion.question}")
-                        onFollowUpSuggestion(followUpSuggestion)
+                    if (isConfigurationError) {
+                        return@retry result
                     }
+
+                    if (errorOccurred) {
+                        val errorDetails = capturedError?.message ?: "Unknown streaming error"
+                        throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
+                    }
+
+                    // === STAGE 2: Post-response - Detect follow-up opportunities ===
+                    if (onFollowUpSuggestion != null) {
+                        val followUpSuggestion = DetectAiResponseIntentCommand.execute(
+                            result,
+                            availableTools = ToolRegistry.getFollowUpOnly(),
+                        )
+
+                        if (followUpSuggestion != null) {
+                            log.debug("Detected follow-up opportunity (Stage 2): ${followUpSuggestion.question}")
+                            onFollowUpSuggestion(followUpSuggestion)
+                        }
+                    }
+
+                    result
+                }
+            } catch (e: Exception) {
+                // Check if this is a context length error - immediate retry without backoff
+                if ((e.isContextLengthError() || e.isUnsupportedSamplingError()) && contextRetryCount < maxContextRetries) {
+                    contextRetryCount++
+
+                    // Retry immediately with reduced context size (no backoff)
+                    // ChatRequestTransformers.enforceTokenBudget() will automatically truncate
+                    // messages to fit the new smaller budget on the next attempt
+                    continue
                 }
 
-                result
+                // Not a context error or out of retries - rethrow
+                throw e
             }
-        } catch (e: Exception) {
-            // Check if this is a context length error - immediate retry without backoff
-            if ((e.isContextLengthError() || e.isUnsupportedSamplingError()) && contextRetryCount < maxContextRetries) {
-                contextRetryCount++
-
-                // Retry immediately with reduced context size (no backoff)
-                // ChatRequestTransformers.enforceTokenBudget() will automatically truncate
-                // messages to fit the new smaller budget on the next attempt
-                continue
-            }
-
-            // Not a context error or out of retries - rethrow
-            throw e
         }
-    }
 
-    // Should never reach here, but for completeness
-    throw IllegalStateException("Failed to send message after ${maxContextRetries + 1} context retries")
+        // Should never reach here, but for completeness
+        throw IllegalStateException("Failed to send message after ${maxContextRetries + 1} context retries")
+    } finally {
+        // Always clear ThreadLocal to prevent memory leaks
+        ProjectContext.clear()
+    }
 }
 
 /**

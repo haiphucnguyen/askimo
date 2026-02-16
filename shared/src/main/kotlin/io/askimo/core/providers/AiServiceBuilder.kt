@@ -180,7 +180,7 @@ object AiServiceBuilder {
             }
 
         if (toolProvider != null) {
-            builder.toolProvider(toolProvider)
+            builder.toolProvider(toolProvider).maxSequentialToolsInvocations(3)
         }
 
         if (retriever != null) {

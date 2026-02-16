@@ -6,6 +6,7 @@ package io.askimo.core.mcp.connectors
 
 import dev.langchain4j.mcp.client.transport.McpTransport
 import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport
+import io.askimo.core.logging.logger
 import io.askimo.core.mcp.McpConnector
 import io.askimo.core.mcp.StdioMcpTransportConfig
 import io.askimo.core.mcp.ValidationResult
@@ -19,11 +20,15 @@ class StdioMcpConnector(
     private val config: StdioMcpTransportConfig,
 ) : McpConnector() {
 
+    private val log = logger<StdioMcpConnector>()
+
     override suspend fun createTransport(): McpTransport {
         // Resolve executable paths (handles Windows .cmd/.bat extensions, macOS PATH issues, etc.)
         val command = ExecutableResolver.resolveCommand(config.command)
 
         val builder = StdioMcpTransport.builder()
+            .logger(log)
+            .logEvents(true)
             .command(command)
 
         // Add environment variables if any

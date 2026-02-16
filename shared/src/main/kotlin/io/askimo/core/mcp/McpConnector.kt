@@ -20,24 +20,6 @@ abstract class McpConnector {
      * Validates the connector configuration
      */
     abstract fun validate(): ValidationResult
-
-    /**
-     * Tests the connection to the MCP server
-     */
-    open suspend fun testConnection(): TestResult {
-        val validation = validate()
-        if (!validation.isValid) {
-            return TestResult.Invalid(validation.errors)
-        }
-
-        return try {
-            val transport = createTransport()
-            // TODO: Perform actual connection test when langchain4j supports it
-            TestResult.Success
-        } catch (e: Exception) {
-            TestResult.Failed(e.message ?: "Unknown error")
-        }
-    }
 }
 
 /**

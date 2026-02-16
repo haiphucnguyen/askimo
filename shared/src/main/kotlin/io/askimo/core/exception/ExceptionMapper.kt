@@ -24,19 +24,23 @@ object ExceptionMapper {
 
     /**
      * Map a throwable to an AskimoException by traversing the entire exception chain.
-     * If already an AskimoException, returns it as-is.
+     * If any exception in the chain is already an AskimoException, returns it as-is.
      * Otherwise, analyzes all exceptions in the chain and maps to the appropriate type.
      *
      * @param throwable The exception to map
      * @return An AskimoException (either user or system error)
      */
     fun map(throwable: Throwable): AskimoException {
-        if (throwable is AskimoException) {
-            return throwable
-        }
-
         // Build the complete exception chain
         val exceptionChain = buildExceptionChain(throwable)
+
+        // Check if ANY exception in the chain is already an AskimoException
+        exceptionChain.forEach { exception ->
+            if (exception is AskimoException) {
+                return exception
+            }
+        }
+
         val rootCause = exceptionChain.last()
 
         // Try to match by exception type first (checking all in chain)

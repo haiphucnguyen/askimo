@@ -178,7 +178,7 @@ fun detectMacOSDarkMode(): Boolean {
         // If the command succeeds and returns "Dark", we're in dark mode
         // If the command fails (exit code != 0), the key doesn't exist, meaning light mode
         exitCode == 0 && result.equals("Dark", ignoreCase = true)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         false
     }
 }
@@ -1315,7 +1315,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                     profileRepo.getProfile()
                                 }
 
-                                if (profile?.name.isNullOrBlank()) {
+                                if (profile.name.isNullOrBlank()) {
                                     showWelcomeProfileDialog = true
                                 }
                             }
@@ -1657,8 +1657,6 @@ fun mainContent(
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
 ) {
-    val scope = rememberCoroutineScope()
-
     Box(
         modifier = Modifier
             .fillMaxSize()

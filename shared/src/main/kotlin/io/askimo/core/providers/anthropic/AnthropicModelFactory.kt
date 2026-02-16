@@ -59,6 +59,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.ANTHROPIC.name.lowercase())))
                 .baseUrl(settings.baseUrl)
                 .build()
