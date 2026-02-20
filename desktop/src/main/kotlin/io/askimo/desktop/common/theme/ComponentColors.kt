@@ -194,6 +194,51 @@ object ComponentColors {
     fun sidebarHeaderColor(): Color = MaterialTheme.colorScheme.secondaryContainer
 
     /**
+     * Icon tint for secondary/muted icons
+     * - Used for icons that need less emphasis than primary content
+     * - Examples: collapsed sidebar icons, secondary actions, metadata icons
+     * - Provides good contrast while being visually subdued
+     */
+    @Composable
+    fun secondaryIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+
+    /**
+     * Icon tint for disabled or very subtle icons
+     * - Used for disabled state or very low emphasis elements
+     * - Examples: placeholder icons, disabled actions
+     * - Follows Material Design 3 guidelines (38% alpha)
+     */
+    @Composable
+    fun disabledIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+
+    /**
+     * Icon tint for tertiary/muted icons with very low emphasis
+     * - Used for background icons or decorative elements
+     * - Examples: empty state icons, watermarks
+     * - More subdued than secondaryIconColor
+     */
+    @Composable
+    fun tertiaryIconColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+
+    /**
+     * Text color for secondary text
+     * - Used for supporting text that needs less emphasis
+     * - Examples: descriptions, metadata, helper text
+     * - Better readability than tertiary text
+     */
+    @Composable
+    fun secondaryTextColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+
+    /**
+     * Text color for tertiary text with minimal emphasis
+     * - Used for very subtle text elements
+     * - Examples: "(Coming soon)" labels, footnotes, timestamps
+     * - More subdued than secondary text
+     */
+    @Composable
+    fun tertiaryTextColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+
+    /**
      * Themed DropdownMenu that uses correct theme colors.
      *
      * DropdownMenu in Material3 uses surfaceContainer by default, which doesn't follow

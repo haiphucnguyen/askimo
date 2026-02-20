@@ -101,9 +101,6 @@
         "pattern": "\\QMETA-INF/services/kotlin.test.AsserterContributor\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/org.apache.commons.logging.LogFactory\\E"
-      },
-      {
         "pattern": "\\QMETA-INF/services/org.apache.logging.log4j.spi.Provider\\E"
       },
       {
@@ -162,9 +159,6 @@
       },
       {
         "pattern": "\\Qcom/github/dockerjava/zerodep/shaded/org/apache/hc/client5/version.properties\\E"
-      },
-      {
-        "pattern": "\\Qcommons-logging.properties\\E"
       },
       {
         "pattern": "\\Qcustom-mimetypes.xml\\E"
