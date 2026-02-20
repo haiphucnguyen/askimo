@@ -18,11 +18,7 @@ data class McpServerDefinition(
     val description: String,
     val transportType: TransportType,
 
-    // For stdio servers
     val stdioConfig: StdioConfig? = null,
-
-    // Generic parameters that users can configure
-    val parameters: List<Parameter> = emptyList(),
 
     // Metadata
     val version: String = "1.0.0",
@@ -47,20 +43,26 @@ enum class TransportType {
 @Serializable
 data class StdioConfig(
     /**
-     * Command template with parameter placeholders.
-     * Example: ["npx", "-y", "mongodb-mcp-server@latest", "{{mongoUri}}", "{{database}}"]
-     * Supports conditional flags: "{{?readOnly:--readOnly}}"
+     * Command template with variable placeholders.
+     * Examples:
+     * - ["npx", "-y", "mongodb-mcp-server@latest"]  // No variables
+     * - ["node", "{{scriptPath}}", "--port", "{{port}}"]  // With variables
+     * - ["python", "server.py", "{{?debug:--verbose}}"]  // Conditional flag
      */
     val commandTemplate: List<String>,
 
     /**
-     * Environment variable templates.
-     * Example: {"MONGO_URI": "{{mongoUri}}"}
+     * Environment variable templates (optional).
+     * Examples:
+     * - {"API_KEY": "{{apiKey}}"}  // Variable
+     * - {"NODE_ENV": "production"}  // Static value
+     * - {"MONGO_URI": "mongodb://{{host}}:{{port}}/{{db}}"}  // Multiple variables
      */
     val envTemplate: Map<String, String> = emptyMap(),
 
     /**
-     * Working directory for the process
+     * Working directory for process execution (optional).
+     * Can also contain variables: "{{projectRoot}}/scripts"
      */
     val workingDirectory: String? = null,
 )

@@ -6,9 +6,9 @@ package io.askimo.core.mcp
 
 import io.konform.validation.Validation
 import io.konform.validation.ValidationResult
-import io.konform.validation.jsonschema.minItems
-import io.konform.validation.jsonschema.minLength
-import io.konform.validation.jsonschema.pattern
+import io.konform.validation.constraints.minItems
+import io.konform.validation.constraints.minLength
+import io.konform.validation.constraints.pattern
 import java.util.ResourceBundle
 
 /**
@@ -51,7 +51,7 @@ private object ValidationMessages {
  * }
  * ```
  */
-val mcpServerDefinitionValidator = Validation<McpServerDefinition> {
+val mcpServerDefinitionValidator = Validation {
     McpServerDefinition::id {
         minLength(1) hint ValidationMessages.idEmpty
         pattern("^[a-z0-9-]+$") hint ValidationMessages.idPattern
@@ -65,15 +65,6 @@ val mcpServerDefinitionValidator = Validation<McpServerDefinition> {
         StdioConfig::commandTemplate {
             minItems(1) hint ValidationMessages.commandEmpty
         }
-    }
-
-    // Custom validation for parameters
-    addConstraint(ValidationMessages.paramKeyEmpty) { def ->
-        def.parameters.all { it.key.isNotBlank() }
-    }
-
-    addConstraint(ValidationMessages.paramLabelEmpty) { def ->
-        def.parameters.all { it.label.isNotBlank() }
     }
 }
 

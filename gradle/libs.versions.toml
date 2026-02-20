@@ -46,6 +46,7 @@ langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-
 langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
 langchain4j-agentic = { group = "dev.langchain4j", name = "langchain4j-agentic", version.ref = "langchain4j-extra" }
 langchain4j-mcp = { group = "dev.langchain4j", name = "langchain4j-mcp", version.ref = "langchain4j-extra" }
+langchain4j-mcp-docker = { group = "dev.langchain4j", name = "langchain4j-mcp-docker", version.ref = "langchain4j-extra" }
 
 # Markdown
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
@@ -125,7 +126,8 @@ langchain4j = [
     "langchain4j-http-client",
     "langchain4j-jvector",
     "langchain4j-agentic",
-    "langchain4j-mcp"
+    "langchain4j-mcp",
+    "langchain4j-mcp-docker"
 ]
 
 lucene = [

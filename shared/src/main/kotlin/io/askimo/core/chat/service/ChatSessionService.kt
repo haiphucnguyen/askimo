@@ -426,6 +426,7 @@ class ChatSessionService(
                         MessageRole.USER -> MessageRole.USER.value
                         MessageRole.ASSISTANT -> MessageRole.ASSISTANT.value
                         MessageRole.SYSTEM -> MessageRole.SYSTEM.value
+                        MessageRole.TOOL_EXECUTION_RESULT_MESSAGE -> MessageRole.TOOL_EXECUTION_RESULT_MESSAGE.value
                     },
                     createdAt = msg.createdAt,
                 )

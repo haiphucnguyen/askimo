@@ -4,6 +4,7 @@
  */
 package io.askimo.core.mcp
 
+import io.askimo.core.logging.logger
 import io.askimo.core.mcp.connectors.StdioMcpConnector
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
@@ -31,42 +32,16 @@ data class ProjectMcpInstance(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
 ) {
+
+    private val log = logger<ProjectMcpInstance>()
+
     /**
      * Creates an MCP connector from this instance + its definition.
      * Resolves all template placeholders with actual parameter values.
      */
     fun toConnector(definition: McpServerDefinition): McpConnector {
-        validateParameters(definition)
-
         val resolver = TemplateResolver(parameterValues)
-
         return createStdioConnector(definition, resolver)
-    }
-
-    private fun validateParameters(definition: McpServerDefinition) {
-        val errors = mutableListOf<String>()
-
-        // Check all required parameters are provided
-        definition.parameters.filter { it.required }.forEach { param ->
-            if (!parameterValues.containsKey(param.key) && param.defaultValue == null) {
-                errors.add("Missing required parameter: ${param.key}")
-            }
-        }
-
-        // Validate parameter patterns if specified
-        definition.parameters.forEach { param ->
-            val value = parameterValues[param.key]
-            if (value != null && param.validationPattern != null) {
-                val pattern = Regex(param.validationPattern)
-                if (!pattern.matches(value)) {
-                    errors.add("Parameter ${param.key} does not match pattern: ${param.validationPattern}")
-                }
-            }
-        }
-
-        if (errors.isNotEmpty()) {
-            throw IllegalArgumentException("Invalid parameters: ${errors.joinToString(", ")}")
-        }
     }
 
     private fun createStdioConnector(
@@ -79,6 +54,12 @@ data class ProjectMcpInstance(
         val resolvedCommand = resolver.resolveList(stdioConfig.commandTemplate)
         val resolvedEnv = resolver.resolveMap(stdioConfig.envTemplate)
         val resolvedWorkingDir = stdioConfig.workingDirectory?.let { resolver.resolve(it) }
+        log.debug(
+            "Create the MCP connector with command: {}, env: {}, workingDir: {}",
+            resolvedCommand,
+            resolvedEnv,
+            resolvedWorkingDir,
+        )
 
         return StdioMcpConnector(
             StdioMcpTransportConfig(
@@ -87,7 +68,6 @@ data class ProjectMcpInstance(
                 description = "Instance of ${definition.name}",
                 command = resolvedCommand,
                 env = resolvedEnv,
-                workingDirectory = resolvedWorkingDir,
             ),
         )
     }
