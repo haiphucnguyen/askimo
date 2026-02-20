@@ -47,16 +47,6 @@ class StdioMcpConnector(
             errors.add("Command cannot be empty")
         }
 
-        // Validate working directory exists if specified
-        config.workingDirectory?.let { dir ->
-            val file = File(dir)
-            if (!file.exists()) {
-                errors.add("Working directory does not exist: $dir")
-            } else if (!file.isDirectory) {
-                errors.add("Working directory is not a directory: $dir")
-            }
-        }
-
         // Check if command executable exists (basic check for first element)
         if (config.command.isNotEmpty()) {
             val executable = config.command[0]

@@ -12,9 +12,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.McpServerDefinition
-import io.askimo.core.mcp.Parameter
-import io.askimo.core.mcp.ParameterLocation
-import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TemplateResolver
 import io.askimo.core.mcp.TransportType
@@ -42,7 +39,7 @@ object McpServersConfig {
             .registerModule(KotlinModule.Builder().build())
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
-    private val configFileName = "mcp-servers.yml"
+    private const val MCP_CONFIG_FILE = "mcp-servers.yml"
 
     /**
      * Get all registered MCP server definitions
@@ -160,34 +157,7 @@ object McpServersConfig {
             }
         }
 
-        // Validate parameters
-        val paramKeys = mutableSetOf<String>()
-        definition.parameters.forEach { param ->
-            if (param.key.isBlank()) {
-                errors.add("Parameter key cannot be blank")
-            }
-            if (param.key in paramKeys) {
-                errors.add("Duplicate parameter key: ${param.key}")
-            }
-            paramKeys.add(param.key)
-
-            if (param.label.isBlank()) {
-                errors.add("Parameter ${param.key} label cannot be blank")
-            }
-
-            // Validate default value against pattern if provided
-            if (param.defaultValue != null && param.validationPattern != null) {
-                try {
-                    val pattern = Regex(param.validationPattern)
-                    if (!pattern.matches(param.defaultValue)) {
-                        errors.add("Parameter ${param.key} default value does not match validation pattern")
-                    }
-                } catch (e: Exception) {
-                    errors.add("Invalid validation pattern for parameter ${param.key}: ${e.message}")
-                }
-            }
-        }
-
+        // Just basic validation - MCP server will validate the actual parameters
         return ValidationResult(
             isValid = errors.isEmpty(),
             errors = errors,
@@ -245,7 +215,7 @@ object McpServersConfig {
     }
 
     private fun resolveConfigPath(): Path? = try {
-        AskimoHome.base().resolve(configFileName)
+        AskimoHome.base().resolve(MCP_CONFIG_FILE)
     } catch (e: Exception) {
         log.displayError("Failed to resolve MCP servers config path", e)
         null
@@ -271,27 +241,6 @@ object McpServersConfig {
                     "MONGODB_VARS" to "{{mongoEnv}}",
                 ),
             ),
-            parameters = listOf(
-                Parameter(
-                    key = "mongoEnv",
-                    label = "MongoDB Environment Variables",
-                    type = ParameterType.STRING,
-                    required = true,
-                    placeholder = "MDB_MCP_CONNECTION_STRING=mongodb://localhost:27017/myDatabase\nor\nMDB_MCP_API_CLIENT_ID=clientId,MDB_MCP_API_CLIENT_SECRET=secret",
-                    description = "Environment variables for MongoDB connection. Use 'KEY=value' or 'KEY1=value1,KEY2=value2' for multiple vars",
-                    location = ParameterLocation.ENVIRONMENT,
-                    allowMultiple = true,
-                ),
-                Parameter(
-                    key = "readOnly",
-                    label = "Read Only Mode",
-                    type = ParameterType.BOOLEAN,
-                    required = false,
-                    defaultValue = "true",
-                    description = "Only allow read operations (recommended for safety)",
-                    location = ParameterLocation.COMMAND,
-                ),
-            ),
             tags = listOf("database", "mongodb", "nosql", "official"),
         ),
 
@@ -307,17 +256,6 @@ object McpServersConfig {
                     "-y",
                     "@modelcontextprotocol/server-filesystem",
                     "{{rootPath}}",
-                ),
-            ),
-            parameters = listOf(
-                Parameter(
-                    key = "rootPath",
-                    label = "Root Path",
-                    type = ParameterType.PATH,
-                    required = true,
-                    placeholder = "/path/to/directory",
-                    description = "Root directory for filesystem access (must be an absolute path)",
-                    location = ParameterLocation.COMMAND,
                 ),
             ),
             tags = listOf("filesystem", "local", "files", "official", "anthropic"),

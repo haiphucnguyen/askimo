@@ -11,6 +11,7 @@ enum class MessageRole(val value: String) {
     USER("user"),
     ASSISTANT("assistant"),
     SYSTEM("system"),
+    TOOL_EXECUTION_RESULT_MESSAGE("tool_result_message"),
     ;
 
     override fun toString(): String = value

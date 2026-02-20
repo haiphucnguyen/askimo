@@ -57,16 +57,22 @@ import io.askimo.core.mcp.Parameter
 import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.ProjectMcpInstanceData
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpRuntimeValidator
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.RuntimeValidationResult
 import io.askimo.core.mcp.config.ValidationSeverity
+import io.askimo.core.mcp.extractVariables
+import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.rememberDialogState
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
 import java.time.LocalDateTime
 
@@ -84,11 +90,15 @@ fun addMcpIntegrationDialog(
 ) {
     val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
 
+    // Dialog state for error handling
+    val dialogState = rememberDialogState()
+
     // Load available server templates
     val serverDefinitions = remember { McpServersConfig.getAll() }
     var selectedServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var instanceName by remember { mutableStateOf("") }
     val parameterValues = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var additionalEnvVars by remember { mutableStateOf("") }
     var showServerDropdown by remember { mutableStateOf(false) }
 
     // Tool configuration state
@@ -96,7 +106,6 @@ fun addMcpIntegrationDialog(
     var availableTools by remember { mutableStateOf<List<ToolSpecification>>(emptyList()) }
     var toolCategories by remember { mutableStateOf<Map<String, ToolCategory>>(emptyMap()) }
     var toolStrategies by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    var toolLoadError by remember { mutableStateOf<String?>(null) }
 
     // Validation state
     var isValidating by remember { mutableStateOf(false) }
@@ -133,7 +142,7 @@ fun addMcpIntegrationDialog(
                         .weight(1f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.large),
                 ) {
                     Text(
                         text = stringResource("mcp.integrations.add.dialog.description"),
@@ -214,9 +223,11 @@ fun addMcpIntegrationDialog(
                                     onClick = {
                                         selectedServer = server
                                         showServerDropdown = false
-                                        parameterValues.value = server.parameters.associate { param ->
-                                            param.key to (param.defaultValue ?: "")
+                                        // Extract variables and initialize with empty values
+                                        val variables = when (server.transportType) {
+                                            TransportType.STDIO -> server.stdioConfig?.extractVariables() ?: emptyList()
                                         }
+                                        parameterValues.value = variables.associate { it.key to "" }
                                         instanceName = server.name
                                     },
                                 )
@@ -227,7 +238,7 @@ fun addMcpIntegrationDialog(
                     // Step 2: Configure Integration (only show if server selected)
                     AnimatedVisibility(visible = selectedServer != null) {
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.large),
                         ) {
                             Spacer(modifier = Modifier.height(Spacing.small))
 
@@ -249,27 +260,89 @@ fun addMcpIntegrationDialog(
                                 colors = ComponentColors.outlinedTextFieldColors(),
                             )
 
-                            // Parameters
-                            selectedServer?.parameters?.let { params ->
-                                if (params.isNotEmpty()) {
+                            // Variables from templates
+                            selectedServer?.let { server ->
+                                val variables = when (server.transportType) {
+                                    TransportType.STDIO -> server.stdioConfig?.extractVariables() ?: emptyList()
+                                }
+                                if (variables.isNotEmpty()) {
                                     Text(
-                                        text = stringResource("mcp.integrations.parameters"),
+                                        text = stringResource("mcp.integrations.variables"),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(top = Spacing.small),
                                     )
 
-                                    params.forEach { param ->
-                                        parameterField(
-                                            parameter = param,
-                                            value = parameterValues.value[param.key] ?: "",
+                                    Text(
+                                        text = stringResource("mcp.integrations.variables.description"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = Spacing.small),
+                                    )
+
+                                    variables.forEach { variable ->
+                                        OutlinedTextField(
+                                            value = parameterValues.value[variable.key] ?: "",
                                             onValueChange = { newValue ->
-                                                parameterValues.value += (param.key to newValue)
+                                                parameterValues.value = parameterValues.value + (variable.key to newValue)
                                             },
+                                            label = {
+                                                val capitalizedKey = variable.key.replaceFirstChar { it.uppercase() }
+                                                Text(
+                                                    stringResource(
+                                                        if (variable.isConditional) {
+                                                            "mcp.integrations.variables.label.optional"
+                                                        } else {
+                                                            "mcp.integrations.variables.label.required"
+                                                        },
+                                                        capitalizedKey,
+                                                    ),
+                                                )
+                                            },
+                                            placeholder = {
+                                                Text(stringResource("mcp.integrations.variables.placeholder", variable.key))
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            colors = ComponentColors.outlinedTextFieldColors(),
                                         )
+
+                                        Spacer(modifier = Modifier.height(Spacing.small))
                                     }
                                 }
                             }
+
+                            // Environment Variables (Optional)
+                            Text(
+                                text = stringResource("mcp.integrations.environment.additional"),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = Spacing.small),
+                            )
+
+                            Text(
+                                text = stringResource("mcp.integrations.environment.additional.description"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = Spacing.small),
+                            )
+
+                            OutlinedTextField(
+                                value = additionalEnvVars,
+                                onValueChange = { additionalEnvVars = it },
+                                label = { Text(stringResource("mcp.integrations.environment.additional.label")) },
+                                placeholder = { Text(stringResource("mcp.integrations.environment.additional.placeholder")) },
+                                supportingText = {
+                                    Text(
+                                        stringResource("mcp.integrations.environment.additional.hint"),
+                                        modifier = Modifier.padding(top = Spacing.extraSmall),
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 5,
+                                colors = ComponentColors.outlinedTextFieldColors(),
+                            )
 
                             // Tools Section
                             HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.medium))
@@ -289,67 +362,77 @@ fun addMcpIntegrationDialog(
                                 OutlinedButton(
                                     onClick = {
                                         // Load tools from MCP instance
+                                        dialogState.clearError()
                                         isLoadingTools = true
-                                        toolLoadError = null
 
                                         scope.launch {
                                             try {
-                                                // Create temporary instance to test connection
-                                                val now = LocalDateTime.now().toString()
-                                                val tempInstanceData = ProjectMcpInstanceData(
-                                                    id = "temp-${System.currentTimeMillis()}",
-                                                    projectId = projectId,
-                                                    serverId = selectedServer!!.id,
-                                                    name = instanceName.ifBlank { "Temporary" },
-                                                    parameterValues = parameterValues.value,
-                                                    enabled = true,
-                                                    createdAt = now,
-                                                    updatedAt = now,
-                                                )
+                                                // Run on IO dispatcher to avoid freezing UI
+                                                withContext(Dispatchers.IO) {
+                                                    // Parse additional environment variables
+                                                    val additionalEnvMap = parseEnvironmentVariables(additionalEnvVars)
 
-                                                // Convert to domain object for MCP client creation
-                                                val tempInstance = tempInstanceData.toDomain()
+                                                    // Merge parameters with additional env vars
+                                                    val allParameters = parameterValues.value + additionalEnvMap
 
-                                                // Try to fetch tools
-                                                val mcpClient = mcpService.createMcpClient(
-                                                    tempInstance,
-                                                    "test-connection",
-                                                )
+                                                    // Create temporary instance to test connection
+                                                    val now = LocalDateTime.now().toString()
+                                                    val tempInstanceData = ProjectMcpInstanceData(
+                                                        id = "temp-${System.currentTimeMillis()}",
+                                                        projectId = projectId,
+                                                        serverId = selectedServer!!.id,
+                                                        name = instanceName.ifBlank { "Temporary" },
+                                                        parameterValues = allParameters,
+                                                        enabled = true,
+                                                        createdAt = now,
+                                                        updatedAt = now,
+                                                    )
 
-                                                if (mcpClient != null) {
-                                                    val tools = mcpClient.listTools()
-                                                    availableTools = tools
+                                                    // Convert to domain object for MCP client creation
+                                                    val tempInstance = tempInstanceData.toDomain()
 
-                                                    // Auto-infer categories and strategies for each tool
-                                                    val inferredCategories = mutableMapOf<String, ToolCategory>()
-                                                    val inferredStrategies = mutableMapOf<String, Int>()
+                                                    // Try to fetch tools
+                                                    val mcpClient = mcpService.createMcpClient(
+                                                        tempInstance,
+                                                        "test-connection",
+                                                    )
 
-                                                    tools.forEach { toolSpec ->
-                                                        val category = mcpService.inferToolCategory(toolSpec)
-                                                        val strategy = mcpService.inferToolStrategy(toolSpec)
+                                                    if (mcpClient != null) {
+                                                        val tools = mcpClient.listTools()
+                                                        availableTools = tools
 
-                                                        inferredCategories[toolSpec.name()] = category
-                                                        inferredStrategies[toolSpec.name()] = strategy
+                                                        // Auto-infer categories and strategies for each tool
+                                                        val inferredCategories = mutableMapOf<String, ToolCategory>()
+                                                        val inferredStrategies = mutableMapOf<String, Int>()
+
+                                                        tools.forEach { toolSpec ->
+                                                            val category = mcpService.inferToolCategory(toolSpec)
+                                                            val strategy = mcpService.inferToolStrategy(toolSpec)
+
+                                                            inferredCategories[toolSpec.name()] = category
+                                                            inferredStrategies[toolSpec.name()] = strategy
+                                                        }
+
+                                                        toolCategories = inferredCategories
+                                                        toolStrategies = inferredStrategies
+                                                    } else {
+                                                        dialogState.setError("Failed to create MCP client. Check your parameters.")
                                                     }
-
-                                                    toolCategories = inferredCategories
-                                                    toolStrategies = inferredStrategies
-                                                    toolLoadError = null
-                                                } else {
-                                                    toolLoadError = "Failed to create MCP client. Check your parameters."
                                                 }
                                             } catch (e: Exception) {
-                                                toolLoadError = "Error loading tools: ${e.message}"
+                                                dialogState.setError(e, "Error loading tools")
                                             } finally {
                                                 isLoadingTools = false
                                             }
                                         }
                                     },
                                     enabled = selectedServer != null && !isLoadingTools,
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 ) {
                                     if (isLoadingTools) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.padding(end = Spacing.small).width(16.dp).height(16.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
                                         )
                                     } else {
                                         Icon(
@@ -366,23 +449,6 @@ fun addMcpIntegrationDialog(
                                                 "mcp.integrations.tools.load"
                                             },
                                         ),
-                                    )
-                                }
-                            }
-
-                            // Tool load error
-                            toolLoadError?.let { error ->
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    ),
-                                ) {
-                                    Text(
-                                        text = error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.padding(Spacing.medium),
                                     )
                                 }
                             }
@@ -508,6 +574,11 @@ fun addMcpIntegrationDialog(
                     }
                 }
 
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
+
+                // Error Message Display
+                inlineErrorMessage(errorMessage = dialogState.errorMessage)
+
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -525,67 +596,97 @@ fun addMcpIntegrationDialog(
                     primaryButton(
                         onClick = {
                             selectedServer?.let { server ->
+                                // Clear previous errors
+                                dialogState.clearError()
+
                                 // Start validation
                                 isValidating = true
                                 validationResult = null
 
                                 scope.launch {
-                                    val result = McpRuntimeValidator.validateInstance(
-                                        definition = server,
-                                        parameters = parameterValues.value,
-                                    )
+                                    try {
+                                        // Parse additional environment variables
+                                        val additionalEnvMap = parseEnvironmentVariables(additionalEnvVars)
 
-                                    isValidating = false
-                                    validationResult = result
+                                        // Merge parameters with additional env vars
+                                        val allParameters = parameterValues.value + additionalEnvMap
 
-                                    // If validation passes, save
-                                    if (result.canProceed) {
-                                        // Automatically load tools if not already loaded
-                                        if (toolCategories.isEmpty() && toolStrategies.isEmpty()) {
-                                            try {
-                                                val now = LocalDateTime.now().toString()
-                                                val tempInstanceData = ProjectMcpInstanceData(
-                                                    id = "temp-${System.currentTimeMillis()}",
-                                                    projectId = projectId,
-                                                    serverId = server.id,
-                                                    name = instanceName,
-                                                    parameterValues = parameterValues.value,
-                                                    enabled = true,
-                                                    createdAt = now,
-                                                    updatedAt = now,
-                                                )
-                                                val tempInstance = tempInstanceData.toDomain()
-                                                val mcpClient = mcpService.createMcpClient(tempInstance, "auto-load-tools")
-
-                                                if (mcpClient != null) {
-                                                    val tools = mcpClient.listTools()
-                                                    val inferredCategories = mutableMapOf<String, ToolCategory>()
-                                                    val inferredStrategies = mutableMapOf<String, Int>()
-
-                                                    tools.forEach { toolSpec ->
-                                                        val category = mcpService.inferToolCategory(toolSpec)
-                                                        val strategy = mcpService.inferToolStrategy(toolSpec)
-                                                        inferredCategories[toolSpec.name()] = category
-                                                        inferredStrategies[toolSpec.name()] = strategy
-                                                    }
-
-                                                    toolCategories = inferredCategories
-                                                    toolStrategies = inferredStrategies
-                                                }
-                                            } catch (e: Exception) {
-                                                // If auto-load fails, continue without tools
-                                                // (tools can still be loaded later via getProjectTools)
-                                            }
+                                        val result = withContext(Dispatchers.IO) {
+                                            McpRuntimeValidator.validateInstance(
+                                                definition = server,
+                                                parameters = allParameters,
+                                            )
                                         }
 
-                                        onSave(
-                                            server.id,
-                                            instanceName,
-                                            parameterValues.value,
-                                            toolCategories,
-                                            toolStrategies,
-                                        )
-                                        onDismiss()
+                                        isValidating = false
+                                        validationResult = result
+
+                                        // If validation passes, save
+                                        if (result.canProceed) {
+                                            // Automatically load tools if not already loaded
+                                            if (toolCategories.isEmpty() && toolStrategies.isEmpty()) {
+                                                try {
+                                                    withContext(Dispatchers.IO) {
+                                                        val now = LocalDateTime.now().toString()
+                                                        val tempInstanceData = ProjectMcpInstanceData(
+                                                            id = "temp-${System.currentTimeMillis()}",
+                                                            projectId = projectId,
+                                                            serverId = server.id,
+                                                            name = instanceName,
+                                                            parameterValues = allParameters,
+                                                            enabled = true,
+                                                            createdAt = now,
+                                                            updatedAt = now,
+                                                        )
+                                                        val tempInstance = tempInstanceData.toDomain()
+                                                        val mcpClient = mcpService.createMcpClient(tempInstance, "auto-load-tools")
+
+                                                        if (mcpClient != null) {
+                                                            val tools = mcpClient.listTools()
+                                                            val inferredCategories = mutableMapOf<String, ToolCategory>()
+                                                            val inferredStrategies = mutableMapOf<String, Int>()
+
+                                                            tools.forEach { toolSpec ->
+                                                                val category = mcpService.inferToolCategory(toolSpec)
+                                                                val strategy = mcpService.inferToolStrategy(toolSpec)
+                                                                inferredCategories[toolSpec.name()] = category
+                                                                inferredStrategies[toolSpec.name()] = strategy
+                                                            }
+
+                                                            toolCategories = inferredCategories
+                                                            toolStrategies = inferredStrategies
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    // If auto-load fails, continue without tools
+                                                    // (tools can still be loaded later via getProjectTools)
+                                                }
+                                            }
+
+                                            // Parse additional environment variables
+                                            val additionalEnvMap = parseEnvironmentVariables(additionalEnvVars)
+
+                                            // Merge parameters with additional env vars
+                                            val allParameters = parameterValues.value + additionalEnvMap
+
+                                            onSave(
+                                                server.id,
+                                                instanceName,
+                                                allParameters,
+                                                toolCategories,
+                                                toolStrategies,
+                                            )
+                                            onDismiss()
+                                        } else {
+                                            // Show validation error
+                                            dialogState.setError(
+                                                result.issues.firstOrNull { it.severity == ValidationSeverity.ERROR }?.message
+                                                    ?: "Validation failed",
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        isValidating = false
+                                        dialogState.setError(e, "Failed to save integration")
                                     }
                                 }
                             }
@@ -602,6 +703,29 @@ fun addMcpIntegrationDialog(
             }
         }
     }
+}
+
+/**
+ * Parses environment variables from comma-separated KEY=VALUE format
+ * Example: "API_KEY=secret123, DEBUG=true" -> {"API_KEY": "secret123", "DEBUG": "true"}
+ */
+private fun parseEnvironmentVariables(envVarsString: String): Map<String, String> {
+    if (envVarsString.isBlank()) return emptyMap()
+
+    return envVarsString
+        .split(",")
+        .mapNotNull { pair ->
+            val trimmed = pair.trim()
+            if (trimmed.isEmpty()) return@mapNotNull null
+
+            val parts = trimmed.split("=", limit = 2)
+            if (parts.size == 2) {
+                parts[0].trim() to parts[1].trim()
+            } else {
+                null
+            }
+        }
+        .toMap()
 }
 
 @Composable

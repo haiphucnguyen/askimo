@@ -35,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import io.askimo.core.mcp.McpServerDefinition
+import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpServersConfig
+import io.askimo.core.mcp.extractVariables
 import io.askimo.desktop.common.components.dangerButton
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
@@ -287,8 +289,12 @@ private fun mcpServerTemplateCard(
                     )
                 }
 
+                val variableCount = when (server.transportType) {
+                    TransportType.STDIO -> server.stdioConfig?.extractVariables()?.size ?: 0
+                }
+
                 Text(
-                    text = "${server.transportType} • ${server.parameters.size} parameter(s)",
+                    text = "${ server.transportType} • $variableCount variable(s)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )

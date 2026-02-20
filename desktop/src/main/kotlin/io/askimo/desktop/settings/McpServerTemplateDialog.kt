@@ -29,8 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.mcp.McpServerDefinition
-import io.askimo.core.mcp.Parameter
-import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.getFirstError
@@ -59,7 +57,6 @@ fun mcpServerTemplateDialog(
     var description by remember { mutableStateOf(server?.description ?: "") }
     var commandTemplate by remember { mutableStateOf(server?.stdioConfig?.commandTemplate?.joinToString(" ") ?: "") }
     var envTemplate by remember { mutableStateOf(server?.stdioConfig?.envTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" } ?: "") }
-    var parametersText by remember { mutableStateOf(server?.parameters?.joinToString("\n") { "${it.key}:${it.label}:${it.type}:${it.required}:${it.defaultValue ?: ""}" } ?: "") }
     var tags by remember { mutableStateOf(server?.tags?.joinToString(", ") ?: "") }
 
     val isEditMode = server != null
@@ -75,7 +72,7 @@ fun mcpServerTemplateDialog(
                     .fillMaxWidth()
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
                 // Dialog Title
                 Text(
@@ -101,8 +98,8 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = id,
                     onValueChange = { if (!isEditMode) id = it },
-                    label = { Text("Server ID") },
-                    placeholder = { Text("e.g., mongodb-mcp-server") },
+                    label = { Text(stringResource("mcp.template.field.id")) },
+                    placeholder = { Text(stringResource("mcp.template.field.id.placeholder")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !isEditMode,
@@ -113,8 +110,8 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Server Name") },
-                    placeholder = { Text("e.g., MongoDB MCP Server") },
+                    label = { Text(stringResource("mcp.template.field.name")) },
+                    placeholder = { Text(stringResource("mcp.template.field.name.placeholder")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = ComponentColors.outlinedTextFieldColors(),
@@ -124,8 +121,8 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
-                    placeholder = { Text("Brief description of what this server does") },
+                    label = { Text(stringResource("mcp.template.field.description")) },
+                    placeholder = { Text(stringResource("mcp.template.field.description.placeholder")) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     maxLines = 3,
@@ -136,9 +133,14 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = commandTemplate,
                     onValueChange = { commandTemplate = it },
-                    label = { Text("Command Template") },
-                    placeholder = { Text("npx -y mongodb-mcp-server@latest {{?readOnly:--readOnly}}") },
-                    supportingText = { Text("Space-separated command with {{parameter}} placeholders") },
+                    label = { Text(stringResource("mcp.template.field.command")) },
+                    placeholder = { Text(stringResource("mcp.template.field.command.placeholder")) },
+                    supportingText = {
+                        Text(
+                            stringResource("mcp.template.field.command.hint"),
+                            modifier = Modifier.padding(top = Spacing.extraSmall),
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     colors = ComponentColors.outlinedTextFieldColors(),
@@ -148,23 +150,16 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = envTemplate,
                     onValueChange = { envTemplate = it },
-                    label = { Text("Environment Variables (Optional)") },
-                    placeholder = { Text("KEY={{value}}\nANOTHER_KEY={{anotherValue}}") },
-                    supportingText = { Text("One per line: KEY={{parameter}}") },
+                    label = { Text(stringResource("mcp.template.env.label")) },
+                    placeholder = { Text(stringResource("mcp.template.env.placeholder")) },
+                    supportingText = {
+                        Text(
+                            stringResource("mcp.template.env.hint"),
+                            modifier = Modifier.padding(top = Spacing.extraSmall),
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
-                    colors = ComponentColors.outlinedTextFieldColors(),
-                )
-
-                // Parameters
-                OutlinedTextField(
-                    value = parametersText,
-                    onValueChange = { parametersText = it },
-                    label = { Text("Parameters") },
-                    placeholder = { Text("connectionString:MongoDB Connection String:URL:true:") },
-                    supportingText = { Text("One per line: key:label:type:required:defaultValue") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
                     colors = ComponentColors.outlinedTextFieldColors(),
                 )
 
@@ -172,9 +167,14 @@ fun mcpServerTemplateDialog(
                 OutlinedTextField(
                     value = tags,
                     onValueChange = { tags = it },
-                    label = { Text("Tags (Optional)") },
-                    placeholder = { Text("database, mongodb, nosql") },
-                    supportingText = { Text("Comma-separated tags") },
+                    label = { Text(stringResource("mcp.template.tags.label")) },
+                    placeholder = { Text(stringResource("mcp.template.tags.placeholder")) },
+                    supportingText = {
+                        Text(
+                            stringResource("mcp.template.tags.hint"),
+                            modifier = Modifier.padding(top = Spacing.extraSmall),
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = ComponentColors.outlinedTextFieldColors(),
@@ -217,24 +217,6 @@ fun mcpServerTemplateDialog(
                                         }
                                 }
 
-                                // Parse parameters
-                                val paramsList = if (parametersText.isBlank()) {
-                                    emptyList()
-                                } else {
-                                    parametersText.trim().lines()
-                                        .filter { it.isNotBlank() }
-                                        .map { line ->
-                                            val parts = line.split(":")
-                                            Parameter(
-                                                key = parts.getOrNull(0)?.trim() ?: "",
-                                                label = parts.getOrNull(1)?.trim() ?: "",
-                                                type = parts.getOrNull(2)?.trim()?.let { ParameterType.valueOf(it) } ?: ParameterType.STRING,
-                                                required = parts.getOrNull(3)?.trim()?.toBoolean() ?: true,
-                                                defaultValue = parts.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() },
-                                            )
-                                        }
-                                }
-
                                 // Parse tags
                                 val tagsList = if (tags.isBlank()) {
                                     emptyList()
@@ -252,7 +234,6 @@ fun mcpServerTemplateDialog(
                                         commandTemplate = commandList,
                                         envTemplate = envMap,
                                     ),
-                                    parameters = paramsList,
                                     tags = tagsList,
                                 )
 
