@@ -75,9 +75,6 @@
     "name": "[Lio.askimo.core.mcp.McpServerDefinition;"
   },
   {
-    "name": "[Lio.askimo.core.mcp.Parameter;"
-  },
-  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -555,6 +552,7 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
+      { "name": "getAnnotations", "parameterTypes": [] },
       { "name": "getAutoRemove", "parameterTypes": [] },
       { "name": "getBlkioDeviceReadBps", "parameterTypes": [] },
       { "name": "getBlkioDeviceReadIOps", "parameterTypes": [] },
@@ -3907,7 +3905,6 @@
           "java.lang.String",
           "io.askimo.core.mcp.TransportType",
           "io.askimo.core.mcp.StdioConfig",
-          "java.util.List",
           "java.lang.String",
           "java.lang.String",
           "java.util.List",
@@ -3922,7 +3919,6 @@
           "java.lang.String",
           "io.askimo.core.mcp.TransportType",
           "io.askimo.core.mcp.StdioConfig",
-          "java.util.List",
           "java.lang.String",
           "java.lang.String",
           "java.util.List"
@@ -3932,7 +3928,6 @@
       { "name": "getDescription", "parameterTypes": [] },
       { "name": "getId", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] },
-      { "name": "getParameters", "parameterTypes": [] },
       { "name": "getStdioConfig", "parameterTypes": [] },
       { "name": "getTags", "parameterTypes": [] },
       { "name": "getTransportType", "parameterTypes": [] },
@@ -3944,78 +3939,6 @@
   },
   {
     "name": "io.askimo.core.mcp.McpServerDefinition$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.Parameter",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterType",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterLocation",
-          "boolean",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterType",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterLocation",
-          "boolean"
-        ]
-      },
-      { "name": "getAllowMultiple", "parameterTypes": [] },
-      { "name": "getDefaultValue", "parameterTypes": [] },
-      { "name": "getDescription", "parameterTypes": [] },
-      { "name": "getKey", "parameterTypes": [] },
-      { "name": "getLabel", "parameterTypes": [] },
-      { "name": "getLocation", "parameterTypes": [] },
-      { "name": "getPlaceholder", "parameterTypes": [] },
-      { "name": "getRequired", "parameterTypes": [] },
-      { "name": "getType", "parameterTypes": [] },
-      { "name": "getValidationPattern", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.mcp.Parameter$$serializer"
-  },
-  {
-    "name": "io.askimo.core.mcp.Parameter$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterLocation",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterLocation$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterType$Companion"
   },
   {
     "name": "io.askimo.core.mcp.ProjectMcpInstance"
@@ -4121,12 +4044,346 @@
     "name": "io.askimo.core.mcp.StdioConfig$Companion"
   },
   {
+    "name": "io.askimo.core.mcp.TemplateResolverTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "extractParameters finds both simple and conditional",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters finds conditional placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters finds simple placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters from complex template",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters handles duplicate parameters",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters returns empty for empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractParameters returns empty for plain text",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve Docker command with all options",
+        "parameterTypes": []
+      },
+      { "name": "resolve MongoDB connection string", "parameterTypes": [] },
+      {
+        "name": "resolve command line arguments with optional flags",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve complex command with multiple placeholder types",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder when false",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder when missing",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder when true",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder with True capitalized",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder with case insensitive true",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder with complex value",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder with equals sign in value",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional placeholder with spaces in value",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional with empty string treats as false",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve conditional with non-boolean value treats as false",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve empty template returns empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve environment variables for deployment",
+        "parameterTypes": []
+      },
+      { "name": "resolve handles adjacent placeholders", "parameterTypes": [] },
+      { "name": "resolve handles empty string value", "parameterTypes": [] },
+      {
+        "name": "resolve handles placeholder with numbers",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve handles placeholder with underscore",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve mix of simple and conditional placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve multiple conditional placeholders",
+        "parameterTypes": []
+      },
+      { "name": "resolve multiple simple placeholders", "parameterTypes": [] },
+      { "name": "resolve placeholder at end of string", "parameterTypes": [] },
+      {
+        "name": "resolve placeholder at start of string",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve placeholder with numeric value",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve placeholder with special characters in value",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve preserves whitespace around placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve same placeholder multiple times",
+        "parameterTypes": []
+      },
+      { "name": "resolve simple placeholder with value", "parameterTypes": [] },
+      {
+        "name": "resolve simple placeholder without value returns empty",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve template with no placeholders returns original",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveList filters out empty results from false conditionals",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveList filters out empty results from missing values",
+        "parameterTypes": []
+      },
+      { "name": "resolveList with all valid templates", "parameterTypes": [] },
+      {
+        "name": "resolveList with empty list returns empty",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveList with mixed placeholder types",
+        "parameterTypes": []
+      },
+      { "name": "resolveMap filters out blank values", "parameterTypes": [] },
+      {
+        "name": "resolveMap handles comma-separated with spaces",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveMap splits comma-separated KEY=value pairs",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveMap with conditional placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveMap with empty template map returns empty",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveMap with simple key-value pairs",
+        "parameterTypes": []
+      },
+      { "name": "validate detects empty placeholder", "parameterTypes": [] },
+      {
+        "name": "validate detects unmatched closing braces",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate detects unmatched opening braces",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate returns valid for correct conditional placeholder",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate returns valid for correct simple placeholder",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate returns valid for empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate returns valid for multiple placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "validate returns valid for nested braces in value",
+        "parameterTypes": []
+      },
+      { "name": "validate returns valid for plain text", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.mcp.TransportType",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
   },
   {
     "name": "io.askimo.core.mcp.TransportType$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.VariableExtractorTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "extract Filesystem MCP server variables",
+        "parameterTypes": []
+      },
+      { "name": "extract MongoDB MCP server variables", "parameterTypes": [] },
+      {
+        "name": "extract complex server with multiple variable types",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should find variables from command template only",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should find variables from environment template only",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should find variables from working directory",
+        "parameterTypes": []
+      },
+      { "name": "extract should handle empty config", "parameterTypes": [] },
+      {
+        "name": "extract should handle malformed placeholders gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should handle nested braces in conditional value",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should handle very long variable names",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should identify conditional variables",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should return sorted results by key",
+        "parameterTypes": []
+      },
+      {
+        "name": "extract should track variable in multiple locations",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should find both simple and conditional placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should find conditional placeholder",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should find multiple placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should find simple placeholder",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should handle adjacent placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should handle complex conditional with value containing special chars",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should handle conditional with spaces in value",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should handle unicode characters",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should remove duplicates",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should return empty for empty string",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should return empty for no placeholders",
+        "parameterTypes": []
+      },
+      {
+        "name": "extractFromString should trim whitespace in variable keys",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve extension should filter out blank working directory",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve extension should handle missing optional variables",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolve extension should produce resolved config",
+        "parameterTypes": []
+      }
+    ]
   },
   {
     "name": "io.askimo.core.mcp.config.InstancesWrapper",
@@ -4292,7 +4549,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$aLg5i2V2",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$sjF4lq7e",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5709,12 +5966,6 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.Collections$SingletonList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
     "name": "java.util.Collections$SingletonMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -6192,20 +6443,6 @@
     "name": "kotlinx.serialization.internal.SerializationConstructorMarker"
   },
   {
-    "name": "org.apache.commons.logging.LogFactory"
-  },
-  {
-    "name": "org.apache.commons.logging.impl.Log4jApiLogFactory",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "org.apache.commons.logging.impl.WeakHashtable",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "org.apache.logging.slf4j.SLF4JProvider"
-  },
-  {
     "name": "org.apache.tika.detect.microsoft.POIFSContainerDetector",
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
@@ -6591,7 +6828,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$gljnWaoY",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$uwUPkgUn",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
