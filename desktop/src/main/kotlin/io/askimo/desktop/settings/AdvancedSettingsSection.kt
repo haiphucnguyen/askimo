@@ -103,6 +103,9 @@ fun advancedSettingsSection() {
         // Vision Models Section
         visionModelsSection()
 
+        // Image Models Section
+        imageModelsSection()
+
         // Developer Mode Section
         developerModeSection()
     }
@@ -1259,6 +1262,249 @@ private fun visionModelSelector() {
         if (!isSupported) {
             Text(
                 text = stringResource("settings.vision.models.not.supported", getProviderDisplayName(selectedProvider)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
+                fontStyle = FontStyle.Italic,
+            )
+        }
+    }
+}
+
+@Composable
+private fun imageModelsSection() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.large),
+        ) {
+            // Title
+            Text(
+                text = stringResource("settings.image.models.title"),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+
+            // Description
+            Text(
+                text = stringResource("settings.image.models.description"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            )
+
+            imageModelSelector()
+        }
+    }
+}
+
+@Composable
+private fun imageModelSelector() {
+    // AI Provider options - all providers support image models
+    val providers = listOf(
+        ModelProvider.OPENAI to true,
+        ModelProvider.ANTHROPIC to true,
+        ModelProvider.GEMINI to true,
+        ModelProvider.XAI to true,
+        ModelProvider.OLLAMA to true,
+        ModelProvider.DOCKER to true,
+        ModelProvider.LOCALAI to true,
+        ModelProvider.LMSTUDIO to true,
+    )
+
+    var selectedProvider by remember { mutableStateOf(providers[0].first) }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    // Get current value based on selected provider
+    val currentValue = when (selectedProvider) {
+        ModelProvider.OPENAI -> AppConfig.models.openai.imageModel
+        ModelProvider.ANTHROPIC -> AppConfig.models.anthropic.imageModel
+        ModelProvider.GEMINI -> AppConfig.models.gemini.imageModel
+        ModelProvider.XAI -> AppConfig.models.xai.imageModel
+        ModelProvider.OLLAMA -> AppConfig.models.ollama.imageModel
+        ModelProvider.DOCKER -> AppConfig.models.docker.imageModel
+        ModelProvider.LOCALAI -> AppConfig.models.localai.imageModel
+        ModelProvider.LMSTUDIO -> AppConfig.models.lmstudio.imageModel
+        else -> ""
+    }
+
+    val isSupported = providers.find { it.first == selectedProvider }?.second ?: false
+
+    var textValue by remember(selectedProvider, currentValue) { mutableStateOf(currentValue) }
+    var lastSavedValue by remember(selectedProvider) { mutableStateOf(currentValue) }
+    var showSavedIndicator by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentValue) {
+        textValue = currentValue
+        lastSavedValue = currentValue
+    }
+
+    LaunchedEffect(showSavedIndicator) {
+        if (showSavedIndicator) {
+            delay(2000)
+            showSavedIndicator = false
+        }
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // Provider Dropdown and Model Field in a Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Provider Dropdown
+            Box(
+                modifier = Modifier.weight(1f),
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickableCard { dropdownExpanded = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = getProviderDisplayName(selectedProvider),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Change provider",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = dropdownExpanded,
+                    onDismissRequest = { dropdownExpanded = false },
+                ) {
+                    providers.forEach { (provider, supported) ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = getProviderDisplayName(provider),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (supported) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                        },
+                                    )
+                                    if (!supported) {
+                                        Text(
+                                            text = "(Not supported)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                            fontStyle = FontStyle.Italic,
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                selectedProvider = provider
+                                dropdownExpanded = false
+                            },
+                            leadingIcon = if (provider == selectedProvider) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+            }
+
+            // Image Model Text Field
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { newValue ->
+                    if (isSupported) {
+                        textValue = newValue
+                    }
+                },
+                modifier = Modifier
+                    .weight(2f)
+                    .onFocusChanged { focusState ->
+                        if (!focusState.isFocused && isSupported) {
+                            // Only save when losing focus if value changed
+                            if (textValue != lastSavedValue) {
+                                when (selectedProvider) {
+                                    ModelProvider.OPENAI -> AppConfig.updateField("models.openai.imageModel", textValue)
+                                    ModelProvider.ANTHROPIC -> AppConfig.updateField("models.anthropic.imageModel", textValue)
+                                    ModelProvider.GEMINI -> AppConfig.updateField("models.gemini.imageModel", textValue)
+                                    ModelProvider.XAI -> AppConfig.updateField("models.xai.imageModel", textValue)
+                                    ModelProvider.OLLAMA -> AppConfig.updateField("models.ollama.imageModel", textValue)
+                                    ModelProvider.DOCKER -> AppConfig.updateField("models.docker.imageModel", textValue)
+                                    ModelProvider.LOCALAI -> AppConfig.updateField("models.localai.imageModel", textValue)
+                                    ModelProvider.LMSTUDIO -> AppConfig.updateField("models.lmstudio.imageModel", textValue)
+                                    else -> {}
+                                }
+                                lastSavedValue = textValue
+                                showSavedIndicator = true
+                            }
+                        }
+                    },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                singleLine = true,
+                enabled = isSupported,
+                placeholder = {
+                    Text(
+                        text = if (isSupported) {
+                            stringResource("settings.model.placeholder.enter", "image")
+                        } else {
+                            stringResource("settings.model.placeholder.not.supported")
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = showSavedIndicator,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Saved",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+                colors = ComponentColors.outlinedTextFieldColors(),
+            )
+        }
+
+        // Show not supported message
+        if (!isSupported) {
+            Text(
+                text = stringResource("settings.image.models.not.supported", getProviderDisplayName(selectedProvider)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
                 fontStyle = FontStyle.Italic,

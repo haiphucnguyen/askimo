@@ -20,11 +20,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -254,19 +256,54 @@ fun chatInputField(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Attach file button
-            themedTooltip(
-                text = stringResource("chat.attach.file", Platform.modifierKey),
-            ) {
-                IconButton(
-                    onClick = openFileDialog,
-                    colors = ComponentColors.primaryIconButtonColors(),
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            // Attachment dropdown menu
+            var attachmentMenuExpanded by remember { mutableStateOf(false) }
+
+            Box {
+                themedTooltip(
+                    text = stringResource("chat.attach.file", Platform.modifierKey),
                 ) {
-                    Icon(
-                        Icons.Default.AttachFile,
-                        contentDescription = "Attach file",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                    IconButton(
+                        onClick = { attachmentMenuExpanded = true },
+                        colors = ComponentColors.primaryIconButtonColors(),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add attachments",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = attachmentMenuExpanded,
+                    onDismissRequest = { attachmentMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource("chat.attach.file.menu"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        onClick = {
+                            attachmentMenuExpanded = false
+                            openFileDialog()
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }
