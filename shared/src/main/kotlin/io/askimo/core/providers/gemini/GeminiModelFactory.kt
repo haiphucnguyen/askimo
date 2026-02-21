@@ -9,6 +9,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
 import dev.langchain4j.service.tool.ToolProvider
@@ -87,6 +88,13 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             retriever = retriever,
             executionMode = executionMode,
         )
+    }
+
+    override fun create(
+        model: String,
+        settings: GeminiSettings,
+    ): ImageModel {
+        TODO("Not yet implemented")
     }
 
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel {

@@ -7,6 +7,7 @@ package io.askimo.core.providers.docker
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -108,6 +109,13 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             retriever = retriever,
             executionMode = executionMode,
         )
+    }
+
+    override fun create(
+        model: String,
+        settings: DockerAiSettings,
+    ): ImageModel {
+        TODO("Not yet implemented")
     }
 
     private fun createSecondaryChatModel(settings: DockerAiSettings): ChatModel {

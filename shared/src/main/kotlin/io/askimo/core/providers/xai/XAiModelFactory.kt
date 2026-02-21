@@ -7,6 +7,7 @@ package io.askimo.core.providers.xai
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -85,6 +86,13 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             retriever = retriever,
             executionMode = executionMode,
         )
+    }
+
+    override fun create(
+        model: String,
+        settings: XAiSettings,
+    ): ImageModel {
+        TODO("Not yet implemented")
     }
 
     private fun createSecondaryChatModel(settings: XAiSettings): ChatModel {
