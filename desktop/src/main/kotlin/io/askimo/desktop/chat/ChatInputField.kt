@@ -5,6 +5,7 @@
 package io.askimo.desktop.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,13 +25,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -106,8 +110,12 @@ fun chatInputField(
 ) {
     val inputFocusRequester = remember { FocusRequester() }
 
+    // State for image creation mode
+    var isImageCreationMode by remember { mutableStateOf(false) }
+
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
+    val badgeHeight = 44.dp // Height reserved for the badge + gap (badge ~36dp + 8dp gap)
     var textFieldHeight by remember { mutableStateOf(defaultTextFieldHeight) }
     var manuallyResized by remember { mutableStateOf(false) }
 
@@ -120,6 +128,9 @@ fun chatInputField(
     val lineHeight = 24.dp
     val padding = 36.dp // Top and bottom padding for the text field
     val calculatedHeight = (lineHeight * lineCount) + padding
+
+    // Total height includes badge space when in image creation mode
+    val totalFieldHeight = if (isImageCreationMode) textFieldHeight + badgeHeight else textFieldHeight
 
     // Reset height to default when message is sent (detected by empty input text)
     LaunchedEffect(inputText.text) {
@@ -254,31 +265,34 @@ fun chatInputField(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
-            // Attachment dropdown menu
-            var attachmentMenuExpanded by remember { mutableStateOf(false) }
+            // Action dropdown menu (attachments, image creation, etc.)
+            var actionMenuExpanded by remember { mutableStateOf(false) }
 
-            Box {
+            Box(
+                modifier = Modifier.height(textFieldHeight),
+                contentAlignment = Alignment.Center,
+            ) {
                 themedTooltip(
                     text = stringResource("chat.attach.file", Platform.modifierKey),
                 ) {
                     IconButton(
-                        onClick = { attachmentMenuExpanded = true },
+                        onClick = { actionMenuExpanded = true },
                         colors = ComponentColors.primaryIconButtonColors(),
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Add attachments",
+                            contentDescription = "Actions menu",
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
 
                 ComponentColors.themedDropdownMenu(
-                    expanded = attachmentMenuExpanded,
-                    onDismissRequest = { attachmentMenuExpanded = false },
+                    expanded = actionMenuExpanded,
+                    onDismissRequest = { actionMenuExpanded = false },
                 ) {
                     DropdownMenuItem(
                         text = {
@@ -300,8 +314,36 @@ fun chatInputField(
                             }
                         },
                         onClick = {
-                            attachmentMenuExpanded = false
+                            actionMenuExpanded = false
                             openFileDialog()
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    )
+
+                    HorizontalDivider()
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource("chat.create.image.menu"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        onClick = {
+                            actionMenuExpanded = false
+                            isImageCreationMode = true
                         },
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
@@ -357,89 +399,143 @@ fun chatInputField(
                         )
                     }
 
-                    // Text field with constrained height
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = onInputTextChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(textFieldHeight)
-                            .focusRequester(inputFocusRequester)
-                            .onPreviewKeyEvent { keyEvent ->
-                                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-                                when (shortcut) {
-                                    AppShortcut.NEW_LINE -> {
-                                        val cursorPosition = inputText.selection.start
-                                        val textBeforeCursor = inputText.text.substring(0, cursorPosition)
-                                        val textAfterCursor = inputText.text.substring(cursorPosition)
-                                        val newText = textBeforeCursor + "\n" + textAfterCursor
-                                        val newCursorPosition = cursorPosition + 1
-                                        onInputTextChange(
-                                            TextFieldValue(
-                                                text = newText,
-                                                selection = TextRange(newCursorPosition),
-                                            ),
-                                        )
-                                        true
-                                    }
-                                    AppShortcut.SEND_MESSAGE -> {
-                                        if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                            onSendMessage()
+                    // Text field with image mode badge overlay
+                    Box(
+                        modifier = Modifier.height(totalFieldHeight),
+                    ) {
+                        // Text field with constrained height - using Box padding to reserve space for badge
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = if (isImageCreationMode) badgeHeight else 0.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = inputText,
+                                onValueChange = onInputTextChange,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(inputFocusRequester)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+                                        when (shortcut) {
+                                            AppShortcut.NEW_LINE -> {
+                                                val cursorPosition = inputText.selection.start
+                                                val textBeforeCursor = inputText.text.substring(0, cursorPosition)
+                                                val textAfterCursor = inputText.text.substring(cursorPosition)
+                                                val newText = textBeforeCursor + "\n" + textAfterCursor
+                                                val newCursorPosition = cursorPosition + 1
+                                                onInputTextChange(
+                                                    TextFieldValue(
+                                                        text = newText,
+                                                        selection = TextRange(newCursorPosition),
+                                                    ),
+                                                )
+                                                true
+                                            }
+                                            AppShortcut.SEND_MESSAGE -> {
+                                                if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                                                    onSendMessage()
+                                                }
+                                                true
+                                            }
+                                            else -> false
                                         }
-                                        true
-                                    }
-                                    else -> false
+                                    },
+                                placeholder = { Text(placeholder) },
+                                maxLines = Int.MAX_VALUE,
+                                isError = errorMessage != null,
+                                supportingText = if (errorMessage != null) {
+                                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                                } else {
+                                    null
+                                },
+                                colors = ComponentColors.outlinedTextFieldColors(),
+                            )
+                        }
+
+                        // Image creation mode badge at bottom
+                        if (isImageCreationMode) {
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(bottom = 6.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                tonalElevation = 2.dp,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Image,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                    Text(
+                                        text = stringResource("chat.create.image.mode"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource("chat.create.image.mode.cancel"),
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clickable { isImageCreationMode = false }
+                                            .pointerHoverIcon(PointerIcon.Hand),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
                                 }
-                            },
-                        placeholder = { Text(placeholder) },
-                        maxLines = Int.MAX_VALUE, // Allow unlimited lines within the height constraint
-                        isError = errorMessage != null,
-                        supportingText = if (errorMessage != null) {
-                            { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                        } else {
-                            null
-                        },
-                        colors = ComponentColors.outlinedTextFieldColors(),
-                    )
+                            }
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            if (isLoading || isThinking) {
-                IconButton(
-                    onClick = onStopResponse,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Stop",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            } else {
-                themedTooltip(
-                    text = if (editingMessage != null) {
-                        stringResource("message.update.regenerate")
-                    } else {
-                        stringResource("message.send")
-                    },
-                ) {
+            Box(
+                modifier = Modifier.height(textFieldHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isLoading || isThinking) {
                     IconButton(
-                        onClick = onSendMessage,
-                        enabled = inputText.text.isNotBlank(),
-                        colors = ComponentColors.primaryIconButtonColors(),
+                        onClick = onStopResponse,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
-                            if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
-                            contentDescription = if (editingMessage != null) {
-                                stringResource("message.update.regenerate")
-                            } else {
-                                stringResource("message.send")
-                            },
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            Icons.Default.Stop,
+                            contentDescription = "Stop",
+                            tint = MaterialTheme.colorScheme.error,
                         )
+                    }
+                } else {
+                    themedTooltip(
+                        text = if (editingMessage != null) {
+                            stringResource("message.update.regenerate")
+                        } else {
+                            stringResource("message.send")
+                        },
+                    ) {
+                        IconButton(
+                            onClick = onSendMessage,
+                            enabled = inputText.text.isNotBlank(),
+                            colors = ComponentColors.primaryIconButtonColors(),
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
+                                contentDescription = if (editingMessage != null) {
+                                    stringResource("message.update.regenerate")
+                                } else {
+                                    stringResource("message.send")
+                                },
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
