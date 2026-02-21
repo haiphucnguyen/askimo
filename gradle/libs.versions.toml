@@ -28,6 +28,8 @@ langchain4j-extra = "1.11.0-beta19"
 caffeine = "3.2.3"
 jsoup = "1.22.1"
 konform = "0.11.1"
+pty4j = "0.13.4"
+jediterm = "3.61"
 
 [libraries]
 # JLine
@@ -55,6 +57,11 @@ commonmark-ext-autolink = { group = "org.commonmark", name = "commonmark-ext-aut
 
 # LaTeX Rendering
 jlatexmath = { group = "org.scilab.forge", name = "jlatexmath", version.ref = "jlatexmath" }
+
+# Terminal (JediTerm & PTY4J)
+pty4j = { group = "org.jetbrains.pty4j", name = "pty4j", version.ref = "pty4j" }
+jediterm-ui = { group = "org.jetbrains.jediterm", name = "jediterm-ui", version.ref = "jediterm" }
+jediterm-core = { group = "org.jetbrains.jediterm", name = "jediterm-core", version.ref = "jediterm" }
 
 # Image Loading (Coil)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
@@ -181,6 +188,12 @@ logging = [
 jline = [
     "jline",
     "jline-terminal-jansi"
+]
+
+jediterm = [
+    "pty4j",
+    "jediterm-ui",
+    "jediterm-core"
 ]
 
 [plugins]
