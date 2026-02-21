@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
 import io.askimo.core.logging.currentFileLogger
@@ -66,6 +67,23 @@ import java.awt.Desktop
 import java.io.File
 
 private val log = currentFileLogger()
+
+/**
+ * Gets the initial provider selection for model selectors.
+ * Defaults to the current active provider from AppContext if it's in the list,
+ * otherwise falls back to the first provider in the list.
+ *
+ * @param providers List of available providers
+ * @return The provider to select by default
+ */
+private fun getInitialProviderSelection(providers: List<Pair<ModelProvider, Boolean>>): ModelProvider {
+    val currentProvider = AppContext.getInstance().params.currentProvider
+    return if (providers.any { it.first == currentProvider }) {
+        currentProvider
+    } else {
+        providers[0].first // Fallback to first provider if current is not in the list
+    }
+}
 
 @Composable
 fun advancedSettingsSection() {
@@ -862,7 +880,7 @@ private fun ragEmbeddingModelSelector() {
         ModelProvider.LMSTUDIO to true,
     )
 
-    var selectedProvider by remember { mutableStateOf(providers[0].first) }
+    var selectedProvider by remember { mutableStateOf(getInitialProviderSelection(providers)) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     // Get current value based on selected provider
@@ -1072,7 +1090,7 @@ private fun visionModelSelector() {
         ModelProvider.LMSTUDIO to true,
     )
 
-    var selectedProvider by remember { mutableStateOf(providers[0].first) }
+    var selectedProvider by remember { mutableStateOf(getInitialProviderSelection(providers)) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     // Get current value based on selected provider
@@ -1315,7 +1333,7 @@ private fun imageModelSelector() {
         ModelProvider.LMSTUDIO to true,
     )
 
-    var selectedProvider by remember { mutableStateOf(providers[0].first) }
+    var selectedProvider by remember { mutableStateOf(getInitialProviderSelection(providers)) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     // Get current value based on selected provider

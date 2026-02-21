@@ -9,6 +9,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
@@ -111,12 +112,16 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         )
     }
 
-    override fun create(
-        model: String,
+    override fun createImageModel(
         settings: DockerAiSettings,
-    ): ImageModel {
-        TODO("Not yet implemented")
-    }
+    ): ImageModel = OpenAiImageModel.builder()
+        .apiKey("dockerai")
+        .baseUrl(settings.baseUrl)
+        .modelName(AppConfig.models.docker.imageModel)
+        .logger(log)
+        .logRequests(log.isDebugEnabled)
+        .logResponses(log.isDebugEnabled)
+        .build()
 
     private fun createSecondaryChatModel(settings: DockerAiSettings): ChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)

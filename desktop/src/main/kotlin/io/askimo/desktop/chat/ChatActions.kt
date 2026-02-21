@@ -9,6 +9,7 @@ import io.askimo.core.chat.dto.FileAttachmentDTO
 
 interface ChatActions {
     fun sendOrEditMessage(
+        creationMode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         editingMessage: ChatMessageDTO? = null,

@@ -97,12 +97,14 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         )
     }
 
-    override fun create(
-        model: String,
+    override fun createImageModel(
         settings: OpenAiSettings,
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
         .modelName(AppConfig.models.openai.imageModel)
+        .logger(log)
+        .logRequests(log.isDebugEnabled)
+        .logResponses(log.isDebugEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel {

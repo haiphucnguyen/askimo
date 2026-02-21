@@ -81,6 +81,7 @@ import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.session.manageDirectivesDialog
 import io.askimo.desktop.session.newDirectiveDialog
 import io.askimo.desktop.session.sessionActionsMenu
@@ -531,16 +532,20 @@ fun chatView(
                             }
 
                             // Session title
-                            Text(
+                            themedTooltip(
                                 text = sessionTitle ?: "New Chat",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .padding(end = 8.dp),
-                            )
+                            ) {
+                                Text(
+                                    text = sessionTitle ?: "New Chat",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .padding(end = 8.dp),
+                                )
+                            }
                         }
 
                         // Right side: Directive selector and session actions
@@ -1015,9 +1020,9 @@ fun chatView(
                 onInputTextChange = { inputText = it },
                 attachments = attachments,
                 onAttachmentsChange = { attachments = it },
-                onSendMessage = {
+                onSendMessage = { mode ->
                     if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                        actions.sendOrEditMessage(inputText.text, attachments, editingMessage)
+                        actions.sendOrEditMessage(mode, inputText.text, attachments, editingMessage)
                         inputText = TextFieldValue("")
                         attachments = emptyList()
                         editingMessage = null

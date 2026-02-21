@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.common.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
@@ -101,6 +103,9 @@ import org.commonmark.node.Paragraph
 import org.commonmark.node.SoftLineBreak
 import org.commonmark.node.StrongEmphasis
 import org.commonmark.parser.Parser
+import java.io.ByteArrayInputStream
+import java.util.Base64
+import javax.imageio.ImageIO
 import org.commonmark.node.Text as MarkdownText
 
 private val log = currentFileLogger()
@@ -161,6 +166,19 @@ private fun renderNode(node: Node, viewportTopY: Float? = null) {
 
 @Composable
 private fun renderParagraph(paragraph: Paragraph) {
+    // Check if this paragraph contains only an image
+    val firstChild = paragraph.firstChild
+    if (firstChild is Image && firstChild.next == null) {
+        // Paragraph contains only an image - render as block image
+        val destination = firstChild.destination
+        if (isVideoUrl(destination)) {
+            renderVideo(destination)
+        } else {
+            renderImage(firstChild)
+        }
+        return
+    }
+
     val inlineCodeBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     val linkColor = MaterialTheme.colorScheme.tertiary
 
@@ -693,23 +711,71 @@ private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null
 @Composable
 private fun renderImage(image: Image) {
     val context = LocalPlatformContext.current
+    val destination = image.destination
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(image.destination)
-                .crossfade(true)
-                .build(),
-            contentDescription = image.title ?: extractTextContent(image),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(8.dp),
-        )
+        // Check if it's a base64 data URL
+        if (destination.startsWith("data:image/")) {
+            // Decode base64 outside composable context
+            val imageResult = remember(destination) {
+                try {
+                    val base64String = destination.substringAfter("base64,", "")
+                    if (base64String.isNotEmpty()) {
+                        val imageBytes = Base64.getDecoder().decode(base64String)
+                        val bufferedImage = ImageIO.read(ByteArrayInputStream(imageBytes))
+
+                        if (bufferedImage != null) {
+                            Result.success(bufferedImage.toComposeImageBitmap())
+                        } else {
+                            Result.failure(Exception("Failed to decode image"))
+                        }
+                    } else {
+                        Result.failure(Exception("Invalid base64 data"))
+                    }
+                } catch (e: Exception) {
+                    log.error("Error decoding base64 image", e)
+                    Result.failure(e)
+                }
+            }
+
+            imageResult.fold(
+                onSuccess = { bitmap ->
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = image.title ?: extractTextContent(image),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .padding(8.dp),
+                    )
+                },
+                onFailure = { error ->
+                    Text(
+                        text = "Error loading image: ${error.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(8.dp),
+                    )
+                },
+            )
+        } else {
+            // Regular URL - use AsyncImage
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(destination)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = image.title ?: extractTextContent(image),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(8.dp),
+            )
+        }
 
         // Show caption if title or alt text exists
         val caption = image.title ?: extractTextContent(image)

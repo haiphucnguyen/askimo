@@ -64,8 +64,7 @@ interface ChatModelFactory<T : ProviderSettings> {
         chatMemory: ChatMemory? = null,
     ): ChatClient
 
-    fun create(
-        model: String,
+    fun createImageModel(
         settings: T,
     ): ImageModel
 

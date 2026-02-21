@@ -78,6 +78,7 @@ import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.util.TimeUtil
+import io.askimo.desktop.chat.CreationMode
 import io.askimo.desktop.chat.chatInputField
 import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
@@ -99,7 +100,7 @@ import kotlin.let
 @Composable
 fun projectView(
     project: Project,
-    onStartChat: (projectId: String, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
+    onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (sessionId: String, projectId: String) -> Unit,
     onRenameSession: (String, String) -> Unit,
@@ -457,9 +458,9 @@ fun projectView(
             onInputTextChange = { inputText = it },
             attachments = attachments,
             onAttachmentsChange = { attachments = it },
-            onSendMessage = {
+            onSendMessage = { mode ->
                 if (inputText.text.isNotBlank()) {
-                    onStartChat(currentProject.id, inputText.text, attachments)
+                    onStartChat(currentProject.id, mode, inputText.text, attachments)
                     inputText = TextFieldValue("")
                     attachments = emptyList()
                 }

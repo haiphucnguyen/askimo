@@ -9,6 +9,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
@@ -93,12 +94,16 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         )
     }
 
-    override fun create(
-        model: String,
+    override fun createImageModel(
         settings: OllamaSettings,
-    ): ImageModel {
-        TODO("Not yet implemented")
-    }
+    ): ImageModel = OpenAiImageModel.builder()
+        .apiKey("ollama")
+        .baseUrl(settings.baseUrl)
+        .modelName(AppConfig.models.ollama.imageModel)
+        .logger(log)
+        .logRequests(log.isDebugEnabled)
+        .logResponses(log.isDebugEnabled)
+        .build()
 
     private fun createSecondaryChatModel(settings: OllamaSettings): ChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)

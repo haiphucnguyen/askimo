@@ -50,9 +50,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.logging.currentFileLogger
@@ -80,7 +83,7 @@ private val log = currentFileLogger()
  * @param onInputTextChange Callback when input text changes
  * @param attachments List of file attachments
  * @param onAttachmentsChange Callback when attachments list changes
- * @param onSendMessage Callback when send button is clicked
+ * @param onSendMessage Callback when send button is clicked, receives the current CreationMode
  * @param isLoading Whether the chat is currently loading
  * @param isThinking Whether the AI is thinking
  * @param onStopResponse Callback to stop the current response
@@ -97,7 +100,7 @@ fun chatInputField(
     onInputTextChange: (TextFieldValue) -> Unit,
     attachments: List<FileAttachmentDTO>,
     onAttachmentsChange: (List<FileAttachmentDTO>) -> Unit,
-    onSendMessage: () -> Unit,
+    onSendMessage: (CreationMode) -> Unit,
     isLoading: Boolean = false,
     isThinking: Boolean = false,
     onStopResponse: () -> Unit = {},
@@ -110,27 +113,63 @@ fun chatInputField(
 ) {
     val inputFocusRequester = remember { FocusRequester() }
 
-    // State for image creation mode
-    var isImageCreationMode by remember { mutableStateOf(false) }
+    // State for creation mode (Chat, Image, etc.)
+    // Reset to Chat mode when switching to a different session
+    var creationMode by remember(sessionId) { mutableStateOf<CreationMode>(CreationMode.Chat) }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
-    val badgeHeight = 44.dp // Height reserved for the badge + gap (badge ~36dp + 8dp gap)
-    var textFieldHeight by remember { mutableStateOf(defaultTextFieldHeight) }
-    var manuallyResized by remember { mutableStateOf(false) }
+    val statusBarHeight = if (creationMode is CreationMode.Image) 48.dp else 0.dp
+    var textFieldHeight by remember(sessionId) { mutableStateOf(defaultTextFieldHeight) }
+    var manuallyResized by remember(sessionId) { mutableStateOf(false) }
 
-    // Calculate desired height based on text content
-    val lineCount = remember(inputText.text) {
-        if (inputText.text.isEmpty()) 1 else inputText.text.count { it == '\n' } + 1
+    // Track the actual width of the text field for accurate wrapping calculation
+    var textFieldWidthPx by remember { mutableStateOf(0f) }
+
+    // Density for dp to px conversion
+    val density = LocalDensity.current
+
+    // Calculate desired height based on text content and actual width
+    // This accounts for both explicit newlines AND text wrapping
+    val estimatedLineCount = remember(inputText.text, textFieldWidthPx) {
+        if (inputText.text.isEmpty()) return@remember 1
+
+        // Calculate average character width dynamically
+        // Approximate: bodyMedium font is ~14sp, average char width is ~0.6 of font size
+        val fontSizePx = with(density) { 14.sp.toPx() }
+        val avgCharWidthPx = fontSizePx * 0.6f
+
+        // Calculate characters that fit per line based on actual text field width
+        // Subtract padding (typically ~24dp on each side for OutlinedTextField)
+        val textFieldPaddingPx = with(density) { 48.dp.toPx() }
+        val availableWidthPx = textFieldWidthPx - textFieldPaddingPx
+
+        val charsPerLine = if (availableWidthPx > 0 && avgCharWidthPx > 0) {
+            (availableWidthPx / avgCharWidthPx).toInt().coerceAtLeast(20) // Minimum 20 chars
+        } else {
+            80 // Fallback if width not measured yet
+        }
+
+        // Count total lines accounting for wrapping
+        // Split by explicit newlines first
+        var totalLines = 0
+        inputText.text.split('\n').forEach { line ->
+            if (line.isEmpty()) {
+                totalLines += 1 // Empty line still takes space
+            } else {
+                // Calculate how many visual lines this text line will take
+                val wrappedLines = kotlin.math.ceil(line.length.toFloat() / charsPerLine).toInt()
+                totalLines += wrappedLines
+            }
+        }
+
+        totalLines.coerceAtLeast(1)
     }
 
     // Approximate height per line (can be adjusted based on your text style)
     val lineHeight = 24.dp
     val padding = 36.dp // Top and bottom padding for the text field
-    val calculatedHeight = (lineHeight * lineCount) + padding
-
-    // Total height includes badge space when in image creation mode
-    val totalFieldHeight = if (isImageCreationMode) textFieldHeight + badgeHeight else textFieldHeight
+    val calculatedHeight = (lineHeight * estimatedLineCount) + padding
 
     // Reset height to default when message is sent (detected by empty input text)
     LaunchedEffect(inputText.text) {
@@ -343,7 +382,7 @@ fun chatInputField(
                         },
                         onClick = {
                             actionMenuExpanded = false
-                            isImageCreationMode = true
+                            creationMode = CreationMode.Image
                         },
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
@@ -357,13 +396,12 @@ fun chatInputField(
                 modifier = Modifier.weight(1f),
             ) {
                 val maxAvailableHeight = maxHeight
-                val minTextFieldHeight = defaultTextFieldHeight
-                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(minTextFieldHeight)
+                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(defaultTextFieldHeight)
 
                 // Auto-calculate height if not manually resized
                 LaunchedEffect(calculatedHeight, manuallyResized) {
                     if (!manuallyResized) {
-                        textFieldHeight = calculatedHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                        textFieldHeight = calculatedHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
                     }
                 }
 
@@ -381,7 +419,7 @@ fun chatInputField(
                                 detectVerticalDragGestures { change, dragAmount ->
                                     change.consume()
                                     val newHeight = textFieldHeight - dragAmount.toDp()
-                                    textFieldHeight = newHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                                    textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
                                     manuallyResized = true
                                 }
                             },
@@ -399,95 +437,97 @@ fun chatInputField(
                         )
                     }
 
-                    // Text field with image mode badge overlay
-                    Box(
-                        modifier = Modifier.height(totalFieldHeight),
-                    ) {
-                        // Text field with constrained height - using Box padding to reserve space for badge
-                        Box(
+                    // Text field
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = onInputTextChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(textFieldHeight)
+                            .focusRequester(inputFocusRequester)
+                            .onGloballyPositioned { coordinates ->
+                                // Capture the actual width of the text field for wrapping calculation
+                                textFieldWidthPx = coordinates.size.width.toFloat()
+                            }
+                            .onPreviewKeyEvent { keyEvent ->
+                                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+                                when (shortcut) {
+                                    AppShortcut.NEW_LINE -> {
+                                        val cursorPosition = inputText.selection.start
+                                        val textBeforeCursor = inputText.text.substring(0, cursorPosition)
+                                        val textAfterCursor = inputText.text.substring(cursorPosition)
+                                        val newText = textBeforeCursor + "\n" + textAfterCursor
+                                        val newCursorPosition = cursorPosition + 1
+                                        onInputTextChange(
+                                            TextFieldValue(
+                                                text = newText,
+                                                selection = TextRange(newCursorPosition),
+                                            ),
+                                        )
+                                        true
+                                    }
+                                    AppShortcut.SEND_MESSAGE -> {
+                                        if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                                            onSendMessage(creationMode)
+                                        }
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            },
+                        placeholder = { Text(placeholder) },
+                        maxLines = Int.MAX_VALUE,
+                        isError = errorMessage != null,
+                        supportingText = if (errorMessage != null) {
+                            { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                        } else {
+                            null
+                        },
+                        colors = ComponentColors.outlinedTextFieldColors(),
+                    )
+
+                    // Status badge bar - height is 0 when no status
+                    if (statusBarHeight > 0.dp) {
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = if (isImageCreationMode) badgeHeight else 0.dp),
+                                .height(statusBarHeight)
+                                .padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            OutlinedTextField(
-                                value = inputText,
-                                onValueChange = onInputTextChange,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(inputFocusRequester)
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-                                        when (shortcut) {
-                                            AppShortcut.NEW_LINE -> {
-                                                val cursorPosition = inputText.selection.start
-                                                val textBeforeCursor = inputText.text.substring(0, cursorPosition)
-                                                val textAfterCursor = inputText.text.substring(cursorPosition)
-                                                val newText = textBeforeCursor + "\n" + textAfterCursor
-                                                val newCursorPosition = cursorPosition + 1
-                                                onInputTextChange(
-                                                    TextFieldValue(
-                                                        text = newText,
-                                                        selection = TextRange(newCursorPosition),
-                                                    ),
-                                                )
-                                                true
-                                            }
-                                            AppShortcut.SEND_MESSAGE -> {
-                                                if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                                    onSendMessage()
-                                                }
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    },
-                                placeholder = { Text(placeholder) },
-                                maxLines = Int.MAX_VALUE,
-                                isError = errorMessage != null,
-                                supportingText = if (errorMessage != null) {
-                                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                                } else {
-                                    null
-                                },
-                                colors = ComponentColors.outlinedTextFieldColors(),
-                            )
-                        }
-
-                        // Image creation mode badge at bottom
-                        if (isImageCreationMode) {
-                            Surface(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(bottom = 6.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                tonalElevation = 2.dp,
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
+                            // Image creation mode badge
+                            if (creationMode is CreationMode.Image) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    tonalElevation = 2.dp,
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Image,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                    Text(
-                                        text = stringResource("chat.create.image.mode"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = stringResource("chat.create.image.mode.cancel"),
-                                        modifier = Modifier
-                                            .size(18.dp)
-                                            .clickable { isImageCreationMode = false }
-                                            .pointerHoverIcon(PointerIcon.Hand),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Image,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                        Text(
+                                            text = stringResource("chat.create.image.mode"),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource("chat.create.image.mode.cancel"),
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clickable { creationMode = CreationMode.Chat }
+                                                .pointerHoverIcon(PointerIcon.Hand),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -521,7 +561,7 @@ fun chatInputField(
                         },
                     ) {
                         IconButton(
-                            onClick = onSendMessage,
+                            onClick = { onSendMessage(creationMode) },
                             enabled = inputText.text.isNotBlank(),
                             colors = ComponentColors.primaryIconButtonColors(),
                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

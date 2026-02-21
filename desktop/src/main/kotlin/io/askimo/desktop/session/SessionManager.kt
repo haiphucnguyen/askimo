@@ -12,13 +12,16 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.core.vision.ImageProcessor
 import io.askimo.core.vision.needsVision
 import io.askimo.desktop.chat.ChatViewModel
+import io.askimo.desktop.chat.CreationMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -157,6 +160,7 @@ class SessionManager(
      */
     fun sendMessage(
         projectId: String?,
+        mode: CreationMode,
         sessionId: String,
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
@@ -214,27 +218,68 @@ class SessionManager(
         // Start streaming in background
         streamingScope.launch(thread.job) {
             try {
-                val fullResponse = chatSessionService
-                    .getOrCreateClientForSession(sessionId, userMessage.needsVision())
-                    .sendStreamingMessageWithCallback(
-                        projectId = projectId,
-                        userMessage = promptWithContext,
-                        onToken = { token ->
-                            streamingScope.launch {
-                                thread.appendChunk(token)
-                            }
-                        },
-                        onFollowUpSuggestion = { suggestion ->
-                            log.debug("Follow-up suggestion for session $sessionId: ${suggestion.question}")
-                            // TODO: Handle follow-up suggestions in the UI
-                            // This could be shown as a clickable suggestion button in the chat
-                        },
-                    )
+                if (mode is CreationMode.Chat) {
+                    val fullResponse = chatSessionService
+                        .getOrCreateClientForSession(sessionId, userMessage.needsVision())
+                        .sendStreamingMessageWithCallback(
+                            projectId = projectId,
+                            userMessage = promptWithContext,
+                            onToken = { token ->
+                                streamingScope.launch {
+                                    thread.appendChunk(token)
+                                }
+                            },
+                            onFollowUpSuggestion = { suggestion ->
+                                log.debug("Follow-up suggestion for session $sessionId: ${suggestion.question}")
+                                // TODO: Handle follow-up suggestions in the UI
+                                // This could be shown as a clickable suggestion button in the chat
+                            },
+                        )
 
-                val savedMessage = chatSessionService.saveAiResponse(sessionId, fullResponse)
-                thread.setSavedMessage(savedMessage)
+                    val savedMessage = chatSessionService.saveAiResponse(sessionId, fullResponse)
+                    thread.setSavedMessage(savedMessage)
+                    log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
+                } else {
+                    // Handle other creation modes (e.g., image generation)
+                    val imageModel = AppContext.getInstance().createImageModel()
+                    val generateImage = imageModel.generate(userMessage.content).content()
+
+                    // Get MIME type from AI response for logging purposes
+                    val aiMimeType = generateImage.mimeType()
+
+                    // Convert to markdown format with base64 for preview
+                    // We always use image/png in markdown since we convert all images to PNG
+                    val imageMarkdown = if (generateImage.url().path.isNotEmpty()) {
+                        val base64Data = generateImage.base64Data()
+                        val sourceUrl = generateImage.url().toString()
+                        val sourceLink = "[Source]($sourceUrl)"
+
+                        if (!base64Data.isNullOrEmpty()) {
+                            "![Generated Image](data:image/png;base64,$base64Data)\n\n$sourceLink"
+                        } else {
+                            val downloadedBase64 = withContext(Dispatchers.IO) {
+                                ImageProcessor.downloadAndProcessImageAsBase64(sourceUrl, aiMimeType)
+                            }
+                            if (downloadedBase64 != null) {
+                                "![Generated Image](data:image/png;base64,$downloadedBase64)\n\n$sourceLink"
+                            } else {
+                                // Fallback to URL if download fails
+                                "![Generated Image]($sourceUrl)"
+                            }
+                        }
+                    } else {
+                        val base64Data = generateImage.base64Data()
+                        if (!base64Data.isNullOrEmpty()) {
+                            "![Generated Image](data:image/png;base64,$base64Data)"
+                        } else {
+                            "Error: No image data available"
+                        }
+                    }
+
+                    val savedMessage = chatSessionService.saveAiResponse(sessionId, imageMarkdown)
+                    thread.setSavedMessage(savedMessage)
+                }
                 thread.markComplete()
-                log.debug("Streaming thread $threadId completed successfully. Saved response to session $sessionId.")
             } catch (e: Exception) {
                 log.error("Error while sending message to chat session $sessionId", e)
                 thread.markFailed()
@@ -367,6 +412,7 @@ class SessionManager(
      */
     fun createProjectSessionAndSendMessage(
         projectId: String?,
+        mode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         onComplete: () -> Unit,
@@ -394,7 +440,7 @@ class SessionManager(
 
                 // Now send the message - ViewModel is ready
                 val viewModel = getOrCreateChatViewModel(newSession.id)
-                viewModel.sendMessage(projectId, message, attachments)
+                viewModel.sendMessage(projectId, mode, message, attachments)
             } catch (e: Exception) {
                 log.error("Failed to create project session and send message", e)
             }
@@ -433,7 +479,7 @@ class SessionManager(
     }
 
     /**
-     * Shutdown all streaming threads and clean up resources.
+     * Shutdown hook to cancel all active threads when the application closes.
      */
     private fun shutdown() {
         log.info("Shutting down SessionManager. Cancelling ${activeThreads.size} active streams.")

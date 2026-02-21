@@ -1727,9 +1727,10 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            onStartChat = { projId, message, attachments ->
+                            onStartChat = { projId, mode, message, attachments ->
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
+                                    mode = mode,
                                     message = message,
                                     attachments = attachments,
                                     onComplete = { onNavigateToChat() },

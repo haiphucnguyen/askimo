@@ -78,8 +78,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         )
     }
 
-    override fun create(
-        model: String,
+    override fun createImageModel(
         settings: AnthropicSettings,
     ): ImageModel {
         TODO("Not yet implemented")

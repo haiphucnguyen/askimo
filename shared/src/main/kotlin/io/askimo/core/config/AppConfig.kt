@@ -289,7 +289,7 @@ data class GeminiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "text-embedding-004",
     val visionModel: String = "gemini-2.0-pro",
-    val imageModel: String = "gemini-2.0-flash-exp",
+    val imageModel: String = "grok-imagine-image",
 )
 
 data class OpenAiModelConfig(
@@ -304,14 +304,14 @@ data class OllamaModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
     val visionModel: String = "llava:7b",
-    val imageModel: String = "stable-diffusion:latest",
+    val imageModel: String = "brxce/stable-diffusion-prompt-generato",
 )
 
 data class DockerModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "ai/qwen3-embedding:0.6B-F16",
-    val visionModel: String = "llava:latest",
-    val imageModel: String = "stable-diffusion:latest",
+    val visionModel: String = "dustynv/llava:r36.2.0",
+    val imageModel: String = "ai/stable-diffusion:latest",
 )
 
 data class LocalAiModelConfig(
