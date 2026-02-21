@@ -5,6 +5,7 @@
 package io.askimo.desktop.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,15 +21,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,9 +50,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.logging.currentFileLogger
@@ -74,7 +83,7 @@ private val log = currentFileLogger()
  * @param onInputTextChange Callback when input text changes
  * @param attachments List of file attachments
  * @param onAttachmentsChange Callback when attachments list changes
- * @param onSendMessage Callback when send button is clicked
+ * @param onSendMessage Callback when send button is clicked, receives the current CreationMode
  * @param isLoading Whether the chat is currently loading
  * @param isThinking Whether the AI is thinking
  * @param onStopResponse Callback to stop the current response
@@ -91,7 +100,7 @@ fun chatInputField(
     onInputTextChange: (TextFieldValue) -> Unit,
     attachments: List<FileAttachmentDTO>,
     onAttachmentsChange: (List<FileAttachmentDTO>) -> Unit,
-    onSendMessage: () -> Unit,
+    onSendMessage: (CreationMode) -> Unit,
     isLoading: Boolean = false,
     isThinking: Boolean = false,
     onStopResponse: () -> Unit = {},
@@ -104,20 +113,63 @@ fun chatInputField(
 ) {
     val inputFocusRequester = remember { FocusRequester() }
 
+    // State for creation mode (Chat, Image, etc.)
+    // Reset to Chat mode when switching to a different session
+    var creationMode by remember(sessionId) { mutableStateOf<CreationMode>(CreationMode.Chat) }
+
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
-    var textFieldHeight by remember { mutableStateOf(defaultTextFieldHeight) }
-    var manuallyResized by remember { mutableStateOf(false) }
+    val statusBarHeight = if (creationMode is CreationMode.Image) 48.dp else 0.dp
+    var textFieldHeight by remember(sessionId) { mutableStateOf(defaultTextFieldHeight) }
+    var manuallyResized by remember(sessionId) { mutableStateOf(false) }
 
-    // Calculate desired height based on text content
-    val lineCount = remember(inputText.text) {
-        if (inputText.text.isEmpty()) 1 else inputText.text.count { it == '\n' } + 1
+    // Track the actual width of the text field for accurate wrapping calculation
+    var textFieldWidthPx by remember { mutableStateOf(0f) }
+
+    // Density for dp to px conversion
+    val density = LocalDensity.current
+
+    // Calculate desired height based on text content and actual width
+    // This accounts for both explicit newlines AND text wrapping
+    val estimatedLineCount = remember(inputText.text, textFieldWidthPx) {
+        if (inputText.text.isEmpty()) return@remember 1
+
+        // Calculate average character width dynamically
+        // Approximate: bodyMedium font is ~14sp, average char width is ~0.6 of font size
+        val fontSizePx = with(density) { 14.sp.toPx() }
+        val avgCharWidthPx = fontSizePx * 0.6f
+
+        // Calculate characters that fit per line based on actual text field width
+        // Subtract padding (typically ~24dp on each side for OutlinedTextField)
+        val textFieldPaddingPx = with(density) { 48.dp.toPx() }
+        val availableWidthPx = textFieldWidthPx - textFieldPaddingPx
+
+        val charsPerLine = if (availableWidthPx > 0 && avgCharWidthPx > 0) {
+            (availableWidthPx / avgCharWidthPx).toInt().coerceAtLeast(20) // Minimum 20 chars
+        } else {
+            80 // Fallback if width not measured yet
+        }
+
+        // Count total lines accounting for wrapping
+        // Split by explicit newlines first
+        var totalLines = 0
+        inputText.text.split('\n').forEach { line ->
+            if (line.isEmpty()) {
+                totalLines += 1 // Empty line still takes space
+            } else {
+                // Calculate how many visual lines this text line will take
+                val wrappedLines = kotlin.math.ceil(line.length.toFloat() / charsPerLine).toInt()
+                totalLines += wrappedLines
+            }
+        }
+
+        totalLines.coerceAtLeast(1)
     }
 
     // Approximate height per line (can be adjusted based on your text style)
     val lineHeight = 24.dp
     val padding = 36.dp // Top and bottom padding for the text field
-    val calculatedHeight = (lineHeight * lineCount) + padding
+    val calculatedHeight = (lineHeight * estimatedLineCount) + padding
 
     // Reset height to default when message is sent (detected by empty input text)
     LaunchedEffect(inputText.text) {
@@ -252,21 +304,87 @@ fun chatInputField(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
-            // Attach file button
-            themedTooltip(
-                text = stringResource("chat.attach.file", Platform.modifierKey),
+            // Action dropdown menu (attachments, image creation, etc.)
+            var actionMenuExpanded by remember { mutableStateOf(false) }
+
+            Box(
+                modifier = Modifier.height(textFieldHeight),
+                contentAlignment = Alignment.Center,
             ) {
-                IconButton(
-                    onClick = openFileDialog,
-                    colors = ComponentColors.primaryIconButtonColors(),
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                themedTooltip(
+                    text = stringResource("chat.attach.file", Platform.modifierKey),
                 ) {
-                    Icon(
-                        Icons.Default.AttachFile,
-                        contentDescription = "Attach file",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                    IconButton(
+                        onClick = { actionMenuExpanded = true },
+                        colors = ComponentColors.primaryIconButtonColors(),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Actions menu",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+
+                ComponentColors.themedDropdownMenu(
+                    expanded = actionMenuExpanded,
+                    onDismissRequest = { actionMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource("chat.attach.file.menu"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        onClick = {
+                            actionMenuExpanded = false
+                            openFileDialog()
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    )
+
+                    HorizontalDivider()
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource("chat.create.image.menu"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        onClick = {
+                            actionMenuExpanded = false
+                            creationMode = CreationMode.Image
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }
@@ -278,13 +396,12 @@ fun chatInputField(
                 modifier = Modifier.weight(1f),
             ) {
                 val maxAvailableHeight = maxHeight
-                val minTextFieldHeight = defaultTextFieldHeight
-                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(minTextFieldHeight)
+                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(defaultTextFieldHeight)
 
                 // Auto-calculate height if not manually resized
                 LaunchedEffect(calculatedHeight, manuallyResized) {
                     if (!manuallyResized) {
-                        textFieldHeight = calculatedHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                        textFieldHeight = calculatedHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
                     }
                 }
 
@@ -302,7 +419,7 @@ fun chatInputField(
                                 detectVerticalDragGestures { change, dragAmount ->
                                     change.consume()
                                     val newHeight = textFieldHeight - dragAmount.toDp()
-                                    textFieldHeight = newHeight.coerceIn(minTextFieldHeight, maxTextFieldHeight)
+                                    textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
                                     manuallyResized = true
                                 }
                             },
@@ -320,7 +437,7 @@ fun chatInputField(
                         )
                     }
 
-                    // Text field with constrained height
+                    // Text field
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = onInputTextChange,
@@ -328,6 +445,10 @@ fun chatInputField(
                             .fillMaxWidth()
                             .height(textFieldHeight)
                             .focusRequester(inputFocusRequester)
+                            .onGloballyPositioned { coordinates ->
+                                // Capture the actual width of the text field for wrapping calculation
+                                textFieldWidthPx = coordinates.size.width.toFloat()
+                            }
                             .onPreviewKeyEvent { keyEvent ->
                                 val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
                                 when (shortcut) {
@@ -347,7 +468,7 @@ fun chatInputField(
                                     }
                                     AppShortcut.SEND_MESSAGE -> {
                                         if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                            onSendMessage()
+                                            onSendMessage(creationMode)
                                         }
                                         true
                                     }
@@ -355,7 +476,7 @@ fun chatInputField(
                                 }
                             },
                         placeholder = { Text(placeholder) },
-                        maxLines = Int.MAX_VALUE, // Allow unlimited lines within the height constraint
+                        maxLines = Int.MAX_VALUE,
                         isError = errorMessage != null,
                         supportingText = if (errorMessage != null) {
                             { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
@@ -364,45 +485,97 @@ fun chatInputField(
                         },
                         colors = ComponentColors.outlinedTextFieldColors(),
                     )
+
+                    // Status badge bar - height is 0 when no status
+                    if (statusBarHeight > 0.dp) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(statusBarHeight)
+                                .padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Image creation mode badge
+                            if (creationMode is CreationMode.Image) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    tonalElevation = 2.dp,
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Image,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                        Text(
+                                            text = stringResource("chat.create.image.mode"),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource("chat.create.image.mode.cancel"),
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clickable { creationMode = CreationMode.Chat }
+                                                .pointerHoverIcon(PointerIcon.Hand),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            if (isLoading || isThinking) {
-                IconButton(
-                    onClick = onStopResponse,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Stop",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            } else {
-                themedTooltip(
-                    text = if (editingMessage != null) {
-                        stringResource("message.update.regenerate")
-                    } else {
-                        stringResource("message.send")
-                    },
-                ) {
+            Box(
+                modifier = Modifier.height(textFieldHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isLoading || isThinking) {
                     IconButton(
-                        onClick = onSendMessage,
-                        enabled = inputText.text.isNotBlank(),
-                        colors = ComponentColors.primaryIconButtonColors(),
+                        onClick = onStopResponse,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
-                            if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
-                            contentDescription = if (editingMessage != null) {
-                                stringResource("message.update.regenerate")
-                            } else {
-                                stringResource("message.send")
-                            },
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            Icons.Default.Stop,
+                            contentDescription = "Stop",
+                            tint = MaterialTheme.colorScheme.error,
                         )
+                    }
+                } else {
+                    themedTooltip(
+                        text = if (editingMessage != null) {
+                            stringResource("message.update.regenerate")
+                        } else {
+                            stringResource("message.send")
+                        },
+                    ) {
+                        IconButton(
+                            onClick = { onSendMessage(creationMode) },
+                            enabled = inputText.text.isNotBlank(),
+                            colors = ComponentColors.primaryIconButtonColors(),
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
+                                contentDescription = if (editingMessage != null) {
+                                    stringResource("message.update.regenerate")
+                                } else {
+                                    stringResource("message.send")
+                                },
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }

@@ -305,12 +305,14 @@ class ChatViewModel(
      * Send or edit a chat message.
      * This method handles both normal message sending and edit mode.
      *
+     * @param mode The creation mode (Chat, Image, etc.)
      * @param message The message text
      * @param attachments Optional list of file attachments
      * @param editingMessage The message being edited (null for normal send)
      * @return The session ID after sending (or null if no session)
      */
     override fun sendOrEditMessage(
+        mode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO>,
         editingMessage: ChatMessageDTO?,
@@ -324,10 +326,10 @@ class ChatViewModel(
 
             scope.launch {
                 editMessage(originalMessageId, message, attachments)
-                sendMessage(projectId = project?.id, message, attachments)
+                sendMessage(projectId = project?.id, mode, message, attachments)
             }
         } else {
-            sendMessage(projectId = project?.id, message, attachments)
+            sendMessage(projectId = project?.id, mode, message, attachments)
         }
 
         return currentSessionId
@@ -406,6 +408,7 @@ class ChatViewModel(
                     try {
                         val threadId = sessionManager.sendMessage(
                             projectId = project?.id,
+                            mode = CreationMode.Chat, // Retry should always be in Chat mode
                             sessionId = sessionId,
                             userMessage = userMessage,
                             willSaveUserMessage = false,
@@ -443,10 +446,11 @@ class ChatViewModel(
     /**
      * Send a message to the AI.
      *
+     * @param mode The creation mode (Chat, Image, etc.)
      * @param message The user's message
      * @param attachments Optional list of file attachments
      */
-    fun sendMessage(projectId: String?, message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
+    fun sendMessage(projectId: String?, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
         if (message.isBlank() || isLoading) return
 
         // Session ID must be set by this point (from resumeSession)
@@ -486,6 +490,7 @@ class ChatViewModel(
             try {
                 val threadId = sessionManager.sendMessage(
                     projectId = projectId,
+                    mode = mode,
                     sessionId = sessionId,
                     userMessage = userMessage,
                     willSaveUserMessage = true,

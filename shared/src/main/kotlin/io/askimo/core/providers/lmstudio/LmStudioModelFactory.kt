@@ -7,7 +7,9 @@ package io.askimo.core.providers.lmstudio
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
@@ -32,6 +34,17 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun getProvider(): ModelProvider = ModelProvider.LMSTUDIO
 
+    /**
+     * Creates a JdkHttpClient builder configured with proxy settings.
+     * Automatically skips proxy for localhost URLs.
+     */
+    private fun createHttpClientBuilder(baseUrl: String) = JdkHttpClient.builder().httpClientBuilder(
+        ProxyUtil.configureProxy(
+            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1),
+            baseUrl,
+        ),
+    )
+
     override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
         apiKey = "lm-studio",
         url = "${settings.baseUrl}/v1/models",
@@ -52,11 +65,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         val telemetry = AppContext.getInstance().telemetry
 
         // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val httpClientBuilder = ProxyUtil.configureProxy(
-            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1),
-            settings.baseUrl,
-        )
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
 
         val chatModel =
             OpenAiStreamingChatModel
@@ -85,15 +94,27 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         )
     }
 
+    override fun createImageModel(
+        settings: LmStudioSettings,
+    ): ImageModel {
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
+
+        return OpenAiImageModel.builder()
+            .apiKey("lmstudio")
+            .baseUrl(settings.baseUrl)
+            .modelName(AppConfig.models.lmstudio.imageModel)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isDebugEnabled)
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .build()
+    }
+
     private fun createSecondaryChatModel(
         settings: LmStudioSettings,
     ): ChatModel {
         // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val httpClientBuilder = ProxyUtil.configureProxy(
-            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1),
-            settings.baseUrl,
-        )
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
 
         return OpenAiChatModel.builder()
             .baseUrl(settings.baseUrl)

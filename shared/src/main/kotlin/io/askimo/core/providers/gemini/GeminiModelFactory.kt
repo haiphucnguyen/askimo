@@ -8,7 +8,9 @@ import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
+import dev.langchain4j.model.googleai.GoogleAiGeminiImageModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
 import dev.langchain4j.service.tool.ToolProvider
@@ -88,6 +90,16 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             executionMode = executionMode,
         )
     }
+
+    override fun createImageModel(
+        settings: GeminiSettings,
+    ): ImageModel = GoogleAiGeminiImageModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(AppConfig.models.openai.imageModel)
+        .logger(log)
+        .logRequests(log.isDebugEnabled)
+        .logResponses(log.isDebugEnabled)
+        .build()
 
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())

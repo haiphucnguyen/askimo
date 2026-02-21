@@ -494,8 +494,6 @@ fun addMcpIntegrationDialog(
                     }
                 } // End of scrollable content area
 
-                HorizontalDivider()
-
                 // Validation Results
                 validationResult?.let { result ->
                     if (result.issues.isNotEmpty()) {

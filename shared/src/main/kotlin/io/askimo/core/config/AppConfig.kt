@@ -281,6 +281,7 @@ data class AnthropicModelConfig(
     val utilityModel: String = "claude-3-haiku-20240307",
     val utilityModelTimeoutSeconds: Long = 45,
     val visionModel: String = "claude-3-5-sonnet-20241022",
+    val imageModel: String = "claude-3-5-sonnet-20241022",
 )
 
 data class GeminiModelConfig(
@@ -288,6 +289,7 @@ data class GeminiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "text-embedding-004",
     val visionModel: String = "gemini-2.0-pro",
+    val imageModel: String = "grok-imagine-image",
 )
 
 data class OpenAiModelConfig(
@@ -295,35 +297,41 @@ data class OpenAiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "text-embedding-3-small",
     val visionModel: String = "gpt-4o",
+    val imageModel: String = "dall-e-3",
 )
 
 data class OllamaModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
     val visionModel: String = "llava:7b",
+    val imageModel: String = "brxce/stable-diffusion-prompt-generato",
 )
 
 data class DockerModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "ai/qwen3-embedding:0.6B-F16",
-    val visionModel: String = "llava:latest",
+    val visionModel: String = "dustynv/llava:r36.2.0",
+    val imageModel: String = "ai/stable-diffusion:latest",
 )
 
 data class LocalAiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
     val visionModel: String = "bakllava",
+    val imageModel: String = "stable-diffusion",
 )
 
 data class LmStudioModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val embeddingModel: String = "nomic-embed-text:latest",
     val visionModel: String = "llava-v1.6-mistral-7b",
+    val imageModel: String = "stable-diffusion",
 )
 
 data class XAiModelConfig(
     val utilityModelTimeoutSeconds: Long = 45,
     val visionModel: String = "grok-2-vision-latest",
+    val imageModel: String = "grok-2-vision-latest",
 )
 
 data class ModelsConfig(
@@ -437,35 +445,43 @@ object AppConfig {
             utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-3-haiku-20240307}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-3-5-sonnet-20241022}
+            image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-3-5-sonnet-20241022}
           gemini:
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-1.5-flash}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
+            image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:
             utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:gpt-3.5-turbo}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
+            image_model: ${'$'}{ASKIMO_OPENAI_IMAGE_MODEL:dall-e-3}
           ollama:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:llava:latest}
+            image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:stable-diffusion:latest}
           docker:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:ai/qwen3-embedding:0.6B-F16}
             vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:llava:latest}
+            image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:stable-diffusion:latest}
           localai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:bakllava}
+            image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:stable-diffusion}
           lmstudio:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:llava-v1.6-mistral-7b}
+            image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
+            image_model: ${'$'}{ASKIMO_XAI_IMAGE_MODEL:grok-2-vision-latest}
 
         proxy:
           type: ${'$'}{ASKIMO_PROXY_TYPE:NONE}
@@ -855,6 +871,7 @@ object AppConfig {
             "openai" -> config.copy(
                 openai = when (modelField) {
                     "visionModel" -> config.openai.copy(visionModel = stringValue)
+                    "imageModel" -> config.openai.copy(imageModel = stringValue)
                     "embeddingModel" -> config.openai.copy(embeddingModel = stringValue)
                     "utilityModel" -> config.openai.copy(utilityModel = stringValue)
                     else -> {
@@ -866,6 +883,7 @@ object AppConfig {
             "anthropic" -> config.copy(
                 anthropic = when (modelField) {
                     "visionModel" -> config.anthropic.copy(visionModel = stringValue)
+                    "imageModel" -> config.anthropic.copy(imageModel = stringValue)
                     "utilityModel" -> config.anthropic.copy(utilityModel = stringValue)
                     else -> {
                         log.displayError("Unknown Anthropic model field: $modelField", null)
@@ -876,6 +894,7 @@ object AppConfig {
             "gemini" -> config.copy(
                 gemini = when (modelField) {
                     "visionModel" -> config.gemini.copy(visionModel = stringValue)
+                    "imageModel" -> config.gemini.copy(imageModel = stringValue)
                     "embeddingModel" -> config.gemini.copy(embeddingModel = stringValue)
                     "utilityModel" -> config.gemini.copy(utilityModel = stringValue)
                     else -> {
@@ -887,6 +906,7 @@ object AppConfig {
             "xai" -> config.copy(
                 xai = when (modelField) {
                     "visionModel" -> config.xai.copy(visionModel = stringValue)
+                    "imageModel" -> config.xai.copy(imageModel = stringValue)
                     else -> {
                         log.displayError("Unknown X AI model field: $modelField", null)
                         config.xai
@@ -896,6 +916,7 @@ object AppConfig {
             "ollama" -> config.copy(
                 ollama = when (modelField) {
                     "visionModel" -> config.ollama.copy(visionModel = stringValue)
+                    "imageModel" -> config.ollama.copy(imageModel = stringValue)
                     "embeddingModel" -> config.ollama.copy(embeddingModel = stringValue)
                     else -> {
                         log.displayError("Unknown Ollama model field: $modelField", null)
@@ -906,6 +927,7 @@ object AppConfig {
             "docker" -> config.copy(
                 docker = when (modelField) {
                     "visionModel" -> config.docker.copy(visionModel = stringValue)
+                    "imageModel" -> config.docker.copy(imageModel = stringValue)
                     "embeddingModel" -> config.docker.copy(embeddingModel = stringValue)
                     else -> {
                         log.displayError("Unknown Docker model field: $modelField", null)
@@ -916,6 +938,7 @@ object AppConfig {
             "localai" -> config.copy(
                 localai = when (modelField) {
                     "visionModel" -> config.localai.copy(visionModel = stringValue)
+                    "imageModel" -> config.localai.copy(imageModel = stringValue)
                     "embeddingModel" -> config.localai.copy(embeddingModel = stringValue)
                     else -> {
                         log.displayError("Unknown LocalAI model field: $modelField", null)
@@ -926,6 +949,7 @@ object AppConfig {
             "lmstudio" -> config.copy(
                 lmstudio = when (modelField) {
                     "visionModel" -> config.lmstudio.copy(visionModel = stringValue)
+                    "imageModel" -> config.lmstudio.copy(imageModel = stringValue)
                     "embeddingModel" -> config.lmstudio.copy(embeddingModel = stringValue)
                     else -> {
                         log.displayError("Unknown LMStudio model field: $modelField", null)

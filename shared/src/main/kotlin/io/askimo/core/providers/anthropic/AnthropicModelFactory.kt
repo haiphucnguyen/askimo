@@ -9,6 +9,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
 import dev.langchain4j.service.tool.ToolProvider
@@ -75,6 +76,12 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             retriever = retriever,
             executionMode = executionMode,
         )
+    }
+
+    override fun createImageModel(
+        settings: AnthropicSettings,
+    ): ImageModel {
+        TODO("Not yet implemented")
     }
 
     private fun createSecondaryChatModel(settings: AnthropicSettings): ChatModel {

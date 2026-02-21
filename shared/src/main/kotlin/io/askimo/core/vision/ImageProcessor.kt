@@ -10,6 +10,12 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.Base64
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
@@ -251,6 +257,96 @@ object ImageProcessor {
 
         writer.dispose()
         return out.toByteArray()
+    }
+
+    /**
+     * Downloads an image from a URL, processes it (resize/compress), converts to PNG,
+     * and returns base64 string.
+     *
+     * @param imageUrl The URL of the image to download
+     * @param originalMimeType The original MIME type from AI response (for logging)
+     * @param maxWidth Maximum width for resizing (default: DEFAULT_MAX_WIDTH)
+     * @param maxHeight Maximum height for resizing (default: DEFAULT_MAX_HEIGHT)
+     * @return Base64-encoded PNG image, or null if download/conversion fails
+     */
+    fun downloadAndProcessImageAsBase64(
+        imageUrl: String,
+        originalMimeType: String? = null,
+        maxWidth: Int = DEFAULT_MAX_WIDTH,
+        maxHeight: Int = DEFAULT_MAX_HEIGHT,
+    ): String? {
+        try {
+            log.debug("Downloading image from: $imageUrl (original MIME: $originalMimeType)")
+
+            val httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .build()
+
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create(imageUrl))
+                .GET()
+                .build()
+
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+
+            if (response.statusCode() == 200) {
+                val imageBytes = response.body()
+
+                // Decode the image
+                val bufferedImage = ImageIO.read(ByteArrayInputStream(imageBytes))
+                    ?: run {
+                        log.warn("Failed to decode image from $imageUrl")
+                        return null
+                    }
+
+                val originalWidth = bufferedImage.width
+                val originalHeight = bufferedImage.height
+
+                // Resize if needed (using same logic as process())
+                val (newWidth, newHeight) = calculateDimensions(
+                    originalWidth,
+                    originalHeight,
+                    maxWidth,
+                    maxHeight,
+                )
+
+                val resizedImage = if (newWidth != originalWidth || newHeight != originalHeight) {
+                    resizeImage(bufferedImage, newWidth, newHeight)
+                } else {
+                    normalizeImage(bufferedImage)
+                }
+
+                // Convert to PNG format
+                val outputStream = ByteArrayOutputStream()
+                ImageIO.write(resizedImage, "png", outputStream)
+                val pngBytes = outputStream.toByteArray()
+
+                // Encode to base64
+                val base64 = Base64.getEncoder().encodeToString(pngBytes)
+
+                val savedBytes = imageBytes.size - pngBytes.size
+                val savedPercent = if (imageBytes.size > 0) {
+                    ((1.0 - pngBytes.size.toDouble() / imageBytes.size) * 100).toInt()
+                } else {
+                    0
+                }
+
+                log.debug(
+                    "Image downloaded and processed: ${originalWidth}x$originalHeight → " +
+                        "${resizedImage.width}x${resizedImage.height}, " +
+                        "size ${imageBytes.size} → ${pngBytes.size} bytes " +
+                        "(-$savedBytes, $savedPercent%)",
+                )
+
+                return@downloadAndProcessImageAsBase64 base64
+            } else {
+                log.warn("Failed to download image. Status code: ${response.statusCode()}")
+                return@downloadAndProcessImageAsBase64 null
+            }
+        } catch (e: Exception) {
+            log.error("Error downloading/converting image from $imageUrl", e)
+            return@downloadAndProcessImageAsBase64 null
+        }
     }
 
     /**

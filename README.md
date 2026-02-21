@@ -86,18 +86,9 @@ Think of it as having multiple AI assistants in one app: use Claude for coding, 
 
 ## 🚀 Quick Start
 
-Download the installer for your operating system:
+**[Download Askimo for your operating system →](https://askimo.chat/download/)**
 
-- **macOS**: 
-  - [Apple Silicon.dmg](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-macos-arm64.dmg)
-  - [Intel (x64) .dmg](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-macos-x64.dmg)
-- **Windows**: [Download .msi](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-windows-x64.msi)
-- **Linux**: 
-  - [ARM64.deb](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-linux-arm64.deb)
-  - [x64.deb](https://github.com/haiphucnguyen/askimo/releases/latest/download/Askimo-Desktop-linux-x64.deb)
-  - **Other distributions**: See [Linux installation guide](https://askimo.chat/docs/desktop/installation/linux/) for installing using the universal JAR file
-
-Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) for all available versions.
+Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM64 & x64).
 
 **After installation:** Open Askimo, add your API keys (or connect to Ollama for local models), and start chatting. [**Setup guide →**](https://askimo.chat/docs/desktop/ai-providers/)
 
@@ -120,6 +111,7 @@ Or visit the [releases page](https://github.com/haiphucnguyen/askimo/releases) f
 - 🔄 **Use the Best AI for Each Task** - Need help with code? Use Claude. General questions? Try ChatGPT. Writing a quick email? Use a free local model. Switch instantly between different AIs
 - 🔒 **Complete Privacy** - Everything stays on your computer. Your conversations, your data, your control. Nothing is sent to the cloud unless you choose to ask an AI
 - 🧠 **Ask Questions About Your Files** - Point Askimo to folders, files, or web URLs and ask "What does this project do?" or "How does the login work?" Get answers from your actual documents and code
+- 🔌 **Connect Custom Tools (Experimental)** - Extend AI capabilities with custom MCP (Model Context Protocol) integrations. Connect your own tools and services for specialized workflows
 - ⭐ **Stay Organized** - Star your favorite conversations, search through everything you've ever asked, and keep work separate from personal chats
 - 📊 **Beautiful Formatting** - See code with syntax highlighting, tables, diagrams, and properly formatted text. Copy and paste ready to use
 - 🎯 **Save Your Favorite Prompts** - Create reusable templates for things you ask often. One click to use your "proofreader" or "code reviewer" assistant

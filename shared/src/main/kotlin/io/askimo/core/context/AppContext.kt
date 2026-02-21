@@ -5,6 +5,7 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
@@ -118,6 +119,8 @@ class AppContext private constructor(
     @Volatile
     private var cachedUtilityClient: ChatClient? = null
 
+    private var cachedImageModel: ImageModel? = null
+
     init {
         // Listen for model change events and invalidate the cached utility client
         eventScope.launch {
@@ -136,6 +139,7 @@ class AppContext private constructor(
         log.info("Model changed to ${event.newModel} for provider ${event.provider}, clearing cached utility client")
         synchronized(this) {
             cachedUtilityClient = null
+            cachedImageModel = null
         }
     }
 
@@ -225,6 +229,30 @@ class AppContext private constructor(
             cachedUtilityClient = client
             log.debug("Created and cached utility client for provider {} with model {}", provider, params.model)
             return client
+        }
+    }
+
+    fun createImageModel(): ImageModel {
+        // Return cached model if available
+        cachedImageModel?.let { return it }
+
+        synchronized(this) {
+            cachedImageModel?.let { return it }
+
+            val provider = params.currentProvider
+            val factory = getModelFactory(provider)
+                ?: error("No model factory registered for $provider")
+
+            val settings = getOrCreateProviderSettings(provider)
+
+            @Suppress("UNCHECKED_CAST")
+            val imageModel = (factory as ChatModelFactory<ProviderSettings>).createImageModel(
+                settings = settings,
+            )
+
+            cachedImageModel = imageModel
+            log.debug("Created and cached image model for provider {}", provider)
+            return imageModel
         }
     }
 

@@ -5,6 +5,7 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.context.ExecutionMode
@@ -62,6 +63,10 @@ interface ChatModelFactory<T : ProviderSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory? = null,
     ): ChatClient
+
+    fun createImageModel(
+        settings: T,
+    ): ImageModel
 
     /**
      * Returns helpful guidance text to display when no models are available for this provider.

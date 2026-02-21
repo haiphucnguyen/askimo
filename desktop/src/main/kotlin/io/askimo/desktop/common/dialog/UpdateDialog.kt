@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,33 +59,6 @@ fun updateCheckDialog(
             )
         }
     }
-}
-
-@Composable
-private fun checkingForUpdatesDialog(onDismiss: () -> Unit) {
-    ComponentColors.themedAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource("update.dialog.title"),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        },
-        text = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(vertical = 8.dp),
-            ) {
-                CircularProgressIndicator(modifier = Modifier.width(24.dp).height(24.dp))
-                Text(
-                    text = stringResource("update.check.checking"),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        },
-        confirmButton = {},
-    )
 }
 
 @Composable
