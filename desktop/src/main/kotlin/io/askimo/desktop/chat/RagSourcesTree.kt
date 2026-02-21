@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -189,7 +190,7 @@ private fun folderNodeItem(
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
     }
 
     Column(modifier = modifier) {
@@ -333,7 +334,7 @@ private fun fileNodeItem(
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
     }
 
     TooltipArea(
@@ -360,6 +361,9 @@ private fun fileNodeItem(
                     .onClick(
                         matcher = PointerMatcher.mouse(PointerButton.Primary),
                         onClick = { onNodeSelected(node) },
+                        onDoubleClick = {
+                            openInFileBrowser(node.path)
+                        },
                     )
                     .onClick(
                         matcher = PointerMatcher.mouse(PointerButton.Secondary),
@@ -447,7 +451,7 @@ private fun urlNodeItem(
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
     }
 
     TooltipArea(
@@ -474,6 +478,9 @@ private fun urlNodeItem(
                     .onClick(
                         matcher = PointerMatcher.mouse(PointerButton.Primary),
                         onClick = { onNodeSelected(node) },
+                        onDoubleClick = {
+                            openInBrowser(node.url)
+                        },
                     )
                     .onClick(
                         matcher = PointerMatcher.mouse(PointerButton.Secondary),

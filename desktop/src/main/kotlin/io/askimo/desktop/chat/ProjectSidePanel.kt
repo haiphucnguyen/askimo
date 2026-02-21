@@ -4,6 +4,8 @@
  */
 package io.askimo.desktop.chat
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
@@ -90,10 +92,17 @@ fun projectSidePanel(
     // Panel width state (default 350dp, min 250dp, max 600dp)
     var panelWidth by remember { mutableStateOf(350.dp) }
 
+    // Animated width for smooth transition
+    val targetWidth = if (isExpanded) panelWidth else 56.dp
+    val animatedWidth by animateDpAsState(
+        targetValue = targetWidth,
+        animationSpec = tween(durationMillis = 300),
+    )
+
     // Unified card containing both content panel and icon bar
     Card(
         modifier = modifier
-            .width(if (isExpanded) panelWidth else 56.dp)
+            .width(animatedWidth)
             .fillMaxHeight(),
         colors = CardDefaults.cardColors(
             containerColor = ComponentColors.sidebarSurfaceColor(),

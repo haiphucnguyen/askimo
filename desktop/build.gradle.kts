@@ -37,6 +37,7 @@ version = rootProject.version
 repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
     google()
 }
 
@@ -51,6 +52,9 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.jlatexmath)
     implementation(libs.konform)
+
+    // Terminal support
+    implementation(libs.bundles.jediterm)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.koin.test)

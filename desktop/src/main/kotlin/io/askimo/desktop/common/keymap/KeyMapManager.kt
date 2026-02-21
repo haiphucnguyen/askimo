@@ -54,6 +54,9 @@ object KeyMapManager {
         // Project shortcuts
         CREATE_PROJECT("shortcut.create.project", Key.N, requiresPrimaryModifier = true, requiresShift = true),
 
+        // Terminal shortcuts
+        NEW_TERMINAL("shortcut.new.terminal", Key.T, requiresPrimaryModifier = true, requiresShift = true),
+
         // Backup shortcuts
         EXPORT_BACKUP("shortcut.export.backup", Key.E, requiresPrimaryModifier = true, requiresShift = true),
         IMPORT_BACKUP("shortcut.import.backup", Key.I, requiresPrimaryModifier = true, requiresShift = true),
@@ -155,6 +158,9 @@ object KeyMapManager {
         ),
         LocalizationManager.getString("shortcut.category.project") to listOf(
             AppShortcut.CREATE_PROJECT,
+        ),
+        LocalizationManager.getString("shortcut.category.terminal") to listOf(
+            AppShortcut.NEW_TERMINAL,
         ),
         LocalizationManager.getString("shortcut.category.search") to listOf(
             AppShortcut.CLOSE_SEARCH,

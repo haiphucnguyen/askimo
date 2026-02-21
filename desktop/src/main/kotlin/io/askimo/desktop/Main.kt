@@ -48,6 +48,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
@@ -126,6 +127,7 @@ import io.askimo.desktop.shell.footerBar
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
+import io.askimo.desktop.terminal.TerminalPanel
 import io.askimo.desktop.tutorial.languageSelectionDialog
 import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
@@ -292,6 +294,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showEventLogPanel by remember { mutableStateOf(false) }
     var eventLogDockPosition by remember { mutableStateOf(EventLogDockPosition.BOTTOM) }
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
+    var showTerminalPanel by remember { mutableStateOf(false) }
+    var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
@@ -663,6 +667,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 },
                 onShowTutorial = {
                     showTutorialWizard = true
+                },
+                onOpenTerminal = {
+                    showTerminalPanel = !showTerminalPanel
                 },
             )
         }
@@ -1063,6 +1070,18 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             currentDockPosition = eventLogDockPosition,
                             size = eventLogPanelSize,
                             onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Terminal Panel - BOTTOM position
+                    if (showTerminalPanel) {
+                        terminalPanel(
+                            onClose = {
+                                showTerminalPanel = false
+                            },
+                            size = terminalPanelSize,
+                            onSizeChange = { newSize -> terminalPanelSize = newSize },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1760,4 +1779,22 @@ fun mainContent(
             }
         }
     }
+}
+
+/**
+ * Terminal panel with resizable height
+ */
+@Composable
+private fun terminalPanel(
+    onClose: () -> Unit,
+    size: Dp,
+    onSizeChange: (Dp) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TerminalPanel(
+        onClose = onClose,
+        panelHeight = size,
+        onHeightChange = onSizeChange,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
