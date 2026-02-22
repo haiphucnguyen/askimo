@@ -74,7 +74,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, GEMINI.name.lowercase())))
                 .build()
 
@@ -95,10 +95,11 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         settings: GeminiSettings,
     ): ImageModel = GoogleAiGeminiImageModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.openai.imageModel)
+        .baseUrl(settings.baseUrl)
+        .modelName(AppConfig.models.gemini.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel {

@@ -427,6 +427,14 @@ class LocalFoldersIndexingCoordinator(
     }
 
     /**
+     * Clear all indexed data for this project.
+     */
+    override fun clearAll() {
+        stateManager.clearStates()
+        log.info("Cleared all index states for project $projectId (folders)")
+    }
+
+    /**
      * Close coordinator and cleanup resources.
      */
     override fun close() {

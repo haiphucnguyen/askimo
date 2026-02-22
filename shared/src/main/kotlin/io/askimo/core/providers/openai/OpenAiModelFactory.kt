@@ -80,7 +80,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, OPENAI.name.lowercase())))
                 .build()
 
@@ -104,7 +104,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         .modelName(AppConfig.models.openai.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel {

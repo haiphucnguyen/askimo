@@ -422,7 +422,7 @@ fun messageBubble(
                                     if (isClickable) {
                                         Modifier
                                             .clickable {
-                                                onMessageClick?.invoke(message.id!!, message.timestamp!!)
+                                                onMessageClick.invoke(message.id!!, message.timestamp!!)
                                             }
                                             .pointerHoverIcon(PointerIcon.Hand)
                                     } else {

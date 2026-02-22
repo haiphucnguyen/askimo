@@ -452,7 +452,6 @@ fun projectView(
             }
         }
 
-        // Fixed bottom: Chat Input
         chatInputField(
             inputText = inputText,
             onInputTextChange = { inputText = it },

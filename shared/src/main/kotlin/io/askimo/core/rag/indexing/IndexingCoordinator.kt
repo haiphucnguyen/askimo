@@ -36,4 +36,10 @@ interface IndexingCoordinator : Closeable {
      * Stop watching for changes.
      */
     fun stopWatching()
+
+    /**
+     * Clear all indexed data for this knowledge source.
+     * This is used when the project is deleted or reset.
+     */
+    fun clearAll()
 }

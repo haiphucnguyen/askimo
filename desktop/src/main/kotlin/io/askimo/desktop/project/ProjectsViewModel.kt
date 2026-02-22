@@ -12,6 +12,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
@@ -168,6 +169,11 @@ class ProjectsViewModel(
                 }
                 if (deleted) {
                     deleteProjectSuccessfulBannerMessage = LocalizationManager.getString("projects.delete.success")
+                    EventBus.post(
+                        ProjectDeletedEvent(
+                            projectId = projectId,
+                        ),
+                    )
                     refresh()
                 } else {
                     errorMessage = LocalizationManager.getString("projects.error.not.found")

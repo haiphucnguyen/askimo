@@ -94,7 +94,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
                 .build()
@@ -120,7 +120,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         .modelName(AppConfig.models.docker.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: DockerAiSettings): ChatModel {

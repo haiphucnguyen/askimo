@@ -72,7 +72,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
                 .build()
 
@@ -97,7 +97,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         .modelName(AppConfig.models.xai.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: XAiSettings): ChatModel {

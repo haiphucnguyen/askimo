@@ -28,7 +28,7 @@ class StdioMcpConnector(
 
         val builder = StdioMcpTransport.builder()
             .logger(log)
-            .logEvents(true)
+            .logEvents(log.isTraceEnabled)
             .command(command)
 
         // Add environment variables if any
