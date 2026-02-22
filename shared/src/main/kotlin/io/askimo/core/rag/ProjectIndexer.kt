@@ -21,6 +21,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.rag.indexing.IndexingCoordinator
 import io.askimo.core.rag.indexing.IndexingCoordinatorFactory
 import io.askimo.core.rag.state.IndexStatus
+import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +30,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 
@@ -52,7 +52,7 @@ class ProjectIndexer(
                 .filterIsInstance<ProjectDeletedEvent>()
                 .collect { event ->
                     log.info("Project deleted, cleaning up coordinator: ${event.projectId}")
-                    removeCoordinator(event.projectId, deleteIndexFiles = true)
+                    removeCoordinator(event.projectId, true)
                 }
         }
 
@@ -78,19 +78,28 @@ class ProjectIndexer(
     /**
      * Remove coordinator and cleanup resources
      * @param projectId The project ID
-     * @param deleteIndexFiles If true, also delete the index files from disk
      */
-    fun removeCoordinator(projectId: String, deleteIndexFiles: Boolean = false) {
-        coordinators.remove(projectId)?.forEach { it.close() } // Close all coordinators for this project
+    private fun removeCoordinator(projectId: String, deleteProjectFolder: Boolean) {
+        coordinators.remove(projectId)?.forEach {
+            it.clearAll()
+            it.close()
+        } // Close all coordinators for this project
 
-        LuceneIndexer.removeInstance(projectId)
-
-        if (deleteIndexFiles) {
+        if (deleteProjectFolder) {
+            try {
+                val projectDir = AskimoHome.projectsDir().resolve(projectId)
+                if (projectDir.toFile().exists()) {
+                    projectDir.toFile().deleteRecursively()
+                }
+            } catch (e: Exception) {
+                log.error("Failed to delete index files for project $projectId", e)
+            }
+        } else {
+            LuceneIndexer.removeInstance(projectId)
             try {
                 val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)
                 if (indexDir.toFile().exists()) {
                     indexDir.toFile().deleteRecursively()
-                    log.info("Deleted index files for project $projectId at $indexDir")
                 }
             } catch (e: Exception) {
                 log.error("Failed to delete index files for project $projectId", e)
@@ -234,7 +243,7 @@ class ProjectIndexer(
 
             if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
                 log.debug("Project $projectId already indexed, removing and re-indexing")
-                removeCoordinator(projectId, deleteIndexFiles = true)
+                removeCoordinator(projectId, false)
             }
 
             if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
@@ -242,7 +251,7 @@ class ProjectIndexer(
                 return
             }
 
-            removeCoordinator(projectId, deleteIndexFiles = true)
+            removeCoordinator(projectId, false)
             log.info("Removed existing coordinators and deleted index files for project $projectId")
 
             // Create new embedding components for re-indexing
@@ -348,34 +357,6 @@ class ProjectIndexer(
     }
 
     /**
-     * Get the current indexing status for a project
-     * @param projectId The project ID to check
-     * @return IndexStatus (NOT_STARTED, INDEXING, READY, WATCHING, FAILED)
-     */
-    fun getProjectIndexStatus(projectId: String): IndexStatus {
-        val projectCoordinators = coordinators[projectId]
-        if (projectCoordinators != null) {
-            // If any coordinator is still indexing, return INDEXING
-            if (projectCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
-                return IndexStatus.INDEXING
-            }
-            // If any coordinator failed, return FAILED
-            if (projectCoordinators.any { it.progress.value.status == IndexStatus.FAILED }) {
-                return IndexStatus.FAILED
-            }
-            // If all coordinators are complete, return the most advanced status
-            return projectCoordinators.maxOf { it.progress.value.status }
-        }
-
-        // Check disk if no active coordinator
-        return if (isProjectIndexed(projectId)) {
-            IndexStatus.READY
-        } else {
-            IndexStatus.NOT_STARTED
-        }
-    }
-
-    /**
      * Check if embedding model is available and functional
      * @throws ModelNotFoundException if the model is not found or unavailable
      */
@@ -400,18 +381,5 @@ class ProjectIndexer(
             coordinatorList.forEach { it.close() }
         }
         coordinators.clear()
-    }
-
-    /**
-     * Shutdown hook for cleanup
-     */
-    init {
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                runBlocking {
-                    close()
-                }
-            },
-        )
     }
 }

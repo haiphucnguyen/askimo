@@ -75,7 +75,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .modelName(model)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.LMSTUDIO.name.lowercase())))
@@ -105,7 +105,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .modelName(AppConfig.models.lmstudio.imageModel)
             .logger(log)
             .logRequests(log.isDebugEnabled)
-            .logResponses(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }

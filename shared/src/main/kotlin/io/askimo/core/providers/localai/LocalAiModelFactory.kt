@@ -72,7 +72,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isDebugEnabled)
+                .logResponses(log.isTraceEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase()))).build()
 
         return AiServiceBuilder.buildChatClient(
@@ -96,7 +96,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         .modelName(AppConfig.models.localai.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: LocalAiSettings): ChatModel {

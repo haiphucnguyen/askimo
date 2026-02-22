@@ -10,11 +10,14 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Base64
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
@@ -109,12 +112,13 @@ object ImageProcessor {
             // Save to temp file for debugging if debug logging is enabled
             if (log.isDebugEnabled) {
                 try {
-                    val tempDir = java.io.File(System.getProperty("java.io.tmpdir"), "askimo-images")
+                    val tempDir = File(System.getProperty("java.io.tmpdir"), "askimo-images")
                     tempDir.mkdirs()
-                    val timestamp = java.time.LocalDateTime.now().format(
-                        java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"),
+                    val timestamp = LocalDateTime.now().format(
+                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"),
                     )
-                    val debugFile = java.io.File(tempDir, "processed_${timestamp}_${newWidth}x${newHeight}_q${String.format("%.2f", quality)}.jpg")
+                    val debugFile =
+                        File(tempDir, "processed_${timestamp}_${newWidth}x${newHeight}_q${String.format("%.2f", quality)}.jpg")
                     debugFile.writeBytes(compressed)
                     log.debug("Saved processed image to: ${debugFile.absolutePath}")
                 } catch (e: Exception) {
@@ -338,25 +342,17 @@ object ImageProcessor {
                         "(-$savedBytes, $savedPercent%)",
                 )
 
-                return@downloadAndProcessImageAsBase64 base64
+                return base64
             } else {
                 log.warn("Failed to download image. Status code: ${response.statusCode()}")
-                return@downloadAndProcessImageAsBase64 null
+                return null
             }
         } catch (e: Exception) {
             log.error("Error downloading/converting image from $imageUrl", e)
-            return@downloadAndProcessImageAsBase64 null
+            return null
         }
     }
-
-    /**
-     * Conservative upper-bound estimate for GPT-4o vision tokens.
-     * Intentionally overestimates to avoid TPM failures.
-     */
-    fun estimateMaxVisionTokens(width: Int, height: Int): Int = (width * height) / 750
 }
-
-// ===== Result DTO =====
 
 data class ProcessedImage(
     val bytes: ByteArray,

@@ -174,13 +174,4 @@ object ApplicationPreferences {
     fun resetVersion() {
         prefs.remove(LAST_LAUNCHED_VERSION_KEY)
     }
-
-    /**
-     * Reset all preferences (for testing).
-     */
-    fun resetAll() {
-        resetTutorial()
-        resetStarPrompt()
-        resetVersion()
-    }
 }

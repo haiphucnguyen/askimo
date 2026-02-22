@@ -73,7 +73,15 @@ class IndexStateManager(
     }
 
     /**
-     * Calculate hash for URL content (used by URL indexing coordinator)
+     * Clear all index states for this project.
+     * Deletes all records that have the projectId field equals to this projectId.
      */
-    fun calculateUrlHash(url: String): String = url.hashCode().toString()
+    fun clearStates() {
+        try {
+            repository.clearProjectState(projectId)
+            log.info("Cleared all index states for project $projectId")
+        } catch (e: Exception) {
+            log.error("Failed to clear index states for project $projectId", e)
+        }
+    }
 }

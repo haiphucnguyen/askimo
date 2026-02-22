@@ -343,4 +343,12 @@ class LocalFilesIndexingCoordinator(
     override fun close() {
         log.debug("Closed LocalFilesIndexingCoordinator for project $projectId")
     }
+
+    /**
+     * Clear all indexed data for this project.
+     */
+    override fun clearAll() {
+        stateManager.clearStates()
+        log.info("Cleared all index states for project $projectId (files)")
+    }
 }

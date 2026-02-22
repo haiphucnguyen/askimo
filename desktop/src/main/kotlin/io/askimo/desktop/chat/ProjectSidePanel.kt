@@ -28,14 +28,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,8 +55,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import java.awt.Cursor
@@ -68,7 +74,6 @@ enum class PanelTab(
 ) {
     RAG_SOURCES(Icons.Default.AutoAwesome, "panel.tab.rag.sources"),
     MCP(Icons.Default.Extension, "panel.tab.mcp"),
-    // Add more tabs here in the future
 }
 
 /**
@@ -86,13 +91,10 @@ fun projectSidePanel(
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Currently selected tab
     var selectedTab by remember { mutableStateOf(PanelTab.RAG_SOURCES) }
 
-    // Panel width state (default 350dp, min 250dp, max 600dp)
-    var panelWidth by remember { mutableStateOf(350.dp) }
+    var panelWidth by remember { mutableStateOf(400.dp) }
 
-    // Animated width for smooth transition
     val targetWidth = if (isExpanded) panelWidth else 56.dp
     val animatedWidth by animateDpAsState(
         targetValue = targetWidth,
@@ -135,7 +137,6 @@ fun projectSidePanel(
                 )
             }
 
-            // Content panel (left side) - only visible when expanded
             if (isExpanded) {
                 Column(
                     modifier = Modifier
@@ -143,7 +144,8 @@ fun projectSidePanel(
                         .fillMaxHeight()
                         .padding(16.dp),
                 ) {
-                    // Header with title and collapse button
+                    var showContextMenu by remember { mutableStateOf(false) }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,21 +154,67 @@ fun projectSidePanel(
                         Text(
                             text = stringResource(selectedTab.labelKey),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            fontWeight = FontWeight.Bold,
                         )
 
-                        IconButton(
-                            onClick = { onExpandedChange(false) },
-                            modifier = Modifier
-                                .size(32.dp)
-                                .pointerHoverIcon(PointerIcon.Hand),
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = stringResource("panel.collapse"),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp),
-                            )
+                            if (selectedTab == PanelTab.RAG_SOURCES) {
+                                Box {
+                                    IconButton(
+                                        onClick = { showContextMenu = true },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .pointerHoverIcon(PointerIcon.Hand),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = stringResource("panel.context.menu"),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+
+                                    // Dropdown menu
+                                    ComponentColors.themedDropdownMenu(
+                                        expanded = showContextMenu,
+                                        onDismissRequest = { showContextMenu = false },
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource("panel.context.reindex")) },
+                                            onClick = {
+                                                showContextMenu = false
+                                                project?.let {
+                                                    EventBus.post(
+                                                        ProjectReIndexEvent(
+                                                            projectId = it.id,
+                                                            reason = "Manual re-index requested by user from side panel",
+                                                        ),
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Minimize button
+                            IconButton(
+                                onClick = { onExpandedChange(false) },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = stringResource("panel.collapse"),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     }
 
@@ -269,7 +317,7 @@ private fun tabIcon(
                     } else {
                         Color.Transparent
                     },
-                    shape = RoundedCornerShape(0.dp), // No rounded shape
+                    shape = RoundedCornerShape(0.dp),
                 )
                 .clickable(
                     onClick = onClick,
@@ -333,7 +381,7 @@ private fun ragSourcesTabContent(
                     color = when (ragIndexingStatus) {
                         "completed" -> MaterialTheme.colorScheme.onSurface
                         "failed" -> MaterialTheme.colorScheme.error
-                        "inprogress" -> MaterialTheme.colorScheme.tertiary
+                        "inprogress" -> MaterialTheme.colorScheme.onSurface
                         else -> MaterialTheme.colorScheme.onSurface
                     },
                 )
@@ -342,6 +390,7 @@ private fun ragSourcesTabContent(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -389,14 +438,14 @@ private fun ragSourcesEmptyState() {
                 text = stringResource("rag.empty.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                fontWeight = FontWeight.Medium,
             )
 
             Text(
                 text = stringResource("rag.empty.description"),
                 style = MaterialTheme.typography.bodySmall,
                 color = ComponentColors.secondaryTextColor(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
             )
 
             // Placeholder for future "Add Sources" button

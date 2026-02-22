@@ -102,7 +102,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         .modelName(AppConfig.models.ollama.imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
-        .logResponses(log.isDebugEnabled)
+        .logResponses(log.isTraceEnabled)
         .build()
 
     private fun createSecondaryChatModel(settings: OllamaSettings): ChatModel {

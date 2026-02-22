@@ -285,11 +285,11 @@ data class AnthropicModelConfig(
 )
 
 data class GeminiModelConfig(
-    val utilityModel: String = "gemini-2.0-flash",
+    val utilityModel: String = "gemini-2.5-flash-lite",
     val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "text-embedding-004",
+    val embeddingModel: String = "gemini-embedding-001",
     val visionModel: String = "gemini-2.0-pro",
-    val imageModel: String = "grok-imagine-image",
+    val imageModel: String = "gemini-2.5-flash-image",
 )
 
 data class OpenAiModelConfig(

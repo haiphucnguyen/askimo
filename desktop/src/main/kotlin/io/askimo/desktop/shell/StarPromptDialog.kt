@@ -14,20 +14,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 
 /**
@@ -42,9 +39,9 @@ fun starPromptDialog(
     onDismiss: () -> Unit,
     onStar: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = {}) {
         Surface(
-            modifier = Modifier.width(450.dp),
+            modifier = Modifier.width(600.dp),
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
         ) {
@@ -59,7 +56,7 @@ fun starPromptDialog(
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(32.dp),
                     )
                     Column(
@@ -84,21 +81,16 @@ fun starPromptDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    secondaryButton(
                         onClick = onDismiss,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("star.prompt.maybe.later"))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
+                    primaryButton(
                         onClick = onStar,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,

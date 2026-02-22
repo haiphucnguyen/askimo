@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -78,6 +79,7 @@ import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.tools.chart.MermaidChartData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.commonmark.ext.autolink.AutolinkExtension
@@ -104,8 +106,13 @@ import org.commonmark.node.SoftLineBreak
 import org.commonmark.node.StrongEmphasis
 import org.commonmark.parser.Parser
 import java.io.ByteArrayInputStream
+import java.io.File
+import java.net.URI
 import java.util.Base64
 import javax.imageio.ImageIO
+import javax.swing.JFileChooser
+import javax.swing.SwingUtilities
+import javax.swing.filechooser.FileNameExtensionFilter
 import org.commonmark.node.Text as MarkdownText
 
 private val log = currentFileLogger()
@@ -708,10 +715,51 @@ private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null
     }
 }
 
+/**
+ * Reusable download button overlay for images.
+ * Styled to match the copy button from code blocks.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun imageDownloadButton(
+    isVisible: Boolean,
+    onDownload: suspend () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (isVisible) {
+        val coroutineScope = rememberCoroutineScope()
+        Card(
+            modifier = modifier,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        ) {
+            IconButton(
+                onClick = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        onDownload()
+                    }
+                },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download image",
+                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun renderImage(image: Image) {
     val context = LocalPlatformContext.current
     val destination = image.destination
+    var isHovered by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -729,7 +777,7 @@ private fun renderImage(image: Image) {
                         val bufferedImage = ImageIO.read(ByteArrayInputStream(imageBytes))
 
                         if (bufferedImage != null) {
-                            Result.success(bufferedImage.toComposeImageBitmap())
+                            Result.success(Pair(bufferedImage.toComposeImageBitmap(), imageBytes))
                         } else {
                             Result.failure(Exception("Failed to decode image"))
                         }
@@ -743,15 +791,30 @@ private fun renderImage(image: Image) {
             }
 
             imageResult.fold(
-                onSuccess = { bitmap ->
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = image.title ?: extractTextContent(image),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .padding(8.dp),
-                    )
+                onSuccess = { (bitmap, imageBytes) ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                            .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+                    ) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = image.title ?: extractTextContent(image),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(8.dp),
+                        )
+
+                        // Download button overlay
+                        imageDownloadButton(
+                            isVisible = isHovered,
+                            onDownload = { downloadImage(imageData = imageBytes) },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 4.dp, end = 4.dp),
+                        )
+                    }
                 },
                 onFailure = { error ->
                     Text(
@@ -764,17 +827,32 @@ private fun renderImage(image: Image) {
             )
         } else {
             // Regular URL - use AsyncImage
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(destination)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = image.title ?: extractTextContent(image),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(8.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                    .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(destination)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = image.title ?: extractTextContent(image),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(8.dp),
+                )
+
+                // Download button overlay
+                imageDownloadButton(
+                    isVisible = isHovered,
+                    onDownload = { downloadImage(imageUrl = destination) },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 4.dp),
+                )
+            }
         }
 
         // Show caption if title or alt text exists
@@ -1513,4 +1591,67 @@ private fun isProbablyProse(text: String): Boolean {
 
     // If we have strong prose indicators and minimal code patterns, treat as prose
     return proseScore >= 3 && codePatternCount <= 1
+}
+
+/**
+ * Downloads an image using a file chooser dialog.
+ * Supports both byte arrays (base64 images) and URLs.
+ */
+private fun downloadImage(
+    imageData: ByteArray? = null,
+    imageUrl: String? = null,
+    defaultFileName: String = "image.png",
+) {
+    SwingUtilities.invokeLater {
+        try {
+            // Determine file extension and default name
+            val (extension, fileName) = when {
+                imageUrl != null -> {
+                    val urlFileName = imageUrl.substringAfterLast('/').substringBefore('?').ifEmpty { defaultFileName }
+                    val ext = urlFileName.substringAfterLast('.', "png")
+                    ext to urlFileName
+                }
+                else -> "png" to defaultFileName
+            }
+
+            val fileChooser = JFileChooser()
+            fileChooser.dialogTitle = "Save Image"
+            val filterDescription = "${extension.uppercase()} Image"
+            fileChooser.fileFilter = FileNameExtensionFilter(filterDescription, extension)
+            fileChooser.selectedFile = File(fileName)
+
+            val result = fileChooser.showSaveDialog(null)
+            if (result == JFileChooser.APPROVE_OPTION) {
+                var file = fileChooser.selectedFile
+                // Ensure proper extension
+                if (!file.name.endsWith(".$extension", ignoreCase = true)) {
+                    file = File(file.absolutePath + ".$extension")
+                }
+
+                // Save the image based on source type
+                when {
+                    imageData != null -> {
+                        file.writeBytes(imageData)
+                        log.info("Image saved to: {}", file.absolutePath)
+                    }
+                    imageUrl != null -> {
+                        val url = URI(imageUrl).toURL()
+                        url.openStream().use { input ->
+                            file.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        log.info("Image downloaded and saved to: {}", file.absolutePath)
+                    }
+                    else -> {
+                        log.error("No image data or URL provided")
+                    }
+                }
+            } else {
+                log.debug("Save image dialog cancelled")
+            }
+        } catch (e: Exception) {
+            log.error("Failed to save image", e)
+        }
+    }
 }
