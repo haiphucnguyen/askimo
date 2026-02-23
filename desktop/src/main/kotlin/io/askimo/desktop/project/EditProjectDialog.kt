@@ -52,7 +52,8 @@ import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectReIndexEvent
+import io.askimo.core.event.internal.ProjectIndexRemovalEvent
+import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
@@ -136,7 +137,7 @@ fun editProjectDialog(
                             onClick = onDismiss,
                             modifier = Modifier.align(Alignment.End),
                         ) {
-                            Text("Close")
+                            Text(stringResource("dialog.close"))
                         }
                     }
                 }
@@ -207,8 +208,11 @@ private fun editProjectForm(
         // Build knowledge source configurations from UI items
         val knowledgeSourceConfigs = buildKnowledgeSourceConfigs(knowledgeSources)
 
-        // Check if knowledge sources have changed
-        val knowledgeSourceChanged = knowledgeSourceConfigs != project.knowledgeSources
+        // Detect added and removed knowledge sources
+        val oldSources = project.knowledgeSources.toSet()
+        val newSources = knowledgeSourceConfigs.toSet()
+        val addedSources = newSources - oldSources
+        val removedSources = oldSources - newSources
 
         // Save the project
         onSave(
@@ -218,12 +222,24 @@ private fun editProjectForm(
             knowledgeSourceConfigs,
         )
 
-        // If reference materials changed, emit re-index event
-        if (knowledgeSourceChanged) {
+        // Emit removal events for deleted sources
+        removedSources.forEach { source ->
             EventBus.post(
-                ProjectReIndexEvent(
+                ProjectIndexRemovalEvent(
                     projectId = project.id,
-                    reason = "Reference materials changed",
+                    knowledgeSource = source,
+                    reason = "Knowledge source removed by user",
+                ),
+            )
+        }
+
+        // Emit indexing events for newly added sources
+        if (addedSources.isNotEmpty()) {
+            EventBus.post(
+                ProjectIndexingRequestedEvent(
+                    projectId = project.id,
+                    knowledgeSources = addedSources.toList(),
+                    watchForChanges = true,
                 ),
             )
         }
@@ -247,14 +263,12 @@ private fun editProjectForm(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Title
                 Text(
                     text = stringResource("project.edit.dialog.title"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                // Project Name Field
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = {
@@ -273,7 +287,6 @@ private fun editProjectForm(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
 
-                // Description Field (Optional)
                 OutlinedTextField(
                     value = projectDescription,
                     onValueChange = { projectDescription = it },
@@ -286,7 +299,6 @@ private fun editProjectForm(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
 
-                // Reference Materials Section
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -296,7 +308,6 @@ private fun editProjectForm(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
 
-                    // List of existing sources
                     knowledgeSources.forEach { source ->
                         knowledgeSourceRow(
                             source = source,
@@ -304,7 +315,6 @@ private fun editProjectForm(
                         )
                     }
 
-                    // Add Source Button with Dropdown
                     Box {
                         OutlinedButton(
                             onClick = { showAddSourceMenu = true },
@@ -430,7 +440,7 @@ fun knowledgeSourceRow(
 
         IconButton(
             onClick = onRemove,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
         ) {
             Icon(
                 Icons.Default.Close,

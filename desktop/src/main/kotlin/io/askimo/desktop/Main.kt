@@ -701,7 +701,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     val handleResumeSession: (String) -> Unit = { sessionId ->
         sessionManager.switchToSession(sessionId)
-
+        selectedProjectId = null
         currentView = View.CHAT
     }
 
@@ -866,6 +866,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                 projectsViewModel = projectsViewModel,
                                                 sessionsViewModel = sessionsViewModel,
                                                 currentSessionId = activeSessionId,
+                                                currentProjectId = selectedProjectId,
                                                 userProfile = userProfile,
                                                 onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                                 onNewChat = {

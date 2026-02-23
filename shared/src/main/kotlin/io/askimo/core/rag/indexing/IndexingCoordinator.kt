@@ -4,6 +4,7 @@
  */
 package io.askimo.core.rag.indexing
 
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.rag.state.IndexProgress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -13,8 +14,17 @@ import java.io.Closeable
  * Coordinator for indexing knowledge sources.
  * Each knowledge source type (files, web pages, databases) implements this interface
  * to handle indexing and watching for changes in its own way.
+ *
+ * The type parameter [T] represents the specific [KnowledgeSourceConfig] subtype
+ * used by this coordinator. The `out` variance allows coordinators with specific
+ * config types to be used where the base type is expected.
  */
-interface IndexingCoordinator : Closeable {
+interface IndexingCoordinator<out T : KnowledgeSourceConfig> : Closeable {
+    /**
+     * The knowledge source configuration this coordinator is responsible for.
+     */
+    val knowledgeSourceConfig: T
+
     /**
      * Progress of the indexing operation.
      */

@@ -100,6 +100,7 @@ fun navigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
+    currentProjectId: String?,
     userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
@@ -134,6 +135,7 @@ fun navigationSidebar(
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
             currentSessionId = currentSessionId,
+            currentProjectId = currentProjectId,
             userProfile = userProfile,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
@@ -175,7 +177,8 @@ private fun expandedNavigationSidebar(
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
-    userProfile: io.askimo.core.user.domain.UserProfile?, // Add this
+    currentProjectId: String?,
+    userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -303,6 +306,7 @@ private fun expandedNavigationSidebar(
             if (isProjectsExpanded) {
                 projectsList(
                     projectsViewModel = projectsViewModel,
+                    currentProjectId = currentProjectId,
                     onNewProject = onNewProject,
                     onSelectProject = onSelectProject,
                 )
@@ -516,6 +520,7 @@ private fun collapsedNavigationSidebar(
 @Composable
 private fun projectsList(
     projectsViewModel: ProjectsViewModel,
+    currentProjectId: String?,
     onNewProject: () -> Unit,
     onSelectProject: (String) -> Unit,
 ) {
@@ -562,6 +567,7 @@ private fun projectsList(
             projectsViewModel.projects.forEach { project ->
                 projectItemWithMenu(
                     project = project,
+                    isSelected = project.id == currentProjectId,
                     onProjectClick = { onSelectProject(project.id) },
                     onDeleteProject = { projectToDelete = it },
                 )
@@ -628,6 +634,7 @@ private fun navigationItemLabelWithMenu(
 @Composable
 private fun projectItemWithMenu(
     project: Project,
+    isSelected: Boolean,
     onProjectClick: () -> Unit,
     onDeleteProject: (Project) -> Unit,
 ) {
@@ -655,7 +662,7 @@ private fun projectItemWithMenu(
                         onMenuClick = { showMenu = true },
                     )
                 },
-                selected = false,
+                selected = isSelected,
                 onClick = onProjectClick,
                 modifier = Modifier
                     .fillMaxWidth()

@@ -8,10 +8,12 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectDeletedEvent
+import io.askimo.core.event.internal.ProjectIndexRemovalEvent
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.user.IndexingCompletedEvent
@@ -30,7 +32,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -40,12 +41,12 @@ import java.util.concurrent.ConcurrentHashMap
 class ProjectIndexer(
     private val appContext: AppContext,
     private val projectRepository: ProjectRepository,
-) : Closeable {
+) {
     private val log = logger<ProjectIndexer>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Map of projectId -> List of coordinators (one per knowledge source)
-    private val coordinators = ConcurrentHashMap<String, List<IndexingCoordinator>>()
+    private val coordinators = ConcurrentHashMap<String, List<IndexingCoordinator<*>>>()
     init {
         scope.launch {
             EventBus.internalEvents
@@ -71,6 +72,15 @@ class ProjectIndexer(
                 .collect { event ->
                     log.info("Indexing requested for project ${event.projectId}")
                     handleIndexingRequest(event)
+                }
+        }
+
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<ProjectIndexRemovalEvent>()
+                .collect { event ->
+                    log.info("Indexing requested for project ${event.projectId}")
+                    handleRemoveIndexEvent(event)
                 }
         }
     }
@@ -112,40 +122,18 @@ class ProjectIndexer(
      */
     private suspend fun performIndexing(
         projectId: String,
+        projectName: String,
+        knowledgeSources: List<KnowledgeSourceConfig>,
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         watchForChanges: Boolean,
     ) {
-        val project = try {
-            projectRepository.getProject(projectId)
-        } catch (e: Exception) {
-            log.error("Failed to get project $projectId for indexing", e)
-            return
-        }
-
-        if (project == null) {
-            log.warn("Project $projectId not found, cannot index")
-            return
-        }
-
-        if (project.knowledgeSources.isEmpty()) {
-            log.warn("Project $projectId has no knowledge sources, skipping indexing")
-            EventBus.emit(
-                IndexingCompletedEvent(
-                    projectId = projectId,
-                    projectName = project.name,
-                    filesIndexed = 0,
-                ),
-            )
-            return
-        }
-
         // Create one coordinator per knowledge source using factory
         val projectCoordinators = try {
-            project.knowledgeSources.map { source ->
+            knowledgeSources.map { source ->
                 IndexingCoordinatorFactory.createCoordinator(
                     projectId = projectId,
-                    projectName = project.name,
+                    projectName = projectName,
                     knowledgeSource = source,
                     embeddingStore = embeddingStore,
                     embeddingModel = embeddingModel,
@@ -157,7 +145,7 @@ class ProjectIndexer(
             EventBus.emit(
                 IndexingFailedEvent(
                     projectId = projectId,
-                    projectName = project.name,
+                    projectName = projectName,
                     errorMessage = e.message ?: "Failed to create indexing coordinators",
                 ),
             )
@@ -169,7 +157,7 @@ class ProjectIndexer(
         EventBus.emit(
             IndexingStartedEvent(
                 projectId = projectId,
-                projectName = project.name,
+                projectName = projectName,
             ),
         )
 
@@ -206,7 +194,7 @@ class ProjectIndexer(
             EventBus.emit(
                 IndexingCompletedEvent(
                     projectId = projectId,
-                    projectName = project.name,
+                    projectName = projectName,
                     filesIndexed = totalFilesIndexed,
                 ),
             )
@@ -220,7 +208,7 @@ class ProjectIndexer(
             EventBus.emit(
                 IndexingFailedEvent(
                     projectId = projectId,
-                    projectName = project.name,
+                    projectName = projectName,
                     errorMessage = errors,
                 ),
             )
@@ -254,20 +242,31 @@ class ProjectIndexer(
             removeCoordinator(projectId, false)
             log.info("Removed existing coordinators and deleted index files for project $projectId")
 
-            // Create new embedding components for re-indexing
-            val embeddingModel = getEmbeddingModel(appContext)
-            checkEmbeddingModelAvailable(embeddingModel)
+            val project = try {
+                projectRepository.getProject(projectId)
+            } catch (e: Exception) {
+                log.error("Failed to get project $projectId for indexing", e)
+                return
+            }
 
-            val embeddingStore = getEmbeddingStore(projectId, embeddingModel)
+            if (project != null) {
+                // Create new embedding components for re-indexing
+                val embeddingModel = getEmbeddingModel(appContext)
+                checkEmbeddingModelAvailable(embeddingModel)
 
-            performIndexing(
-                projectId = projectId,
-                embeddingStore = embeddingStore,
-                embeddingModel = embeddingModel,
-                watchForChanges = true,
-            )
+                val embeddingStore = getEmbeddingStore(projectId, embeddingModel)
 
-            log.info("Re-indexing initiated for project $projectId")
+                performIndexing(
+                    projectId = projectId,
+                    projectName = project.name,
+                    knowledgeSources = project.knowledgeSources,
+                    embeddingStore = embeddingStore,
+                    embeddingModel = embeddingModel,
+                    watchForChanges = true,
+                )
+
+                log.info("Re-indexing initiated for project $projectId")
+            }
         } catch (e: Exception) {
             log.error("Failed to handle re-index request for project ${event.projectId}", e)
             EventBus.emit(
@@ -277,6 +276,37 @@ class ProjectIndexer(
                     errorMessage = e.message ?: "Unknown error",
                 ),
             )
+        }
+    }
+
+    private fun handleRemoveIndexEvent(event: ProjectIndexRemovalEvent) {
+        try {
+            val projectId = event.projectId
+            val knowledgeSource = event.knowledgeSource
+
+            val projectCoordinators = coordinators[projectId]
+            if (projectCoordinators != null) {
+                val coordinatorToRemove = projectCoordinators.find {
+                    it.knowledgeSourceConfig == event.knowledgeSource
+                }
+                if (coordinatorToRemove != null) {
+                    coordinatorToRemove.clearAll()
+                    coordinatorToRemove.close()
+
+                    // Remove from the list of coordinators for this project
+                    coordinators[projectId] = projectCoordinators.filterNot {
+                        it.knowledgeSourceConfig.resourceIdentifier == event.knowledgeSource.resourceIdentifier
+                    }
+
+                    log.info("Removed index for knowledge source ${knowledgeSource.resourceIdentifier} from project $projectId")
+                } else {
+                    log.warn("No coordinator found for knowledge source ${knowledgeSource.resourceIdentifier} in project $projectId")
+                }
+            } else {
+                log.warn("No coordinators found for project $projectId when trying to remove index for source ${knowledgeSource.resourceIdentifier}")
+            }
+        } catch (e: Exception) {
+            log.error("Failed to handle index removal request for project ${event.projectId}", e)
         }
     }
 
@@ -314,12 +344,22 @@ class ProjectIndexer(
                 getEmbeddingStore(projectId, embeddingModel)
             }
 
-            performIndexing(
-                projectId = projectId,
-                embeddingStore = embeddingStore,
-                embeddingModel = embeddingModel,
-                watchForChanges = event.watchForChanges,
-            )
+            val project = try {
+                projectRepository.getProject(projectId)
+            } catch (e: Exception) {
+                log.error("Failed to get project $projectId for indexing", e)
+                return
+            }
+            if (project != null) {
+                performIndexing(
+                    projectId = projectId,
+                    projectName = project.name,
+                    knowledgeSources = event.knowledgeSources ?: project.knowledgeSources,
+                    embeddingStore = embeddingStore,
+                    embeddingModel = embeddingModel,
+                    watchForChanges = event.watchForChanges,
+                )
+            }
         } catch (e: Exception) {
             log.error("Failed to handle indexing request for project ${event.projectId}", e)
 
@@ -373,13 +413,5 @@ class ProjectIndexer(
                 throw e
             }
         }
-    }
-
-    override fun close() {
-        log.info("Closing ProjectIndexer, cleaning up ${coordinators.size} projects")
-        coordinators.values.forEach { coordinatorList ->
-            coordinatorList.forEach { it.close() }
-        }
-        coordinators.clear()
     }
 }

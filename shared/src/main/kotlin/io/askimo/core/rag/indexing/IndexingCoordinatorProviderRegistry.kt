@@ -108,17 +108,6 @@ object IndexingCoordinatorProviderRegistry {
     }
 
     /**
-     * Check if a provider is registered for a specific knowledge source type.
-     *
-     * @param type The knowledge source type to check
-     * @return true if a provider is registered, false otherwise
-     */
-    fun hasProvider(type: Class<out KnowledgeSourceConfig>): Boolean {
-        ensureInitialized()
-        return providers.containsKey(type)
-    }
-
-    /**
      * Remove all registered providers and reset initialization.
      * Primarily useful for testing.
      */

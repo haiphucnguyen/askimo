@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.isDirectory
@@ -43,12 +45,14 @@ import kotlin.io.path.pathString
 class LocalFoldersIndexingCoordinator(
     private val projectId: String,
     private val projectName: String,
-    private val paths: List<Path>,
+    override val knowledgeSourceConfig: LocalFoldersKnowledgeSourceConfig,
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
-) : IndexingCoordinator {
+) : IndexingCoordinator<LocalFoldersKnowledgeSourceConfig> {
     private val log = logger<LocalFoldersIndexingCoordinator>()
+
+    private val filePaths = listOf(Paths.get(knowledgeSourceConfig.resourceIdentifier))
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val stateManager = IndexStateManager(projectId, "folders")
@@ -388,7 +392,7 @@ class LocalFoldersIndexingCoordinator(
     /**
      * Start indexing using the paths provided at construction.
      */
-    override suspend fun startIndexing(): Boolean = indexPathsWithProgress(paths)
+    override suspend fun startIndexing(): Boolean = indexPathsWithProgress(filePaths)
 
     /**
      * Start watching for file changes.
@@ -413,7 +417,7 @@ class LocalFoldersIndexingCoordinator(
             },
         )
 
-        fileWatcher?.startWatching(paths, scope)
+        fileWatcher?.startWatching(filePaths, scope)
         log.info("Started file watching for project $projectId")
     }
 
