@@ -62,6 +62,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.preferences.ApplicationPreferences
 import io.askimo.desktop.common.theme.ComponentColors
 import java.awt.Cursor
 
@@ -93,7 +94,10 @@ fun projectSidePanel(
 ) {
     var selectedTab by remember { mutableStateOf(PanelTab.RAG_SOURCES) }
 
-    var panelWidth by remember { mutableStateOf(400.dp) }
+    // Load panel width from preferences (default 400dp if not set)
+    var panelWidth by remember {
+        mutableStateOf(ApplicationPreferences.getProjectSidePanelWidth().dp)
+    }
 
     val targetWidth = if (isExpanded) panelWidth else 56.dp
     val animatedWidth by animateDpAsState(
@@ -131,6 +135,10 @@ fun projectSidePanel(
                                     val newWidth = panelWidth - dragAmount.x.toDp()
                                     // Constrain width between 250dp and 600dp
                                     panelWidth = newWidth.coerceIn(250.dp, 600.dp)
+                                },
+                                onDragEnd = {
+                                    // Save to preferences when drag ends
+                                    ApplicationPreferences.setProjectSidePanelWidth(panelWidth.value.toInt())
                                 },
                             )
                         },

@@ -181,14 +181,14 @@ class LocalFoldersIndexingCoordinator(
             )
 
             log.info(
-                "Completed indexing for project $projectId: " +
+                "Completed indexing for project $projectName: " +
                     "${processedFiles - skippedFiles} files indexed, " +
                     "$skippedFiles files skipped (unchanged), " +
                     "${deletedFiles.size} files removed",
             )
             return true
         } catch (e: Exception) {
-            log.error("Indexing failed for project $projectId", e)
+            log.error("Indexing failed for project $projectName", e)
             _progress.value = _progress.value.copy(
                 status = IndexStatus.FAILED,
                 error = e.message ?: "Unknown error",
@@ -250,7 +250,7 @@ class LocalFoldersIndexingCoordinator(
             for (absoluteFilePath in deletedFiles) {
                 val filePath = Path.of(absoluteFilePath)
                 hybridIndexer.removeFileFromIndex(filePath)
-                log.debug("Removed deleted file from index: $absoluteFilePath")
+                log.trace("Removed deleted file from index: $absoluteFilePath")
             }
         } catch (e: Exception) {
             log.error("Failed to remove deleted files from index", e)
@@ -287,7 +287,7 @@ class LocalFoldersIndexingCoordinator(
 
             // Skip files that can't be read or have blank content
             if (text.isNullOrBlank()) {
-                log.debug("Skipping file with no extractable content: {}", filePath.pathString)
+                log.warn("Skipping file with no extractable content: {}", filePath.pathString)
                 updateProgressAtomic()
                 return true
             }
@@ -306,7 +306,7 @@ class LocalFoldersIndexingCoordinator(
                     return true
                 }
 
-                log.debug("Start indexing {} ({} chunks, text file)", filePath.pathString, chunksWithLineNumbers.size)
+                log.trace("Start indexing {} ({} chunks, text file)", filePath.pathString, chunksWithLineNumbers.size)
                 for ((idx, chunkData) in chunksWithLineNumbers.withIndex()) {
                     val segment = resourceContentProcessor.createTextSegmentWithMetadata(
                         chunk = chunkData.text,
@@ -323,7 +323,7 @@ class LocalFoldersIndexingCoordinator(
                 }
 
                 val elapsedTime = System.currentTimeMillis() - startTime
-                log.debug(
+                log.trace(
                     "Indexed {} ({} chunks, lines tracked) in {}ms",
                     filePath.pathString,
                     chunksWithLineNumbers.size,

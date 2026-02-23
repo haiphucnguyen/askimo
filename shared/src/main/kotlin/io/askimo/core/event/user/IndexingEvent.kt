@@ -19,7 +19,7 @@ data class IndexingStartedEvent(
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
-    override val type = EventType.USER
+    override val type = EventType.INTERNAL
 
     override fun getDetails(): String = "Indexing project '$projectName' ..."
 }
@@ -36,7 +36,7 @@ data class IndexingInProgressEvent(
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
-    override val type = EventType.USER
+    override val type = EventType.INTERNAL
 
     override fun getDetails(): String {
         val percentage = if (totalFiles > 0) (filesIndexed * 100 / totalFiles) else 0
@@ -55,7 +55,7 @@ data class IndexingCompletedEvent(
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
-    override val type = EventType.USER
+    override val type = EventType.INTERNAL
 
     override fun getDetails(): String = "Successfully indexed $filesIndexed file(s) for project '$projectName'"
 }
@@ -71,7 +71,7 @@ data class IndexingFailedEvent(
     override val timestamp: Instant = Instant.now(),
     override val source: EventSource = EventSource.SYSTEM,
 ) : Event {
-    override val type = EventType.USER
+    override val type = EventType.INTERNAL
 
     override fun getDetails(): String = "Failed to index project '$projectName': $errorMessage"
 }

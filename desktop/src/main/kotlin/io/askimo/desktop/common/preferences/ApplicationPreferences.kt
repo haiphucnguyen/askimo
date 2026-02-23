@@ -149,6 +149,25 @@ object ApplicationPreferences {
     }
 
     // ============================================================
+    // UI PREFERENCES
+    // ============================================================
+
+    private const val PROJECT_SIDE_PANEL_WIDTH_KEY = "ui.project_side_panel_width"
+    private const val DEFAULT_PROJECT_SIDE_PANEL_WIDTH = 400
+
+    /**
+     * Get the project side panel width in pixels.
+     */
+    fun getProjectSidePanelWidth(): Int = prefs.getInt(PROJECT_SIDE_PANEL_WIDTH_KEY, DEFAULT_PROJECT_SIDE_PANEL_WIDTH)
+
+    /**
+     * Set the project side panel width in pixels.
+     */
+    fun setProjectSidePanelWidth(width: Int) {
+        prefs.putInt(PROJECT_SIDE_PANEL_WIDTH_KEY, width)
+    }
+
+    // ============================================================
     // RESET & TESTING
     // ============================================================
 

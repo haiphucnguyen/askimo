@@ -72,7 +72,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import io.askimo.core.VersionInfo
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
@@ -536,41 +535,30 @@ fun footerBar(
 }
 
 /**
+ * Wrapper class to ensure unique keys for events in LazyColumn
+ */
+private data class EventWithId(
+    val id: String,
+    val event: Event,
+)
+
+/**
  * Notification icon in bottom bar that shows user events only.
  * Developer events are excluded and shown in the Event Log dialog instead.
  */
 @Composable
 private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
     var showEventPopup by remember { mutableStateOf(false) }
-    val events = remember { mutableStateListOf<Event>() }
+    val events = remember { mutableStateListOf<EventWithId>() }
     var unreadCount by remember { mutableStateOf(0) }
+    var eventCounter by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         EventBus.userEvents.collect { event ->
-            // Skip IndexingInProgressEvent unless developer mode is enabled and active
-            if (event is IndexingInProgressEvent) {
-                if (!(AppConfig.developer.enabled && AppConfig.developer.active)) {
-                    return@collect // Skip this event
-                }
-            }
-
-            // Special handling for IndexingInProgressEvent: replace old progress event for same project
-            if (event is IndexingInProgressEvent) {
-                // Find and remove any existing progress event for the same project
-                val existingIndex = events.indexOfFirst {
-                    it is IndexingInProgressEvent && it.projectId == event.projectId
-                }
-                if (existingIndex >= 0) {
-                    events[existingIndex] = event
-                } else {
-                    events.add(0, event)
-                    unreadCount++
-                }
-            } else {
-                // New event - add and increment unread
-                events.add(0, event)
-                unreadCount++
-            }
+            // Generate unique ID combining counter and timestamp
+            val uniqueId = "${eventCounter++}_${event.timestamp.toEpochMilli()}"
+            events.add(0, EventWithId(uniqueId, event))
+            unreadCount++
 
             // Keep list size manageable
             if (events.size > 100) {
@@ -632,8 +620,8 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                         events = events,
                         onShowUpdateDetails = onShowUpdateDetails,
                         onDismissPopup = { showEventPopup = false },
-                        onRemoveEvent = { event ->
-                            events.remove(event)
+                        onRemoveEvent = { eventWithId ->
+                            events.remove(eventWithId)
                             if (unreadCount > 0) {
                                 unreadCount--
                             }
@@ -656,10 +644,10 @@ private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
  */
 @Composable
 private fun eventPopupContent(
-    events: List<Event>,
+    events: List<EventWithId>,
     onShowUpdateDetails: () -> Unit,
     onDismissPopup: () -> Unit,
-    onRemoveEvent: (Event) -> Unit,
+    onRemoveEvent: (EventWithId) -> Unit,
     onClearAll: () -> Unit,
 ) {
     val estimatedItemHeight = 128.dp
@@ -733,13 +721,13 @@ private fun eventPopupContent(
                 ) {
                     items(
                         items = events,
-                        key = { it.timestamp.toEpochMilli() },
-                    ) { event ->
+                        key = { it.id },
+                    ) { eventWithId ->
                         eventItem(
-                            event = event,
+                            event = eventWithId.event,
                             onShowUpdateDetails = onShowUpdateDetails,
                             onDismissPopup = onDismissPopup,
-                            onRemoveEvent = { onRemoveEvent(event) },
+                            onRemoveEvent = { onRemoveEvent(eventWithId) },
                         )
                     }
                 }

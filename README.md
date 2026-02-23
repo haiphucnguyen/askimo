@@ -124,7 +124,7 @@ Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM6
 
 <p align="center">
   <img src="public/desktop_ai_provider_switcher.png" alt="Provider Switching" width="45%">
-  <img src="public/desktop_chat_search.png" alt="Search & Favorites" width="45%">
+  <img src="public/mcp_tools_configure.png" alt="MCP Tools Configuration" width="45%">
   <img src="public/desktop_rag.png" alt="RAG" width="45%">
 </p>
 

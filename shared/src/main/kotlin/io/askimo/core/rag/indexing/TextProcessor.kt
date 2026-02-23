@@ -40,7 +40,7 @@ class TextProcessor(
         val minOverlap = 50
 
         calculatedOverlap.coerceIn(minOverlap, configuredMax).also {
-            log.info("Calculated chunk overlap: $it chars (${(it.toFloat() / maxCharsPerChunk * 100).toInt()}% of chunk size)")
+            log.trace("Calculated chunk overlap: $it chars (${(it.toFloat() / maxCharsPerChunk * 100).toInt()}% of chunk size)")
         }
     }
 
@@ -79,7 +79,7 @@ class TextProcessor(
 
         val calculated = safeChars.coerceIn(minChars, configuredMax)
 
-        log.debug(
+        log.trace(
             "Calculated chunk size: $calculated chars " +
                 "(model limit: $tokenLimit tokens, " +
                 "safe limit: $safeTokenLimit tokens @ ${(safetyFactor * 100).toInt()}% safety, " +
@@ -183,7 +183,7 @@ class TextProcessor(
 
                     if (linePart.isNotBlank()) {
                         chunks.add(ChunkWithLineNumbers(linePart, currentLine, currentLine))
-                        log.debug(
+                        log.trace(
                             "Split long line {} into chunk of {} chars (line length: {})",
                             currentLine,
                             linePart.length,

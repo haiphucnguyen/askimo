@@ -232,13 +232,18 @@ object McpServersConfig {
             transportType = TransportType.STDIO,
             stdioConfig = StdioConfig(
                 commandTemplate = listOf(
-                    "npx",
-                    "-y",
-                    "mongodb-mcp-server@latest",
-                    "{{?readOnly:--readOnly}}",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-e",
+                    "MDB_MCP_READ_ONLY=true",
+                    "-e",
+                    "MDB_MCP_CONNECTION_STRING",
+                    "-i",
+                    "mongodb/mongodb-mcp-server:latest",
                 ),
                 envTemplate = mapOf(
-                    "MONGODB_VARS" to "{{mongoEnv}}",
+                    "MDB_MCP_CONNECTION_STRING" to "{{mongoConnectionStr}}",
                 ),
             ),
             tags = listOf("database", "mongodb", "nosql", "official"),
