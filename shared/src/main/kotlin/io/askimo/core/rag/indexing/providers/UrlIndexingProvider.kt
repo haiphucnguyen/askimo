@@ -27,17 +27,12 @@ class UrlIndexingProvider : IndexingCoordinatorProvider {
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
-    ): IndexingCoordinator {
-        val config = knowledgeSource as UrlKnowledgeSourceConfig
-        val url = config.resourceIdentifier
-
-        return UrlIndexingCoordinator(
-            projectId = projectId,
-            projectName = projectName,
-            urls = listOf(url),
-            embeddingStore = embeddingStore,
-            embeddingModel = embeddingModel,
-            appContext = appContext,
-        )
-    }
+    ): IndexingCoordinator<KnowledgeSourceConfig> = UrlIndexingCoordinator(
+        projectId = projectId,
+        projectName = projectName,
+        knowledgeSourceConfig = knowledgeSource as UrlKnowledgeSourceConfig,
+        embeddingStore = embeddingStore,
+        embeddingModel = embeddingModel,
+        appContext = appContext,
+    )
 }

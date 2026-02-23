@@ -509,6 +509,7 @@ fun projectView(
                 EventBus.post(
                     ProjectIndexingRequestedEvent(
                         projectId = currentProject.id,
+                        knowledgeSources = newConfigs,
                         watchForChanges = true,
                     ),
                 )

@@ -46,5 +46,5 @@ interface IndexingCoordinatorProvider {
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
-    ): IndexingCoordinator
+    ): IndexingCoordinator<KnowledgeSourceConfig>
 }

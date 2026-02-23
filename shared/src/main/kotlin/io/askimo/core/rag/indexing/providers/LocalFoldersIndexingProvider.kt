@@ -13,7 +13,6 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.rag.indexing.IndexingCoordinator
 import io.askimo.core.rag.indexing.IndexingCoordinatorProvider
 import io.askimo.core.rag.indexing.LocalFoldersIndexingCoordinator
-import java.nio.file.Paths
 
 /**
  * Provider for creating IndexingCoordinator instances for local folder knowledge sources.
@@ -28,17 +27,12 @@ class LocalFoldersIndexingProvider : IndexingCoordinatorProvider {
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
-    ): IndexingCoordinator {
-        val config = knowledgeSource as LocalFoldersKnowledgeSourceConfig
-        val folderPath = Paths.get(config.resourceIdentifier)
-
-        return LocalFoldersIndexingCoordinator(
-            projectId = projectId,
-            projectName = projectName,
-            paths = listOf(folderPath),
-            embeddingStore = embeddingStore,
-            embeddingModel = embeddingModel,
-            appContext = appContext,
-        )
-    }
+    ): IndexingCoordinator<KnowledgeSourceConfig> = LocalFoldersIndexingCoordinator(
+        projectId = projectId,
+        projectName = projectName,
+        knowledgeSourceConfig = knowledgeSource as LocalFoldersKnowledgeSourceConfig,
+        embeddingStore = embeddingStore,
+        embeddingModel = embeddingModel,
+        appContext = appContext,
+    )
 }

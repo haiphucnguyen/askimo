@@ -13,6 +13,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectDeletedEvent
+import io.askimo.core.event.internal.ProjectIndexRemovalEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.core.event.internal.ProjectSessionsRefreshEvent
@@ -203,8 +204,9 @@ class ProjectViewModel(
                 }
 
                 EventBus.post(
-                    ProjectReIndexEvent(
-                        projectId = projectId,
+                    ProjectIndexRemovalEvent(
+                        projectId = project.id,
+                        knowledgeSource = source,
                         reason = "Knowledge source removed by user",
                     ),
                 )

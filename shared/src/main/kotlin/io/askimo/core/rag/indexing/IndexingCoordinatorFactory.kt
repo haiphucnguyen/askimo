@@ -35,7 +35,7 @@ object IndexingCoordinatorFactory {
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         appContext: AppContext,
-    ): IndexingCoordinator {
+    ): IndexingCoordinator<KnowledgeSourceConfig> {
         val provider = IndexingCoordinatorProviderRegistry.getProvider(knowledgeSource)
             ?: throw IllegalArgumentException(
                 "No provider registered for knowledge source type: ${knowledgeSource::class.simpleName}. " +

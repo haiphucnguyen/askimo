@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.user.IndexingInProgressEvent
@@ -19,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.isRegularFile
@@ -31,12 +33,14 @@ import kotlin.io.path.isRegularFile
 class LocalFilesIndexingCoordinator(
     private val projectId: String,
     private val projectName: String,
-    private val filePaths: List<Path>,
+    override val knowledgeSourceConfig: LocalFilesKnowledgeSourceConfig,
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
-) : IndexingCoordinator {
+) : IndexingCoordinator<LocalFilesKnowledgeSourceConfig> {
     private val log = logger<LocalFilesIndexingCoordinator>()
+
+    private val filePaths = listOf(Paths.get(knowledgeSourceConfig.resourceIdentifier))
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val stateManager = IndexStateManager(projectId, "files")

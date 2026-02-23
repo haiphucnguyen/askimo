@@ -7,6 +7,7 @@ package io.askimo.core.rag.indexing
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
@@ -27,12 +28,14 @@ import java.util.concurrent.atomic.AtomicInteger
 class UrlIndexingCoordinator(
     private val projectId: String,
     private val projectName: String,
-    private val urls: List<String>,
+    override val knowledgeSourceConfig: UrlKnowledgeSourceConfig,
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val appContext: AppContext,
-) : IndexingCoordinator {
+) : IndexingCoordinator<UrlKnowledgeSourceConfig> {
     private val log = logger<UrlIndexingCoordinator>()
+
+    private val urls = listOf(knowledgeSourceConfig.resourceIdentifier)
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
     private val stateManager = IndexStateManager(projectId, "urls")

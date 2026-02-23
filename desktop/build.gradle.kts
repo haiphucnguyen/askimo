@@ -718,18 +718,21 @@ fun signDylibsInsideJar(
         return
     }
 
-    // Check if JAR contains dylibs
-    val hasDylibs =
+    // Check if JAR contains dylibs or jnilib files
+    // pty4j (used by jediterm) embeds native libs under resources/com/pty4j/native/darwin*/
+    val jarContents =
         ByteArrayOutputStream().use { output ->
             project.exec {
                 commandLine("jar", "tf", jarFile.absolutePath)
                 standardOutput = output
                 isIgnoreExitValue = true
             }
-            output.toString().contains(".dylib")
+            output.toString()
         }
 
-    if (!hasDylibs) {
+    val hasNativeLibs = jarContents.contains(".dylib") || jarContents.contains(".jnilib")
+
+    if (!hasNativeLibs) {
         return
     }
 
@@ -745,12 +748,13 @@ fun signDylibsInsideJar(
             commandLine("jar", "xf", jarFile.absolutePath)
         }
 
-        // Find and sign dylibs
-        logger.lifecycle("     Signing dylibs...")
+        // Find and sign all native libraries recursively (pty4j uses both .dylib and .jnilib)
+        logger.lifecycle("     Signing native libraries...")
         extractDir
-            .walk()
-            .filter { it.extension == "dylib" }
-            .forEach { dylibFile ->
+            .walkTopDown()
+            .filter { it.isFile && (it.extension == "dylib" || it.extension == "jnilib") }
+            .forEach { nativeLib ->
+                logger.lifecycle("       Signing: ${nativeLib.relativeTo(extractDir)}")
                 project.exec {
                     commandLine(
                         "codesign",
@@ -762,17 +766,39 @@ fun signDylibsInsideJar(
                         "--timestamp",
                         "--options",
                         "runtime",
-                        dylibFile.absolutePath,
+                        nativeLib.absolutePath,
                     )
                 }
             }
 
-        // Repack JAR
+        // Repack JAR using an explicit file list to correctly preserve structure.
+        // Avoid `jar cf tmpJar .` which adds a stray "." directory entry and can
+        // drop files on some JDK versions.
         logger.lifecycle("     Repacking JAR...")
         tmpJar.delete()
-        project.exec {
-            workingDir = extractDir
-            commandLine("jar", "cf", tmpJar.absolutePath, ".")
+
+        val manifestFile = File(extractDir, "META-INF/MANIFEST.MF")
+
+        // Collect all relative file paths (MANIFEST.MF is handled separately via cfm)
+        val allRelativeFiles =
+            extractDir
+                .walkTopDown()
+                .filter { it.isFile && it.relativeTo(extractDir).path != "META-INF/MANIFEST.MF" }
+                .map { it.relativeTo(extractDir).path }
+                .toList()
+
+        if (manifestFile.exists()) {
+            project.exec {
+                workingDir = extractDir
+                commandLine(
+                    listOf("jar", "cfm", tmpJar.absolutePath, "META-INF/MANIFEST.MF") + allRelativeFiles,
+                )
+            }
+        } else {
+            project.exec {
+                workingDir = extractDir
+                commandLine(listOf("jar", "cf", tmpJar.absolutePath) + allRelativeFiles)
+            }
         }
 
         // Replace original JAR
@@ -781,6 +807,7 @@ fun signDylibsInsideJar(
             throw GradleException("Repacked JAR missing: ${tmpJar.absolutePath}")
         }
         tmpJar.copyTo(jarFile, overwrite = true)
+        logger.lifecycle("     ✅ Done: ${jarFile.name}")
     } finally {
         workDir.deleteRecursively()
     }
