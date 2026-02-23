@@ -208,7 +208,11 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             # For macOS: Build, sign, and notarize using custom Gradle task
-            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:customNotarizeMacApp
+            # Redirect output to a log file so we can upload it on failure
+            ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:customNotarizeMacApp \
+              2>&1 | tee /tmp/notarize.log
+            # Preserve the exit code from gradlew (tee always exits 0)
+            exit "${PIPESTATUS[0]}"
           else
             # For Linux: Just package
             ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx4g" desktop:${{ matrix.task }}
@@ -341,6 +345,15 @@ jobs:
           path: ${{ steps.jar.outputs.jar }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload notarization log on failure
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: notarize-log-${{ matrix.name }}-attempt${{ github.run_attempt }}
+          path: /tmp/notarize.log
+          if-no-files-found: warn
+          retention-days: 7
 
   # Create GitHub release with all desktop installers and JARs
   release:
