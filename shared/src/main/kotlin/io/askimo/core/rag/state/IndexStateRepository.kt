@@ -73,7 +73,7 @@ class IndexStateRepository(
             }
         }
 
-        log.debug("Batch saved ${fileHashes.size} file states for project $projectId, source type $sourceType")
+        log.trace("Batch saved ${fileHashes.size} file states for project $projectId, source type $sourceType")
     }
 
     /**

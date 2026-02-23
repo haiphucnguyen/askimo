@@ -2729,6 +2729,7 @@
           "java.util.List",
           "java.lang.String",
           "long",
+          "java.lang.String",
           "java.lang.String"
         ]
       },
@@ -2739,11 +2740,13 @@
           "java.lang.String",
           "long",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getAvailableModels", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
@@ -3027,7 +3030,12 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
       },
       {
         "name": "<init>",
@@ -3035,11 +3043,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -3119,6 +3129,7 @@
           "java.lang.String",
           "long",
           "java.lang.String",
+          "java.lang.String",
           "java.lang.String"
         ]
       },
@@ -3129,11 +3140,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
@@ -3194,7 +3207,12 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
       },
       {
         "name": "<init>",
@@ -3202,11 +3220,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -3219,7 +3239,12 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
       },
       {
         "name": "<init>",
@@ -3227,11 +3252,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -3288,7 +3315,12 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+        "parameterTypes": [
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
       },
       {
         "name": "<init>",
@@ -3296,11 +3328,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -3317,6 +3351,7 @@
           "java.lang.String",
           "long",
           "java.lang.String",
+          "java.lang.String",
           "java.lang.String"
         ]
       },
@@ -3327,11 +3362,13 @@
           "long",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
@@ -3507,16 +3544,21 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["long", "java.lang.String"] },
+      {
+        "name": "<init>",
+        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
+      },
       {
         "name": "<init>",
         "parameterTypes": [
           "long",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
+      { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -4549,7 +4591,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$sjF4lq7e",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$ez62u0Iz",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5367,6 +5409,7 @@
           "java.lang.Boolean"
         ]
       },
+      { "name": "print", "parameterTypes": ["java.lang.String"] },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
         "name": "writeFile",
@@ -6828,7 +6871,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$uwUPkgUn",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$3lfexoYO",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

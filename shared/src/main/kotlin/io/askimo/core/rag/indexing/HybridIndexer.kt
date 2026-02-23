@@ -100,7 +100,7 @@ class HybridIndexer(
                 // Save mappings to database
                 savePendingMappings()
 
-                log.debug("Hybrid indexed batch of {} segments (vector + keyword) for project {}", segments.size, projectId)
+                log.trace("Hybrid indexed batch of {} segments (vector + keyword) for project {}", segments.size, projectId)
             }
 
             true
@@ -135,7 +135,7 @@ class HybridIndexer(
      */
     suspend fun flushRemainingSegments(): Boolean = batchMutex.withLock {
         if (segmentBatch.isNotEmpty()) {
-            log.debug("Flushing {} remaining segments", segmentBatch.size)
+            log.trace("Flushing {} remaining segments", segmentBatch.size)
             flushSegmentBatchInternal()
         } else {
             savePendingMappings()
@@ -160,7 +160,7 @@ class HybridIndexer(
                 segmentRepository.saveSegmentMappings(projectId, filePath, segmentData)
             }
 
-            log.debug("Saved {} segment mappings to database", pendingMappings.size)
+            log.trace("Saved {} segment mappings to database", pendingMappings.size)
             pendingMappings.clear()
         } catch (e: Exception) {
             log.error("Failed to save segment mappings: {}", e.message, e)
@@ -175,19 +175,19 @@ class HybridIndexer(
             val segmentIds = segmentRepository.getSegmentIdsForFile(projectId, filePath)
 
             if (segmentIds.isNotEmpty()) {
-                log.debug("Found {} segments for file {} - removing from hybrid index", segmentIds.size, filePath.fileName)
+                log.trace("Found {} segments for file {} - removing from hybrid index", segmentIds.size, filePath.fileName)
 
                 // Remove from embedding store
                 embeddingStore.removeAll(segmentIds)
-                log.debug("Removed {} embeddings from vector store", segmentIds.size)
+                log.trace("Removed {} embeddings from vector store", segmentIds.size)
 
                 // Remove from keyword index
                 luceneIndexer.removeFile(filePath.toString())
-                log.debug("Removed segments from keyword index for file {}", filePath.fileName)
+                log.trace("Removed segments from keyword index for file {}", filePath.fileName)
 
                 // Remove from database
                 val removed = segmentRepository.removeSegmentMappingsForFile(projectId, filePath)
-                log.debug("Removed {} segment mappings from database for file {}", removed, filePath.fileName)
+                log.trace("Removed {} segment mappings from database for file {}", removed, filePath.fileName)
             } else {
                 log.debug("No segments found for file {}", filePath.fileName)
             }

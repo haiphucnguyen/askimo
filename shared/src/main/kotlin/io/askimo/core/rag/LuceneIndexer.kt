@@ -105,7 +105,7 @@ class LuceneIndexer private constructor(
 
         indexWriter.addDocuments(documents)
         indexWriter.commit()
-        log.debug("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
+        log.trace("Indexed ${textSegments.size} text segments for keyword search at $indexPath")
     }
 
     /**
