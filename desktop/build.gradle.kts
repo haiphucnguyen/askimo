@@ -703,13 +703,51 @@ tasks.register("createEntitlements") {
     }
 }
 
+/**
+ * Returns true if the file is a macOS Mach-O binary (dylib, executable, bundle, etc.)
+ * by inspecting its magic bytes. This catches extension-less binaries like
+ * pty4j-unix-spawn-helper that are bundled inside JARs.
+ *
+ * Mach-O magic values:
+ *   0xFEEDFACE  - 32-bit big-endian
+ *   0xCEFAEDFE  - 32-bit little-endian
+ *   0xFEEDFACF  - 64-bit big-endian
+ *   0xCFFAEDFE  - 64-bit little-endian
+ *   0xBEBAFECA  - fat/universal binary
+ *   0xCAFEBABE  - fat/universal binary (big-endian)
+ */
+fun isMachOBinary(file: File): Boolean {
+    if (!file.isFile || file.length() < 4) return false
+    return try {
+        val bytes = file.inputStream().use { it.readNBytes(4) }
+        val b0 = bytes[0].toInt() and 0xFF
+        val b1 = bytes[1].toInt() and 0xFF
+        val b2 = bytes[2].toInt() and 0xFF
+        val b3 = bytes[3].toInt() and 0xFF
+        // little-endian 32-bit:  CE FA ED FE
+        (b0 == 0xCE && b1 == 0xFA && b2 == 0xED && b3 == 0xFE) ||
+            // little-endian 64-bit:  CF FA ED FE
+            (b0 == 0xCF && b1 == 0xFA && b2 == 0xED && b3 == 0xFE) ||
+            // big-endian 32-bit:  FE ED FA CE
+            (b0 == 0xFE && b1 == 0xED && b2 == 0xFA && b3 == 0xCE) ||
+            // big-endian 64-bit:  FE ED FA CF
+            (b0 == 0xFE && b1 == 0xED && b2 == 0xFA && b3 == 0xCF) ||
+            // fat/universal:  CA FE BA BE
+            (b0 == 0xCA && b1 == 0xFE && b2 == 0xBA && b3 == 0xBE) ||
+            // fat/universal big-endian:  BE BA FE CA
+            (b0 == 0xBE && b1 == 0xBA && b2 == 0xFE && b3 == 0xCA)
+    } catch (_: Exception) {
+        false
+    }
+}
+
 fun signDylibsInsideJar(
     jarFile: File,
     identity: String,
     entitlementsFile: File,
     workRoot: File,
 ) {
-    logger.lifecycle("   • Signing dylibs inside JAR: ${jarFile.name}")
+    logger.lifecycle("   • Signing native binaries inside JAR: ${jarFile.name}")
     logger.lifecycle("     Path: ${jarFile.absolutePath}")
 
     // Check if JAR exists
@@ -718,8 +756,11 @@ fun signDylibsInsideJar(
         return
     }
 
-    // Check if JAR contains dylibs or jnilib files
-    // pty4j (used by jediterm) embeds native libs under resources/com/pty4j/native/darwin*/
+    // Check if JAR likely contains macOS native binaries by scanning entry names.
+    // pty4j embeds:
+    //   resources/com/pty4j/native/darwin/libpty.dylib          (.dylib - caught by extension)
+    //   resources/com/pty4j/native/darwin/pty4j-unix-spawn-helper (Mach-O, NO extension!)
+    // We use "darwin" as an additional hint so we don't skip JARs with extension-less helpers.
     val jarContents =
         ByteArrayOutputStream().use { output ->
             project.exec {
@@ -730,7 +771,10 @@ fun signDylibsInsideJar(
             output.toString()
         }
 
-    val hasNativeLibs = jarContents.contains(".dylib") || jarContents.contains(".jnilib")
+    val hasNativeLibs =
+        jarContents.contains(".dylib") ||
+            jarContents.contains(".jnilib") ||
+            jarContents.contains("darwin/") // catches extension-less Mach-O helpers
 
     if (!hasNativeLibs) {
         return
@@ -748,13 +792,21 @@ fun signDylibsInsideJar(
             commandLine("jar", "xf", jarFile.absolutePath)
         }
 
-        // Find and sign all native libraries recursively (pty4j uses both .dylib and .jnilib)
-        logger.lifecycle("     Signing native libraries...")
+        // Find and sign ALL macOS native binaries:
+        //  - files with .dylib or .jnilib extension
+        //  - extension-less files that are Mach-O binaries (e.g. pty4j-unix-spawn-helper)
+        logger.lifecycle("     Signing native binaries...")
         extractDir
             .walkTopDown()
-            .filter { it.isFile && (it.extension == "dylib" || it.extension == "jnilib") }
-            .forEach { nativeLib ->
-                logger.lifecycle("       Signing: ${nativeLib.relativeTo(extractDir)}")
+            .filter { it.isFile }
+            .filter { file ->
+                file.extension == "dylib" ||
+                    file.extension == "jnilib" ||
+                    (file.extension.isEmpty() && isMachOBinary(file))
+            }.forEach { nativeBinary ->
+                logger.lifecycle("       Signing: ${nativeBinary.relativeTo(extractDir)}")
+                // Make sure the binary is executable before signing
+                nativeBinary.setExecutable(true, false)
                 project.exec {
                     commandLine(
                         "codesign",
@@ -766,7 +818,7 @@ fun signDylibsInsideJar(
                         "--timestamp",
                         "--options",
                         "runtime",
-                        nativeLib.absolutePath,
+                        nativeBinary.absolutePath,
                     )
                 }
             }
@@ -1080,9 +1132,29 @@ tasks.register("notarizeApp") {
         val idMatch = Regex(""""id":\s*"([^"]+)"""").find(notarizationOutput)
         val submissionId = idMatch?.groupValues?.get(1)
 
-        logger.lifecycle("✅ .app submission: id=$submissionId, status=$status")
+        logger.lifecycle(".app submission: id=$submissionId, status=$status")
 
         if (status != "Accepted") {
+            // Fetch the detailed log from Apple so we can see exactly which file was rejected
+            if (submissionId != null) {
+                logger.lifecycle("📋 Fetching notarization log for submission $submissionId...")
+                val logOutput =
+                    ByteArrayOutputStream().use { output ->
+                        project.exec {
+                            commandLine(
+                                "xcrun",
+                                "notarytool",
+                                "log",
+                                submissionId,
+                                *notaryArgs.toTypedArray(),
+                            )
+                            standardOutput = output
+                            isIgnoreExitValue = true
+                        }
+                        output.toString()
+                    }
+                logger.lifecycle("📋 Notarization log:\n$logOutput")
+            }
             throw GradleException("❌ .app notarization failed with status: $status")
         }
 
@@ -1417,9 +1489,29 @@ tasks.register("customNotarizeDmg") {
         val status = statusMatch?.groupValues?.get(1) ?: "Unknown"
         val submissionId = idMatch?.groupValues?.get(1) ?: ""
 
-        logger.lifecycle("✅ DMG submission: id=$submissionId, status=$status")
+        logger.lifecycle("DMG submission: id=$submissionId, status=$status")
 
         if (status != "Accepted") {
+            // Fetch the detailed log from Apple so we can see exactly which file was rejected
+            if (submissionId.isNotEmpty()) {
+                logger.lifecycle("📋 Fetching notarization log for submission $submissionId...")
+                val logOutput =
+                    ByteArrayOutputStream().use { output ->
+                        project.exec {
+                            commandLine(
+                                "xcrun",
+                                "notarytool",
+                                "log",
+                                submissionId,
+                                *notaryArgs.toTypedArray(),
+                            )
+                            standardOutput = output
+                            isIgnoreExitValue = true
+                        }
+                        output.toString()
+                    }
+                logger.lifecycle("📋 Notarization log:\n$logOutput")
+            }
             throw GradleException("❌ Notarization failed (status=$status)")
         }
 
