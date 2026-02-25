@@ -15,6 +15,7 @@ import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.SendMessageErrorEvent
+import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.core.logging.logger
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.util.ErrorHandler
@@ -153,6 +154,50 @@ class ChatViewModel(
     companion object {
         private const val MESSAGE_PAGE_SIZE = 100
         private const val MESSAGE_BUFFER_THRESHOLD = MESSAGE_PAGE_SIZE * 2
+    }
+
+    init {
+        observeProjectEvents()
+    }
+
+    /**
+     * Observe project-related events and update state accordingly
+     */
+    private fun observeProjectEvents() {
+        // Observe ProjectRefreshEvent to reload project when reference materials are added/removed
+        scope.launch {
+            EventBus.internalEvents
+                .collect { event ->
+                    if (event is ProjectRefreshEvent) {
+                        // Only reload if this event is for the current session's project
+                        val currentProject = project
+                        if (currentProject != null && currentProject.id == event.projectId) {
+                            log.debug("ProjectRefreshEvent received for project {}, reloading project data", event.projectId)
+                            reloadProject(currentProject.id)
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
+     * Reload project data from database when reference materials change
+     */
+    private fun reloadProject(projectId: String) {
+        scope.launch {
+            try {
+                val updatedProject = withContext(Dispatchers.IO) {
+                    val projectRepository = io.askimo.core.db.DatabaseManager.getInstance().getProjectRepository()
+                    projectRepository.getProject(projectId)
+                }
+                if (updatedProject != null) {
+                    project = updatedProject
+                    log.debug("Project reloaded: {} with {} knowledge sources", updatedProject.name, updatedProject.knowledgeSources.size)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to reload project {}", projectId, e)
+            }
+        }
     }
 
     /**

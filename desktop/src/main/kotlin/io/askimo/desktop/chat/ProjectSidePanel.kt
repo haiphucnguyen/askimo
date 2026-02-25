@@ -24,13 +24,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,25 +52,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ProjectIndexRemovalEvent
+import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
+import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.preferences.ApplicationPreferences
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.project.addReferenceMaterialDialog
+import io.askimo.desktop.project.buildKnowledgeSourceConfigs
+import io.askimo.desktop.project.mergeKnowledgeSourceConfigs
 import java.awt.Cursor
 
 /**
  * Tab types for the side panel
  */
 enum class PanelTab(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val labelKey: String, // Localization key instead of label
 ) {
     RAG_SOURCES(Icons.Default.AutoAwesome, "panel.tab.rag.sources"),
@@ -93,6 +102,7 @@ fun projectSidePanel(
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(PanelTab.RAG_SOURCES) }
+    var showAddMaterialDialog by remember { mutableStateOf(false) }
 
     // Load panel width from preferences (default 400dp if not set)
     var panelWidth by remember {
@@ -114,7 +124,6 @@ fun projectSidePanel(
             containerColor = ComponentColors.sidebarSurfaceColor(),
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
-        shape = RoundedCornerShape(0.dp), // No rounded corners
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -191,6 +200,22 @@ fun projectSidePanel(
                                         onDismissRequest = { showContextMenu = false },
                                     ) {
                                         DropdownMenuItem(
+                                            text = { Text(stringResource("panel.context.add.material")) },
+                                            onClick = {
+                                                showContextMenu = false
+                                                if (project != null) {
+                                                    showAddMaterialDialog = true
+                                                }
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = null,
+                                                )
+                                            },
+                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                        )
+                                        DropdownMenuItem(
                                             text = { Text(stringResource("panel.context.reindex")) },
                                             onClick = {
                                                 showContextMenu = false
@@ -202,6 +227,12 @@ fun projectSidePanel(
                                                         ),
                                                     )
                                                 }
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Refresh,
+                                                    contentDescription = null,
+                                                )
                                             },
                                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                         )
@@ -242,6 +273,35 @@ fun projectSidePanel(
                                     project = project,
                                     ragIndexingStatus = ragIndexingStatus,
                                     ragIndexingPercentage = ragIndexingPercentage,
+                                    onAddMaterial = { showAddMaterialDialog = true },
+                                    onRemove = { source ->
+                                        if (project != null) {
+                                            val projectRepository = DatabaseManager.getInstance().getProjectRepository()
+                                            val updatedSources = project.knowledgeSources.filter { it != source }
+
+                                            projectRepository.updateProject(
+                                                projectId = project.id,
+                                                name = project.name,
+                                                description = project.description,
+                                                knowledgeSources = updatedSources,
+                                            )
+
+                                            EventBus.post(
+                                                ProjectIndexRemovalEvent(
+                                                    projectId = project.id,
+                                                    knowledgeSource = source,
+                                                    reason = "Knowledge source removed by user from side panel",
+                                                ),
+                                            )
+
+                                            EventBus.post(
+                                                ProjectRefreshEvent(
+                                                    projectId = project.id,
+                                                    reason = "Knowledge source removed from project",
+                                                ),
+                                            )
+                                        }
+                                    },
                                 )
                             }
                             PanelTab.MCP -> {
@@ -281,6 +341,44 @@ fun projectSidePanel(
             }
         }
     }
+
+    // Add Reference Material Dialog
+    if (showAddMaterialDialog && project != null) {
+        val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
+        addReferenceMaterialDialog(
+            projectId = project.id,
+            onDismiss = { showAddMaterialDialog = false },
+            onAdd = { newSources ->
+                // Build knowledge source configs from the new items
+                val newConfigs = buildKnowledgeSourceConfigs(newSources)
+
+                // Merge with existing knowledge sources
+                val mergedConfigs = mergeKnowledgeSourceConfigs(
+                    existing = project.knowledgeSources,
+                    new = newConfigs,
+                )
+
+                // Update the project
+                projectRepository.updateProject(
+                    projectId = project.id,
+                    name = project.name,
+                    description = project.description,
+                    knowledgeSources = mergedConfigs,
+                )
+
+                // Trigger re-indexing for the new sources
+                EventBus.post(
+                    ProjectIndexingRequestedEvent(
+                        projectId = project.id,
+                        knowledgeSources = newConfigs,
+                        watchForChanges = true,
+                    ),
+                )
+
+                showAddMaterialDialog = false
+            },
+        )
+    }
 }
 
 /**
@@ -305,7 +403,6 @@ private fun tabIcon(
         tooltip = {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(4.dp),
             ) {
                 Text(
                     text = tooltipText,
@@ -325,7 +422,6 @@ private fun tabIcon(
                     } else {
                         Color.Transparent
                     },
-                    shape = RoundedCornerShape(0.dp),
                 )
                 .clickable(
                     onClick = onClick,
@@ -352,6 +448,8 @@ private fun ragSourcesTabContent(
     project: Project?,
     ragIndexingStatus: String?,
     ragIndexingPercentage: Int?,
+    onAddMaterial: () -> Unit,
+    onRemove: (KnowledgeSourceConfig) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -409,7 +507,10 @@ private fun ragSourcesTabContent(
         // Content area
         if (project == null || project.knowledgeSources.isEmpty()) {
             // Empty state
-            ragSourcesEmptyState()
+            ragSourcesEmptyState(
+                project = project,
+                onAddMaterial = onAddMaterial,
+            )
         } else {
             // RAG sources tree
             ragSourcesTree(
@@ -417,6 +518,7 @@ private fun ragSourcesTabContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
+                onRemove = onRemove,
             )
         }
     }
@@ -426,7 +528,10 @@ private fun ragSourcesTabContent(
  * Empty state for RAG sources
  */
 @Composable
-private fun ragSourcesEmptyState() {
+private fun ragSourcesEmptyState(
+    project: Project?,
+    onAddMaterial: () -> Unit,
+) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -456,14 +561,14 @@ private fun ragSourcesEmptyState() {
                 textAlign = TextAlign.Center,
             )
 
-            // Placeholder for future "Add Sources" button
             Button(
-                onClick = { /* TODO: Implement add sources dialog */ },
-                enabled = false,
+                onClick = { if (project != null) onAddMaterial() },
+                enabled = project != null,
                 colors = ButtonDefaults.buttonColors(
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,

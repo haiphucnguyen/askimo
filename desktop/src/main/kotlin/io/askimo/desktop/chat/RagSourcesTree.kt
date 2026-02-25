@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ import java.net.URI
 fun ragSourcesTree(
     sources: List<KnowledgeSourceConfig>,
     modifier: Modifier = Modifier,
+    onRemove: (KnowledgeSourceConfig) -> Unit = {},
 ) {
     // Selection state
     var selectedNode by remember { mutableStateOf<TreeNode?>(null) }
@@ -106,6 +108,7 @@ fun ragSourcesTree(
                 level = 0,
                 selectedNode = selectedNode,
                 onNodeSelected = { selectedNode = it },
+                onRemove = onRemove,
             )
         }
     }
@@ -154,12 +157,13 @@ private fun treeNodeItem(
     level: Int,
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
+    onRemove: (KnowledgeSourceConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (node) {
-        is FolderTreeNode -> folderNodeItem(node, level, selectedNode, onNodeSelected, modifier)
-        is FileTreeNode -> fileNodeItem(node, level, selectedNode, onNodeSelected, modifier)
-        is UrlTreeNode -> urlNodeItem(node, level, selectedNode, onNodeSelected, modifier)
+        is FolderTreeNode -> folderNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
+        is FileTreeNode -> fileNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
+        is UrlTreeNode -> urlNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
     }
 }
 
@@ -173,6 +177,7 @@ private fun folderNodeItem(
     level: Int,
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
+    onRemove: (KnowledgeSourceConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -297,6 +302,16 @@ private fun folderNodeItem(
                             Icon(Icons.Default.ContentCopy, contentDescription = null)
                         },
                     )
+                    DropdownMenuItem(
+                        text = { Text(stringResource("rag.tree.remove")) },
+                        onClick = {
+                            onRemove(node.source)
+                            showContextMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Remove, contentDescription = null)
+                        },
+                    )
                 }
             }
         }
@@ -310,6 +325,7 @@ private fun folderNodeItem(
                         level = level + 1,
                         selectedNode = selectedNode,
                         onNodeSelected = onNodeSelected,
+                        onRemove = onRemove,
                     )
                 }
             }
@@ -327,6 +343,7 @@ private fun fileNodeItem(
     level: Int,
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
+    onRemove: (KnowledgeSourceConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
@@ -429,6 +446,16 @@ private fun fileNodeItem(
                         Icon(Icons.Default.ContentCopy, contentDescription = null)
                     },
                 )
+                DropdownMenuItem(
+                    text = { Text(stringResource("rag.tree.remove")) },
+                    onClick = {
+                        onRemove(node.source)
+                        showContextMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Remove, contentDescription = null)
+                    },
+                )
             }
         }
     }
@@ -444,6 +471,7 @@ private fun urlNodeItem(
     level: Int,
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
+    onRemove: (KnowledgeSourceConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
@@ -534,6 +562,16 @@ private fun urlNodeItem(
                     },
                     leadingIcon = {
                         Icon(Icons.Default.ContentCopy, contentDescription = null)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("rag.tree.remove")) },
+                    onClick = {
+                        onRemove(node.source)
+                        showContextMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Remove, contentDescription = null)
                     },
                 )
             }
