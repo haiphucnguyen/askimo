@@ -79,7 +79,7 @@ class ProjectIndexer(
             EventBus.internalEvents
                 .filterIsInstance<ProjectIndexRemovalEvent>()
                 .collect { event ->
-                    log.info("Indexing requested for project ${event.projectId}")
+                    log.info("Indexing removal requested for project ${event.projectId}")
                     handleRemoveIndexEvent(event)
                 }
         }

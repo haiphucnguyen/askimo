@@ -185,6 +185,90 @@ object ComponentColors {
     }
 
     /**
+     * Background color for user message bubbles.
+     * Computed as a neutral darkened/lightened step from the surface color so it is
+     * always accent-neutral. surfaceContainerHigh inherits surfaceTint (the
+     * accent colour) and looks tinted (e.g. purple/grey) in light mode.
+     * - Light theme: surface darkened by 8% — subtle grey, no accent tint.
+     * - Dark theme:  surface lightened by 10% — slightly lighter dark surface.
+     */
+    @Composable
+    fun userMessageBackground(): Color {
+        val surface = MaterialTheme.colorScheme.surface
+        val isLight = surface.luminance() > 0.5
+        return if (isLight) {
+            Color(
+                red = (surface.red * 0.92f).coerceIn(0f, 1f),
+                green = (surface.green * 0.92f).coerceIn(0f, 1f),
+                blue = (surface.blue * 0.92f).coerceIn(0f, 1f),
+                alpha = surface.alpha,
+            )
+        } else {
+            Color(
+                red = (surface.red + 0.10f).coerceIn(0f, 1f),
+                green = (surface.green + 0.10f).coerceIn(0f, 1f),
+                blue = (surface.blue + 0.10f).coerceIn(0f, 1f),
+                alpha = surface.alpha,
+            )
+        }
+    }
+
+    /**
+     * Content (text/icon) color for user message bubbles.
+     */
+    @Composable
+    fun userMessageContentColor(): Color = MaterialTheme.colorScheme.onSurface
+
+    /**
+     * Background color for code blocks in AI responses.
+     * Computed directly from surface to stay accent-neutral.
+     * surfaceContainerHighest/Low inherit surfaceTint (the accent colour)
+     * and appear tinted in themed modes.
+     * - Light theme: surface darkened by 15% — clear contrast, no accent tint.
+     * - Dark theme:  surface darkened by 15% — deeper dark, keeps dark syntax colors readable.
+     */
+    @Composable
+    fun codeBlockBackground(): Color {
+        val surface = MaterialTheme.colorScheme.surface
+        val isLight = surface.luminance() > 0.5
+        return if (isLight) {
+            Color(
+                red = (surface.red * 0.85f).coerceIn(0f, 1f),
+                green = (surface.green * 0.85f).coerceIn(0f, 1f),
+                blue = (surface.blue * 0.85f).coerceIn(0f, 1f),
+                alpha = surface.alpha,
+            )
+        } else {
+            Color(
+                red = (surface.red * 0.75f).coerceIn(0f, 1f),
+                green = (surface.green * 0.75f).coerceIn(0f, 1f),
+                blue = (surface.blue * 0.75f).coerceIn(0f, 1f),
+                alpha = surface.alpha,
+            )
+        }
+    }
+
+    /**
+     * Text/content color for code blocks (used as the fallback/unstyled token color).
+     * Paired with codeBlockBackground() to ensure readable contrast.
+     */
+    @Composable
+    fun codeBlockContentColor(): Color = MaterialTheme.colorScheme.onSurface
+
+    /**
+     * Border color for code blocks.
+     */
+    @Composable
+    fun codeBlockBorderColor(): Color = MaterialTheme.colorScheme.outlineVariant
+
+    /**
+     * Returns true when the code block background is dark, so the caller can
+     * pick the correct syntax highlight theme (dark vs light).
+     */
+    @Composable
+    fun isCodeBlockDark(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5
+
+    /**
      * Sidebar header color - uses secondaryContainer for a subtle accent
      * - Lighter than primaryContainer (used by buttons)
      * - Makes header visually distinct but not overwhelming

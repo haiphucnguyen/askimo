@@ -430,20 +430,20 @@ fun messageBubble(
                                     },
                                 ),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isOutdatedMessage) {
-                                    if (message.isUser) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                    } else {
-                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                                    }
-                                } else {
-                                    MaterialTheme.colorScheme.primaryContainer
+                                containerColor = when {
+                                    isOutdatedMessage && message.isUser -> ComponentColors.userMessageBackground().copy(alpha = 0.5f)
+                                    isOutdatedMessage && !message.isUser -> Color.Transparent
+                                    message.isUser -> ComponentColors.userMessageBackground()
+                                    else -> Color.Transparent
                                 },
                                 contentColor = if (isOutdatedMessage) {
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 } else {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                    ComponentColors.userMessageContentColor()
                                 },
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = if (message.isUser) 2.dp else 0.dp,
                             ),
                         ) {
                             Column {
@@ -638,7 +638,7 @@ fun messageBubble(
                                             imageVector = Icons.Default.ContentCopy,
                                             contentDescription = stringResource("message.copy.description"),
                                             modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -658,7 +658,7 @@ fun messageBubble(
                                                 imageVector = Icons.Default.Edit,
                                                 contentDescription = stringResource("message.ai.edit.description"),
                                                 modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
@@ -672,14 +672,10 @@ fun messageBubble(
                                         IconButton(
                                             onClick = {
                                                 message.id?.let { messageId ->
-                                                    // Check if this is the latest AI message
                                                     val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
-
                                                     if (isLatestMessage) {
-                                                        // Directly retry for latest message
                                                         onRetryMessage.invoke(messageId)
                                                     } else {
-                                                        // Show confirmation dialog for mid-conversation retry
                                                         onShowRetryConfirmDialog?.invoke(messageId)
                                                     }
                                                 }
@@ -690,7 +686,7 @@ fun messageBubble(
                                                 imageVector = Icons.Default.Refresh,
                                                 contentDescription = stringResource("message.ai.try.again.description"),
                                                 modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
@@ -780,7 +776,7 @@ fun messageBubble(
                                                     imageVector = Icons.Default.ContentCopy,
                                                     contentDescription = stringResource("message.copy.description"),
                                                     modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
@@ -800,7 +796,7 @@ fun messageBubble(
                                                         imageVector = Icons.Default.Edit,
                                                         contentDescription = stringResource("message.edit.description"),
                                                         modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
                                                 }
                                             }

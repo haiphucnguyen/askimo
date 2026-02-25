@@ -11,6 +11,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -158,6 +160,7 @@ fun navigationSidebar(
         collapsedNavigationSidebar(
             animatedWidth = animatedWidth,
             currentView = currentView,
+            userProfile = userProfile,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onNavigateToSessions = onNavigateToSessions,
@@ -374,6 +377,7 @@ private fun expandedNavigationSidebar(
 private fun collapsedNavigationSidebar(
     animatedWidth: Dp,
     currentView: View,
+    userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onNavigateToSessions: () -> Unit,
@@ -394,24 +398,48 @@ private fun collapsedNavigationSidebar(
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Header with expand button only
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(ComponentColors.sidebarHeaderColor())
-                .padding(vertical = (16 * fontScale).dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // Header — shows app logo, swaps to expand icon on hover
+        val headerInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+        val isHeaderHovered by headerInteractionSource.collectIsHoveredAsState()
+
+        val appLogo = remember {
+            BitmapPainter(
+                Image.makeFromEncoded(
+                    object {}.javaClass.getResourceAsStream("/images/askimo_logo_64.png")?.readBytes()
+                        ?: throw IllegalStateException("Icon not found"),
+                ).toComposeImageBitmap(),
+            )
+        }
+
+        themedTooltip(
+            text = stringResource("sidebar.expand"),
         ) {
-            themedTooltip(
-                text = stringResource("sidebar.expand"),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(ComponentColors.sidebarHeaderColor())
+                    .padding(vertical = (16 * fontScale).dp)
+                    .hoverable(headerInteractionSource)
+                    .clickable(
+                        interactionSource = headerInteractionSource,
+                        indication = null,
+                        onClick = onToggleExpand,
+                    )
+                    .pointerHoverIcon(PointerIcon.Hand),
+                contentAlignment = Alignment.Center,
             ) {
-                IconButton(
-                    onClick = onToggleExpand,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                ) {
+                if (isHeaderHovered) {
                     Icon(
                         imageVector = Icons.Filled.Menu,
                         contentDescription = stringResource("sidebar.expand"),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size((32 * fontScale).dp),
+                    )
+                } else {
+                    Icon(
+                        painter = appLogo,
+                        contentDescription = "Askimo",
+                        modifier = Modifier.size((32 * fontScale).dp),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -459,16 +487,44 @@ private fun collapsedNavigationSidebar(
         HorizontalDivider()
         var showUserMenu by remember { mutableStateOf(false) }
 
+        // Load avatar image if available
+        val avatarImage = loadAvatarImage(userProfile)
+
         Box {
             themedTooltip(
                 text = stringResource("user.profile.menu"),
             ) {
                 NavigationRailItem(
                     icon = {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = stringResource("user.profile.menu"),
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size((32 * fontScale).dp)
+                                .clip(CircleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    shape = CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (avatarImage != null) {
+                                Image(
+                                    bitmap = avatarImage,
+                                    contentDescription = stringResource("user.profile.avatar"),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            } else {
+                                val initials = userProfile?.name?.split(" ")
+                                    ?.mapNotNull { it.firstOrNull()?.uppercase() }
+                                    ?.take(2)
+                                    ?.joinToString("") ?: "?"
+                                Text(
+                                    text = initials,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                        }
                     },
                     label = null,
                     selected = false,
@@ -964,6 +1020,23 @@ private fun sessionItemWithMenu(
     }
 }
 
+@Composable
+private fun loadAvatarImage(profile: UserProfile?) = remember(profile?.preferences?.get("avatarPath")) {
+    profile?.preferences?.get("avatarPath")?.let { path ->
+        try {
+            val file = File(path)
+            if (file.exists()) {
+                val bytes = file.readBytes()
+                SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
 /**
  * User profile section at bottom of navigation sidebar.
  * Shows user avatar, name, occupation, and a menu for Edit Profile, Settings, and About.
@@ -981,21 +1054,7 @@ private fun userProfileSection(
     val fontScale = LocalFontScale.current
 
     // Load avatar image if available
-    val avatarImage = remember(profile?.preferences?.get("avatarPath")) {
-        profile?.preferences?.get("avatarPath")?.let { path ->
-            try {
-                val file = File(path)
-                if (file.exists()) {
-                    val bytes = file.readBytes()
-                    SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-                } else {
-                    null
-                }
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    val avatarImage = loadAvatarImage(profile)
 
     Box(modifier = modifier) {
         Row(

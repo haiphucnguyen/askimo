@@ -193,7 +193,7 @@ fun chatView(
                 }
             }
 
-            EventBus.userEvents.collect { event ->
+            EventBus.internalEvents.collect { event ->
                 val eventProjectId = when (event) {
                     is IndexingStartedEvent -> event.projectId
                     is IndexingInProgressEvent -> event.projectId

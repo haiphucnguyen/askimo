@@ -130,6 +130,18 @@ fun projectView(
     // Get repository
     val projectRepository = remember { DatabaseManager.getInstance().getProjectRepository() }
 
+    // Broadcast indexing request when entering the project view so that
+    // all knowledge sources are (re-)indexed / watched for changes.
+    LaunchedEffect(currentProject.id) {
+        EventBus.post(
+            ProjectIndexingRequestedEvent(
+                projectId = currentProject.id,
+                knowledgeSources = null,
+                watchForChanges = true,
+            ),
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()

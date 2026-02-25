@@ -30,7 +30,6 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
-import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
@@ -254,16 +253,6 @@ class ChatSessionService(
                     .build(),
             )
 
-            EventBus.post(
-                ProjectIndexingRequestedEvent(
-                    projectId = project.id,
-                    embeddingStore = embeddingStore,
-                    embeddingModel = embeddingModel,
-                    watchForChanges = true,
-                ),
-            )
-
-            log.info("✓ RAG retriever created, indexing started in background for project ${project.id}")
             return vectorRetriever
         } catch (e: Exception) {
             log.error("Failed to create content retriever for project ${project.id}", e)

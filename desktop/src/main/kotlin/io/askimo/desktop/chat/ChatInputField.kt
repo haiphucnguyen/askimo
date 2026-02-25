@@ -171,11 +171,12 @@ fun chatInputField(
     val padding = 36.dp // Top and bottom padding for the text field
     val calculatedHeight = (lineHeight * estimatedLineCount) + padding
 
-    // Reset height to default when message is sent (detected by empty input text)
+    // Reset height and creation mode to default when message is sent (detected by empty input text)
     LaunchedEffect(inputText.text) {
         if (inputText.text.isEmpty()) {
             textFieldHeight = defaultTextFieldHeight
             manuallyResized = false
+            creationMode = CreationMode.Chat
         }
     }
 
