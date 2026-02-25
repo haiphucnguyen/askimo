@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -42,10 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -78,6 +79,7 @@ import coil3.request.crossfade
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.tools.chart.MermaidChartData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -556,11 +558,17 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             modifier = Modifier
                 .fillMaxWidth()
                 .height(400.dp)
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = MaterialTheme.shapes.medium,
+                ),
+            shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             mermaidChart(
                 data = chartData,
@@ -571,8 +579,8 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     }
 
     // Render as regular code block
-    val backgroundColor = MaterialTheme.colorScheme.surface
-    val isDark = backgroundColor.luminance() < 0.5
+    val backgroundColor = ComponentColors.codeBlockBackground()
+    val isDark = ComponentColors.isCodeBlockDark()
     val clipboardManager = LocalClipboardManager.current
     val density = LocalDensity.current
     var isHovered by remember { mutableStateOf(false) }
@@ -605,9 +613,18 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
         4.dp
     }
 
+    val codeBlockShape = MaterialTheme.shapes.small
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .border(
+                width = 1.dp,
+                color = ComponentColors.codeBlockBorderColor(),
+                shape = codeBlockShape,
+            )
+            .background(backgroundColor, shape = codeBlockShape)
             .pointerHoverIcon(PointerIcon.Hand)
             .onPointerEvent(PointerEventType.Enter) { isHovered = true }
             .onPointerEvent(PointerEventType.Exit) { isHovered = false }
@@ -627,10 +644,9 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                 text = highlightedCode,
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = ComponentColors.codeBlockContentColor(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(backgroundColor)
                     .padding(12.dp)
                     .horizontalScroll(scrollState),
             )
@@ -728,28 +744,25 @@ private fun imageDownloadButton(
 ) {
     if (isVisible) {
         val coroutineScope = rememberCoroutineScope()
-        Card(
-            modifier = modifier,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        ) {
-            IconButton(
-                onClick = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        onDownload()
-                    }
-                },
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "Download image",
-                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Box(
+            modifier = modifier
+                .background(
+                    color = Color.Black.copy(alpha = 0.45f),
+                    shape = MaterialTheme.shapes.small,
                 )
-            }
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable {
+                    coroutineScope.launch(Dispatchers.IO) { onDownload() }
+                }
+                .padding(6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = "Download image",
+                modifier = Modifier.size(18.dp),
+                tint = Color.White,
+            )
         }
     }
 }
@@ -793,26 +806,23 @@ private fun renderImage(image: Image) {
             imageResult.fold(
                 onSuccess = { (bitmap, imageBytes) ->
                     Box(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .wrapContentSize(Alignment.TopStart)
                             .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                             .onPointerEvent(PointerEventType.Exit) { isHovered = false },
                     ) {
                         Image(
                             bitmap = bitmap,
                             contentDescription = image.title ?: extractTextContent(image),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .padding(8.dp),
+                            modifier = Modifier.clip(MaterialTheme.shapes.small),
                         )
 
-                        // Download button overlay
                         imageDownloadButton(
                             isVisible = isHovered,
                             onDownload = { downloadImage(imageData = imageBytes) },
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 4.dp, end = 4.dp),
+                                .align(Alignment.BottomStart)
+                                .padding(start = 6.dp, bottom = 6.dp),
                         )
                     }
                 },
@@ -828,7 +838,8 @@ private fun renderImage(image: Image) {
         } else {
             // Regular URL - use AsyncImage
             Box(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .wrapContentSize(Alignment.TopStart)
                     .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                     .onPointerEvent(PointerEventType.Exit) { isHovered = false },
             ) {
@@ -838,19 +849,15 @@ private fun renderImage(image: Image) {
                         .crossfade(true)
                         .build(),
                     contentDescription = image.title ?: extractTextContent(image),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .padding(8.dp),
+                    modifier = Modifier.clip(MaterialTheme.shapes.small),
                 )
 
-                // Download button overlay
                 imageDownloadButton(
                     isVisible = isHovered,
                     onDownload = { downloadImage(imageUrl = destination) },
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 4.dp, end = 4.dp),
+                        .align(Alignment.BottomStart)
+                        .padding(start = 6.dp, bottom = 6.dp),
                 )
             }
         }
