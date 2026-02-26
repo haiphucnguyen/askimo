@@ -251,7 +251,9 @@ fun mermaidChart(
             isMermaidCliAvailable == null -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Checking Mermaid CLI...", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -271,7 +273,9 @@ fun mermaidChart(
             isLoading && isMermaidCliAvailable == true -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(stringResource("mermaid.rendering.progress"), style = MaterialTheme.typography.bodyMedium)
                     }

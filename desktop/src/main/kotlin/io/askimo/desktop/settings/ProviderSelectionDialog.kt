@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.ModelProvider
@@ -97,7 +99,9 @@ fun providerSelectionDialog(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
                                 Text(
                                     text = stringResource("settings.model.loading"),
                                     modifier = Modifier.padding(start = Spacing.large),
@@ -291,6 +295,7 @@ fun providerSelectionDialog(
                                             } else {
                                                 null
                                             },
+                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                         )
                                     }
                                 }
@@ -532,6 +537,7 @@ fun providerSelectionDialog(
                                                     CircularProgressIndicator(
                                                         modifier = Modifier.size(16.dp),
                                                         strokeWidth = 2.dp,
+                                                        color = MaterialTheme.colorScheme.onPrimary,
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                 }
@@ -566,6 +572,7 @@ fun providerSelectionDialog(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.small))
                                 Text(stringResource("settings.test.connection.testing"))

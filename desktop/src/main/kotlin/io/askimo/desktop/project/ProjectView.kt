@@ -532,19 +532,6 @@ fun projectView(
     }
 }
 
-/**
- * Merge existing and new knowledge source configurations
- */
-private fun mergeKnowledgeSourceConfigs(
-    existing: List<KnowledgeSourceConfig>,
-    new: List<KnowledgeSourceConfig>,
-): List<KnowledgeSourceConfig> = (existing + new)
-    .groupBy { it::class }
-    .flatMap { (_, configs) ->
-        configs.distinctBy { it.resourceIdentifier }
-    }
-    .sortedBy { it.resourceIdentifier }
-
 @Composable
 private fun sessionCard(
     session: ChatSession,

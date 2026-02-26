@@ -140,6 +140,19 @@ fun validateFile(path: String): Boolean {
 }
 
 /**
+ * Merge existing and new knowledge source configurations, deduplicating by resource identifier
+ */
+fun mergeKnowledgeSourceConfigs(
+    existing: List<KnowledgeSourceConfig>,
+    new: List<KnowledgeSourceConfig>,
+): List<KnowledgeSourceConfig> = (existing + new)
+    .groupBy { it::class }
+    .flatMap { (_, configs) ->
+        configs.distinctBy { it.resourceIdentifier }
+    }
+    .sortedBy { it.resourceIdentifier }
+
+/**
  * Validate if a URL is valid
  */
 fun validateUrl(url: String): Boolean = try {
