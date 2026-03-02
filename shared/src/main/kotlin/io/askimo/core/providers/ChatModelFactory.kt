@@ -5,6 +5,7 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.tool.ToolProvider
@@ -89,4 +90,31 @@ interface ChatModelFactory<T : ProviderSettings> {
     fun createUtilityClient(
         settings: T,
     ): ChatClient
+
+    /**
+     * Indicates whether this provider supports embedding models.
+     * Providers that do not support embeddings (e.g., Anthropic, xAI) return false.
+     */
+    fun supportsEmbedding(): Boolean = false
+
+    /**
+     * Creates an embedding model for this provider.
+     * Throws [UnsupportedOperationException] by default for providers that don't support embeddings.
+     *
+     * @param settings Provider-specific settings
+     * @return Configured [EmbeddingModel] instance
+     */
+    fun createEmbeddingModel(settings: T): EmbeddingModel = throw UnsupportedOperationException(
+        "${getProvider().name} does not support embedding models. " +
+            "Please switch to a provider that supports embeddings (OpenAI, Gemini, Ollama, etc.) to use RAG features.",
+    )
+
+    /**
+     * Returns the maximum token limit for the embedding model of this provider.
+     * Returns a safe conservative default if not overridden.
+     *
+     * @param settings Provider-specific settings
+     * @return Maximum number of tokens the embedding model can handle
+     */
+    fun getEmbeddingTokenLimit(settings: T): Int = 2048
 }

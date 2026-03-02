@@ -5,6 +5,7 @@
 package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.tool.ToolProvider
@@ -120,6 +121,7 @@ class AppContext private constructor(
     private var cachedUtilityClient: ChatClient? = null
 
     private var cachedImageModel: ImageModel? = null
+    private var cachedEmbeddingModel: EmbeddingModel? = null
 
     init {
         // Listen for model change events and invalidate the cached utility client
@@ -140,6 +142,7 @@ class AppContext private constructor(
         synchronized(this) {
             cachedUtilityClient = null
             cachedImageModel = null
+            cachedEmbeddingModel = null
         }
     }
 
@@ -254,6 +257,62 @@ class AppContext private constructor(
             log.debug("Created and cached image model for provider {}", provider)
             return imageModel
         }
+    }
+
+    /**
+     * Returns whether the currently active provider supports embedding models.
+     */
+    fun supportsEmbedding(): Boolean = getModelFactory(params.currentProvider)?.supportsEmbedding() ?: false
+
+    /**
+     * Returns the embedding model for the currently active provider.
+     * The model is cached and reused until the provider or model changes.
+     *
+     * @return Configured [EmbeddingModel] for the active provider
+     * @throws UnsupportedOperationException if the active provider does not support embeddings
+     * @throws IllegalStateException if no model factory is registered for the current provider
+     */
+    fun getEmbeddingModel(): EmbeddingModel {
+        cachedEmbeddingModel?.let { return it }
+
+        synchronized(this) {
+            cachedEmbeddingModel?.let { return it }
+
+            val provider = params.currentProvider
+            val factory = getModelFactory(provider)
+                ?: error("No model factory registered for $provider")
+
+            if (!factory.supportsEmbedding()) {
+                throw UnsupportedOperationException(
+                    "${provider.name} does not support embedding models. " +
+                        "Please switch to a provider that supports embeddings (OpenAI, Gemini, Ollama, etc.) to use RAG features.",
+                )
+            }
+
+            val settings = getOrCreateProviderSettings(provider)
+
+            @Suppress("UNCHECKED_CAST")
+            val embeddingModel = (factory as ChatModelFactory<ProviderSettings>).createEmbeddingModel(settings)
+
+            cachedEmbeddingModel = embeddingModel
+            log.debug("Created and cached embedding model for provider {}", provider)
+            return embeddingModel
+        }
+    }
+
+    /**
+     * Returns the maximum token limit for the active provider's embedding model.
+     * Falls back to a conservative default (2048) if the limit cannot be determined.
+     *
+     * @return Maximum number of tokens the embedding model can handle
+     */
+    fun getEmbeddingTokenLimit(): Int {
+        val provider = params.currentProvider
+        val factory = getModelFactory(provider) ?: return 2048
+        val settings = getOrCreateProviderSettings(provider)
+
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).getEmbeddingTokenLimit(settings)
     }
 
     /**

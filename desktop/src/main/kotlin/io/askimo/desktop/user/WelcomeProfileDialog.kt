@@ -24,14 +24,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.AskimoHome
+import io.askimo.desktop.common.components.linkButton
+import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
+import io.askimo.desktop.common.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
 import java.nio.file.Files
@@ -207,6 +208,7 @@ fun welcomeProfileDialog(
                         },
                         placeholder = { Text(stringResource("welcome.name.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         singleLine = true,
                     )
 
@@ -217,6 +219,7 @@ fun welcomeProfileDialog(
                         label = { Text(stringResource("welcome.occupation")) },
                         placeholder = { Text(stringResource("welcome.occupation.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.outlinedTextFieldColors(),
                         singleLine = true,
                     )
 
@@ -273,14 +276,13 @@ fun welcomeProfileDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    linkButton(
                         onClick = onSkip,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("welcome.skip"))
                     }
 
-                    Button(
+                    primaryButton(
                         onClick = {
                             val updatedPreferences = mutableMapOf<String, String>()
                             avatarPath?.let { updatedPreferences["avatarPath"] = it }
@@ -295,7 +297,6 @@ fun welcomeProfileDialog(
                             onComplete(profile)
                         },
                         enabled = name.isNotBlank(), // Require at least name
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(stringResource("welcome.get_started"))
                     }

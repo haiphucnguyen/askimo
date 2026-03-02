@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontStyle
@@ -83,8 +84,8 @@ fun groupMessagesWithOutdatedBranches(messages: List<ChatMessageDTO>): List<Mess
 fun outdatedBranchComponent(
     messages: List<ChatMessageDTO>,
     modifier: Modifier = Modifier,
-    userAvatarPath: String? = null,
-    aiAvatarPath: String? = null,
+    userAvatarPainter: BitmapPainter? = null,
+    aiAvatarPainter: BitmapPainter? = null,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -147,8 +148,8 @@ fun outdatedBranchComponent(
                 messages.forEach { message ->
                     outdatedMessageItem(
                         message = message,
-                        userAvatarPath = userAvatarPath,
-                        aiAvatarPath = aiAvatarPath,
+                        userAvatarPainter = userAvatarPainter,
+                        aiAvatarPainter = aiAvatarPainter,
                     )
                 }
             }
@@ -164,18 +165,17 @@ fun outdatedBranchComponent(
 @Composable
 fun outdatedMessageItem(
     message: ChatMessageDTO,
-    userAvatarPath: String? = null,
-    aiAvatarPath: String? = null,
+    userAvatarPainter: BitmapPainter? = null,
+    aiAvatarPainter: BitmapPainter? = null,
 ) {
     Box(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        // Render the message bubble
         messageBubble(
             message = message,
             isOutdatedMessage = true,
-            userAvatarPath = userAvatarPath,
-            aiAvatarPath = aiAvatarPath,
+            userAvatarPainter = userAvatarPainter,
+            aiAvatarPainter = aiAvatarPainter,
             // Disable interactive features for outdated messages
             onMessageClick = null,
             onEditMessage = null,

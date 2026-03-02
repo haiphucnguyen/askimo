@@ -36,9 +36,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.memory.MemoryMessage
 import io.askimo.core.memory.TokenAwareSummarizingMemory
 import io.askimo.core.providers.ChatClient
-import io.askimo.core.rag.enrichContentRetrieverWithLucene
-import io.askimo.core.rag.getEmbeddingModel
-import io.askimo.core.rag.getEmbeddingStore
+import io.askimo.core.rag.RagUtils
 import io.askimo.core.util.formatFileSize
 import io.askimo.core.vision.toUserMessage
 import kotlinx.coroutines.CoroutineScope
@@ -236,13 +234,13 @@ class ChatSessionService(
      */
     private fun createRetrieverForProject(classifierChatClient: ChatClient, project: Project): ContentRetriever? {
         try {
-            val embeddingModel = getEmbeddingModel(appContext)
+            val embeddingModel = appContext.getEmbeddingModel()
 
-            val embeddingStore = getEmbeddingStore(project.id, embeddingModel)
+            val embeddingStore = RagUtils.getEmbeddingStore(project.id, embeddingModel)
 
             val ragConfig = AppConfig.rag
 
-            val vectorRetriever = enrichContentRetrieverWithLucene(
+            val vectorRetriever = RagUtils.enrichContentRetrieverWithLucene(
                 classifierChatClient,
                 project.id,
                 EmbeddingStoreContentRetriever.builder()

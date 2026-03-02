@@ -72,9 +72,6 @@
     "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
   },
   {
-    "name": "[Lio.askimo.core.mcp.McpServerDefinition;"
-  },
-  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -419,6 +416,23 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "com.github.dockerjava.api.model.AuthConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "getAuth", "parameterTypes": [] },
+      { "name": "getEmail", "parameterTypes": [] },
+      { "name": "getIdentitytoken", "parameterTypes": [] },
+      { "name": "getPassword", "parameterTypes": [] },
+      { "name": "getRegistryAddress", "parameterTypes": [] },
+      { "name": "getRegistrytoken", "parameterTypes": [] },
+      { "name": "getStackOrchestrator", "parameterTypes": [] },
+      { "name": "getUsername", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "com.github.dockerjava.api.model.Bind",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -734,7 +748,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1829,7 +1844,8 @@
         "parameterTypes": []
       },
       { "name": "keyword returns correct value", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] }
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] }
     ]
   },
   {
@@ -3966,14 +3982,21 @@
           "java.util.List"
         ]
       },
-      { "name": "getAuthor", "parameterTypes": [] },
-      { "name": "getDescription", "parameterTypes": [] },
-      { "name": "getId", "parameterTypes": [] },
-      { "name": "getName", "parameterTypes": [] },
-      { "name": "getStdioConfig", "parameterTypes": [] },
-      { "name": "getTags", "parameterTypes": [] },
-      { "name": "getTransportType", "parameterTypes": [] },
-      { "name": "getVersion", "parameterTypes": [] }
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.TransportType",
+          "io.askimo.core.mcp.StdioConfig",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.List",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
     ]
   },
   {
@@ -4074,9 +4097,16 @@
           "java.lang.String"
         ]
       },
-      { "name": "getCommandTemplate", "parameterTypes": [] },
-      { "name": "getEnvTemplate", "parameterTypes": [] },
-      { "name": "getWorkingDirectory", "parameterTypes": [] }
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.util.Map",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
     ]
   },
   {
@@ -4452,7 +4482,14 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": ["java.util.List"] },
-      { "name": "getServers", "parameterTypes": [] }
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      }
     ]
   },
   {
@@ -4591,7 +4628,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$ez62u0Iz",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$bsz7LqCr",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4602,7 +4639,11 @@
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true,
     "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "setUp", "parameterTypes": [] },
+      { "name": "tearDown", "parameterTypes": [] }
+    ]
   },
   {
     "name": "io.askimo.core.providers.ChatRequestTransformersTest$EdgeCaseTests",
@@ -5409,7 +5450,6 @@
           "java.lang.Boolean"
         ]
       },
-      { "name": "print", "parameterTypes": ["java.lang.String"] },
       { "name": "readFile", "parameterTypes": ["java.lang.String"] },
       {
         "name": "writeFile",
@@ -5982,23 +6022,12 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.AbstractList",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
     "name": "java.util.AbstractMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
   },
   {
     "name": "java.util.ArrayList",
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "java.util.Arrays$ArrayList",
-    "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
@@ -6871,7 +6900,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$3lfexoYO",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$JioXjIHE",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6917,10 +6946,6 @@
   },
   {
     "name": "sun.security.provider.JavaKeyStore$JKS",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "sun.security.provider.MD5",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

@@ -251,10 +251,10 @@ class ProjectIndexer(
 
             if (project != null) {
                 // Create new embedding components for re-indexing
-                val embeddingModel = getEmbeddingModel(appContext)
+                val embeddingModel = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(embeddingModel)
 
-                val embeddingStore = getEmbeddingStore(projectId, embeddingModel)
+                val embeddingStore = RagUtils.getEmbeddingStore(projectId, embeddingModel)
 
                 performIndexing(
                     projectId = projectId,
@@ -335,13 +335,13 @@ class ProjectIndexer(
 
             // Create embedding model and store if not provided
             val embeddingModel = event.embeddingModel ?: run {
-                val model = getEmbeddingModel(appContext)
+                val model = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(model)
                 model
             }
 
             val embeddingStore = event.embeddingStore ?: run {
-                getEmbeddingStore(projectId, embeddingModel)
+                RagUtils.getEmbeddingStore(projectId, embeddingModel)
             }
 
             val project = try {

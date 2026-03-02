@@ -7,8 +7,10 @@ package io.askimo.core.providers.localai
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -17,13 +19,16 @@ import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.display
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.LocalEmbeddingTokenLimits
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.LOCALAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
+import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ProxyUtil
 import java.net.http.HttpClient
@@ -117,4 +122,30 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
+
+    override fun supportsEmbedding(): Boolean = true
+
+    override fun createEmbeddingModel(settings: LocalAiSettings): EmbeddingModel {
+        val baseUrl = settings.baseUrl.removeSuffix("/")
+        val modelName = AppConfig.models.localai.embeddingModel
+
+        log.display(
+            """
+            ℹ️  Using LocalAI for embeddings
+               • LocalAI URL: $baseUrl
+               • Embedding model: $modelName
+               • Configure in askimo.yml: models.localai.embedding_model
+            """.trimIndent(),
+        )
+
+        ensureLocalEmbeddingModelAvailable(LOCALAI, baseUrl, modelName)
+
+        return OpenAiEmbeddingModelBuilder()
+            .apiKey("not-needed")
+            .baseUrl(baseUrl)
+            .modelName(modelName)
+            .build()
+    }
+
+    override fun getEmbeddingTokenLimit(settings: LocalAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.localai.embeddingModel)
 }

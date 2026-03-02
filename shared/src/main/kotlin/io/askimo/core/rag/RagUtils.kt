@@ -4,9 +4,15 @@
  */
 package io.askimo.core.rag
 
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
+import dev.langchain4j.rag.content.retriever.ContentRetriever
+import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.config.AppConfig
+import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ChatClient
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Path
 
@@ -52,5 +58,34 @@ object RagUtils {
     } catch (e: Exception) {
         log.warn("Failed to detect embedding dimension, using default 384", e)
         384
+    }
+
+    fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> {
+        val jVectorIndexDir = getProjectJVectorIndexDir(projectId)
+
+        return JVectorEmbeddingStore.builder()
+            .dimension(getDimensionForModel(embeddingModel))
+            .persistencePath(jVectorIndexDir.toString())
+            .build()
+    }
+
+    fun enrichContentRetrieverWithLucene(
+        classifierChatClient: ChatClient,
+        projectId: String,
+        retriever: ContentRetriever,
+    ): ContentRetriever {
+        val ragConfig = AppConfig.rag
+        val telemetry = AppContext.getInstance().telemetry
+
+        return RAGContentProcessor(
+            HybridContentRetriever(
+                vectorRetriever = retriever,
+                keywordRetriever = LuceneKeywordRetriever(projectId),
+                maxResults = ragConfig.hybridMaxResults,
+                k = ragConfig.rankFusionConstant,
+            ),
+            classifierChatClient,
+            telemetry,
+        )
     }
 }
