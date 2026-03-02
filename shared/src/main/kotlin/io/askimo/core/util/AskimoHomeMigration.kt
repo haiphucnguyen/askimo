@@ -38,17 +38,17 @@ object AskimoHomeMigration {
      * If any new top-level dirs/files are added in future, add them here.
      */
     private val LEGACY_ENTRIES = listOf(
-        "database",
+        "telemetry.json",
+        "model_capabilities.json",
+        "askimo.db",
+        "askimo.yml",
+        "mcp-servers.yml",
+        "telemetry.json",
+        "model-capabilities-cache.json",
+        "avatars",
         "projects",
         "recipes",
         "session",
-        ".key",
-        ".encrypted-keys",
-        "logs",
-        "backups",
-        "model-capabilities-cache.json",
-        "avatars",
-        "mcp",
     )
 
     /**
