@@ -7,8 +7,10 @@ package io.askimo.core.providers.docker
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -17,12 +19,15 @@ import dev.langchain4j.service.tool.ToolProvider
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
+import io.askimo.core.logging.display
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.LocalEmbeddingTokenLimits
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.core.util.ProxyUtil
@@ -141,4 +146,30 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
+
+    override fun supportsEmbedding(): Boolean = true
+
+    override fun createEmbeddingModel(settings: DockerAiSettings): EmbeddingModel {
+        val baseUrl = settings.baseUrl.removeSuffix("/")
+        val modelName = AppConfig.models.docker.embeddingModel
+
+        log.display(
+            """
+            ℹ️  Using Docker AI for embeddings
+               • Docker AI URL: $baseUrl
+               • Embedding model: $modelName
+               • Configure in askimo.yml: models.docker.embedding_model
+            """.trimIndent(),
+        )
+
+        ensureLocalEmbeddingModelAvailable(ModelProvider.DOCKER, baseUrl, modelName)
+
+        return OpenAiEmbeddingModelBuilder()
+            .apiKey("not-needed")
+            .baseUrl(baseUrl)
+            .modelName(modelName)
+            .build()
+    }
+
+    override fun getEmbeddingTokenLimit(settings: DockerAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.docker.embeddingModel)
 }

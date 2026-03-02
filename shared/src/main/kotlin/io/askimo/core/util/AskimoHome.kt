@@ -8,7 +8,22 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
+ * Profile type for Askimo home directory.
+ * PERSONAL is the default — used when the app runs standalone with user-provided API keys.
+ * TEAM is activated when the user signs in to an Askimo team server.
+ */
+enum class AppProfile(val dirName: String) {
+    PERSONAL("personal"),
+    TEAM("team"),
+}
+
+/**
  * Centralized resolution of Askimo home-related paths.
+ *
+ * Directory structure (Option B — single base, profile subdirectories):
+ *   ~/.askimo/
+ *     personal/    ← PERSONAL profile data (default)
+ *     team/        ← TEAM profile data (when signed in to a server)
  *
  * Override base directory with env var ASKIMO_HOME; if unset, defaults to `${user.home}/.askimo`.
  * Paths are computed on demand so tests that override `user.home` still work.
@@ -20,14 +35,47 @@ object AskimoHome {
     // Thread-local override for testing - doesn't affect other threads or the main application
     private val testBaseOverride = ThreadLocal<Path?>()
 
-    /** Returns the (possibly overridden) base Askimo directory. */
-    fun base(): Path {
+    /**
+     * The currently active profile. Defaults to PERSONAL.
+     * Switch via [switchProfile] when the user logs in/out of a team.
+     */
+    @Volatile
+    var activeProfile: AppProfile = AppProfile.PERSONAL
+        private set
+
+    /**
+     * Switches the active profile. Should be called when user logs in/out of a team server.
+     * All subsequent [base], [projectsDir], [recipesDir], etc. calls will resolve
+     * to the new profile's subdirectory.
+     */
+    fun switchProfile(profile: AppProfile) {
+        activeProfile = profile
+    }
+
+    /** Returns the base Askimo directory (e.g., ~/.askimo) — does NOT include profile subdir. */
+    fun rootBase(): Path {
         testBaseOverride.get()?.let { return it }
 
         val override = System.getenv("ASKIMO_HOME")?.trim()?.takeIf { it.isNotEmpty() }
         val userHome = System.getProperty("user.home")
         val base = override?.let { Paths.get(it) } ?: Paths.get(userHome).resolve(".askimo")
         return base.toAbsolutePath().normalize()
+    }
+
+    /**
+     * Returns the active profile's home directory (e.g., ~/.askimo/personal).
+     * All app data paths resolve under this directory.
+     */
+    fun base(): Path = rootBase().resolve(activeProfile.dirName).also {
+        it.toFile().mkdirs()
+    }
+
+    /**
+     * Returns the home directory for a specific profile, regardless of which one is active.
+     * Useful when reading data from the non-active profile (e.g., during migration checks).
+     */
+    fun profileBase(profile: AppProfile): Path = rootBase().resolve(profile.dirName).also {
+        it.toFile().mkdirs()
     }
 
     /**

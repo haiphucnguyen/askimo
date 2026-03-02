@@ -9,7 +9,6 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.request.ChatRequest
-import io.askimo.core.chat.repository.ChatDirectiveRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
@@ -19,7 +18,7 @@ import io.askimo.core.logging.logger
  */
 object ChatRequestTransformers {
 
-    private val directiveRepository: ChatDirectiveRepository = DatabaseManager.getInstance().getChatDirectiveRepository()
+    private val directiveRepository by lazy { DatabaseManager.getInstance().getChatDirectiveRepository() }
     private val log = logger<ChatRequestTransformers>()
 
     /**

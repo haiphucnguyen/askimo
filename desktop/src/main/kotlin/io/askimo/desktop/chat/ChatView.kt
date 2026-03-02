@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -80,8 +81,8 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.themedTooltip
+import io.askimo.desktop.service.AvatarService
 import io.askimo.desktop.session.manageDirectivesDialog
 import io.askimo.desktop.session.newDirectiveDialog
 import io.askimo.desktop.session.sessionActionsMenu
@@ -113,6 +114,7 @@ fun chatView(
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
     onNavigateToProject: ((String) -> Unit)? = null,
+    userAvatarPath: String? = null,
     modifier: Modifier = Modifier,
 ) {
     // Unpack state for internal use
@@ -267,8 +269,23 @@ fun chatView(
         chatViewFocusRequester.requestFocus()
     }
 
-    // Load AI avatar path (user avatar is now in UserProfile)
-    val aiAvatarPath = remember { ThemePreferences.getAIAvatarPath() }
+    // Load avatar painters from AvatarService (cached — decoded once per app lifetime).
+    // userAvatarPath is passed in from the caller which already has userProfile loaded,
+    // so there is no async race on first run and it re-triggers naturally when the
+    // user saves a new avatar (path string changes).
+    val avatarService = remember { GlobalContext.get().get<AvatarService>() }
+    var aiAvatarPainter by remember { mutableStateOf<BitmapPainter?>(null) }
+    var userAvatarPainter by remember { mutableStateOf<BitmapPainter?>(null) }
+
+    LaunchedEffect(Unit) {
+        aiAvatarPainter = withContext(Dispatchers.IO) { avatarService.getAiAvatarPainter() }
+    }
+
+    LaunchedEffect(userAvatarPath) {
+        userAvatarPainter = withContext(Dispatchers.IO) {
+            avatarService.getUserAvatarPainter(userAvatarPath)
+        }
+    }
 
     // Show new directive dialog
     if (showNewDirectiveDialog) {
@@ -971,7 +988,8 @@ fun chatView(
                                 }
                             },
                             onDownloadAttachment = downloadAttachment,
-                            aiAvatarPath = aiAvatarPath,
+                            userAvatarPainter = userAvatarPainter,
+                            aiAvatarPainter = aiAvatarPainter,
                             onRetryMessage = actions::retryMessage,
                         )
                     }
@@ -1007,7 +1025,8 @@ fun chatView(
                                 }
                             },
                             onDownloadAttachment = downloadAttachment,
-                            aiAvatarPath = aiAvatarPath,
+                            userAvatarPainter = userAvatarPainter,
+                            aiAvatarPainter = aiAvatarPainter,
                             onRetryMessage = actions::retryMessage,
                         )
                     }

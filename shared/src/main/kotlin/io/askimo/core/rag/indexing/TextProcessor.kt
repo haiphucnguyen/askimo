@@ -9,7 +9,6 @@ import dev.langchain4j.data.segment.TextSegment
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
-import io.askimo.core.rag.getModelTokenLimit
 
 /**
  * Handles generic text processing operations: chunking and segment creation.
@@ -50,7 +49,7 @@ class TextProcessor(
      */
     private fun calculateSafeMaxChars(): Int {
         val tokenLimit = try {
-            getModelTokenLimit(appContext)
+            appContext.getEmbeddingTokenLimit()
         } catch (e: Exception) {
             log.warn("Failed to get model token limit, using default from config: ${e.message}")
             return AppConfig.embedding.maxCharsPerChunk

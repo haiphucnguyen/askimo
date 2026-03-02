@@ -7,6 +7,7 @@ package io.askimo.core.config
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.event.EventBus
@@ -391,7 +392,14 @@ object AppConfig {
 
     private val mapper: ObjectMapper =
         ObjectMapper(YAMLFactory())
-            .registerModule(KotlinModule.Builder().build())
+            .registerModule(
+                KotlinModule.Builder()
+                    .withReflectionCacheSize(512)
+                    .configure(KotlinFeature.NullIsSameAsDefault, true)
+                    .configure(KotlinFeature.NullToEmptyCollection, true)
+                    .configure(KotlinFeature.NullToEmptyMap, true)
+                    .build(),
+            )
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
     // Default YAML written on first run if no config exists

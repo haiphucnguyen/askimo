@@ -7,8 +7,10 @@ package io.askimo.core.providers.openai
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -124,4 +126,20 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
+
+    override fun supportsEmbedding(): Boolean = true
+
+    override fun createEmbeddingModel(settings: OpenAiSettings): EmbeddingModel = OpenAiEmbeddingModelBuilder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(AppConfig.models.openai.embeddingModel)
+        .build()
+
+    override fun getEmbeddingTokenLimit(settings: OpenAiSettings): Int {
+        val modelName = AppConfig.models.openai.embeddingModel.lowercase()
+        return when {
+            modelName.contains("text-embedding-3") -> 8191
+            modelName.contains("ada-002") -> 8191
+            else -> 8191
+        }
+    }
 }

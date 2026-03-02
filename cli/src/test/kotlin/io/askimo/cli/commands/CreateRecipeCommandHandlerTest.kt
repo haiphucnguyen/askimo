@@ -5,7 +5,9 @@
 package io.askimo.cli.commands
 
 import io.askimo.cli.recipes.RecipeDef
+import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Yaml.yamlMapper
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -24,12 +26,18 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
     @TempDir
     lateinit var tempHome: Path
 
+    private lateinit var testBaseScope: AskimoHome.TestBaseScope
+
     @BeforeEach
     fun setUp() {
         handler = CreateRecipeCommandHandler()
+        // Use thread-local override — AskimoHome.base() resolves to tempHome/personal/
+        testBaseScope = AskimoHome.withTestBase(tempHome)
+    }
 
-        // Set temporary home directory for testing
-        System.setProperty("user.home", tempHome.toString())
+    @AfterEach
+    fun tearDown() {
+        testBaseScope.close()
     }
 
     @Test
@@ -56,8 +64,7 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
         assertTrue(output.contains("✅ Registered recipe 'my-recipe'"))
 
         // Verify recipe file was created
-        val recipesDir = tempHome.resolve(".askimo/recipes")
-        val recipeFile = recipesDir.resolve("my-recipe.yml")
+        val recipeFile = AskimoHome.recipesDir().resolve("my-recipe.yml")
         assertTrue(Files.exists(recipeFile))
     }
 
@@ -155,8 +162,8 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
             """.trimIndent()
         Files.writeString(templateFile, yamlContent)
 
-        // Create the recipe first time
-        val recipesDir = tempHome.resolve(".askimo/recipes")
+        // Pre-create the recipe in the profile-aware recipes dir
+        val recipesDir = AskimoHome.recipesDir()
         Files.createDirectories(recipesDir)
         Files.writeString(recipesDir.resolve("existing-recipe.yml"), yamlContent)
 
@@ -170,24 +177,32 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
 
     @Test
     fun `handle expands tilde in template path`() {
-        val templateFile = tempHome.resolve("template.yml")
-        val yamlContent =
-            """
-            name: tilde-test
-            version: 3
-            system: |
-              You are a helpful assistant.
-            userTemplate: |
-              Complete: {{task}}
-            """.trimIndent()
-        Files.writeString(templateFile, yamlContent)
+        // Write the template into the user home that AskimoHome.userHome() resolves.
+        // Since we are using withTestBase (not overriding user.home), we write to
+        // the real user home but use a unique name to avoid collisions.
+        val realHome = Paths.get(System.getProperty("user.home"))
+        val templateFile = realHome.resolve("askimo-tilde-test-template.yml")
+        try {
+            val yamlContent =
+                """
+                name: tilde-test
+                version: 3
+                system: |
+                  You are a helpful assistant.
+                userTemplate: |
+                  Complete: {{task}}
+                """.trimIndent()
+            Files.writeString(templateFile, yamlContent)
 
-        val parsedLine = mockParsedLine(":create-recipe", "test", "-f", "~/template.yml")
+            val parsedLine = mockParsedLine(":create-recipe", "tilde-test", "-f", "~/askimo-tilde-test-template.yml")
 
-        handler.handle(parsedLine)
+            handler.handle(parsedLine)
 
-        val output = getOutput()
-        assertTrue(output.contains("✅ Registered recipe"))
+            val output = getOutput()
+            assertTrue(output.contains("✅ Registered recipe"))
+        } finally {
+            Files.deleteIfExists(templateFile)
+        }
     }
 
     @Test
@@ -205,38 +220,21 @@ class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
     fun `handle with real gitcommit template preserves vars`() {
         // Use the real template shipped with the repo (now in src/main/resources)
         val templatePath =
-            Paths
-                .get(System.getProperty("user.dir"), "src", "main", "resources", "templates", "gitcommit.yml")
-        assertTrue(
-            Files
-                .exists(templatePath),
-        )
+            Paths.get(System.getProperty("user.dir"), "src", "main", "resources", "templates", "gitcommit.yml")
+        assertTrue(Files.exists(templatePath))
 
         val parsedLine =
-            mockParsedLine(
-                ":create-recipe",
-                "gitcommit-test",
-                "-f",
-                templatePath.toString(),
-            )
+            mockParsedLine(":create-recipe", "gitcommit-test", "-f", templatePath.toString())
 
         handler.handle(parsedLine)
 
         val output = getOutput()
         assertTrue(output.contains("✅ Registered recipe 'gitcommit-test'"))
 
-        // Verify recipe file was created and contains vars from the template
-        val recipesDir = tempHome.resolve(".askimo/recipes")
-        val recipeFile = recipesDir.resolve("gitcommit-test.yml")
+        val recipeFile = AskimoHome.recipesDir().resolve("gitcommit-test.yml")
         assertTrue(Files.exists(recipeFile))
 
-        // Parse back to ensure vars made it through
-        val def =
-            yamlMapper.readValue(
-                Files
-                    .readString(recipeFile),
-                RecipeDef::class.java,
-            )
+        val def = yamlMapper.readValue(Files.readString(recipeFile), RecipeDef::class.java)
         assertTrue(def.vars.containsKey("diff"))
         assertTrue(def.vars.containsKey("status"))
         assertTrue(def.vars.containsKey("branch"))

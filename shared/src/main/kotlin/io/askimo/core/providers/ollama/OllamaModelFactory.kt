@@ -7,8 +7,10 @@ package io.askimo.core.providers.ollama
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder
 import dev.langchain4j.model.openai.OpenAiImageModel
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -21,8 +23,10 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.LocalEmbeddingTokenLimits
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
+import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
 import io.askimo.core.util.ProxyUtil
 import java.net.http.HttpClient
@@ -125,4 +129,19 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
+
+    override fun supportsEmbedding(): Boolean = true
+
+    override fun createEmbeddingModel(settings: OllamaSettings): EmbeddingModel {
+        val baseUrl = settings.baseUrl.removeSuffix("/")
+        val modelName = AppConfig.models.ollama.embeddingModel
+        ensureLocalEmbeddingModelAvailable(ModelProvider.OLLAMA, baseUrl, modelName)
+        return OpenAiEmbeddingModelBuilder()
+            .apiKey("not-needed")
+            .baseUrl(baseUrl)
+            .modelName(modelName)
+            .build()
+    }
+
+    override fun getEmbeddingTokenLimit(settings: OllamaSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.ollama.embeddingModel)
 }

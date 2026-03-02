@@ -9,9 +9,17 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.request.ChatRequest
+import io.askimo.core.context.AppContext
+import io.askimo.core.context.ExecutionMode
+import io.askimo.core.db.DatabaseManager
+import io.askimo.core.util.AskimoHome
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -20,6 +28,28 @@ import kotlin.test.assertTrue
  * Tests for ChatRequestTransformers focusing on token budget enforcement and message handling.
  */
 class ChatRequestTransformersTest {
+
+    @TempDir
+    lateinit var tempDir: Path
+
+    private lateinit var testBaseScope: AskimoHome.TestBaseScope
+    private lateinit var databaseManager: DatabaseManager
+
+    @BeforeEach
+    fun setUp() {
+        testBaseScope = AskimoHome.withTestBase(tempDir)
+        databaseManager = DatabaseManager.getInMemoryTestInstance(this)
+        AppContext.reset() // defensive reset in case another test left instance set
+        AppContext.initialize(ExecutionMode.STATELESS_MODE)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        AppContext.reset()
+        databaseManager.close()
+        DatabaseManager.reset()
+        testBaseScope.close()
+    }
 
     @Nested
     @DisplayName("Token Budget Enforcement")

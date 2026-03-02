@@ -11,7 +11,6 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
-import io.askimo.core.rag.getEmbeddingModel
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -68,7 +67,7 @@ class EmbeddingModelFactoryOllamaTest {
     @Test
     @DisplayName("EmbeddingModelFactory auto-pulls missing Ollama embedding model and can embed text")
     fun autoPullsMissingModelAndEmbeds() {
-        val model = getEmbeddingModel(appContext)
+        val model = appContext.getEmbeddingModel()
 
         val segment = TextSegment.from("hello world")
         val embedding = model.embed(segment).content().vector()

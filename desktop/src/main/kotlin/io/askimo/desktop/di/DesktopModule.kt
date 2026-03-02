@@ -13,6 +13,7 @@ import io.askimo.core.providers.ToolProviderImpl
 import io.askimo.desktop.common.monitoring.SystemResourceMonitor
 import io.askimo.desktop.project.ProjectViewModel
 import io.askimo.desktop.project.ProjectsViewModel
+import io.askimo.desktop.service.AvatarService
 import io.askimo.desktop.service.UpdateService
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.session.SessionsViewModel
@@ -96,6 +97,7 @@ val desktopModule = module {
     }
 
     single { UpdateService() }
+    single { AvatarService() }
     factory { (scope: CoroutineScope) ->
         UpdateViewModel(
             scope = scope,

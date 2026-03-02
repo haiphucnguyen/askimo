@@ -7,6 +7,8 @@ package io.askimo.core.providers.gemini
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.embedding.EmbeddingModel
+import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiImageModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
@@ -119,4 +121,20 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     ): ChatClient = AiServices.builder(ChatClient::class.java)
         .chatModel(createSecondaryChatModel(settings))
         .build()
+
+    override fun supportsEmbedding(): Boolean = true
+
+    override fun createEmbeddingModel(settings: GeminiSettings): EmbeddingModel = GoogleAiEmbeddingModel.builder()
+        .apiKey(safeApiKey(settings.apiKey))
+        .modelName(AppConfig.models.gemini.embeddingModel)
+        .build()
+
+    override fun getEmbeddingTokenLimit(settings: GeminiSettings): Int {
+        val modelName = AppConfig.models.gemini.embeddingModel.lowercase()
+        return when {
+            modelName.contains("embedding-001") -> 2048
+            modelName.contains("text-embedding-004") -> 2048
+            else -> 2048
+        }
+    }
 }

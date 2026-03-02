@@ -18,18 +18,18 @@ import kotlin.test.assertTrue
 
 class DefaultRecipeInitializerTest {
     private lateinit var tempDir: Path
-    private lateinit var originalRecipesDir: Path
+    private lateinit var testBaseScope: AskimoHome.TestBaseScope
 
     @BeforeEach
     fun setUp() {
         tempDir = Files.createTempDirectory("askimo-test")
-        originalRecipesDir = AskimoHome.recipesDir()
-
-        System.setProperty("user.home", tempDir.toString())
+        // Use thread-local override so AskimoHome resolves paths under tempDir
+        testBaseScope = AskimoHome.withTestBase(tempDir)
     }
 
     @AfterEach
     fun tearDown() {
+        testBaseScope.close()
         tempDir.toFile().deleteRecursively()
     }
 
@@ -37,7 +37,7 @@ class DefaultRecipeInitializerTest {
     fun `should create gitcommit template when it doesn't exist`() {
         DefaultRecipeInitializer.initializeDefaultTemplates()
 
-        val recipesDir = tempDir.resolve(".askimo").resolve("recipes")
+        val recipesDir = AskimoHome.recipesDir()
         val gitcommitFile = recipesDir.resolve("gitcommit.yml")
 
         assertTrue(recipesDir.exists(), "Recipes directory should be created")
@@ -50,7 +50,7 @@ class DefaultRecipeInitializerTest {
 
     @Test
     fun `should not overwrite existing template`() {
-        val recipesDir = tempDir.resolve(".askimo").resolve("recipes")
+        val recipesDir = AskimoHome.recipesDir()
         Files.createDirectories(recipesDir)
         val gitcommitFile = recipesDir.resolve("gitcommit.yml")
         val existingContent = "name: customGitCommit\nversion: 999"

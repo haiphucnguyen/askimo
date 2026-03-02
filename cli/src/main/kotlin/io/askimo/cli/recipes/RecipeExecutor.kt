@@ -49,7 +49,7 @@ class RecipeExecutor(
 
         opts.externalArgs.forEachIndexed { i, v -> vars["arg${i + 1}"] = v }
         // Inject stdin content if provided so recipes can use {{stdin}}
-        if (opts.stdinContent != null && opts.stdinContent.isNotBlank()) {
+        if (!opts.stdinContent.isNullOrBlank()) {
             vars["stdin"] = opts.stdinContent
         }
 

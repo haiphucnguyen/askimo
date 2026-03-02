@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.chat
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
@@ -34,7 +35,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,10 +56,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -69,21 +71,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
-import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.ui.asyncImage
 import io.askimo.desktop.common.ui.markdownText
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.common.ui.util.highlightSearchText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 
 private val log = currentFileLogger()
@@ -103,19 +101,11 @@ fun messageList(
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
     onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
-    aiAvatarPath: String? = null,
+    userAvatarPainter: BitmapPainter? = null,
+    aiAvatarPainter: BitmapPainter? = null,
     onRetryMessage: ((String) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
-
-    // Load user avatar from UserProfile
-    var userAvatarPath by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        userAvatarPath = withContext(Dispatchers.IO) {
-            DatabaseManager.getInstance().getUserProfileRepository()
-                .getProfile().preferences["avatarPath"]
-        }
-    }
 
     // Retry confirmation dialog state
     var showRetryConfirmDialog by remember { mutableStateOf(false) }
@@ -227,8 +217,8 @@ fun messageList(
                             onMessageClick = onMessageClick,
                             onEditMessage = onEditMessage,
                             onDownloadAttachment = onDownloadAttachment,
-                            userAvatarPath = userAvatarPath,
-                            aiAvatarPath = aiAvatarPath,
+                            userAvatarPainter = userAvatarPainter,
+                            aiAvatarPainter = aiAvatarPainter,
                             onRetryMessage = onRetryMessage,
                             addTopPadding = isFirstMessage,
                             viewportTopY = scrollableColumnBounds?.top,
@@ -244,8 +234,8 @@ fun messageList(
                     is MessageGroup.OutdatedBranch -> {
                         outdatedBranchComponent(
                             messages = group.messages,
-                            userAvatarPath = userAvatarPath,
-                            aiAvatarPath = aiAvatarPath,
+                            userAvatarPainter = userAvatarPainter,
+                            aiAvatarPainter = aiAvatarPainter,
                         )
                         isFirstMessage = false
                         messageIndex += group.messages.size
@@ -334,8 +324,8 @@ fun messageBubble(
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
     onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
     onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
-    userAvatarPath: String? = null,
-    aiAvatarPath: String? = null,
+    userAvatarPainter: BitmapPainter? = null,
+    aiAvatarPainter: BitmapPainter? = null,
     onRetryMessage: ((String) -> Unit)? = null,
     addTopPadding: Boolean = false,
     viewportTopY: Float? = null,
@@ -394,17 +384,9 @@ fun messageBubble(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (aiAvatarPath != null) {
-                                asyncImage(
-                                    imagePath = aiAvatarPath,
-                                    contentDescription = "AI",
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape),
-                                )
-                            } else {
+                            if (aiAvatarPainter != null) {
                                 Icon(
-                                    imageVector = Icons.Default.SmartToy,
+                                    painter = aiAvatarPainter,
                                     contentDescription = "AI",
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(20.dp),
@@ -572,10 +554,11 @@ fun messageBubble(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (userAvatarPath != null) {
-                                asyncImage(
-                                    imagePath = userAvatarPath,
+                            if (userAvatarPainter != null) {
+                                Image(
+                                    painter = userAvatarPainter,
                                     contentDescription = "User",
+                                    contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape),
