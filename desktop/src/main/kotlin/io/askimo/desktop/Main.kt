@@ -857,9 +857,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                             // Min 200dp, max 35% of screen width, default ~20%
                                             val minSidebarWidth = 200.dp
                                             val maxSidebarWidthFraction = 0.35f
+                                            // Guard: max must never be less than min (happens when
+                                            // the window is resized smaller than ~571dp wide)
+                                            val maxSidebarWidth = maxOf(maxWidth * maxSidebarWidthFraction, minSidebarWidth)
                                             val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
                                                 minSidebarWidth,
-                                                maxWidth * maxSidebarWidthFraction,
+                                                maxSidebarWidth,
                                             )
 
                                             navigationSidebar(

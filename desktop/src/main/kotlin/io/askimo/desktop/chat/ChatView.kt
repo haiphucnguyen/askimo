@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -952,116 +953,129 @@ fun chatView(
                     .fillMaxWidth()
                     .padding(16.dp),
             ) {
-                when {
-                    isSearchMode && searchResults.isEmpty() && !isSearching -> {
-                        Text(
-                            stringResource("chat.search.not.found", searchQuery),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 900.dp)
+                        .align(Alignment.TopCenter)
+                        .fillMaxHeight(),
+                ) {
+                    when {
+                        isSearchMode && searchResults.isEmpty() && !isSearching -> {
+                            Text(
+                                stringResource("chat.search.not.found", searchQuery),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
+                        isSearchMode -> {
+                            messageList(
+                                messages = searchResults,
+                                isThinking = false,
+                                thinkingElapsedSeconds = 0,
+                                spinnerFrame = spinnerFrame.toString(),
+                                hasMoreMessages = false,
+                                isLoadingPrevious = false,
+                                onLoadPrevious = {},
+                                searchQuery = searchQuery,
+                                currentSearchResultIndex = currentSearchResultIndex,
+                                onMessageClick = onJumpToMessage,
+                                onEditMessage = { message ->
+                                    if (message.isUser) {
+                                        // User message - set editing mode
+                                        editingMessage = message
+                                        inputText = TextFieldValue(
+                                            text = message.content,
+                                            selection = TextRange(0),
+                                        )
+                                        attachments = message.attachments
+                                    } else {
+                                        // AI message - show edit dialog
+                                        editingAIMessage = message
+                                    }
+                                },
+                                onDownloadAttachment = downloadAttachment,
+                                userAvatarPainter = userAvatarPainter,
+                                aiAvatarPainter = aiAvatarPainter,
+                                onRetryMessage = actions::retryMessage,
+                            )
+                        }
+                        messages.isEmpty() -> {
+                            Text(
+                                stringResource("chat.welcome"),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
+                        else -> {
+                            messageList(
+                                messages = messages,
+                                isThinking = isThinking,
+                                thinkingElapsedSeconds = thinkingElapsedSeconds,
+                                spinnerFrame = spinnerFrame.toString(),
+                                hasMoreMessages = hasMoreMessages,
+                                isLoadingPrevious = isLoadingPrevious,
+                                onLoadPrevious = actions::loadPrevious,
+                                onEditMessage = { message ->
+                                    if (message.isUser) {
+                                        // User message - set editing mode
+                                        editingMessage = message
+                                        inputText = TextFieldValue(
+                                            text = message.content,
+                                            selection = TextRange(0),
+                                        )
+                                        attachments = message.attachments
+                                    } else {
+                                        // AI message - show edit dialog
+                                        editingAIMessage = message
+                                    }
+                                },
+                                onDownloadAttachment = downloadAttachment,
+                                userAvatarPainter = userAvatarPainter,
+                                aiAvatarPainter = aiAvatarPainter,
+                                onRetryMessage = actions::retryMessage,
+                            )
+                        }
                     }
-                    isSearchMode -> {
-                        messageList(
-                            messages = searchResults,
-                            isThinking = false,
-                            thinkingElapsedSeconds = 0,
-                            spinnerFrame = spinnerFrame.toString(),
-                            hasMoreMessages = false,
-                            isLoadingPrevious = false,
-                            onLoadPrevious = {},
-                            searchQuery = searchQuery,
-                            currentSearchResultIndex = currentSearchResultIndex,
-                            onMessageClick = onJumpToMessage,
-                            onEditMessage = { message ->
-                                if (message.isUser) {
-                                    // User message - set editing mode
-                                    editingMessage = message
-                                    inputText = TextFieldValue(
-                                        text = message.content,
-                                        selection = TextRange(0),
-                                    )
-                                    attachments = message.attachments
-                                } else {
-                                    // AI message - show edit dialog
-                                    editingAIMessage = message
-                                }
-                            },
-                            onDownloadAttachment = downloadAttachment,
-                            userAvatarPainter = userAvatarPainter,
-                            aiAvatarPainter = aiAvatarPainter,
-                            onRetryMessage = actions::retryMessage,
-                        )
-                    }
-                    messages.isEmpty() -> {
-                        Text(
-                            stringResource("chat.welcome"),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-                    else -> {
-                        messageList(
-                            messages = messages,
-                            isThinking = isThinking,
-                            thinkingElapsedSeconds = thinkingElapsedSeconds,
-                            spinnerFrame = spinnerFrame.toString(),
-                            hasMoreMessages = hasMoreMessages,
-                            isLoadingPrevious = isLoadingPrevious,
-                            onLoadPrevious = actions::loadPrevious,
-                            onEditMessage = { message ->
-                                if (message.isUser) {
-                                    // User message - set editing mode
-                                    editingMessage = message
-                                    inputText = TextFieldValue(
-                                        text = message.content,
-                                        selection = TextRange(0),
-                                    )
-                                    attachments = message.attachments
-                                } else {
-                                    // AI message - show edit dialog
-                                    editingAIMessage = message
-                                }
-                            },
-                            onDownloadAttachment = downloadAttachment,
-                            userAvatarPainter = userAvatarPainter,
-                            aiAvatarPainter = aiAvatarPainter,
-                            onRetryMessage = actions::retryMessage,
-                        )
-                    }
-                }
+                } // end centered Box
             }
 
             // Input area
-            chatInputField(
-                inputText = inputText,
-                onInputTextChange = { inputText = it },
-                attachments = attachments,
-                onAttachmentsChange = { attachments = it },
-                onSendMessage = { mode ->
-                    if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                        actions.sendOrEditMessage(mode, inputText.text, attachments, editingMessage)
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                chatInputField(
+                    inputText = inputText,
+                    onInputTextChange = { inputText = it },
+                    attachments = attachments,
+                    onAttachmentsChange = { attachments = it },
+                    onSendMessage = { mode ->
+                        if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                            actions.sendOrEditMessage(mode, inputText.text, attachments, editingMessage)
+                            inputText = TextFieldValue("")
+                            attachments = emptyList()
+                            editingMessage = null
+                        }
+                    },
+                    isLoading = isLoading,
+                    isThinking = isThinking,
+                    onStopResponse = actions::cancelResponse,
+                    errorMessage = errorMessage,
+                    editingMessage = editingMessage,
+                    onCancelEdit = {
+                        editingMessage = null
                         inputText = TextFieldValue("")
                         attachments = emptyList()
-                        editingMessage = null
-                    }
-                },
-                isLoading = isLoading,
-                isThinking = isThinking,
-                onStopResponse = actions::cancelResponse,
-                errorMessage = errorMessage,
-                editingMessage = editingMessage,
-                onCancelEdit = {
-                    editingMessage = null
-                    inputText = TextFieldValue("")
-                    attachments = emptyList()
-                },
-                sessionId = sessionId,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            )
+                    },
+                    sessionId = sessionId,
+                    modifier = Modifier
+                        .widthIn(max = 900.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                )
+            } // end centered Box
         } // End of main chat Column
 
         // Project Side Panel (right side) - Tabbed panel with RAG sources, MCP, etc.

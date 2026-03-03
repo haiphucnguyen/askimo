@@ -354,10 +354,11 @@ fun messageBubble(
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false },
         ) {
-            val maxBubbleWidth = when {
+            // Only applies to user message bubbles — AI messages use full width
+            val maxUserBubbleWidth = when {
                 maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
-                maxWidth < 1200.dp -> (maxWidth * 0.75f).coerceAtMost(800.dp)
-                else -> (maxWidth * 0.65f).coerceAtMost(1000.dp)
+                maxWidth < 1200.dp -> (maxWidth * 0.70f).coerceAtMost(700.dp)
+                else -> (maxWidth * 0.55f).coerceAtMost(850.dp)
             }
 
             Column(
@@ -399,7 +400,13 @@ fun messageBubble(
                     Box {
                         Card(
                             modifier = Modifier
-                                .widthIn(max = maxBubbleWidth)
+                                .then(
+                                    if (message.isUser) {
+                                        Modifier.widthIn(max = maxUserBubbleWidth)
+                                    } else {
+                                        Modifier.fillMaxWidth()
+                                    },
+                                )
                                 .then(
                                     if (isClickable) {
                                         Modifier
