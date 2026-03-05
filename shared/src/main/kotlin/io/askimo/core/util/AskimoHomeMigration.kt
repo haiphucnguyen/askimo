@@ -23,7 +23,6 @@ import java.io.File
  *     model-capabilities-cache.json   backups/
  *     ...                             model-capabilities-cache.json
  *                                     ...
- *                                   team/   ← empty, created on first team login
  *
  * Safe to call on every startup — skips if already migrated (marker file present).
  */
@@ -32,6 +31,7 @@ object AskimoHomeMigration {
     private val log = LoggerFactory.getLogger(AskimoHomeMigration::class.java)
 
     private const val MIGRATION_MARKER = ".migrated_profiles_v1"
+    private const val PERSONAL_DIR = "personal"
 
     /**
      * Known legacy entries to move into personal/ subdirectory.
@@ -39,11 +39,9 @@ object AskimoHomeMigration {
      */
     private val LEGACY_ENTRIES = listOf(
         "telemetry.json",
-        "model_capabilities.json",
         "askimo.db",
         "askimo.yml",
         "mcp-servers.yml",
-        "telemetry.json",
         "model-capabilities-cache.json",
         "avatars",
         "projects",
@@ -65,8 +63,7 @@ object AskimoHomeMigration {
             return
         }
 
-        // If personal/ already exists, migration was done manually or in a newer install
-        val personalDir = File(rootBase, AppProfile.PERSONAL.dirName)
+        val personalDir = File(rootBase, PERSONAL_DIR)
         if (personalDir.exists()) {
             log.debug("personal/ dir already exists, writing marker and skipping migration.")
             migrationMarker.writeText("migrated_at=${System.currentTimeMillis()}")

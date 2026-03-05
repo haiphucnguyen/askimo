@@ -301,6 +301,39 @@ class ChatSessionService(
             )
         }
 
+        // Asynchronously generate a better AI title using the first user message.
+        // The trimmed title is already persisted by createSession — this is a best-effort improvement.
+        if (session.title.isNotBlank()) {
+            eventScope.launch {
+                try {
+                    val prompt = """
+                        Generate a short, concise title (150 words max, no quotes, no punctuation at end)
+                        for a conversation that starts with this user message:
+                        "${session.title}"
+                        Respond with only the title, nothing else.
+                    """.trimIndent()
+                    val utilityChatClient = appContext.createUtilityClient()
+
+                    val aiTitle = utilityChatClient.sendMessage(prompt).trim()
+
+                    if (aiTitle.isNotBlank()) {
+                        sessionRepository.updateSessionTitle(createdSession.id, aiTitle)
+
+                        EventBus.emit(
+                            SessionTitleUpdatedEvent(
+                                sessionId = createdSession.id,
+                                newTitle = aiTitle,
+                            ),
+                        )
+
+                        log.debug("AI title generated for session {}: {}", createdSession.id, aiTitle)
+                    }
+                } catch (e: Exception) {
+                    log.debug("Failed to generate AI title for session {}: {}", createdSession.id, e.message)
+                }
+            }
+        }
+
         return createdSession
     }
 

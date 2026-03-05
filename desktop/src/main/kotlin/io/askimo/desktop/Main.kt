@@ -82,6 +82,7 @@ import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
+import io.askimo.core.util.PersonalAskimoHome
 import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.desktop.chat.ChatViewModel
 import io.askimo.desktop.chat.chatView
@@ -190,7 +191,8 @@ fun detectMacOSDarkMode(): Boolean {
 private val log = currentFileLogger()
 
 fun main() {
-    // Migrate legacy flat ~/.askimo/ to profile-based structure before anything touches the paths
+    AskimoHome.register(PersonalAskimoHome)
+
     AskimoHomeMigration.migrate(AskimoHome.rootBase().toFile())
 
     AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)

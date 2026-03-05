@@ -58,6 +58,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.koin.test)
+    testImplementation(testFixtures(project(":shared")))
 }
 
 tasks.withType<JavaCompile> {

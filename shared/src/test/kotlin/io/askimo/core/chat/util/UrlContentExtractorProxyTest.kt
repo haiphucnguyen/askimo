@@ -9,6 +9,8 @@ import com.sun.net.httpserver.HttpServer
 import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProxyConfig
 import io.askimo.core.config.ProxyType
+import io.askimo.core.security.SecureKeyManager
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -28,6 +30,7 @@ import kotlin.test.assertTrue
  * 3. External URLs use proxy when configured
  * 4. Different proxy types work correctly
  */
+@AskimoTestHome
 class UrlContentExtractorProxyTest {
 
     private var mockServer: HttpServer? = null
@@ -37,7 +40,16 @@ class UrlContentExtractorProxyTest {
 
     @BeforeEach
     fun setUp() {
-        // Save original proxy config
+        // Reset AppConfig cache to ensure clean state
+        AppConfig.reset()
+
+        // Clear secure storage for all proxy types to prevent test pollution
+        ProxyType.entries.forEach { proxyType ->
+            val storageKey = "proxy.${proxyType.name.lowercase()}.password"
+            SecureKeyManager.removeSecretKey(storageKey)
+        }
+
+        // Save original proxy config after clearing secure storage
         originalProxyConfig = AppConfig.proxy
 
         // Reset counters

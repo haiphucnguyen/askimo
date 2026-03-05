@@ -6,6 +6,7 @@ package io.askimo.core.mcp
 
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.util.ProcessBuilderExt
+import io.askimo.test.extensions.AskimoTestHome
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -23,6 +24,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @DisplayName("MCP Filesystem Connector Integration Tests")
+@AskimoTestHome
 class McpFilesystemConnectorTest {
 
     @TempDir

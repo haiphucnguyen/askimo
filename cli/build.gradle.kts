@@ -25,7 +25,7 @@ fun loadEnvFile(): Map<String, String> {
     if (envFile.exists()) {
         val props = Properties()
         envFile.inputStream().use { props.load(it) }
-        props.forEach { key, value ->
+        props.forEach { (key, value) ->
             envVars[key.toString()] = value.toString()
         }
         println("📁 Loaded ${envVars.size} environment variables from .env file")
@@ -47,6 +47,7 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.bundles.testcontainers)
+    testImplementation(testFixtures(project(":shared")))
 }
 
 val traceAgent = (findProperty("traceAgent") as String?) == "true"

@@ -72,6 +72,12 @@
     "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
   },
   {
+    "name": "[Lio.askimo.core.config.ProjectType;"
+  },
+  {
+    "name": "[Lio.askimo.core.mcp.McpServerDefinition;"
+  },
+  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -748,8 +754,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -1844,8 +1849,7 @@
         "parameterTypes": []
       },
       { "name": "keyword returns correct value", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] }
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -1905,8 +1909,7 @@
         "parameterTypes": []
       },
       { "name": "keyword returns correct value", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] }
+      { "name": "setUp", "parameterTypes": [] }
     ]
   },
   {
@@ -2959,19 +2962,6 @@
           "boolean"
         ]
       },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "boolean",
-          "boolean",
-          "int",
-          "int",
-          "boolean",
-          "boolean",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
       { "name": "getAutoBackupEnabled", "parameterTypes": [] },
       { "name": "getAutoBackupIntervalHours", "parameterTypes": [] },
       { "name": "getAutoBackupOnStartup", "parameterTypes": [] },
@@ -3110,19 +3100,6 @@
           "boolean",
           "boolean",
           "boolean"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "boolean",
-          "boolean",
-          "boolean",
-          "boolean",
-          "boolean",
-          "boolean",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getBinary", "parameterTypes": [] },
@@ -3399,16 +3376,6 @@
       {
         "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.util.Set", "java.util.Set"]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.util.Set",
-          "java.util.Set",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
       },
       { "name": "getExcludePaths", "parameterTypes": [] },
       { "name": "getMarkers", "parameterTypes": [] },
@@ -3982,21 +3949,14 @@
           "java.util.List"
         ]
       },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.TransportType",
-          "io.askimo.core.mcp.StdioConfig",
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.List",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      }
+      { "name": "getAuthor", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getId", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getStdioConfig", "parameterTypes": [] },
+      { "name": "getTags", "parameterTypes": [] },
+      { "name": "getTransportType", "parameterTypes": [] },
+      { "name": "getVersion", "parameterTypes": [] }
     ]
   },
   {
@@ -4097,16 +4057,9 @@
           "java.lang.String"
         ]
       },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.util.List",
-          "java.util.Map",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      }
+      { "name": "getCommandTemplate", "parameterTypes": [] },
+      { "name": "getEnvTemplate", "parameterTypes": [] },
+      { "name": "getWorkingDirectory", "parameterTypes": [] }
     ]
   },
   {
@@ -4482,14 +4435,7 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": ["java.util.List"] },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.util.List",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      }
+      { "name": "getServers", "parameterTypes": [] }
     ]
   },
   {
@@ -4628,7 +4574,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$bsz7LqCr",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$XQhHJ2VX",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5351,6 +5297,10 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.util.AskimoHome",
+    "fields": [{ "name": "impl" }]
+  },
+  {
     "name": "io.askimo.core.util.ProcessBuilderExtTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -5409,6 +5359,14 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.test.extensions.AskimoTestHome",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.test.extensions.AskimoTestHomeExtension",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "io.askimo.testcontainers.ModelCachingDemoTest",
@@ -6022,12 +5980,23 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.util.AbstractList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "java.util.AbstractMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
   },
   {
     "name": "java.util.ArrayList",
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
+    "name": "java.util.Arrays$ArrayList",
+    "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
   },
@@ -6145,7 +6114,10 @@
     "queryAllDeclaredMethods": true
   },
   {
-    "name": "java.util.Set"
+    "name": "java.util.Set",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "java.util.Spliterator"
@@ -6338,6 +6310,16 @@
       { "name": "getKeys", "parameterTypes": [] },
       { "name": "getSize", "parameterTypes": [] },
       { "name": "getValues", "parameterTypes": [] },
+      { "name": "isEmpty", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "kotlin.collections.EmptySet",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "getSize", "parameterTypes": [] },
       { "name": "isEmpty", "parameterTypes": [] }
     ]
   },
@@ -6900,7 +6882,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$JioXjIHE",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$8alpPNgC",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6946,6 +6928,10 @@
   },
   {
     "name": "sun.security.provider.JavaKeyStore$JKS",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "sun.security.provider.MD5",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {

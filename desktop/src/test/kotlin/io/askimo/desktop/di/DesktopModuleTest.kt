@@ -13,6 +13,7 @@ import io.askimo.desktop.common.monitoring.SystemResourceMonitor
 import io.askimo.desktop.session.SessionManager
 import io.askimo.desktop.session.SessionsViewModel
 import io.askimo.desktop.settings.SettingsViewModel
+import io.askimo.test.extensions.AskimoTestHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.jupiter.api.AfterEach
@@ -34,6 +35,7 @@ import kotlin.test.assertNotNull
  *
  * This prevents runtime errors like "No definition found for type X"
  */
+@AskimoTestHome
 class DesktopModuleTest : KoinTest {
 
     @BeforeEach

@@ -5,6 +5,7 @@
 package io.askimo.core.security
 
 import io.askimo.core.util.AskimoHome
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -21,8 +22,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class EncryptionManagerTest {
-
     private var originalKeyPath: Path? = null
 
     @BeforeEach

@@ -14,6 +14,7 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -44,6 +45,7 @@ import kotlin.test.assertTrue
     disabledReason = "OPENAI_API_KEY environment variable is required for OpenAI proxy tests",
 )
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class OpenAiModelFactoryProxyTest {
 
     private var mockProxyServer: HttpServer? = null
@@ -76,8 +78,6 @@ class OpenAiModelFactoryProxyTest {
 
         // Stop mock proxy server
         mockProxyServer?.stop(0)
-
-        // Reset AppContext
         AppContext.reset()
     }
 

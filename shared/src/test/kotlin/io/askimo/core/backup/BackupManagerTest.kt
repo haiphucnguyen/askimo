@@ -5,7 +5,7 @@
 package io.askimo.core.backup
 
 import io.askimo.core.util.AskimoHome
-import org.junit.jupiter.api.AfterEach
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -18,18 +18,14 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
+@AskimoTestHome
 class BackupManagerTest {
 
     @TempDir
     lateinit var tempDir: Path
 
-    private lateinit var testBaseScope: AskimoHome.TestBaseScope
-
     @BeforeEach
     fun setup() {
-        // Use test base directory
-        testBaseScope = AskimoHome.withTestBase(tempDir)
-
         // Create some test data
         val dataDir = AskimoHome.base().resolve("data")
         dataDir.toFile().mkdirs()
@@ -39,11 +35,6 @@ class BackupManagerTest {
         val configDir = AskimoHome.base().resolve("config")
         configDir.toFile().mkdirs()
         Files.writeString(configDir.resolve("config.yml"), "test: true")
-    }
-
-    @AfterEach
-    fun cleanup() {
-        testBaseScope.close()
     }
 
     @Test

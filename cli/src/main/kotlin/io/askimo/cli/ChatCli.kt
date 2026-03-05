@@ -45,6 +45,8 @@ import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.core.util.AskimoHome
+import io.askimo.core.util.PersonalAskimoHome
 import io.askimo.core.util.RetryPresets.RECIPE_EXECUTOR_TRANSIENT_ERRORS
 import io.askimo.core.util.RetryUtils
 import kotlinx.coroutines.CoroutineScope
@@ -71,6 +73,9 @@ private object ChatCliLogger
 private val log = logger<ChatCliLogger>()
 
 fun main(args: Array<String>) {
+    // Register PersonalAskimoHome before any path is accessed
+    AskimoHome.register(PersonalAskimoHome)
+
     DefaultRecipeInitializer.initializeDefaultTemplates()
 
     // Determine the execution mode based on arguments
