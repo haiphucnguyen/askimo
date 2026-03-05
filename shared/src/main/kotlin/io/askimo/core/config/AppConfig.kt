@@ -390,6 +390,15 @@ object AppConfig {
 
     @Volatile private var cached: AppConfigData? = null
 
+    /**
+     * Clears the cached configuration, forcing it to be reloaded on next access.
+     * Useful for testing to ensure clean state between tests.
+     */
+    @Synchronized
+    fun reset() {
+        cached = null
+    }
+
     private val mapper: ObjectMapper =
         ObjectMapper(YAMLFactory())
             .registerModule(

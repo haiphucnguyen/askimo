@@ -14,6 +14,7 @@ import io.askimo.test.extensions.AskimoTestHome
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -85,7 +86,7 @@ class OllamaModelFactoryTest {
         assertTrue(output.isNotBlank(), "Expected a non-empty response from qwen2.5:0.5b, but got blank: '$output'")
     }
 
-    @Test
+    @RepeatedTest(value = 3, name = "Attempt {currentRepetition} of {totalRepetitions}")
     @DisplayName("qwen2.5:0.5b can call LocalFsTools countEntries function")
     fun canCallCountEntriesTool() {
         val baseUrl = setupOllamaContainer()

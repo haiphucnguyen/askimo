@@ -4574,7 +4574,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$2rkI3Pl4",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$XQhHJ2VX",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5362,21 +5362,11 @@
   },
   {
     "name": "io.askimo.test.extensions.AskimoTestHome",
-    "allDeclaredClasses": true,
     "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.test.extensions.AskimoTestHomeExtension",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
-  },
-  {
-    "name": "io.askimo.test.extensions.AskimoTestHomeExtension$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.testcontainers.ModelCachingDemoTest",
@@ -5702,11 +5692,6 @@
   },
   {
     "name": "java.lang.WeakPairMap$Pair$Weak"
-  },
-  {
-    "name": "java.lang.annotation.Annotation",
-    "allDeclaredClasses": true,
-    "queryAllPublicMethods": true
   },
   {
     "name": "java.lang.annotation.Documented",
@@ -6897,7 +6882,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$QtQ7dcjP",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$8alpPNgC",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

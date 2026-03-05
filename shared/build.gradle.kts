@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    `java-test-fixtures`
 }
 
 group = rootProject.group
@@ -46,6 +47,10 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.bundles.testcontainers)
     testImplementation(libs.bundles.koin.test)
+
+    // Test fixtures - shared test utilities
+    testFixturesApi(platform(libs.junit.bom))
+    testFixturesApi(libs.junit.jupiter)
 }
 
 tasks.test {
