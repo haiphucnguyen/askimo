@@ -7,7 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.cli.recipes.RecipeDef
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.Yaml.yamlMapper
-import org.junit.jupiter.api.AfterEach
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -17,27 +17,16 @@ import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@AskimoTestHome
 class CreateRecipeCommandHandlerTest : CommandHandlerTestBase() {
     private lateinit var handler: CreateRecipeCommandHandler
 
     @TempDir
     lateinit var tempDir: Path
 
-    @TempDir
-    lateinit var tempHome: Path
-
-    private lateinit var testBaseScope: AskimoHome.TestBaseScope
-
     @BeforeEach
     fun setUp() {
         handler = CreateRecipeCommandHandler()
-        // Use thread-local override — AskimoHome.base() resolves to tempHome/personal/
-        testBaseScope = AskimoHome.withTestBase(tempHome)
-    }
-
-    @AfterEach
-    fun tearDown() {
-        testBaseScope.close()
     }
 
     @Test

@@ -12,6 +12,7 @@ import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.providers.ChatClient
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -39,6 +40,7 @@ import java.time.LocalDateTime
  * - Database integration
  * - Edge cases and error handling
  */
+@AskimoTestHome
 class TokenAwareSummarizingMemoryTest {
 
     private lateinit var mockAppContext: AppContext

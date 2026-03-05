@@ -29,6 +29,7 @@ import org.koin.dsl.module
  * Koin module for desktop application dependencies.
  */
 val desktopModule = module {
+
     single<AppContext> { AppContext.getInstance() }
 
     single { DatabaseManager.getInstance() }

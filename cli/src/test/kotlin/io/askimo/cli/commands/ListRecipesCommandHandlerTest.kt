@@ -5,36 +5,24 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.util.AskimoHome
-import org.junit.jupiter.api.AfterEach
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@AskimoTestHome
 class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
     private lateinit var handler: ListRecipesCommandHandler
 
-    @TempDir
-    lateinit var tempHome: Path
-
-    private lateinit var testBaseScope: AskimoHome.TestBaseScope
     private lateinit var recipesDir: Path
 
     @BeforeEach
     fun setUp() {
         handler = ListRecipesCommandHandler()
-
-        testBaseScope = AskimoHome.withTestBase(tempHome.resolve(".askimo"))
-
         recipesDir = AskimoHome.recipesDir()
-    }
-
-    @AfterEach
-    fun tearDown() {
-        testBaseScope.close()
     }
 
     @Test

@@ -7,6 +7,7 @@ package io.askimo.cli.commands
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -15,6 +16,7 @@ import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@AskimoTestHome
 class ModelsCommandHandlerTest : CommandHandlerTestBase() {
     private lateinit var appContext: AppContext
     private lateinit var handler: ModelsCommandHandler

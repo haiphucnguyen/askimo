@@ -5,6 +5,7 @@
 package io.askimo.cli
 
 import io.askimo.core.chat.util.UrlContentExtractor
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -15,6 +16,7 @@ import kotlin.test.assertTrue
  * This test uses real URLs to ensure Apache Tika is properly configured
  * for native image compilation.
  */
+@AskimoTestHome
 class UrlContentExtractorTest {
 
     @Test

@@ -12,6 +12,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -26,6 +27,7 @@ import kotlin.test.assertTrue
     disabledReason = "ANTHROPIC_API_KEY environment variable is required for Anthropic tests",
 )
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class AnthropicModelFactoryTest {
 
     @BeforeEach

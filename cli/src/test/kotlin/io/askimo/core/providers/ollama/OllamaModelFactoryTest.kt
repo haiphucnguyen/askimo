@@ -10,6 +10,7 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
+import io.askimo.test.extensions.AskimoTestHome
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -26,6 +27,7 @@ import kotlin.test.assertTrue
 )
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class OllamaModelFactoryTest {
 
     @BeforeEach
