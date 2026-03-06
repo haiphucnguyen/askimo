@@ -7,6 +7,7 @@ package io.askimo.test.extensions
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -51,7 +52,7 @@ import java.nio.file.Path
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-@org.junit.jupiter.api.extension.ExtendWith(AskimoTestHomeExtension::class)
+@ExtendWith(AskimoTestHomeExtension::class)
 annotation class AskimoTestHome(
     val profileName: String = "personal",
 )

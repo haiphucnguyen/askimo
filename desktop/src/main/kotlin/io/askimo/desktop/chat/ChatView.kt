@@ -122,6 +122,7 @@ fun chatView(
     val messages = state.messages
     val hasMoreMessages = state.hasMoreMessages
     val isLoadingPrevious = state.isLoadingPrevious
+    val prependGeneration = state.prependGeneration
     val isLoading = state.isLoading
     val isThinking = state.isThinking
     val thinkingElapsedSeconds = state.thinkingElapsedSeconds
@@ -1017,6 +1018,7 @@ fun chatView(
                                 hasMoreMessages = hasMoreMessages,
                                 isLoadingPrevious = isLoadingPrevious,
                                 onLoadPrevious = actions::loadPrevious,
+                                prependGeneration = prependGeneration,
                                 onEditMessage = { message ->
                                     if (message.isUser) {
                                         // User message - set editing mode

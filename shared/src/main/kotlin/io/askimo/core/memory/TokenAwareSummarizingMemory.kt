@@ -26,8 +26,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Structured summary format for conversation analysis
@@ -86,8 +85,9 @@ class TokenAwareSummarizingMemory(
 
     @Volatile private var basicSummary: String? = null
 
-    @Volatile private var summarizationInProgress = false
-    private val summarizationLock = ReentrantLock()
+    // AtomicBoolean is used as the cross-thread "in progress" guard.
+    // Using AtomicBoolean.compareAndSet avoids the permanent-lock bug.
+    private val summarizationInProgress = AtomicBoolean(false)
     private val log = logger<TokenAwareSummarizingMemory>()
 
     init {
@@ -149,7 +149,7 @@ class TokenAwareSummarizingMemory(
 
         log.debug("Current tokens: $totalTokens, Threshold: $threshold, Max: $maxTokens")
 
-        if (totalTokens > threshold && !summarizationInProgress) {
+        if (totalTokens > threshold && !summarizationInProgress.get()) {
             log.info("Token count ($totalTokens) exceeded threshold ($threshold). Triggering async summarization.")
             triggerAsyncSummarization()
         }
@@ -175,12 +175,10 @@ class TokenAwareSummarizingMemory(
     }
 
     override fun clear() {
-        summarizationLock.withLock {
-            log.info("Clearing memory. Removing ${messages.size} messages and summary.")
-            messages.clear()
-            structuredSummary = null
-            basicSummary = null
-        }
+        log.info("Clearing memory. Removing ${messages.size} messages and summary.")
+        messages.clear()
+        structuredSummary = null
+        basicSummary = null
     }
 
     /**
@@ -191,43 +189,41 @@ class TokenAwareSummarizingMemory(
      * @param filteredMessages List of MemoryMessage to load
      */
     fun loadFromFilteredMemory(filteredMessages: List<MemoryMessage>) {
-        summarizationLock.withLock {
-            log.debug("Loading {} filtered memory messages for session: {}", filteredMessages.size, sessionId)
+        log.debug("Loading {} filtered memory messages for session: {}", filteredMessages.size, sessionId)
 
-            messages.clear()
-            structuredSummary = null
-            basicSummary = null
+        messages.clear()
+        structuredSummary = null
+        basicSummary = null
 
-            val validMessages = filteredMessages.filter { it.content.isNotBlank() }.map { it.toChatMessage() }
+        val validMessages = filteredMessages.filter { it.content.isNotBlank() }.map { it.toChatMessage() }
 
-            messages.addAll(validMessages)
+        messages.addAll(validMessages)
 
-            log.debug(
-                "Loaded {} valid messages from filtered memory (filtered out {} blank messages)",
-                validMessages.size,
-                filteredMessages.size - validMessages.size,
-            )
+        log.debug(
+            "Loaded {} valid messages from filtered memory (filtered out {} blank messages)",
+            validMessages.size,
+            filteredMessages.size - validMessages.size,
+        )
 
-            val totalTokens = estimateTotalTokens()
-            val threshold = (maxTokens * summarizationThreshold).toInt()
+        val totalTokens = estimateTotalTokens()
+        val threshold = (maxTokens * summarizationThreshold).toInt()
 
-            log.debug(
-                "After batch load - Total tokens: {}, Threshold: {}, Max: {}",
+        log.debug(
+            "After batch load - Total tokens: {}, Threshold: {}, Max: {}",
+            totalTokens,
+            threshold,
+            maxTokens,
+        )
+
+        persistToDatabase()
+
+        if (totalTokens > threshold && !summarizationInProgress.get()) {
+            log.info(
+                "Token count ({}) exceeded threshold ({}) after batch load. Triggering async summarization.",
                 totalTokens,
                 threshold,
-                maxTokens,
             )
-
-            persistToDatabase()
-
-            if (totalTokens > threshold && !summarizationInProgress) {
-                log.info(
-                    "Token count ({}) exceeded threshold ({}) after batch load. Triggering async summarization.",
-                    totalTokens,
-                    threshold,
-                )
-                triggerAsyncSummarization()
-            }
+            triggerAsyncSummarization()
         }
     }
 
@@ -250,6 +246,24 @@ class TokenAwareSummarizingMemory(
     }
 
     /**
+     * Removes the oldest [count] non-system messages from the list and persists to database.
+     */
+    private fun pruneMessages(count: Int) {
+        synchronized(messages) {
+            var removed = 0
+            val iterator = messages.iterator()
+            while (iterator.hasNext() && removed < count) {
+                val msg = iterator.next()
+                if (msg.type() != ChatMessageType.SYSTEM) {
+                    iterator.remove()
+                    removed++
+                }
+            }
+        }
+        persistToDatabase()
+    }
+
+    /**
      * Estimates total token count of all messages in memory (thread-safe)
      */
     private fun estimateTotalTokens(): Int = synchronized(messages) {
@@ -261,15 +275,16 @@ class TokenAwareSummarizingMemory(
     }
 
     /**
-     * Trigger async summarization without blocking caller
+     * Trigger async summarization without blocking caller.
+     * Uses AtomicBoolean.compareAndSet as the entry guard — safe across threads.
      */
     private fun triggerAsyncSummarization() {
-        if (!summarizationLock.tryLock()) {
+        // Only one summarization at a time. compareAndSet(false, true) returns false if
+        // another task already set it to true, so we skip without touching the lock.
+        if (!summarizationInProgress.compareAndSet(false, true)) {
             log.debug("Summarization already in progress, skipping")
             return
         }
-
-        summarizationInProgress = true
 
         CompletableFuture.runAsync({
             try {
@@ -285,44 +300,22 @@ class TokenAwareSummarizingMemory(
                         val messagesToSummarizeCount = (conversationMessages.size * 0.45).toInt().coerceAtLeast(1)
                         val messagesToSummarize = conversationMessages.take(messagesToSummarizeCount)
                         generateBasicSummary(messagesToSummarize)
-
-                        // Remove the summarized messages
-                        synchronized(messages) {
-                            var removed = 0
-                            val iterator = messages.iterator()
-                            while (iterator.hasNext() && removed < messagesToSummarizeCount) {
-                                val msg = iterator.next()
-                                if (msg.type() != ChatMessageType.SYSTEM) {
-                                    iterator.remove()
-                                    removed++
-                                }
-                            }
-                        }
-                        persistToDatabase()
+                        pruneMessages(messagesToSummarizeCount)
                         log.info("Fallback basic summarization complete. Remaining: ${messages.size}")
                     }
                 } catch (fallbackError: Exception) {
                     log.error("Fallback summarization also failed", fallbackError)
                 }
             } finally {
-                summarizationInProgress = false
-                summarizationLock.unlock()
+                // Always reset on the same thread that set it — AtomicBoolean is safe here.
+                summarizationInProgress.set(false)
             }
         }, executorService)
             .orTimeout(summarizationTimeoutSeconds, TimeUnit.SECONDS)
             .exceptionally { throwable ->
                 log.error("Summarization timed out or failed", throwable)
-                // Ensure cleanup on timeout
-                summarizationInProgress = false
-                // The lock was acquired by the main thread before starting async task
-                // We need to ensure it's unlocked even on timeout
-                try {
-                    if (summarizationLock.isLocked) {
-                        summarizationLock.unlock()
-                    }
-                } catch (_: IllegalMonitorStateException) {
-                    // Lock was already released, ignore
-                }
+                // Ensure the flag is cleared even on timeout so future calls can proceed.
+                summarizationInProgress.set(false)
                 null
             }
     }
@@ -356,21 +349,8 @@ class TokenAwareSummarizingMemory(
             generateBasicSummary(messagesToSummarize)
         }
 
-        // Remove the oldest conversation messages from the original list
-        // System messages are never removed during pruning
-        synchronized(messages) {
-            var removed = 0
-            val iterator = messages.iterator()
-            while (iterator.hasNext() && removed < messagesToSummarizeCount) {
-                val msg = iterator.next()
-                if (msg.type() != ChatMessageType.SYSTEM) {
-                    iterator.remove()
-                    removed++
-                }
-            }
-        }
-
-        persistToDatabase()
+        // Remove the oldest conversation messages — system messages are never pruned
+        pruneMessages(messagesToSummarizeCount)
 
         log.info("Summarization complete. Remaining: ${messages.size}, Tokens: ${estimateTotalTokens()}")
     }
@@ -404,13 +384,13 @@ class TokenAwareSummarizingMemory(
     }
 
     /**
-     * Generate basic extractive summary (no AI required)
+     * Generate basic extractive summary (no AI required).
+     * Replaces the previous basic summary entirely to avoid stale content accumulating.
      */
     private fun generateBasicSummary(messagesToSummarize: List<ChatMessage>) {
         val newSummary = buildString {
             append("Earlier conversation (${messagesToSummarize.size} messages):\n")
 
-            // Extract key exchanges - first and last few messages from the batch
             val keyMessages = if (messagesToSummarize.size <= 6) {
                 messagesToSummarize
             } else {
@@ -419,12 +399,7 @@ class TokenAwareSummarizingMemory(
 
             keyMessages.forEach { message ->
                 val text = message.getTextContent()
-                // Truncate long messages
-                val truncated = if (text.length > 150) {
-                    text.take(150) + "..."
-                } else {
-                    text
-                }
+                val truncated = if (text.length > 150) text.take(150) + "..." else text
                 appendLine("• ${message.type()}: $truncated")
             }
 
@@ -433,16 +408,7 @@ class TokenAwareSummarizingMemory(
             }
         }.take(MAX_SUMMARY_LENGTH)
 
-        basicSummary = if (basicSummary != null) {
-            """
-            |$basicSummary
-            |
-            |$newSummary
-            """.trimMargin().take(MAX_SUMMARY_LENGTH * 2)
-        } else {
-            newSummary
-        }
-
+        basicSummary = newSummary
         log.info("Generated basic summary (${newSummary.length} chars)")
     }
 

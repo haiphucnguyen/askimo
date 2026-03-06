@@ -754,7 +754,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4574,7 +4575,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$XQhHJ2VX",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$wmjPOheU",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5366,6 +5367,14 @@
   },
   {
     "name": "io.askimo.test.extensions.AskimoTestHomeExtension",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "io.askimo.test.extensions.RetryOnFailure",
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.test.extensions.RetryOnFailureExtension",
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
@@ -6882,7 +6891,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$8alpPNgC",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$bcsBl2VG",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

@@ -73,6 +73,11 @@ class ChatViewModel(
     var hasMoreMessages by mutableStateOf(false)
         private set
 
+    // Incremented every time previous messages are prepended so the UI can
+    // distinguish a prepend (restore viewport) from an append (scroll to bottom).
+    var prependGeneration by mutableStateOf(0)
+        private set
+
     var isSearching by mutableStateOf(false)
         private set
 
@@ -102,6 +107,7 @@ class ChatViewModel(
             messages = messages,
             hasMoreMessages = hasMoreMessages,
             isLoadingPrevious = isLoadingPrevious,
+            prependGeneration = prependGeneration,
             isLoading = isLoading,
             isThinking = isThinking,
             thinkingElapsedSeconds = thinkingElapsedSeconds,
@@ -152,7 +158,7 @@ class ChatViewModel(
     private val spinnerFrames = charArrayOf('⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏')
 
     companion object {
-        private const val MESSAGE_PAGE_SIZE = 100
+        private const val MESSAGE_PAGE_SIZE = 50
         private const val MESSAGE_BUFFER_THRESHOLD = MESSAGE_PAGE_SIZE * 2
     }
 
@@ -469,6 +475,7 @@ class ChatViewModel(
 
                         subscribeToThread(sessionId)
                     } catch (e: Exception) {
+                        log.error("Failed to retry message", e)
                         if (currentSessionId.value == sessionId) {
                             errorMessage = ErrorHandler.getUserFriendlyError(e, "retrying message")
                             isLoading = false
@@ -724,6 +731,10 @@ class ChatViewModel(
                 }
 
                 messages = previousMessages + messages
+
+                // Increment so the UI knows messages were prepended (not appended)
+                // and should restore the viewport rather than scroll to bottom.
+                prependGeneration++
 
                 // Update pagination state
                 currentCursor = nextCursor
