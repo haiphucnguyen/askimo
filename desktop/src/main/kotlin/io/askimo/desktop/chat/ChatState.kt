@@ -16,6 +16,9 @@ data class ChatState(
     val messages: List<ChatMessageDTO>,
     val hasMoreMessages: Boolean,
     val isLoadingPrevious: Boolean,
+    // Incremented each time previous messages are prepended. The UI uses this to
+    // distinguish a prepend (keep viewport) from a normal append (scroll to bottom).
+    val prependGeneration: Int = 0,
 
     // Loading/Thinking state
     val isLoading: Boolean,

@@ -96,6 +96,7 @@ fun messageList(
     hasMoreMessages: Boolean = false,
     isLoadingPrevious: Boolean = false,
     onLoadPrevious: () -> Unit = {},
+    prependGeneration: Int = 0,
     searchQuery: String = "",
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
@@ -118,11 +119,30 @@ fun messageList(
     var lastUserMessageCount by remember { mutableStateOf(0) }
     val currentUserMessageCount = messages.count { it.isUser }
 
+    // ---- Prepend scroll anchor ----
+    // prependGeneration increments in the ViewModel each time previous messages
+    // are prepended. We detect the change here (during composition, before layout)
+    // and capture the current scrollValue + maxValue so we can restore the position
+    // after the new content is laid out.
+    var lastSeenPrependGeneration by remember { mutableStateOf(prependGeneration) }
+    // scrollValue captured right before a prepend is laid out
+    var savedScrollValue by remember { mutableStateOf(-1) }
+    // maxValue captured right before a prepend is laid out
+    var savedScrollMax by remember { mutableStateOf(-1) }
+
+    if (prependGeneration != lastSeenPrependGeneration) {
+        // This runs during composition — layout has NOT yet reflected the new messages,
+        // so scrollState still has the pre-prepend values. Capture them.
+        savedScrollValue = scrollState.value
+        savedScrollMax = scrollState.maxValue
+        lastSeenPrependGeneration = prependGeneration
+    }
+
     // When a new user message is sent, reset auto-scroll and scroll to bottom
     LaunchedEffect(currentUserMessageCount) {
         if (currentUserMessageCount > lastUserMessageCount) {
             lastUserMessageCount = currentUserMessageCount
-            userScrolledUp = false // Reset flag when new message sent
+            userScrolledUp = false
             scrollState.scrollTo(scrollState.maxValue)
         }
     }
@@ -131,24 +151,28 @@ fun messageList(
     LaunchedEffect(scrollState.value, scrollState.maxValue) {
         // Only check if we're receiving AI response (thinking or messages being streamed)
         if (isThinking || messages.lastOrNull()?.isUser == false) {
-            val scrollThreshold = 100 // pixels from bottom
             val distanceFromBottom = scrollState.maxValue - scrollState.value
-
-            // If user scrolled up more than threshold, mark as manually scrolled
-            if (distanceFromBottom > scrollThreshold) {
+            if (distanceFromBottom > 100) {
                 userScrolledUp = true
-            }
-            // If user scrolled back to near bottom, re-enable auto-scroll
-            else if (distanceFromBottom < 50) {
+            } else if (distanceFromBottom < 50) {
                 userScrolledUp = false
             }
         }
     }
 
-    // Auto-scroll to bottom when content grows (during AI streaming)
-    // BUT only if user hasn't manually scrolled up
+    // Auto-scroll or restore position when content height changes.
     LaunchedEffect(scrollState.maxValue) {
-        if (!userScrolledUp) {
+        val sv = savedScrollValue
+        val sm = savedScrollMax
+        if (sv >= 0 && sm >= 0 && scrollState.maxValue > sm) {
+            // A prepend just increased maxValue — restore the viewport so the
+            // previously-visible content stays in place.
+            val addedHeight = scrollState.maxValue - sm
+            scrollState.scrollTo((sv + addedHeight).coerceIn(0, scrollState.maxValue))
+            savedScrollValue = -1
+            savedScrollMax = -1
+        } else if (!userScrolledUp && sv < 0) {
+            // Normal streaming / new-message append — scroll to bottom.
             scrollState.scrollTo(scrollState.maxValue)
         }
     }
