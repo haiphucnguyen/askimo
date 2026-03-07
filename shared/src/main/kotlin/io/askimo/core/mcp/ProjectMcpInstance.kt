@@ -86,9 +86,8 @@ data class ProjectMcpInstance(
         val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
         val resolvedHeaders = resolver.resolveMap(httpConfig.headersTemplate)
         log.debug(
-            "Create the HTTP MCP connector with url: {}, mode: {}",
+            "Create the HTTP MCP connector with url: {}",
             resolvedUrl,
-            httpConfig.mode,
         )
 
         return HttpMcpConnector(
@@ -99,7 +98,6 @@ data class ProjectMcpInstance(
                 url = resolvedUrl,
                 headers = resolvedHeaders,
                 timeoutMs = httpConfig.timeoutMs,
-                mode = httpConfig.mode,
             ),
         )
     }

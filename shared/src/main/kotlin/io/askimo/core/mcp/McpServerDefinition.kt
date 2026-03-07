@@ -75,14 +75,14 @@ data class StdioConfig(
 )
 
 /**
- * Configuration for HTTP-based MCP servers (remote/hosted servers)
+ * Configuration for HTTP-based MCP servers (remote/hosted servers).
+ * Uses the modern Streamable HTTP transport (StreamableHttpMcpTransport).
  */
 @Serializable
 data class HttpConfig(
     /**
      * URL template for the MCP server endpoint.
-     * - SSE mode:        "https://{{host}}/sse"
-     * - Streamable mode: "https://{{host}}/mcp"
+     * Example: "https://{{host}}/mcp"
      */
     val urlTemplate: String,
 
@@ -98,29 +98,7 @@ data class HttpConfig(
      * Request/connection timeout in milliseconds. Defaults to 60 s.
      */
     val timeoutMs: Long = 60_000,
-
-    /**
-     * Transport mode for the HTTP connection.
-     * - SSE:        legacy Server-Sent Events transport (HttpMcpTransport)
-     * - STREAMABLE: modern streamable HTTP transport (StreamableHttpMcpTransport)
-     */
-    val mode: HttpTransportMode = HttpTransportMode.STREAMABLE,
 )
-
-@Serializable
-enum class HttpTransportMode {
-    /**
-     * Legacy SSE-based transport (HttpMcpTransport).
-     * Use for servers that only support the older SSE MCP protocol.
-     */
-    SSE,
-
-    /**
-     * Modern streamable HTTP transport (StreamableHttpMcpTransport).
-     * Preferred for all new servers — supports bidirectional streaming.
-     */
-    STREAMABLE,
-}
 
 /**
  * Defines a configuration parameter that users must provide

@@ -33,7 +33,7 @@ data class StdioMcpTransportConfig(
 
 /**
  * Configuration for HTTP-based MCP transport.
- * Supports both legacy SSE and modern streamable HTTP modes.
+ * Always uses the modern Streamable HTTP transport (StreamableHttpMcpTransport).
  */
 @Serializable
 @SerialName("http")
@@ -46,5 +46,4 @@ data class HttpMcpTransportConfig(
     /** Resolved HTTP headers (all template variables already substituted) */
     val headers: Map<String, String> = emptyMap(),
     val timeoutMs: Long = 60_000,
-    val mode: HttpTransportMode = HttpTransportMode.STREAMABLE,
 ) : McpTransportConfig()

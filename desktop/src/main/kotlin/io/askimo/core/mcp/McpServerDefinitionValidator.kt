@@ -37,6 +37,12 @@ private object ValidationMessages {
 
     val paramLabelEmpty: String
         get() = bundle.getString("mcp.template.validation.error.empty.parameter.label")
+
+    val urlEmpty: String
+        get() = bundle.getString("mcp.template.validation.error.empty.url")
+
+    val urlInvalid: String
+        get() = bundle.getString("mcp.template.validation.error.invalid.url")
 }
 
 /**
@@ -61,9 +67,18 @@ val mcpServerDefinitionValidator = Validation {
         minLength(1) hint ValidationMessages.nameEmpty
     }
 
-    McpServerDefinition::stdioConfig required {
+    // STDIO: require a non-empty commandTemplate
+    McpServerDefinition::stdioConfig ifPresent {
         StdioConfig::commandTemplate {
             minItems(1) hint ValidationMessages.commandEmpty
+        }
+    }
+
+    // HTTP: require a non-blank, well-formed urlTemplate
+    McpServerDefinition::httpConfig ifPresent {
+        HttpConfig::urlTemplate {
+            minLength(1) hint ValidationMessages.urlEmpty
+            pattern("^https?://.*") hint ValidationMessages.urlInvalid
         }
     }
 }

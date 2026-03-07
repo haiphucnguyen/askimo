@@ -8,7 +8,6 @@ import dev.langchain4j.mcp.client.transport.McpTransport
 import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.HttpMcpTransportConfig
-import io.askimo.core.mcp.HttpTransportMode
 import io.askimo.core.mcp.McpConnector
 import io.askimo.core.mcp.ValidationResult
 import java.net.URI
@@ -16,8 +15,7 @@ import java.time.Duration
 
 /**
  * Connector for HTTP-based MCP servers (remote/hosted servers).
- * Supports both legacy SSE (HttpMcpTransport) and modern
- * streamable HTTP (StreamableHttpMcpTransport) modes.
+ * Uses the modern Streamable HTTP transport (StreamableHttpMcpTransport).
  */
 class HttpMcpConnector(
     private val config: HttpMcpTransportConfig,
@@ -28,43 +26,23 @@ class HttpMcpConnector(
     override suspend fun createTransport(): McpTransport {
         val timeout = Duration.ofMillis(config.timeoutMs)
         log.debug(
-            "Creating HTTP MCP transport: mode={}, url={}, timeout={}ms",
-            config.mode,
+            "Creating HTTP MCP transport: url={}, timeout={}ms",
             config.url,
             config.timeoutMs,
         )
 
-        return when (config.mode) {
-            HttpTransportMode.SSE -> {
-                val builder = StreamableHttpMcpTransport.builder()
-                    .url(config.url)
-                    .timeout(timeout)
-                    .logRequests(log.isDebugEnabled)
-                    .logResponses(log.isTraceEnabled)
-                    .logger(log)
+        val builder = StreamableHttpMcpTransport.builder()
+            .url(config.url)
+            .timeout(timeout)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .logger(log)
 
-                if (config.headers.isNotEmpty()) {
-                    builder.customHeaders(config.headers)
-                }
-
-                builder.build()
-            }
-
-            HttpTransportMode.STREAMABLE -> {
-                val builder = StreamableHttpMcpTransport.builder()
-                    .url(config.url)
-                    .timeout(timeout)
-                    .logRequests(log.isDebugEnabled)
-                    .logResponses(log.isTraceEnabled)
-                    .logger(log)
-
-                if (config.headers.isNotEmpty()) {
-                    builder.customHeaders(config.headers)
-                }
-
-                builder.build()
-            }
+        if (config.headers.isNotEmpty()) {
+            builder.customHeaders(config.headers)
         }
+
+        return builder.build()
     }
 
     override fun validate(): ValidationResult {
