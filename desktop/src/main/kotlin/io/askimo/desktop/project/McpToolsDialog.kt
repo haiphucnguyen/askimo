@@ -5,6 +5,7 @@
 package io.askimo.desktop.project
 
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.defaultScrollbarStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -33,8 +35,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.askimo.core.intent.ToolCategory
+import io.askimo.core.intent.ToolConfig
+import io.askimo.core.intent.ToolStrategy
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.desktop.common.components.inlineErrorMessage
@@ -52,7 +58,7 @@ fun mcpToolsDialog(
     onDismiss: () -> Unit,
 ) {
     val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
-    var tools by remember { mutableStateOf<List<dev.langchain4j.agent.tool.ToolSpecification>?>(null) }
+    var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -234,18 +240,20 @@ fun mcpToolsDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
                                     ) {
+                                        // Name
                                         SelectionContainer {
                                             Text(
-                                                text = tool.name(),
+                                                text = tool.specification.name(),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurface,
                                             )
                                         }
 
-                                        tool.description()?.let { desc ->
+                                        // Description
+                                        tool.specification.description()?.let { desc ->
                                             SelectionContainer {
                                                 Text(
                                                     text = desc,
@@ -253,6 +261,15 @@ fun mcpToolsDialog(
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
+                                        }
+
+                                        // Category + Strategy chips
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            toolCategoryChip(tool.category)
+                                            toolStrategyChip(tool.strategy)
                                         }
                                     }
                                 }
@@ -280,4 +297,68 @@ fun mcpToolsDialog(
             }
         },
     )
+}
+
+@Composable
+private fun toolCategoryChip(category: ToolCategory) {
+    val label = stringResource("mcp.tool.category.${category.name}.desc")
+    val (bg, fg) = when (category) {
+        ToolCategory.DATABASE -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        ToolCategory.NETWORK -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        ToolCategory.FILE_READ -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        ToolCategory.FILE_WRITE -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        ToolCategory.SEARCH -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        ToolCategory.VERSION_CONTROL -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(bg)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = fg,
+        )
+    }
+}
+
+@Composable
+private fun toolStrategyChip(strategy: Int) {
+    val (label, bg, fg) = when (strategy) {
+        ToolStrategy.INTENT_BASED -> Triple(
+            stringResource("mcp.integrations.tool.strategy.intent"),
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        ToolStrategy.FOLLOW_UP_BASED -> Triple(
+            stringResource("mcp.integrations.tool.strategy.followup"),
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        ToolStrategy.BOTH -> Triple(
+            stringResource("mcp.integrations.tool.strategy.both"),
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+        else -> Triple(
+            stringResource("mcp.integrations.tool.strategy.unknown"),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(bg)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = fg,
+        )
+    }
 }
