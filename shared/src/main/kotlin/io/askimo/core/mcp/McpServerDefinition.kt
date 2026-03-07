@@ -21,6 +21,9 @@ data class McpServerDefinition(
     val stdioConfig: StdioConfig? = null,
     val httpConfig: HttpConfig? = null,
 
+    // Explicit parameter definitions (optional — for richer UI hints)
+    val parameters: List<Parameter> = emptyList(),
+
     // Metadata
     val version: String = "1.0.0",
     val author: String? = null,
