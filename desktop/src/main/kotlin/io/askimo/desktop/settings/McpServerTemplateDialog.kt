@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -185,12 +187,14 @@ fun mcpServerTemplateDialog(
                                 selected = selectedTab == 0,
                                 onClick = { if (!isEditMode) selectedTab = 0 },
                                 enabled = !isEditMode,
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 text = { Text(stringResource("mcp.template.transport.stdio")) },
                             )
                             Tab(
                                 selected = selectedTab == 1,
                                 onClick = { if (!isEditMode) selectedTab = 1 },
                                 enabled = !isEditMode,
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 text = { Text(stringResource("mcp.template.transport.http")) },
                             )
                         }
