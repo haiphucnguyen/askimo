@@ -54,7 +54,7 @@ class SearchDetector :
         directKeywords = listOf(
             "search", "find", "lookup", "query for", "search for",
             "find files", "search github", "search code", "grep",
-            "locate", "discover",
+            "locate", "discover", "list",
         ),
         contextualPatterns = listOf(
             "\\bsearch\\b.*\\bfor\\b", "\\bsearch\\b.*\\bin\\b", "\\bsearch\\b.*\\bfiles\\b",

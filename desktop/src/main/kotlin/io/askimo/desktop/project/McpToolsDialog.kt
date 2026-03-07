@@ -26,6 +26,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,21 +62,31 @@ fun mcpToolsDialog(
     var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredTools = remember(tools, searchQuery) {
+        val query = searchQuery.trim().lowercase()
+        if (query.isEmpty()) {
+            tools
+        } else {
+            tools?.filter { tool ->
+                tool.specification.name().lowercase().contains(query) ||
+                    tool.specification.description()?.lowercase()?.contains(query) == true
+            }
+        }
+    }
 
     LaunchedEffect(instance.id) {
         isLoading = true
         errorMessage = null
-
         try {
-            val toolsList = withContext(Dispatchers.IO) {
+            tools = withContext(Dispatchers.IO) {
                 mcpService.listTools(instance.projectId, instance.id)
             }
-            tools = toolsList
         } catch (e: Exception) {
             val isTimeout = e is TimeoutException ||
                 e.cause is TimeoutException ||
                 e.message?.contains("TimeoutException", ignoreCase = true) == true
-
             errorMessage = if (isTimeout) {
                 "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
             } else {
@@ -97,7 +108,6 @@ fun mcpToolsDialog(
             )
         },
         text = {
-            // Scrollable container with controlled height and visible scrollbar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -112,7 +122,7 @@ fun mcpToolsDialog(
                         .padding(end = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Instance Parameters Section
+                    // ── Instance info card ─────────────────────────────────
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ComponentColors.secondaryCardColors(),
@@ -129,12 +139,9 @@ fun mcpToolsDialog(
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
-
                             HorizontalDivider(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f),
                             )
-
-                            // Server ID
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -153,8 +160,6 @@ fun mcpToolsDialog(
                                     )
                                 }
                             }
-
-                            // Parameters
                             if (instance.parameterValues.isNotEmpty()) {
                                 Text(
                                     text = stringResource("mcp.tools.dialog.parameters"),
@@ -163,7 +168,6 @@ fun mcpToolsDialog(
                                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
-
                                 instance.parameterValues.forEach { (key, value) ->
                                     Row(
                                         modifier = Modifier
@@ -192,6 +196,19 @@ fun mcpToolsDialog(
                         }
                     }
 
+                    // ── Search field — shown once tools are loaded ─────────
+                    if (!tools.isNullOrEmpty()) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text(stringResource("mcp.tools.dialog.search.placeholder")) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = ComponentColors.outlinedTextFieldColors(),
+                        )
+                    }
+
+                    // ── Main content ───────────────────────────────────────
                     when {
                         isLoading -> {
                             Row(
@@ -224,52 +241,59 @@ fun mcpToolsDialog(
 
                         else -> {
                             Text(
-                                text = stringResource("mcp.tools.dialog.count", tools!!.size),
+                                text = if (searchQuery.isBlank()) {
+                                    stringResource("mcp.tools.dialog.count", tools!!.size)
+                                } else {
+                                    stringResource("mcp.tools.dialog.search.count", filteredTools!!.size, tools!!.size)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
 
-                            tools!!.forEach { tool ->
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    ),
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                            if (filteredTools.isNullOrEmpty()) {
+                                Text(
+                                    text = stringResource("mcp.tools.dialog.search.empty"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                filteredTools.forEach { tool ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        ),
                                     ) {
-                                        // Name
-                                        SelectionContainer {
-                                            Text(
-                                                text = tool.specification.name(),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                            )
-                                        }
-
-                                        // Description
-                                        tool.specification.description()?.let { desc ->
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        ) {
                                             SelectionContainer {
                                                 Text(
-                                                    text = desc,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    text = tool.specification.name(),
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface,
                                                 )
                                             }
-                                        }
-
-                                        // Category + Strategy chips
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            toolCategoryChip(tool.category)
-                                            toolStrategyChip(tool.strategy)
+                                            tool.specification.description()?.let { desc ->
+                                                SelectionContainer {
+                                                    Text(
+                                                        text = desc,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            }
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                toolCategoryChip(tool.category)
+                                                toolStrategyChip(tool.strategy)
+                                            }
                                         }
                                     }
                                 }
@@ -278,7 +302,6 @@ fun mcpToolsDialog(
                     }
                 }
 
-                // Visible scrollbar
                 VerticalScrollbar(
                     adapter = rememberScrollbarAdapter(scrollState),
                     modifier = Modifier
