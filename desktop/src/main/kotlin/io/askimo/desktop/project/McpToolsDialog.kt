@@ -44,6 +44,7 @@ import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
+import java.util.concurrent.TimeoutException
 
 @Composable
 fun mcpToolsDialog(
@@ -65,8 +66,8 @@ fun mcpToolsDialog(
             }
             tools = toolsList
         } catch (e: Exception) {
-            val isTimeout = e is java.util.concurrent.TimeoutException ||
-                e.cause is java.util.concurrent.TimeoutException ||
+            val isTimeout = e is TimeoutException ||
+                e.cause is TimeoutException ||
                 e.message?.contains("TimeoutException", ignoreCase = true) == true
 
             errorMessage = if (isTimeout) {
