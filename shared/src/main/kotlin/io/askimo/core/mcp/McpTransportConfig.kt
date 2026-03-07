@@ -30,3 +30,21 @@ data class StdioMcpTransportConfig(
     val command: List<String>,
     val env: Map<String, String> = emptyMap(),
 ) : McpTransportConfig()
+
+/**
+ * Configuration for HTTP-based MCP transport.
+ * Supports both legacy SSE and modern streamable HTTP modes.
+ */
+@Serializable
+@SerialName("http")
+data class HttpMcpTransportConfig(
+    override val id: String,
+    override val name: String,
+    override val description: String? = null,
+    /** Resolved URL (all template variables already substituted) */
+    val url: String,
+    /** Resolved HTTP headers (all template variables already substituted) */
+    val headers: Map<String, String> = emptyMap(),
+    val timeoutMs: Long = 60_000,
+    val mode: HttpTransportMode = HttpTransportMode.STREAMABLE,
+) : McpTransportConfig()

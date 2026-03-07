@@ -5,6 +5,7 @@
 package io.askimo.core.mcp
 
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.connectors.HttpMcpConnector
 import io.askimo.core.mcp.connectors.StdioMcpConnector
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
@@ -41,7 +42,10 @@ data class ProjectMcpInstance(
      */
     fun toConnector(definition: McpServerDefinition): McpConnector {
         val resolver = TemplateResolver(parameterValues)
-        return createStdioConnector(definition, resolver)
+        return when (definition.transportType) {
+            TransportType.STDIO -> createStdioConnector(definition, resolver)
+            TransportType.HTTP -> createHttpConnector(definition, resolver)
+        }
     }
 
     private fun createStdioConnector(
@@ -68,6 +72,34 @@ data class ProjectMcpInstance(
                 description = "Instance of ${definition.name}",
                 command = resolvedCommand,
                 env = resolvedEnv,
+            ),
+        )
+    }
+
+    private fun createHttpConnector(
+        definition: McpServerDefinition,
+        resolver: TemplateResolver,
+    ): HttpMcpConnector {
+        val httpConfig = definition.httpConfig
+            ?: throw IllegalStateException("HTTP config missing for ${definition.id}")
+
+        val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
+        val resolvedHeaders = resolver.resolveMap(httpConfig.headersTemplate)
+        log.debug(
+            "Create the HTTP MCP connector with url: {}, mode: {}",
+            resolvedUrl,
+            httpConfig.mode,
+        )
+
+        return HttpMcpConnector(
+            HttpMcpTransportConfig(
+                id = id,
+                name = name,
+                description = "Instance of ${definition.name}",
+                url = resolvedUrl,
+                headers = resolvedHeaders,
+                timeoutMs = httpConfig.timeoutMs,
+                mode = httpConfig.mode,
             ),
         )
     }

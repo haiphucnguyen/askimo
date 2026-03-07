@@ -19,6 +19,7 @@ data class McpServerDefinition(
     val transportType: TransportType,
 
     val stdioConfig: StdioConfig? = null,
+    val httpConfig: HttpConfig? = null,
 
     // Metadata
     val version: String = "1.0.0",
@@ -26,8 +27,13 @@ data class McpServerDefinition(
     val tags: List<String> = emptyList(),
 ) {
     init {
-        require(transportType == TransportType.STDIO && stdioConfig != null) {
-            "stdioConfig is required for STDIO transport type"
+        when (transportType) {
+            TransportType.STDIO -> require(stdioConfig != null) {
+                "stdioConfig is required for STDIO transport type"
+            }
+            TransportType.HTTP -> require(httpConfig != null) {
+                "httpConfig is required for HTTP transport type"
+            }
         }
     }
 }
@@ -35,6 +41,7 @@ data class McpServerDefinition(
 @Serializable
 enum class TransportType {
     STDIO,
+    HTTP,
 }
 
 /**
@@ -66,6 +73,54 @@ data class StdioConfig(
      */
     val workingDirectory: String? = null,
 )
+
+/**
+ * Configuration for HTTP-based MCP servers (remote/hosted servers)
+ */
+@Serializable
+data class HttpConfig(
+    /**
+     * URL template for the MCP server endpoint.
+     * - SSE mode:        "https://{{host}}/sse"
+     * - Streamable mode: "https://{{host}}/mcp"
+     */
+    val urlTemplate: String,
+
+    /**
+     * HTTP header templates sent with every request (optional).
+     * Examples:
+     * - {"Authorization": "Bearer {{apiKey}}"}
+     * - {"X-Api-Key": "{{apiKey}}"}
+     */
+    val headersTemplate: Map<String, String> = emptyMap(),
+
+    /**
+     * Request/connection timeout in milliseconds. Defaults to 60 s.
+     */
+    val timeoutMs: Long = 60_000,
+
+    /**
+     * Transport mode for the HTTP connection.
+     * - SSE:        legacy Server-Sent Events transport (HttpMcpTransport)
+     * - STREAMABLE: modern streamable HTTP transport (StreamableHttpMcpTransport)
+     */
+    val mode: HttpTransportMode = HttpTransportMode.STREAMABLE,
+)
+
+@Serializable
+enum class HttpTransportMode {
+    /**
+     * Legacy SSE-based transport (HttpMcpTransport).
+     * Use for servers that only support the older SSE MCP protocol.
+     */
+    SSE,
+
+    /**
+     * Modern streamable HTTP transport (StreamableHttpMcpTransport).
+     * Preferred for all new servers — supports bidirectional streaming.
+     */
+    STREAMABLE,
+}
 
 /**
  * Defines a configuration parameter that users must provide
@@ -139,9 +194,19 @@ enum class ParameterLocation {
     ENVIRONMENT,
 
     /**
-     * Parameter can be used in both places
+     * Parameter can be used in both command and environment places
      */
     BOTH,
+
+    /**
+     * Parameter goes into HTTP header templates (headersTemplate)
+     */
+    HTTP_HEADER,
+
+    /**
+     * Parameter goes into the HTTP URL template (urlTemplate)
+     */
+    HTTP_URL,
 }
 
 @Serializable

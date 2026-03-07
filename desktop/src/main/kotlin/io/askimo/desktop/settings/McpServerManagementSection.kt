@@ -291,6 +291,7 @@ private fun mcpServerTemplateCard(
 
                 val variableCount = when (server.transportType) {
                     TransportType.STDIO -> server.stdioConfig?.extractVariables()?.size ?: 0
+                    TransportType.HTTP -> server.httpConfig?.extractVariables()?.size ?: 0
                 }
 
                 Text(

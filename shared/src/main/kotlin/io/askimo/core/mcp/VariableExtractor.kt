@@ -150,3 +150,30 @@ fun StdioConfig.resolve(variables: Map<String, String>): ResolvedStdioConfig {
  * Extract all variables from this StdioConfig
  */
 fun StdioConfig.extractVariables(): List<VariableExtractor.ExtractedVariable> = VariableExtractor.extract(this)
+
+/**
+ * Extract all variables from this HttpConfig (URL template + header templates)
+ */
+fun HttpConfig.extractVariables(): List<VariableExtractor.ExtractedVariable> {
+    val variables = mutableMapOf<String, MutableSet<VariableExtractor.VariableLocation>>()
+
+    // Extract from URL template
+    VariableExtractor.extractFromString(urlTemplate).forEach { varKey ->
+        variables.getOrPut(varKey) { mutableSetOf() }.add(VariableExtractor.VariableLocation.COMMAND)
+    }
+
+    // Extract from header templates
+    headersTemplate.values.forEach { headerValue ->
+        VariableExtractor.extractFromString(headerValue).forEach { varKey ->
+            variables.getOrPut(varKey) { mutableSetOf() }.add(VariableExtractor.VariableLocation.ENVIRONMENT)
+        }
+    }
+
+    return variables.map { (key, locations) ->
+        VariableExtractor.ExtractedVariable(
+            key = key,
+            locations = locations,
+            isConditional = false,
+        )
+    }.sortedBy { it.key }
+}

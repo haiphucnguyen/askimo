@@ -157,6 +157,30 @@ object McpServersConfig {
             }
         }
 
+        if (definition.transportType == TransportType.HTTP) {
+            if (definition.httpConfig == null) {
+                errors.add("HTTP transport requires httpConfig")
+            } else {
+                if (definition.httpConfig.urlTemplate.isBlank()) {
+                    errors.add("HTTP urlTemplate cannot be blank")
+                } else {
+                    val result = TemplateResolver.validate(definition.httpConfig.urlTemplate)
+                    if (!result.isValid) {
+                        errors.addAll(result.errors.map { "URL template error: $it" })
+                    }
+                }
+                definition.httpConfig.headersTemplate.forEach { (key, valueTemplate) ->
+                    val result = TemplateResolver.validate(valueTemplate)
+                    if (!result.isValid) {
+                        errors.addAll(result.errors.map { "Header '$key' template error: $it" })
+                    }
+                }
+                if (definition.httpConfig.timeoutMs <= 0) {
+                    errors.add("HTTP timeoutMs must be positive")
+                }
+            }
+        }
+
         // Just basic validation - MCP server will validate the actual parameters
         return ValidationResult(
             isValid = errors.isEmpty(),
