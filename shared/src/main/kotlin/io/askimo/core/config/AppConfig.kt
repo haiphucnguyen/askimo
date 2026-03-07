@@ -464,7 +464,7 @@ object AppConfig {
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-3-5-sonnet-20241022}
             image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-3-5-sonnet-20241022}
           gemini:
-            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-1.5-flash}
+            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-2.5-flash-lite}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
