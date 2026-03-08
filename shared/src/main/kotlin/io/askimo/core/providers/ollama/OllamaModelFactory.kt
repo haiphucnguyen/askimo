@@ -103,7 +103,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey("ollama")
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models.ollama.imageModel)
+        .modelName(AppConfig.models[ModelProvider.OLLAMA].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -117,8 +117,8 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("ollama")
-            .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models.ollama.utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[ModelProvider.OLLAMA].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OLLAMA].utilityModelTimeoutSeconds))
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .build()
@@ -134,7 +134,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
 
     override fun createEmbeddingModel(settings: OllamaSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models.ollama.embeddingModel
+        val modelName = AppConfig.models[ModelProvider.OLLAMA].embeddingModel
         ensureLocalEmbeddingModelAvailable(ModelProvider.OLLAMA, baseUrl, modelName)
         return OpenAiEmbeddingModelBuilder()
             .apiKey("not-needed")
@@ -143,5 +143,5 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: OllamaSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.ollama.embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: OllamaSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.OLLAMA].embeddingModel)
 }

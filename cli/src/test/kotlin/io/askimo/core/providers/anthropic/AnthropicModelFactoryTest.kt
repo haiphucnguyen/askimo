@@ -72,7 +72,7 @@ class AnthropicModelFactoryTest {
         val models = AnthropicModelFactory().availableModels(settings)
 
         assertTrue(models.isNotEmpty(), "Expected available models list to not be empty")
-        assertTrue(models.contains("claude-sonnet-4-5"), "Expected claude-sonnet-4-5 to be in available models")
+        assertTrue(models.contains("claude-sonnet-4-6"), "Expected claude-sonnet-4-6 to be in available models")
     }
 
     @Test

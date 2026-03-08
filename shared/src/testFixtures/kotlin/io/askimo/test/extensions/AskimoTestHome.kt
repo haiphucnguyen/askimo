@@ -4,6 +4,7 @@
  */
 package io.askimo.test.extensions
 
+import io.askimo.core.config.AppConfig
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -94,6 +95,11 @@ class AskimoTestHomeExtension :
         // Register globally so spawned threads can access it
         AskimoHome.register(testImpl)
 
+        // Write DEFAULT_YAML to the temp home dir and reset AppConfig cache so
+        // any code that calls AppConfig will load the default values from the YAML
+        // (e.g. models[OLLAMA].embeddingModel == "nomic-embed-text:latest")
+        AppConfig.initForTest(AskimoHome.base())
+
         // Also use thread-local for compatibility
         val testBaseScope = AskimoHome.withTestBase(tempDir, profileName)
 
@@ -107,6 +113,9 @@ class AskimoTestHomeExtension :
             .get(TEST_BASE_SCOPE_KEY, AskimoHome.TestBaseScope::class.java)
 
         testBaseScope?.close()
+
+        // Reset AppConfig so the next test (or production code) reloads fresh
+        AppConfig.reset()
 
         // Restore original implementation
         val originalImpl = context.getStore(ExtensionContext.Namespace.GLOBAL)

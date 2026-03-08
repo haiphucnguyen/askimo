@@ -11,6 +11,7 @@ import io.askimo.core.context.ExecutionMode
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.test.extensions.AskimoTestHome
 import io.askimo.testcontainers.SharedOllama
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -27,6 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 )
 @Testcontainers
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class EmbeddingModelFactoryOllamaTest {
 
     private lateinit var baseUrl: String

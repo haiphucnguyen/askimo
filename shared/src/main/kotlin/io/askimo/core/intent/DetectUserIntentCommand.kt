@@ -10,46 +10,43 @@ import io.askimo.core.logging.logger
  * Command for detecting user's intent from their input message.
  * Determines which tools with INTENT_BASED flag should be attached to the AI request.
  *
- * Uses pattern matching on user input to detect keywords indicating
- * specific tool requirements (e.g., "search", "read file", "create chart").
+ * Uses two complementary layers:
+ *  1. Keyword classifier  — fast, deterministic, zero latency (IntentDetectionChain)
+ *  2. Vector similarity   — semantic, catches intent the keyword chain misses (ToolVectorIndex)
  *
- * Note: This handles Stage 1 of the 2-stage flow. Tools with FOLLOW_UP_BASED flag
- * are handled by DetectAiResponseIntentCommand (Stage 2).
- * Tools with BOTH flags are available in both stages.
- */
-/**
- * Command for detecting user's intent using Chain of Responsibility pattern.
+ * Results are unioned: keyword matches take priority, vector-only matches are appended.
+ * Pinned tools (user-selected via @mention) bypass detection entirely.
+ *
+ * Note: Stage 1 of the 2-stage flow. Tools with FOLLOW_UP_BASED flag are handled
+ * by DetectAiResponseIntentCommand (Stage 2). Tools with BOTH flags appear in both stages.
  */
 object DetectUserIntentCommand {
     private val log = logger<DetectUserIntentCommand>()
 
-    // Chain of Responsibility for intent detection
     private val detectionChain = IntentDetectionChain()
 
     /**
-     * Execute the command to detect user intent.
+     * Execute intent detection for the given user message.
      *
-     * @param userMessage The user's input message
-     * @param availableTools Tools to check for intent (should have INTENT_BASED flag set)
-     * @param mcpTools Optional MCP tools to include in detection (project-specific)
+     * @param userMessage      The user's input message
+     * @param availableTools   Built-in tools to consider (should have INTENT_BASED flag set)
+     * @param mcpTools         Project-specific MCP tools
+     * @param toolVectorIndex  Optional semantic vector index for MCP tools (built at tool-load time)
      * @return Intent detection result with matched tools
      */
     fun execute(
         userMessage: String,
         availableTools: List<ToolConfig>,
         mcpTools: List<ToolConfig> = emptyList(),
+        toolVectorIndex: ToolVectorIndex? = null,
     ): IntentDetectionResult {
-        // Combine built-in and MCP tools, filter only those with INTENT_BASED flag
         val allTools = (availableTools + mcpTools).filter {
             (it.strategy and ToolStrategy.INTENT_BASED) != 0
         }
 
-        // Use Chain of Responsibility to detect all matching categories
-        val matchedCategories = detectionChain.detectAll(userMessage)
-
-        // Map categories to actual tools
-        val matchedTools = matchedCategories.mapNotNull { category ->
-            // For EXECUTE category, we want all matching tools (including MCP tools)
+        // ── Layer 1: keyword classifier ───────────────────────────────────
+        val keywordCategories = detectionChain.detectAll(userMessage)
+        val keywordTools = keywordCategories.mapNotNull { category ->
             if (category == ToolCategory.EXECUTE) {
                 allTools.filter { it.category == category }
             } else {
@@ -57,20 +54,48 @@ object DetectUserIntentCommand {
             }
         }.flatten()
 
-        // Calculate confidence
-        val confidence = if (matchedTools.isNotEmpty()) 85 else 0
+        // ── Layer 2: vector similarity ────────────────────────────────────
+        val keywordToolNames = keywordTools.map { it.specification.name() }.toSet()
+        val vectorMatches = toolVectorIndex?.search(userMessage) ?: emptyList()
+        // Only keep vector hits that the keyword layer didn't already find
+        val vectorOnlyTools = vectorMatches
+            .filter { (tool, _) -> tool.specification.name() !in keywordToolNames }
+            .map { (tool, _) -> tool }
 
-        val reasoning = if (matchedTools.isNotEmpty()) {
-            "Detected intent from user keywords: ${matchedTools.joinToString { it.category.name }}"
-        } else {
-            "No specific tool intent detected"
+        val allMatched = (keywordTools + vectorOnlyTools)
+            .distinctBy { it.specification.name() }
+
+        // ── Confidence ────────────────────────────────────────────────────
+        val confidence = when {
+            keywordTools.isNotEmpty() -> 85
+            vectorMatches.any { (_, score) -> score >= 0.80 } -> 70
+            vectorOnlyTools.isNotEmpty() -> 55
+            else -> 0
         }
 
-        log.debug("Intent detection: message='$userMessage', matched=${matchedTools.size} tools, confidence=$confidence")
+        val reasoning = buildString {
+            if (allMatched.isEmpty()) {
+                append("No specific tool intent detected")
+            } else {
+                append("Detected intent from user keywords: ")
+                append(allMatched.joinToString { it.category.name })
+                if (vectorOnlyTools.isNotEmpty()) {
+                    append(" (${vectorOnlyTools.size} via vector search)")
+                }
+            }
+        }
+
+        log.debug(
+            "Intent detection: keyword={}, vector={}, total={}, confidence={}",
+            keywordTools.size,
+            vectorOnlyTools.size,
+            allMatched.size,
+            confidence,
+        )
 
         return IntentDetectionResult(
             stage = IntentStage.USER_INPUT,
-            tools = matchedTools,
+            tools = allMatched,
             confidence = confidence,
             reasoning = reasoning,
         )

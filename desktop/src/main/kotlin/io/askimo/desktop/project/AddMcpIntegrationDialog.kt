@@ -226,6 +226,7 @@ fun addMcpIntegrationDialog(
                                         // Extract variables and initialize with empty values
                                         val variables = when (server.transportType) {
                                             TransportType.STDIO -> server.stdioConfig?.extractVariables() ?: emptyList()
+                                            TransportType.HTTP -> server.httpConfig?.extractVariables() ?: emptyList()
                                         }
                                         parameterValues.value = variables.associate { it.key to "" }
                                         instanceName = server.name
@@ -264,6 +265,7 @@ fun addMcpIntegrationDialog(
                             selectedServer?.let { server ->
                                 val variables = when (server.transportType) {
                                     TransportType.STDIO -> server.stdioConfig?.extractVariables() ?: emptyList()
+                                    TransportType.HTTP -> server.httpConfig?.extractVariables() ?: emptyList()
                                 }
                                 if (variables.isNotEmpty()) {
                                     Text(

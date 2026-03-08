@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -84,6 +85,7 @@ import io.askimo.core.event.user.IndexingCompletedEvent
 import io.askimo.core.event.user.IndexingFailedEvent
 import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
@@ -94,7 +96,7 @@ import io.askimo.desktop.common.monitoring.SystemResourceMonitor
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.clickableCard
 import io.askimo.desktop.common.ui.themedTooltip
-import io.askimo.desktop.settings.groupedModelListAsMenuItems
+import io.askimo.desktop.settings.groupModelsByFamily
 import io.askimo.desktop.util.formatDuration
 import io.askimo.desktop.util.formatDurationDetailed
 import kotlinx.coroutines.CoroutineScope
@@ -104,6 +106,8 @@ import org.koin.java.KoinJavaComponent.get
 import java.awt.Desktop
 import java.net.URI
 import java.util.Locale.getDefault
+
+private val log = currentFileLogger()
 
 @Composable
 private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
@@ -122,13 +126,11 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Provider button - click to configure
         providerButton(
             currentProvider = configInfo.provider,
             onConfigureProvider = onConfigureAiProvider,
         )
 
-        // Model dropdown - quick switch models
         modelDropdown(
             currentProvider = configInfo.provider,
             currentModel = configInfo.model,
@@ -139,8 +141,8 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
                         appContext.params.model = newModel
                         AppContextConfigManager.save(appContext.params)
                         EventBus.emit(ModelChangedEvent(configInfo.provider, newModel))
-                    } catch (_: Exception) {
-                        // Silently handle error
+                    } catch (e: Exception) {
+                        log.error("Failed to change model to $newModel for provider ${configInfo.provider}", e)
                     }
                 }
             },
@@ -325,6 +327,7 @@ private fun modelDropdown(
                             )
                         },
                         textStyle = MaterialTheme.typography.bodySmall,
+                        colors = ComponentColors.outlinedTextFieldColors(),
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -335,44 +338,79 @@ private fun modelDropdown(
                     }
 
                     // Scrollable list with fixed dimensions to avoid intrinsic measurement issues
-                    val scrollState = rememberScrollState()
+                    val listState = rememberLazyListState()
 
                     Box(
                         modifier = Modifier
                             .width(300.dp)
                             .height(400.dp),
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(scrollState),
-                        ) {
-                            if (filteredModels.isEmpty()) {
-                                // Show "no results" message if search yields nothing
-                                Text(
-                                    text = stringResource("settings.model.no.results"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(16.dp),
-                                )
-                            } else {
-                                // Display grouped models using shared component
-                                groupedModelListAsMenuItems(
-                                    models = filteredModels,
-                                    selectedModel = currentModel,
-                                    onModelClick = { model ->
-                                        onModelSelected(model)
-                                        expanded = false
-                                        searchQuery = ""
-                                    },
-                                )
+                        if (filteredModels.isEmpty()) {
+                            // Show "no results" message if search yields nothing
+                            Text(
+                                text = stringResource("settings.model.no.results"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        } else {
+                            // Use LazyColumn so item clicks are not swallowed by the scroll modifier
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                val groupedModels = groupModelsByFamily(filteredModels)
+                                val showHeaders = groupedModels.size > 1
+                                groupedModels.forEach { (category, categoryModels) ->
+                                    if (showHeaders && categoryModels.isNotEmpty()) {
+                                        item(key = "header_$category") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            ) {
+                                                Text(
+                                                    text = category.uppercase(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                            }
+                                        }
+                                    }
+                                    items(categoryModels, key = { it }) { model ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = model,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                )
+                                            },
+                                            onClick = {
+                                                onModelSelected(model)
+                                                expanded = false
+                                                searchQuery = ""
+                                            },
+                                            leadingIcon = if (model == currentModel) {
+                                                {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = "Current model",
+                                                        tint = MaterialTheme.colorScheme.onSurface,
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                        )
+                                    }
+                                }
                             }
-                        }
 
-                        // Scrollbar for long lists
-                        if (filteredModels.size > 10) {
                             VerticalScrollbar(
-                                adapter = rememberScrollbarAdapter(scrollState),
+                                adapter = rememberScrollbarAdapter(listState),
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
                                     .fillMaxHeight()

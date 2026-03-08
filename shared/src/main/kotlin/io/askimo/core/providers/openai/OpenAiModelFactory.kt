@@ -103,7 +103,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         settings: OpenAiSettings,
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.openai.imageModel)
+        .modelName(AppConfig.models[ModelProvider.OPENAI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -116,8 +116,8 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models.openai.utilityModel)
-            .timeout(Duration.ofSeconds(AppConfig.models.openai.utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[ModelProvider.OPENAI].utilityModel)
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OPENAI].utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -131,11 +131,11 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
     override fun createEmbeddingModel(settings: OpenAiSettings): EmbeddingModel = OpenAiEmbeddingModelBuilder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.openai.embeddingModel)
+        .modelName(AppConfig.models[ModelProvider.OPENAI].embeddingModel)
         .build()
 
     override fun getEmbeddingTokenLimit(settings: OpenAiSettings): Int {
-        val modelName = AppConfig.models.openai.embeddingModel.lowercase()
+        val modelName = AppConfig.models[ModelProvider.OPENAI].embeddingModel.lowercase()
         return when {
             modelName.contains("text-embedding-3") -> 8191
             modelName.contains("ada-002") -> 8191

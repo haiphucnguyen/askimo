@@ -11,7 +11,11 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.HttpConfig
 import io.askimo.core.mcp.McpServerDefinition
+import io.askimo.core.mcp.Parameter
+import io.askimo.core.mcp.ParameterLocation
+import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TemplateResolver
 import io.askimo.core.mcp.TransportType
@@ -157,6 +161,30 @@ object McpServersConfig {
             }
         }
 
+        if (definition.transportType == TransportType.HTTP) {
+            if (definition.httpConfig == null) {
+                errors.add("HTTP transport requires httpConfig")
+            } else {
+                if (definition.httpConfig.urlTemplate.isBlank()) {
+                    errors.add("HTTP urlTemplate cannot be blank")
+                } else {
+                    val result = TemplateResolver.validate(definition.httpConfig.urlTemplate)
+                    if (!result.isValid) {
+                        errors.addAll(result.errors.map { "URL template error: $it" })
+                    }
+                }
+                definition.httpConfig.headersTemplate.forEach { (key, valueTemplate) ->
+                    val result = TemplateResolver.validate(valueTemplate)
+                    if (!result.isValid) {
+                        errors.addAll(result.errors.map { "Header '$key' template error: $it" })
+                    }
+                }
+                if (definition.httpConfig.timeoutMs <= 0) {
+                    errors.add("HTTP timeoutMs must be positive")
+                }
+            }
+        }
+
         // Just basic validation - MCP server will validate the actual parameters
         return ValidationResult(
             isValid = errors.isEmpty(),
@@ -264,6 +292,35 @@ object McpServersConfig {
                 ),
             ),
             tags = listOf("filesystem", "local", "files", "official", "anthropic"),
+        ),
+
+        // GitHub MCP Server (remote HTTP)
+        McpServerDefinition(
+            id = "github-mcp-server",
+            name = "GitHub MCP Server",
+            description = "Access GitHub repositories, issues, pull requests, code search, and more using the official GitHub remote MCP server",
+            transportType = TransportType.HTTP,
+            httpConfig = HttpConfig(
+                urlTemplate = "https://api.githubcopilot.com/mcp/",
+                headersTemplate = mapOf(
+                    "Authorization" to "Bearer {{githubToken}}",
+                ),
+                timeoutMs = 60_000,
+            ),
+            parameters = listOf(
+                Parameter(
+                    key = "githubToken",
+                    label = "GitHub Personal Access Token",
+                    type = ParameterType.SECRET,
+                    required = true,
+                    description = "A GitHub PAT with the permissions needed for the operations you want to perform. Create one at https://github.com/settings/personal-access-tokens/new",
+                    placeholder = "github_pat_...",
+                    location = ParameterLocation.HTTP_HEADER,
+                ),
+            ),
+            version = "1.0.0",
+            author = "GitHub",
+            tags = listOf("github", "code", "repositories", "issues", "pull-requests", "official"),
         ),
     )
 }

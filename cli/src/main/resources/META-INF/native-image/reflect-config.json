@@ -2738,41 +2738,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.config.AnthropicModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.util.List",
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.util.List",
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getAvailableModels", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "io.askimo.core.config.AppConfig",
     "methods": [
       {
@@ -2885,6 +2850,10 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       {
+        "name": "DEFAULT_YAML snake_case fields are correctly deserialized for all providers",
+        "parameterTypes": []
+      },
+      {
         "name": "ProxyConfig getStorageKey should be unique per proxy type",
         "parameterTypes": []
       },
@@ -2894,6 +2863,10 @@
       },
       {
         "name": "ProxyConfig should have placeholder constant",
+        "parameterTypes": []
+      },
+      {
+        "name": "YAML round-trip preserves snake_case field values after updateField",
         "parameterTypes": []
       },
       {
@@ -2963,6 +2936,19 @@
           "boolean"
         ]
       },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "int",
+          "int",
+          "boolean",
+          "boolean",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
       { "name": "getAutoBackupEnabled", "parameterTypes": [] },
       { "name": "getAutoBackupIntervalHours", "parameterTypes": [] },
       { "name": "getAutoBackupOnStartup", "parameterTypes": [] },
@@ -3010,6 +2996,14 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.CommaSeparatedListDeserializer",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "io.askimo.core.config.CommaSeparatedSetDeserializer",
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
     "name": "io.askimo.core.config.DeveloperConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3027,38 +3021,6 @@
       },
       { "name": "getActive", "parameterTypes": [] },
       { "name": "getEnabled", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.DockerModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3103,47 +3065,25 @@
           "boolean"
         ]
       },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "boolean",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
       { "name": "getBinary", "parameterTypes": [] },
       { "name": "getCustom", "parameterTypes": [] },
       { "name": "getDockerignore", "parameterTypes": [] },
       { "name": "getFilesize", "parameterTypes": [] },
       { "name": "getGitignore", "parameterTypes": [] },
       { "name": "getProjecttype", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.GeminiModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3194,70 +3134,6 @@
     ]
   },
   {
-    "name": "io.askimo.core.config.LmStudioModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.LocalAiModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "io.askimo.core.config.ModelsConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3266,27 +3142,27 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "io.askimo.core.config.AnthropicModelConfig",
-          "io.askimo.core.config.GeminiModelConfig",
-          "io.askimo.core.config.OpenAiModelConfig",
-          "io.askimo.core.config.OllamaModelConfig",
-          "io.askimo.core.config.DockerModelConfig",
-          "io.askimo.core.config.LocalAiModelConfig",
-          "io.askimo.core.config.LmStudioModelConfig",
-          "io.askimo.core.config.XAiModelConfig"
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig"
         ]
       },
       {
         "name": "<init>",
         "parameterTypes": [
-          "io.askimo.core.config.AnthropicModelConfig",
-          "io.askimo.core.config.GeminiModelConfig",
-          "io.askimo.core.config.OpenAiModelConfig",
-          "io.askimo.core.config.OllamaModelConfig",
-          "io.askimo.core.config.DockerModelConfig",
-          "io.askimo.core.config.LocalAiModelConfig",
-          "io.askimo.core.config.LmStudioModelConfig",
-          "io.askimo.core.config.XAiModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
@@ -3302,73 +3178,6 @@
     ]
   },
   {
-    "name": "io.askimo.core.config.OllamaModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.OpenAiModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEmbeddingModel", "parameterTypes": [] },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "io.askimo.core.config.ProjectType",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3381,6 +3190,44 @@
       { "name": "getExcludePaths", "parameterTypes": [] },
       { "name": "getMarkers", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.config.ProviderModelConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "java.lang.String",
+          "long",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getAvailableModels", "parameterTypes": [] },
+      { "name": "getEmbeddingModel", "parameterTypes": [] },
+      { "name": "getImageModel", "parameterTypes": [] },
+      { "name": "getUtilityModel", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3520,31 +3367,6 @@
         ]
       },
       { "name": "getPerRequestSleepMs", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.XAiModelConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": ["long", "java.lang.String", "java.lang.String"]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "long",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getImageModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
-      { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
   {
@@ -3896,6 +3718,37 @@
     ]
   },
   {
+    "name": "io.askimo.core.mcp.HttpConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.util.Map",
+          "long",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.String", "java.util.Map", "long"]
+      },
+      { "name": "getHeadersTemplate", "parameterTypes": [] },
+      { "name": "getTimeoutMs", "parameterTypes": [] },
+      { "name": "getUrlTemplate", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.HttpConfig$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.HttpConfig$Companion"
+  },
+  {
     "name": "io.askimo.core.mcp.McpFilesystemConnectorTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -3931,6 +3784,8 @@
           "java.lang.String",
           "io.askimo.core.mcp.TransportType",
           "io.askimo.core.mcp.StdioConfig",
+          "io.askimo.core.mcp.HttpConfig",
+          "java.util.List",
           "java.lang.String",
           "java.lang.String",
           "java.util.List",
@@ -3945,6 +3800,8 @@
           "java.lang.String",
           "io.askimo.core.mcp.TransportType",
           "io.askimo.core.mcp.StdioConfig",
+          "io.askimo.core.mcp.HttpConfig",
+          "java.util.List",
           "java.lang.String",
           "java.lang.String",
           "java.util.List"
@@ -3952,8 +3809,10 @@
       },
       { "name": "getAuthor", "parameterTypes": [] },
       { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getHttpConfig", "parameterTypes": [] },
       { "name": "getId", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] },
+      { "name": "getParameters", "parameterTypes": [] },
       { "name": "getStdioConfig", "parameterTypes": [] },
       { "name": "getTags", "parameterTypes": [] },
       { "name": "getTransportType", "parameterTypes": [] },
@@ -3965,6 +3824,78 @@
   },
   {
     "name": "io.askimo.core.mcp.McpServerDefinition$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterType",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterLocation",
+          "boolean",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterType",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "io.askimo.core.mcp.ParameterLocation",
+          "boolean"
+        ]
+      },
+      { "name": "getAllowMultiple", "parameterTypes": [] },
+      { "name": "getDefaultValue", "parameterTypes": [] },
+      { "name": "getDescription", "parameterTypes": [] },
+      { "name": "getKey", "parameterTypes": [] },
+      { "name": "getLabel", "parameterTypes": [] },
+      { "name": "getLocation", "parameterTypes": [] },
+      { "name": "getPlaceholder", "parameterTypes": [] },
+      { "name": "getRequired", "parameterTypes": [] },
+      { "name": "getType", "parameterTypes": [] },
+      { "name": "getValidationPattern", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.Parameter$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterLocation",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterLocation$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterType",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.mcp.ParameterType$Companion"
   },
   {
     "name": "io.askimo.core.mcp.ProjectMcpInstance"
@@ -3984,6 +3915,7 @@
           "java.lang.String",
           "java.lang.String",
           "java.util.Map",
+          "java.util.Set",
           "boolean",
           "java.lang.String",
           "java.lang.String",
@@ -3998,6 +3930,7 @@
           "java.lang.String",
           "java.lang.String",
           "java.util.Map",
+          "java.util.Set",
           "boolean",
           "java.lang.String",
           "java.lang.String"
@@ -4011,6 +3944,7 @@
           "java.lang.String",
           "java.lang.String",
           "java.util.Map",
+          "java.util.Set",
           "boolean",
           "java.lang.String",
           "java.lang.String",
@@ -4024,6 +3958,7 @@
       { "name": "getName", "parameterTypes": [] },
       { "name": "getParameterValues", "parameterTypes": [] },
       { "name": "getProjectId", "parameterTypes": [] },
+      { "name": "getSecretParameterKeys", "parameterTypes": [] },
       { "name": "getServerId", "parameterTypes": [] },
       { "name": "getUpdatedAt", "parameterTypes": [] }
     ]
@@ -4575,7 +4510,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$wmjPOheU",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$FL7sPFJd",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4664,6 +4599,9 @@
     "name": "io.askimo.core.providers.HasApiKey",
     "allDeclaredClasses": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.providers.ModelProvider"
   },
   {
     "name": "io.askimo.core.providers.ProviderSettings",
@@ -6016,6 +5954,12 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "java.util.Collections$SingletonList",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
     "name": "java.util.Collections$SingletonMap",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -6891,7 +6835,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$bcsBl2VG",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$z0gGZUNI",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

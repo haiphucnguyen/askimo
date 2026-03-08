@@ -75,6 +75,7 @@ class OllamaModelFactoryTest {
     }
 
     @Test
+    @RetryOnFailure(maxAttempts = 3)
     @DisplayName("OllamaModelFactory can stream responses from qwen2.5:0.5b via Testcontainers Ollama")
     fun canCreateChatServiceAndStream() {
         val baseUrl = setupOllamaContainer()

@@ -94,7 +94,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .baseUrl(settings.baseUrl)
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models.xai.imageModel)
+        .modelName(AppConfig.models[ModelProvider.XAI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -109,7 +109,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models.xai.utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.XAI].utilityModelTimeoutSeconds))
             .build()
     }
 

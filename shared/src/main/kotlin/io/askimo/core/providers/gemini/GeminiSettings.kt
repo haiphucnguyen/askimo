@@ -14,9 +14,8 @@ import kotlinx.serialization.Serializable
 data class GeminiSettings(
     val baseUrl: String = "https://generativelanguage.googleapis.com/v1beta/openai",
     override var apiKey: String = "",
-    override val defaultModel: String = "gemini-2.5-flash",
+    override val defaultModel: String = "",
     val enableAiSummarization: Boolean = true,
-    val summarizerModel: String = "gemini-1.5-flash-8b", // Very fast and cheap model for summarization
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

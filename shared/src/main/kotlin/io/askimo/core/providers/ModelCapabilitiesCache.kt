@@ -131,15 +131,6 @@ object ModelCapabilitiesCache {
     }
 
     /**
-     * Get the provider-specific default capabilities.
-     * Used to determine if a model's capabilities are from cache or just defaults.
-     *
-     * @param provider The model provider
-     * @return The default capabilities for the provider, or fallback default if provider not recognized
-     */
-    fun getProviderDefault(provider: ModelProvider): ModelCapabilities = PROVIDER_DEFAULTS[provider] ?: FALLBACK_DEFAULT
-
-    /**
      * Update specific capabilities for a model.
      *
      * @param modelKey The model key in format "provider:model"

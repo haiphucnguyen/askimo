@@ -57,11 +57,22 @@ object McpRuntimeValidator {
     ): RuntimeValidationResult = withContext(Dispatchers.IO) {
         val issues = mutableListOf<ValidationIssue>()
 
-        // Only validate STDIO transport for now
-        if (definition.transportType != TransportType.STDIO) {
-            return@withContext RuntimeValidationResult(canProceed = true, issues = emptyList())
+        when (definition.transportType) {
+            TransportType.STDIO -> validateStdio(definition, parameters, issues)
+            TransportType.HTTP -> validateHttp(definition, parameters, issues)
         }
 
+        RuntimeValidationResult(
+            canProceed = !issues.any { it.severity == ValidationSeverity.ERROR },
+            issues = issues,
+        )
+    }
+
+    private suspend fun validateStdio(
+        definition: McpServerDefinition,
+        parameters: Map<String, String>,
+        issues: MutableList<ValidationIssue>,
+    ) {
         val stdioConfig = definition.stdioConfig
         if (stdioConfig == null) {
             issues.add(
@@ -70,7 +81,7 @@ object McpRuntimeValidator {
                     message = "STDIO configuration is missing",
                 ),
             )
-            return@withContext RuntimeValidationResult(canProceed = false, issues = issues)
+            return
         }
 
         // Check executables in command template
@@ -82,7 +93,7 @@ object McpRuntimeValidator {
                     message = "Command template is empty",
                 ),
             )
-            return@withContext RuntimeValidationResult(canProceed = false, issues = issues)
+            return
         }
 
         val executable = commandTemplate.first()
@@ -101,7 +112,7 @@ object McpRuntimeValidator {
                     },
                 ),
             )
-            return@withContext RuntimeValidationResult(canProceed = false, issues = issues)
+            return
         }
 
         // For npx-based servers, check if package might be available
@@ -124,11 +135,55 @@ object McpRuntimeValidator {
                 ),
             )
         }
+    }
 
-        RuntimeValidationResult(
-            canProceed = !issues.any { it.severity == ValidationSeverity.ERROR },
-            issues = issues,
-        )
+    private fun validateHttp(
+        definition: McpServerDefinition,
+        parameters: Map<String, String>,
+        issues: MutableList<ValidationIssue>,
+    ) {
+        val httpConfig = definition.httpConfig
+        if (httpConfig == null) {
+            issues.add(
+                ValidationIssue(
+                    severity = ValidationSeverity.ERROR,
+                    message = "HTTP configuration is missing",
+                ),
+            )
+            return
+        }
+
+        val resolver = io.askimo.core.mcp.TemplateResolver(parameters)
+        val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
+
+        if (resolvedUrl.isBlank()) {
+            issues.add(
+                ValidationIssue(
+                    severity = ValidationSeverity.ERROR,
+                    message = "Resolved URL is empty — check your URL template and parameter values",
+                ),
+            )
+            return
+        }
+
+        try {
+            val uri = java.net.URI(resolvedUrl)
+            if (uri.scheme == null || !uri.scheme.startsWith("http")) {
+                issues.add(
+                    ValidationIssue(
+                        severity = ValidationSeverity.ERROR,
+                        message = "URL must use http or https scheme: $resolvedUrl",
+                    ),
+                )
+            }
+        } catch (e: Exception) {
+            issues.add(
+                ValidationIssue(
+                    severity = ValidationSeverity.ERROR,
+                    message = "Invalid URL '$resolvedUrl': ${e.message}",
+                ),
+            )
+        }
     }
 
     /**

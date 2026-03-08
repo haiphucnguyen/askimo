@@ -122,7 +122,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey("dockerai")
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models.docker.imageModel)
+        .modelName(AppConfig.models[ModelProvider.DOCKER].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -136,8 +136,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("docker-ai")
-            .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models.docker.utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[ModelProvider.DOCKER].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.DOCKER].utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -151,7 +151,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
     override fun createEmbeddingModel(settings: DockerAiSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models.docker.embeddingModel
+        val modelName = AppConfig.models[ModelProvider.DOCKER].embeddingModel
 
         log.display(
             """
@@ -171,5 +171,5 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: DockerAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.docker.embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: DockerAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.DOCKER].embeddingModel)
 }

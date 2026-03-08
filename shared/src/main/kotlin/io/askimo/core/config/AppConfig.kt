@@ -4,8 +4,14 @@
  */
 package io.askimo.core.config
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategies
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -14,6 +20,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ModelProvider
 import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.security.SecureKeyManager.StorageMethod
 import io.askimo.core.util.AskimoHome
@@ -60,16 +67,47 @@ data class FilterConfig(
     val custom: Boolean = true,
 )
 
+/**
+ * Splits a comma-separated YAML string or YAML sequence into a list of tokens.
+ * Handles both `"java,kt,py"` and proper YAML sequences.
+ */
+private fun parseCommaSeparated(p: JsonParser): List<String> = when (p.currentToken) {
+    JsonToken.VALUE_STRING -> {
+        val raw = p.text.trim()
+        if (raw.isEmpty()) {
+            emptyList()
+        } else {
+            raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+    }
+    JsonToken.START_ARRAY -> {
+        val items = mutableListOf<String>()
+        while (p.nextToken() != JsonToken.END_ARRAY) items.add(p.text.trim())
+        items
+    }
+    else -> emptyList()
+}
+
+private class CommaSeparatedSetDeserializer : StdDeserializer<Set<String>>(Set::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<String> = parseCommaSeparated(p).toSet()
+}
+
+private class CommaSeparatedListDeserializer : StdDeserializer<List<String>>(List::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): List<String> = parseCommaSeparated(p)
+}
+
 data class IndexingConfig(
     val maxFileBytes: Long = 5_000_000,
     val concurrentIndexingThreads: Int = 10,
     val filters: FilterConfig = FilterConfig(),
     val customExcludes: Set<String> = emptySet(),
+    @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
         "md", "txt", "gradle", "properties", "toml", "pdf",
     ),
+    @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     val binaryExtensions: Set<String> = setOf(
         // Images
         "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp", "tiff", "tif",
@@ -90,6 +128,7 @@ data class IndexingConfig(
         // Other binary
         "class", "jar", "war", "ear", "pyc", "pyo",
     ),
+    @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     val excludeFileNames: Set<String> = setOf(
         // System files
         ".DS_Store", "Thumbs.db", "desktop.ini",
@@ -173,6 +212,7 @@ data class IndexingConfig(
             excludePaths = setOf("bin/", "obj/", "packages/", ".vs/", "Debug/", "Release/"),
         ),
     ),
+    @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     val commonExcludes: Set<String> = setOf(
         ".git/", ".svn/", ".hg/", ".idea/", ".vscode/", ".DS_Store",
         "*.log", "*.tmp", "*.temp", "*.swp", "*.bak", ".history/",
@@ -245,7 +285,7 @@ data class ChatConfig(
  * Backup and restore configuration
  */
 data class BackupConfig(
-    val autoBackupEnabled: Boolean = false,
+    val autoBackupEnabled: Boolean = true,
     val autoBackupOnStartup: Boolean = false,
     val autoBackupIntervalHours: Int = 24,
     val maxAutoBackupsToKeep: Int = 5,
@@ -270,81 +310,50 @@ data class RagConfig(
     val useAbsolutePathInCitations: Boolean = true,
 )
 
-data class AnthropicModelConfig(
-    val availableModels: List<String> = listOf(
-        "claude-opus-4-1",
-        "claude-opus-4-0",
-        "claude-sonnet-4-5",
-        "claude-sonnet-4-0",
-        "claude-3-7-sonnet-latest",
-        "claude-3-5-haiku-latest",
-    ),
-    val utilityModel: String = "claude-3-haiku-20240307",
+data class ProviderModelConfig(
+    @field:JsonDeserialize(using = CommaSeparatedListDeserializer::class)
+    val availableModels: List<String> = emptyList(),
+    val utilityModel: String = "",
     val utilityModelTimeoutSeconds: Long = 45,
-    val visionModel: String = "claude-3-5-sonnet-20241022",
-    val imageModel: String = "claude-3-5-sonnet-20241022",
-)
-
-data class GeminiModelConfig(
-    val utilityModel: String = "gemini-2.5-flash-lite",
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "gemini-embedding-001",
-    val visionModel: String = "gemini-2.0-pro",
-    val imageModel: String = "gemini-2.5-flash-image",
-)
-
-data class OpenAiModelConfig(
-    val utilityModel: String = "gpt-3.5-turbo",
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "text-embedding-3-small",
-    val visionModel: String = "gpt-4o",
-    val imageModel: String = "dall-e-3",
-)
-
-data class OllamaModelConfig(
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "nomic-embed-text:latest",
-    val visionModel: String = "llava:7b",
-    val imageModel: String = "brxce/stable-diffusion-prompt-generato",
-)
-
-data class DockerModelConfig(
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "ai/qwen3-embedding:0.6B-F16",
-    val visionModel: String = "dustynv/llava:r36.2.0",
-    val imageModel: String = "ai/stable-diffusion:latest",
-)
-
-data class LocalAiModelConfig(
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "nomic-embed-text:latest",
-    val visionModel: String = "bakllava",
-    val imageModel: String = "stable-diffusion",
-)
-
-data class LmStudioModelConfig(
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "nomic-embed-text:latest",
-    val visionModel: String = "llava-v1.6-mistral-7b",
-    val imageModel: String = "stable-diffusion",
-)
-
-data class XAiModelConfig(
-    val utilityModelTimeoutSeconds: Long = 45,
-    val visionModel: String = "grok-2-vision-latest",
-    val imageModel: String = "grok-2-vision-latest",
+    val embeddingModel: String = "",
+    val visionModel: String = "",
+    val imageModel: String = "",
 )
 
 data class ModelsConfig(
-    val anthropic: AnthropicModelConfig = AnthropicModelConfig(),
-    val gemini: GeminiModelConfig = GeminiModelConfig(),
-    val openai: OpenAiModelConfig = OpenAiModelConfig(),
-    val ollama: OllamaModelConfig = OllamaModelConfig(),
-    val docker: DockerModelConfig = DockerModelConfig(),
-    val localai: LocalAiModelConfig = LocalAiModelConfig(),
-    val lmstudio: LmStudioModelConfig = LmStudioModelConfig(),
-    val xai: XAiModelConfig = XAiModelConfig(),
-)
+    val anthropic: ProviderModelConfig = ProviderModelConfig(),
+    val gemini: ProviderModelConfig = ProviderModelConfig(),
+    val openai: ProviderModelConfig = ProviderModelConfig(),
+    val ollama: ProviderModelConfig = ProviderModelConfig(),
+    val docker: ProviderModelConfig = ProviderModelConfig(),
+    val localai: ProviderModelConfig = ProviderModelConfig(),
+    val lmstudio: ProviderModelConfig = ProviderModelConfig(),
+    val xai: ProviderModelConfig = ProviderModelConfig(),
+) {
+    operator fun get(provider: ModelProvider): ProviderModelConfig = when (provider) {
+        ModelProvider.OPENAI -> openai
+        ModelProvider.ANTHROPIC -> anthropic
+        ModelProvider.GEMINI -> gemini
+        ModelProvider.XAI -> xai
+        ModelProvider.OLLAMA -> ollama
+        ModelProvider.DOCKER -> docker
+        ModelProvider.LOCALAI -> localai
+        ModelProvider.LMSTUDIO -> lmstudio
+        ModelProvider.UNKNOWN -> ProviderModelConfig()
+    }
+
+    fun update(provider: ModelProvider, updated: ProviderModelConfig): ModelsConfig = when (provider) {
+        ModelProvider.OPENAI -> copy(openai = updated)
+        ModelProvider.ANTHROPIC -> copy(anthropic = updated)
+        ModelProvider.GEMINI -> copy(gemini = updated)
+        ModelProvider.XAI -> copy(xai = updated)
+        ModelProvider.OLLAMA -> copy(ollama = updated)
+        ModelProvider.DOCKER -> copy(docker = updated)
+        ModelProvider.LOCALAI -> copy(localai = updated)
+        ModelProvider.LMSTUDIO -> copy(lmstudio = updated)
+        ModelProvider.UNKNOWN -> this
+    }
+}
 
 data class AppConfigData(
     val embedding: EmbeddingConfig = EmbeddingConfig(),
@@ -365,6 +374,7 @@ object AppConfig {
     val indexing: IndexingConfig get() = delegate.indexing
     val developer: DeveloperConfig get() = delegate.developer
     val chat: ChatConfig get() = delegate.chat
+    val backup: BackupConfig get() = delegate.backup
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
 
@@ -399,6 +409,20 @@ object AppConfig {
         cached = null
     }
 
+    /**
+     * Initialises AppConfig for tests by writing the DEFAULT_YAML to
+     * [configDir]/askimo.yml and resetting the cache so the next access
+     * reads from that file with all default values populated.
+     *
+     * Called automatically by @AskimoTestHome — you do not need to call this manually.
+     */
+    @Synchronized
+    fun initForTest(configDir: Path) {
+        val configFile = configDir.resolve("askimo.yml")
+        writeDefaultConfig(configFile)
+        cached = null
+    }
+
     private val mapper: ObjectMapper =
         ObjectMapper(YAMLFactory())
             .registerModule(
@@ -410,6 +434,7 @@ object AppConfig {
                     .build(),
             )
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
 
     // Default YAML written on first run if no config exists
     private val DEFAULT_YAML =
@@ -433,70 +458,103 @@ object AppConfig {
           per_request_sleep_ms: ${'$'}{ASKIMO_EMBED_SLEEP_MS:30}
 
         indexing:
-          max_file_bytes: ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
+          max_file_bytes:              ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
+          concurrent_indexing_threads: ${'$'}{ASKIMO_INDEXING_CONCURRENT_THREADS:10}
           supported_extensions: ${'$'}{ASKIMO_INDEXING_SUPPORTED_EXTENSIONS:java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml}
           binary_extensions: ${'$'}{ASKIMO_INDEXING_BINARY_EXTENSIONS:png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,pdf,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc}
           exclude_file_names: ${'$'}{ASKIMO_INDEXING_EXCLUDE_FILE_NAMES:.DS_Store,Thumbs.db,desktop.ini,package-lock.json,yarn.lock,pnpm-lock.yaml,poetry.lock,Gemfile.lock}
           common_excludes: ${'$'}{ASKIMO_INDEXING_COMMON_EXCLUDES:.git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/}
+          filters:
+            gitignore:    ${'$'}{ASKIMO_INDEXING_FILTER_GITIGNORE:true}
+            dockerignore: ${'$'}{ASKIMO_INDEXING_FILTER_DOCKERIGNORE:false}
+            projecttype:  ${'$'}{ASKIMO_INDEXING_FILTER_PROJECTTYPE:true}
+            binary:       ${'$'}{ASKIMO_INDEXING_FILTER_BINARY:true}
+            filesize:     ${'$'}{ASKIMO_INDEXING_FILTER_FILESIZE:true}
+            custom:       ${'$'}{ASKIMO_INDEXING_FILTER_CUSTOM:true}
           # Project types are configured with default values and can be customized via environment variables
           # ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_MARKERS and ASKIMO_INDEXING_PROJECT_TYPES_<TYPE>_EXCLUDES
 
         chat:
-          max_tokens: ${'$'}{ASKIMO_CHAT_MAX_TOKENS:8000}
-          summarization_threshold: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:0.75}
-          enable_async_summarization: ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
+          max_tokens:                    ${'$'}{ASKIMO_CHAT_MAX_TOKENS:8000}
+          summarization_threshold:       ${'$'}{ASKIMO_CHAT_SUMMARIZATION_THRESHOLD:0.75}
+          summarization_timeout_seconds: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_TIMEOUT:60}
+          enable_async_summarization:    ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
+          default_response_ai_locale:    ${'$'}{ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE:}
           sampling:
             temperature: ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
-            top_p: ${'$'}{ASKIMO_CHAT_SAMPLING_TOP_P:1.0}
-            enabled: ${'$'}{ASKIMO_CHAT_SAMPLING_ENABLED:true}
+            top_p:       ${'$'}{ASKIMO_CHAT_SAMPLING_TOP_P:1.0}
+            enabled:     ${'$'}{ASKIMO_CHAT_SAMPLING_ENABLED:true}
 
         rag:
-          vector_search_max_results: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
-          vector_search_min_score: ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE:0.3}
-          hybrid_max_results: ${'$'}{ASKIMO_RAG_HYBRID_MAX_RESULTS:15}
-          rank_fusion_constant: ${'$'}{ASKIMO_RAG_RANK_FUSION_CONSTANT:60}
+          vector_search_max_results:      ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
+          vector_search_min_score:        ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE:0.3}
+          hybrid_max_results:             ${'$'}{ASKIMO_RAG_HYBRID_MAX_RESULTS:15}
+          rank_fusion_constant:           ${'$'}{ASKIMO_RAG_RANK_FUSION_CONSTANT:60}
+          use_absolute_path_in_citations: ${'$'}{ASKIMO_RAG_USE_ABSOLUTE_PATH:true}
+
+        backup:
+          auto_backup_enabled:          ${'$'}{ASKIMO_BACKUP_AUTO_ENABLED:true}
+          auto_backup_on_startup:       ${'$'}{ASKIMO_BACKUP_ON_STARTUP:false}
+          auto_backup_interval_hours:   ${'$'}{ASKIMO_BACKUP_INTERVAL_HOURS:24}
+          max_auto_backups_to_keep:     ${'$'}{ASKIMO_BACKUP_MAX_TO_KEEP:5}
+          create_backup_on_upgrade:     ${'$'}{ASKIMO_BACKUP_ON_UPGRADE:true}
+          create_backup_before_restore: ${'$'}{ASKIMO_BACKUP_BEFORE_RESTORE:true}
 
         models:
           anthropic:
-            available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-1,claude-opus-4-0,claude-sonnet-4-5,claude-sonnet-4-0,claude-3-7-sonnet-latest,claude-3-5-haiku-latest}
-            utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-3-haiku-20240307}
+            available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-6,claude-sonnet-4-6}
+            utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-sonnet-4-6}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
-            vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-3-5-sonnet-20241022}
-            image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-3-5-sonnet-20241022}
+            embedding_model: ${'$'}{ASKIMO_ANTHROPIC_EMBEDDING_MODEL:}
+            vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-sonnet-4-6}
+            image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-sonnet-4-6}
           gemini:
-            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-1.5-flash}
+            available_models: ${'$'}{ASKIMO_GEMINI_MODELS:}
+            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-2.5-flash-lite}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
+            embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
             image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:
+            available_models: ${'$'}{ASKIMO_OPENAI_MODELS:}
             utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:gpt-3.5-turbo}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
             image_model: ${'$'}{ASKIMO_OPENAI_IMAGE_MODEL:dall-e-3}
           ollama:
+            available_models: ${'$'}{ASKIMO_OLLAMA_MODELS:}
+            utility_model: ${'$'}{ASKIMO_OLLAMA_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:llava:latest}
             image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:stable-diffusion:latest}
           docker:
+            available_models: ${'$'}{ASKIMO_DOCKER_MODELS:}
+            utility_model: ${'$'}{ASKIMO_DOCKER_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:ai/qwen3-embedding:0.6B-F16}
             vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:llava:latest}
             image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:stable-diffusion:latest}
           localai:
+            available_models: ${'$'}{ASKIMO_LOCALAI_MODELS:}
+            utility_model: ${'$'}{ASKIMO_LOCALAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:bakllava}
             image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:stable-diffusion}
           lmstudio:
+            available_models: ${'$'}{ASKIMO_LMSTUDIO_MODELS:}
+            utility_model: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:nomic-embed-text:latest}
             vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:llava-v1.6-mistral-7b}
             image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
+            available_models: ${'$'}{ASKIMO_XAI_MODELS:}
+            utility_model: ${'$'}{ASKIMO_XAI_UTILITY_MODEL:grok-3-mini}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
+            embedding_model: ${'$'}{ASKIMO_XAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
             image_model: ${'$'}{ASKIMO_XAI_IMAGE_MODEL:grok-2-vision-latest}
 
@@ -508,8 +566,8 @@ object AppConfig {
           password: ${'$'}{ASKIMO_PROXY_PASSWORD:}
 
         developer:
-          enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:false}
-          active: ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
+          enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:true}
+          active:  ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
         """.trimIndent()
 
     // Lazy, thread-safe init
@@ -546,16 +604,6 @@ object AppConfig {
      * Otherwise, if home path is missing, we create ~/.askimo/askimo.yml.
      */
     private fun resolveOrCreateConfigPath(): Path? {
-        System.getProperty("askimo.config")?.takeIf { it.isNotBlank() }?.let { p ->
-            val path = Paths.get(p)
-            if (!path.exists()) writeDefaultConfig(path)
-            return path
-        }
-        System.getenv("ASKIMO_CONFIG")?.takeIf { it.isNotBlank() }?.let { p ->
-            val path = Paths.get(p)
-            if (!path.exists()) writeDefaultConfig(path)
-            return path
-        }
         val homeBase = AskimoHome.base()
         val homePath = homeBase.resolve("askimo.yml")
         if (!homePath.exists()) writeDefaultConfig(homePath)
@@ -641,8 +689,19 @@ object AppConfig {
         val idx =
             IndexingConfig(
                 maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
+                concurrentIndexingThreads = envInt("ASKIMO_INDEXING_CONCURRENT_THREADS", 10),
                 supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml,pdf"),
+                binaryExtensions = envList("ASKIMO_INDEXING_BINARY_EXTENSIONS", "png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,pdf,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc"),
+                excludeFileNames = envList("ASKIMO_INDEXING_EXCLUDE_FILE_NAMES", ".DS_Store,Thumbs.db,desktop.ini,package-lock.json,yarn.lock,pnpm-lock.yaml,poetry.lock,Gemfile.lock"),
                 commonExcludes = envList("ASKIMO_INDEXING_COMMON_EXCLUDES", ".git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/"),
+                filters = FilterConfig(
+                    gitignore = System.getenv("ASKIMO_INDEXING_FILTER_GITIGNORE")?.toBoolean() ?: true,
+                    dockerignore = System.getenv("ASKIMO_INDEXING_FILTER_DOCKERIGNORE")?.toBoolean() ?: false,
+                    projecttype = System.getenv("ASKIMO_INDEXING_FILTER_PROJECTTYPE")?.toBoolean() ?: true,
+                    binary = System.getenv("ASKIMO_INDEXING_FILTER_BINARY")?.toBoolean() ?: true,
+                    filesize = System.getenv("ASKIMO_INDEXING_FILTER_FILESIZE")?.toBoolean() ?: true,
+                    custom = System.getenv("ASKIMO_INDEXING_FILTER_CUSTOM")?.toBoolean() ?: true,
+                ),
             )
         val dev =
             DeveloperConfig(
@@ -656,7 +715,9 @@ object AppConfig {
             ChatConfig(
                 maxTokens = envInt("ASKIMO_CHAT_MAX_TOKENS", 8000),
                 summarizationThreshold = envDouble("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 0.75),
+                summarizationTimeoutSeconds = envLong("ASKIMO_CHAT_SUMMARIZATION_TIMEOUT", 60L),
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
+                defaultResponseAILocale = System.getenv("ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE")?.takeIf { it.isNotBlank() },
                 sampling = SamplingConfig(
                     temperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
                     topP = envDouble("ASKIMO_CHAT_SAMPLING_TOP_P", 1.0),
@@ -680,73 +741,68 @@ object AppConfig {
                 vectorSearchMinScore = envDouble("ASKIMO_RAG_VECTOR_SEARCH_MIN_SCORE", 0.3),
                 hybridMaxResults = envInt("ASKIMO_RAG_HYBRID_MAX_RESULTS", 15),
                 rankFusionConstant = envInt("ASKIMO_RAG_RANK_FUSION_CONSTANT", 60),
+                useAbsolutePathInCitations = System.getenv("ASKIMO_RAG_USE_ABSOLUTE_PATH")?.toBoolean() ?: true,
             )
 
-        val anthropicModelConfig =
-            AnthropicModelConfig(
-                availableModels =
-                envList(
-                    "ASKIMO_ANTHROPIC_MODELS",
-                    "claude-opus-4-1,claude-opus-4-0,claude-sonnet-4-5,claude-sonnet-4-0,claude-3-7-sonnet-latest,claude-3-5-haiku-latest",
-                ).toList(),
-                utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", "claude-3-haiku-20240307"),
+        val models = ModelsConfig(
+            anthropic = ProviderModelConfig(
+                availableModels = envList("ASKIMO_ANTHROPIC_MODELS", "claude-opus-4-6,claude-sonnet-4-6").toList(),
+                utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", "claude-sonnet-4-6"),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_ANTHROPIC_UTILITY_TIMEOUT", 45L),
-            )
-
-        val geminiModelConfig =
-            GeminiModelConfig(
-                utilityModel = env("ASKIMO_GEMINI_UTILITY_MODEL", "gemini-1.5-flash"),
+                embeddingModel = env("ASKIMO_ANTHROPIC_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_ANTHROPIC_VISION_MODEL", "claude-sonnet-4-6"),
+                imageModel = env("ASKIMO_ANTHROPIC_IMAGE_MODEL", "claude-sonnet-4-6"),
+            ),
+            gemini = ProviderModelConfig(
+                utilityModel = env("ASKIMO_GEMINI_UTILITY_MODEL", "gemini-2.5-flash-lite"),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_GEMINI_UTILITY_TIMEOUT", 45L),
-                embeddingModel = env("ASKIMO_GEMINI_EMBEDDING_MODEL", "text-embedding-004"),
-            )
-
-        val openaiModelConfig =
-            OpenAiModelConfig(
+                embeddingModel = env("ASKIMO_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
+                visionModel = env("ASKIMO_GEMINI_VISION_MODEL", "gemini-1.5-pro"),
+                imageModel = env("ASKIMO_GEMINI_IMAGE_MODEL", "gemini-2.0-flash-exp"),
+            ),
+            openai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_OPENAI_UTILITY_MODEL", "gpt-3.5-turbo"),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_OPENAI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
-            )
-
-        val ollamaModelConfig =
-            OllamaModelConfig(
+                visionModel = env("ASKIMO_OPENAI_VISION_MODEL", "gpt-4o"),
+                imageModel = env("ASKIMO_OPENAI_IMAGE_MODEL", "dall-e-3"),
+            ),
+            ollama = ProviderModelConfig(
+                utilityModel = env("ASKIMO_OLLAMA_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_OLLAMA_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_OLLAMA_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-            )
-
-        val dockerModelConfig =
-            DockerModelConfig(
+                visionModel = env("ASKIMO_OLLAMA_VISION_MODEL", "llava:latest"),
+                imageModel = env("ASKIMO_OLLAMA_IMAGE_MODEL", "stable-diffusion:latest"),
+            ),
+            docker = ProviderModelConfig(
+                utilityModel = env("ASKIMO_DOCKER_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_DOCKER_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_DOCKER_EMBEDDING_MODEL", "ai/qwen3-embedding:0.6B-F16"),
-            )
-
-        val localaiModelConfig =
-            LocalAiModelConfig(
+                visionModel = env("ASKIMO_DOCKER_VISION_MODEL", "llava:latest"),
+                imageModel = env("ASKIMO_DOCKER_IMAGE_MODEL", "stable-diffusion:latest"),
+            ),
+            localai = ProviderModelConfig(
+                utilityModel = env("ASKIMO_LOCALAI_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_LOCALAI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_LOCALAI_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-            )
-
-        val lmstudioModelConfig =
-            LmStudioModelConfig(
+                visionModel = env("ASKIMO_LOCALAI_VISION_MODEL", "bakllava"),
+                imageModel = env("ASKIMO_LOCALAI_IMAGE_MODEL", "stable-diffusion"),
+            ),
+            lmstudio = ProviderModelConfig(
+                utilityModel = env("ASKIMO_LMSTUDIO_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_LMSTUDIO_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_LMSTUDIO_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-            )
-
-        val xaiModelConfig =
-            XAiModelConfig(
+                visionModel = env("ASKIMO_LMSTUDIO_VISION_MODEL", "llava-v1.6-mistral-7b"),
+                imageModel = env("ASKIMO_LMSTUDIO_IMAGE_MODEL", "stable-diffusion"),
+            ),
+            xai = ProviderModelConfig(
+                utilityModel = env("ASKIMO_XAI_UTILITY_MODEL", "grok-3-mini"),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_XAI_UTILITY_TIMEOUT", 45L),
-            )
-
-        val models =
-            ModelsConfig(
-                anthropic = anthropicModelConfig,
-                gemini = geminiModelConfig,
-                openai = openaiModelConfig,
-                ollama = ollamaModelConfig,
-                docker = dockerModelConfig,
-                localai = localaiModelConfig,
-                lmstudio = lmstudioModelConfig,
-                xai = xaiModelConfig,
-            )
+                embeddingModel = env("ASKIMO_XAI_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_XAI_VISION_MODEL", "grok-2-vision-latest"),
+                imageModel = env("ASKIMO_XAI_IMAGE_MODEL", "grok-2-vision-latest"),
+            ),
+        )
 
         val proxy =
             ProxyConfig(
@@ -873,112 +929,35 @@ object AppConfig {
     }
 
     private fun updateModelsField(config: ModelsConfig, field: String, value: Any): ModelsConfig {
-        // Handle nested paths like "openai.visionModel"
         val parts = field.split(".")
         if (parts.size != 2) {
             log.displayError("Models config requires nested path format: provider.field (e.g., openai.visionModel)", null)
             return config
         }
 
-        val provider = parts[0]
+        val providerKey = parts[0]
         val modelField = parts[1]
         val stringValue = value as? String ?: value.toString()
 
-        return when (provider) {
-            "openai" -> config.copy(
-                openai = when (modelField) {
-                    "visionModel" -> config.openai.copy(visionModel = stringValue)
-                    "imageModel" -> config.openai.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.openai.copy(embeddingModel = stringValue)
-                    "utilityModel" -> config.openai.copy(utilityModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown OpenAI model field: $modelField", null)
-                        config.openai
-                    }
-                },
-            )
-            "anthropic" -> config.copy(
-                anthropic = when (modelField) {
-                    "visionModel" -> config.anthropic.copy(visionModel = stringValue)
-                    "imageModel" -> config.anthropic.copy(imageModel = stringValue)
-                    "utilityModel" -> config.anthropic.copy(utilityModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown Anthropic model field: $modelField", null)
-                        config.anthropic
-                    }
-                },
-            )
-            "gemini" -> config.copy(
-                gemini = when (modelField) {
-                    "visionModel" -> config.gemini.copy(visionModel = stringValue)
-                    "imageModel" -> config.gemini.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.gemini.copy(embeddingModel = stringValue)
-                    "utilityModel" -> config.gemini.copy(utilityModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown Gemini model field: $modelField", null)
-                        config.gemini
-                    }
-                },
-            )
-            "xai" -> config.copy(
-                xai = when (modelField) {
-                    "visionModel" -> config.xai.copy(visionModel = stringValue)
-                    "imageModel" -> config.xai.copy(imageModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown X AI model field: $modelField", null)
-                        config.xai
-                    }
-                },
-            )
-            "ollama" -> config.copy(
-                ollama = when (modelField) {
-                    "visionModel" -> config.ollama.copy(visionModel = stringValue)
-                    "imageModel" -> config.ollama.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.ollama.copy(embeddingModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown Ollama model field: $modelField", null)
-                        config.ollama
-                    }
-                },
-            )
-            "docker" -> config.copy(
-                docker = when (modelField) {
-                    "visionModel" -> config.docker.copy(visionModel = stringValue)
-                    "imageModel" -> config.docker.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.docker.copy(embeddingModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown Docker model field: $modelField", null)
-                        config.docker
-                    }
-                },
-            )
-            "localai" -> config.copy(
-                localai = when (modelField) {
-                    "visionModel" -> config.localai.copy(visionModel = stringValue)
-                    "imageModel" -> config.localai.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.localai.copy(embeddingModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown LocalAI model field: $modelField", null)
-                        config.localai
-                    }
-                },
-            )
-            "lmstudio" -> config.copy(
-                lmstudio = when (modelField) {
-                    "visionModel" -> config.lmstudio.copy(visionModel = stringValue)
-                    "imageModel" -> config.lmstudio.copy(imageModel = stringValue)
-                    "embeddingModel" -> config.lmstudio.copy(embeddingModel = stringValue)
-                    else -> {
-                        log.displayError("Unknown LMStudio model field: $modelField", null)
-                        config.lmstudio
-                    }
-                },
-            )
+        val provider = ModelProvider.entries.firstOrNull { it.name.lowercase() == providerKey }
+            ?: run {
+                log.displayError("Unknown provider: $providerKey", null)
+                return config
+            }
+
+        val current = config[provider]
+        val updated = when (modelField) {
+            "utilityModel" -> current.copy(utilityModel = stringValue)
+            "utilityModelTimeoutSeconds" -> current.copy(utilityModelTimeoutSeconds = stringValue.toLongOrNull() ?: current.utilityModelTimeoutSeconds)
+            "embeddingModel" -> current.copy(embeddingModel = stringValue)
+            "visionModel" -> current.copy(visionModel = stringValue)
+            "imageModel" -> current.copy(imageModel = stringValue)
             else -> {
-                log.displayError("Unknown provider: $provider", null)
-                config
+                log.displayError("Unknown model field '$modelField' for provider $providerKey", null)
+                return config
             }
         }
+        return config.update(provider, updated)
     }
 
     private fun updateProxyField(config: ProxyConfig, field: String, value: Any): ProxyConfig = when (field) {

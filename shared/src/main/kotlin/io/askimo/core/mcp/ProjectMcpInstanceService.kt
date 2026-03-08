@@ -8,10 +8,12 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.client.DefaultMcpClient
+import io.askimo.core.context.AppContext
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolSource
 import io.askimo.core.intent.ToolStrategy
+import io.askimo.core.intent.ToolVectorIndex
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.ProjectMcpInstancesConfig
@@ -41,10 +43,25 @@ class ProjectMcpInstanceService(
      */
     private val projectToolsCache: Cache<String, List<ToolConfig>> = Caffeine.newBuilder()
         .maximumSize(200)
-        .expireAfterWrite(30.minutes.toJavaDuration()) // Refresh every 10 minutes
+        .expireAfterWrite(30.minutes.toJavaDuration())
         .removalListener<String, List<ToolConfig>> { projectId, tools, cause ->
             if (tools != null && projectId != null) {
                 log.debug("Evicting project tools cache for project {} (cause: {}, {} tools)", projectId, cause, tools.size)
+            }
+        }
+        .build()
+
+    /**
+     * Cache of per-project vector indices for semantic tool search.
+     * Always kept in sync with [projectToolsCache] — invalidated together.
+     * Cache keys: projectId
+     */
+    private val toolVectorIndexCache: Cache<String, ToolVectorIndex> = Caffeine.newBuilder()
+        .maximumSize(200)
+        .expireAfterWrite(30.minutes.toJavaDuration())
+        .removalListener<String, ToolVectorIndex> { projectId, _, cause ->
+            if (projectId != null) {
+                log.debug("Evicting tool vector index for project {} (cause: {})", projectId, cause)
             }
         }
         .build()
@@ -441,33 +458,105 @@ class ProjectMcpInstanceService(
     }
 
     /**
+     * Fetch, classify and cache tools from a single MCP instance.
+     * This is the single source of truth for:
+     *  - MCP client creation
+     *  - Tool listing
+     *  - Client cache population (so [getMcpClientForTool] works immediately)
+     *  - Category / strategy inference vs. user-override lookup
+     *  - Accumulation of newly-inferred configs for the caller to persist
+     *
+     * @param projectId The project ID
+     * @param instance The MCP instance to fetch tools from
+     * @param userConfigs Persisted user-customized tool configs keyed by "instanceId:toolName"
+     * @param newlyInferredConfigs Mutable list accumulating newly-inferred configs for the caller to persist
+     * @return List of classified [ToolConfig], or null if the MCP client could not be created
+     */
+    private suspend fun fetchToolsFromInstance(
+        projectId: String,
+        instance: ProjectMcpInstance,
+        userConfigs: Map<String, ToolConfigData> = emptyMap(),
+        newlyInferredConfigs: MutableList<ToolConfigData> = mutableListOf(),
+    ): List<ToolConfig>? {
+        val clientKey = "tools_${projectId}_${instance.id}"
+        val mcpClient = createMcpClient(instance, clientKey) ?: run {
+            log.warn("Failed to create MCP client for instance '${instance.name}'")
+            return null
+        }
+
+        log.debug("Fetching tools from MCP client for '${instance.name}'")
+        val toolSpecs = mcpClient.listTools()
+
+        // Populate client cache so getMcpClientForTool() works after this call
+        toolSpecs.forEach { toolSpec ->
+            mcpClientsByToolCache.put("$projectId:${toolSpec.name()}", mcpClient)
+        }
+
+        log.debug("Fetched ${toolSpecs.size} tools from instance '${instance.name}'")
+
+        return toolSpecs.map { toolSpec ->
+            val toolName = toolSpec.name()
+            val compositeKey = "${instance.id}:$toolName"
+            val userConfig = userConfigs[compositeKey]
+
+            if (userConfig != null && !userConfig.autoInferred) {
+                // Use user's custom classification
+                log.debug("Using user-customized config for tool '{}': {}, {}", toolName, userConfig.category, userConfig.strategy)
+                ToolConfig(
+                    specification = toolSpec,
+                    category = ToolCategory.valueOf(userConfig.category),
+                    strategy = userConfig.strategy,
+                    source = ToolSource.MCP_EXTERNAL,
+                )
+            } else {
+                // Auto-infer classification
+                val inferredCategory = inferToolCategory(toolSpec)
+                val inferredStrategy = inferToolStrategy(toolSpec)
+                log.debug("Auto-inferred tool '{}': {}, {}", toolName, inferredCategory, inferredStrategy)
+
+                if (userConfig == null) {
+                    newlyInferredConfigs.add(
+                        ToolConfigData(
+                            toolName = toolName,
+                            instanceId = instance.id,
+                            category = inferredCategory.name,
+                            strategy = inferredStrategy,
+                            autoInferred = true,
+                        ),
+                    )
+                }
+
+                ToolConfig(
+                    specification = toolSpec,
+                    category = inferredCategory,
+                    strategy = inferredStrategy,
+                    source = ToolSource.MCP_EXTERNAL,
+                )
+            }
+        }
+    }
+
+    /**
      * Get all available tools from all enabled MCP instances for a project.
      *
      * **Hybrid Mode:**
      * 1. Load user-customized tool configs from persistence
-     * 2. For tools without user config, auto-infer category/strategy
+     * 2. For tools without user config, auto-infer category/strategy via [fetchToolsFromInstance]
      * 3. Auto-save newly inferred tools to allow future customization
      *
-     * This enables:
-     * - First run: Auto-classification (fast onboarding)
-     * - User correction: Override incorrect classifications
-     * - Performance: Cached classifications, no re-inference
-     *
      * **Caching:**
-     * - Tools are cached per project for 10 minutes to avoid repeated MCP server calls
-     * - MCP clients are also cached per tool for 15 minutes to enable tool execution
+     * - Tools are cached per project for 30 minutes to avoid repeated MCP server calls
+     * - MCP clients are also cached per tool to enable tool execution
      * - Cache is automatically invalidated when instances are updated
-     * - Call invalidateProjectToolsCache() to manually clear both caches
+     * - Call [invalidateProjectToolsCache] to manually clear both caches
      *
      * **Tool Execution:**
-     * - After calling this method, use getMcpClientForTool(projectId, toolName) to get the
-     *   client needed to execute a specific MCP tool
+     * - After calling this method, use [getMcpClientForTool] to get the client for a specific tool
      *
      * @param projectId The project ID
-     * @return List of ToolConfig with hybrid user/auto classifications
+     * @return List of [ToolConfig] with hybrid user/auto classifications
      */
     suspend fun getProjectTools(projectId: String): List<ToolConfig> {
-        // Check cache first
         val cachedTools = projectToolsCache.getIfPresent(projectId)
         if (cachedTools != null) {
             log.debug("Returning cached tools for project {} ({} tools)", projectId, cachedTools.size)
@@ -477,109 +566,76 @@ class ProjectMcpInstanceService(
         log.debug("Cache miss for project {}, fetching tools from MCP servers", projectId)
 
         val instances = getEnabledInstances(projectId)
-
         if (instances.isEmpty()) {
-            log.debug("No active MCP connectors for project $projectId, returning empty list")
+            log.debug("No active MCP instances for project {}, returning empty list", projectId)
             return emptyList()
         }
 
-        // 1. Load persisted user configurations
         val userConfigs = ProjectMcpToolsConfig.load(projectId)
         val newlyInferredConfigs = mutableListOf<ToolConfigData>()
-
         val allTools = mutableListOf<ToolConfig>()
 
-        // 2. Fetch tools from each instance
         instances.forEach { instance ->
             try {
-                val mcpClient = createMcpClient(instance, "tools_${projectId}_${instance.id}")
-                if (mcpClient != null) {
-                    log.debug("Fetching tools from MCP client for '${instance.name}'")
-                    val toolSpecs = mcpClient.listTools()
-
-                    // ✅ POPULATE CLIENT CACHE for each tool
-                    toolSpecs.forEach { toolSpec ->
-                        val cacheKey = "$projectId:${toolSpec.name()}"
-                        mcpClientsByToolCache.put(cacheKey, mcpClient)
-                    }
-
-                    val toolConfigs = toolSpecs.map { toolSpec ->
-                        val toolName = toolSpec.name()
-
-                        // 3. Check if user has customized this tool (use composite key)
-                        val compositeKey = "${instance.id}:$toolName"
-                        val userConfig = userConfigs[compositeKey]
-
-                        if (userConfig != null && !userConfig.autoInferred) {
-                            // ✅ Use user's custom classification
-                            log.debug("Using user-customized config for tool '$toolName': ${userConfig.category}, ${userConfig.strategy}")
-                            ToolConfig(
-                                specification = toolSpec,
-                                category = ToolCategory.valueOf(userConfig.category),
-                                strategy = userConfig.strategy,
-                                source = ToolSource.MCP_EXTERNAL,
-                            )
-                        } else {
-                            // ✅ Auto-infer classification
-                            val inferredCategory = inferToolCategory(toolSpec)
-                            val inferredStrategy = inferToolStrategy(toolSpec)
-
-                            log.debug("Auto-inferred tool '{}': {}, {}", toolName, inferredCategory, inferredStrategy)
-
-                            // Save for future user customization (only if not already persisted)
-                            if (userConfig == null) {
-                                newlyInferredConfigs.add(
-                                    ToolConfigData(
-                                        toolName = toolName,
-                                        instanceId = instance.id,
-                                        category = inferredCategory.name,
-                                        strategy = inferredStrategy,
-                                        autoInferred = true,
-                                    ),
-                                )
-                            }
-
-                            ToolConfig(
-                                specification = toolSpec,
-                                category = inferredCategory,
-                                strategy = inferredStrategy,
-                                source = ToolSource.MCP_EXTERNAL,
-                            )
-                        }
-                    }
-
-                    allTools.addAll(toolConfigs)
-                    log.debug("Successfully fetched ${toolSpecs.size} tools from instance '${instance.name}'")
-                } else {
-                    log.warn("Failed to create MCP client for instance '${instance.name}'")
-                }
+                val tools = fetchToolsFromInstance(projectId, instance, userConfigs, newlyInferredConfigs)
+                    ?: return@forEach
+                allTools.addAll(tools)
             } catch (e: Exception) {
                 log.error("Failed to fetch tools from instance '${instance.name}': ${e.message}", e)
             }
         }
 
-        // 4. Persist newly inferred tools for future customization
         if (newlyInferredConfigs.isNotEmpty()) {
             val updatedConfigs = userConfigs.toMutableMap()
             newlyInferredConfigs.forEach { config ->
-                val compositeKey = "${config.instanceId}:${config.toolName}"
-                updatedConfigs[compositeKey] = config
+                updatedConfigs["${config.instanceId}:${config.toolName}"] = config
             }
             ProjectMcpToolsConfig.save(projectId, updatedConfigs)
-            log.debug("Persisted ${newlyInferredConfigs.size} auto-inferred tool configs for future customization")
+            log.debug("Persisted {} newly auto-inferred tool configs", newlyInferredConfigs.size)
         }
 
         log.debug(
-            "Retrieved total of ${allTools.size} MCP tools " +
-                "(${userConfigs.count { !it.value.autoInferred }} user-customized, " +
-                "${newlyInferredConfigs.size} newly auto-inferred)",
+            "Retrieved {} MCP tools ({} user-customized, {} newly auto-inferred)",
+            allTools.size,
+            userConfigs.count { !it.value.autoInferred },
+            newlyInferredConfigs.size,
         )
 
-        // 5. Cache the results for future requests
         projectToolsCache.put(projectId, allTools)
         log.debug("Cached {} tools for project {}", allTools.size, projectId)
 
+        // Build and cache the vector index from the freshly loaded tools.
+        // Done here so the index is always consistent with the tools cache.
+        buildAndCacheVectorIndex(projectId, allTools)
+
         return allTools
+    }
+
+    /**
+     * Return the cached [ToolVectorIndex] for [projectId], or null if tools have not
+     * been loaded yet (i.e. [getProjectTools] has not been called) or if the embedding
+     * model was unavailable when the index was last built.
+     *
+     * [ToolProviderImpl] calls this instead of building the index itself, keeping
+     * embedding-model knowledge inside this service.
+     */
+    fun getToolVectorIndex(projectId: String): ToolVectorIndex? = toolVectorIndexCache.getIfPresent(projectId)
+
+    /**
+     * Build a [ToolVectorIndex] from [tools] and store it in [toolVectorIndexCache].
+     * Silently skips indexing if the embedding model is unavailable so that the rest
+     * of the tool pipeline still works without vector search.
+     */
+    private fun buildAndCacheVectorIndex(projectId: String, tools: List<ToolConfig>) {
+        if (tools.isEmpty()) return
+        try {
+            val embeddingModel = AppContext.getInstance().getEmbeddingModel()
+            val index = ToolVectorIndex(embeddingModel).also { it.index(tools) }
+            toolVectorIndexCache.put(projectId, index)
+            log.debug("Built and cached ToolVectorIndex for project {} ({} tools)", projectId, tools.size)
+        } catch (e: Exception) {
+            log.warn("Could not build ToolVectorIndex for project {} (embedding model unavailable?): {}", projectId, e.message)
+        }
     }
 
     /**
@@ -590,8 +646,9 @@ class ProjectMcpInstanceService(
      */
     fun invalidateProjectToolsCache(projectId: String) {
         projectToolsCache.invalidate(projectId)
+        toolVectorIndexCache.invalidate(projectId)
         invalidateMcpClientCache(projectId)
-        log.debug("Invalidated tools and client cache for project {}", projectId)
+        log.debug("Invalidated tools, vector index, and client cache for project {}", projectId)
     }
 
     /**
@@ -672,27 +729,21 @@ class ProjectMcpInstanceService(
     /**
      * List available tools for a specific MCP server instance.
      *
+     * Reuses [fetchToolsFromInstance] so the MCP client is cached and
+     * [getMcpClientForTool] works for the returned tools immediately.
+     *
      * @param projectId The project ID
      * @param instanceId The instance ID to get tools for
-     * @return List of ToolSpecification
+     * @return List of [ToolConfig]
      * @throws IllegalArgumentException if instance is not found
      * @throws IllegalStateException if MCP client creation fails
-     * @throws Exception if connection to MCP server fails (e.g., timeout)
      */
-    suspend fun listTools(projectId: String, instanceId: String): List<ToolSpecification> {
+    suspend fun listTools(projectId: String, instanceId: String): List<ToolConfig> {
         val instance = getInstance(projectId, instanceId)
             ?: throw IllegalArgumentException("Instance not found: $instanceId")
 
-        // Use helper method to create MCP client
-        val mcpClient = createMcpClient(instance, "tools_list_${projectId}_${instance.id}")
-            ?: throw IllegalStateException("Failed to create MCP client for instance ${instance.name}")
-
-        // List tools from MCP client
-        log.debug("Fetching tools from MCP client for '${instance.name}'")
-        val tools = mcpClient.listTools()
-
-        log.debug("Successfully fetched ${tools.size} tools for instance '${instance.name}'")
-        return tools
+        return fetchToolsFromInstance(projectId, instance)
+            ?: throw IllegalStateException("Failed to create MCP client for instance '${instance.name}'")
     }
 
     /**
