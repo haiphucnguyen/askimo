@@ -466,7 +466,7 @@ object AppConfig {
           gemini:
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-2.5-flash-lite}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:text-embedding-004}
+            embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
             image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:

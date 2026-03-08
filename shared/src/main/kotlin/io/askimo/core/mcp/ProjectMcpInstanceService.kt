@@ -8,10 +8,12 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.client.DefaultMcpClient
+import io.askimo.core.context.AppContext
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolSource
 import io.askimo.core.intent.ToolStrategy
+import io.askimo.core.intent.ToolVectorIndex
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.ProjectMcpInstancesConfig
@@ -41,10 +43,25 @@ class ProjectMcpInstanceService(
      */
     private val projectToolsCache: Cache<String, List<ToolConfig>> = Caffeine.newBuilder()
         .maximumSize(200)
-        .expireAfterWrite(30.minutes.toJavaDuration()) // Refresh every 10 minutes
+        .expireAfterWrite(30.minutes.toJavaDuration())
         .removalListener<String, List<ToolConfig>> { projectId, tools, cause ->
             if (tools != null && projectId != null) {
                 log.debug("Evicting project tools cache for project {} (cause: {}, {} tools)", projectId, cause, tools.size)
+            }
+        }
+        .build()
+
+    /**
+     * Cache of per-project vector indices for semantic tool search.
+     * Always kept in sync with [projectToolsCache] — invalidated together.
+     * Cache keys: projectId
+     */
+    private val toolVectorIndexCache: Cache<String, ToolVectorIndex> = Caffeine.newBuilder()
+        .maximumSize(200)
+        .expireAfterWrite(30.minutes.toJavaDuration())
+        .removalListener<String, ToolVectorIndex> { projectId, _, cause ->
+            if (projectId != null) {
+                log.debug("Evicting tool vector index for project {} (cause: {})", projectId, cause)
             }
         }
         .build()
@@ -587,7 +604,38 @@ class ProjectMcpInstanceService(
         projectToolsCache.put(projectId, allTools)
         log.debug("Cached {} tools for project {}", allTools.size, projectId)
 
+        // Build and cache the vector index from the freshly loaded tools.
+        // Done here so the index is always consistent with the tools cache.
+        buildAndCacheVectorIndex(projectId, allTools)
+
         return allTools
+    }
+
+    /**
+     * Return the cached [ToolVectorIndex] for [projectId], or null if tools have not
+     * been loaded yet (i.e. [getProjectTools] has not been called) or if the embedding
+     * model was unavailable when the index was last built.
+     *
+     * [ToolProviderImpl] calls this instead of building the index itself, keeping
+     * embedding-model knowledge inside this service.
+     */
+    fun getToolVectorIndex(projectId: String): ToolVectorIndex? = toolVectorIndexCache.getIfPresent(projectId)
+
+    /**
+     * Build a [ToolVectorIndex] from [tools] and store it in [toolVectorIndexCache].
+     * Silently skips indexing if the embedding model is unavailable so that the rest
+     * of the tool pipeline still works without vector search.
+     */
+    private fun buildAndCacheVectorIndex(projectId: String, tools: List<ToolConfig>) {
+        if (tools.isEmpty()) return
+        try {
+            val embeddingModel = AppContext.getInstance().getEmbeddingModel()
+            val index = ToolVectorIndex(embeddingModel).also { it.index(tools) }
+            toolVectorIndexCache.put(projectId, index)
+            log.debug("Built and cached ToolVectorIndex for project {} ({} tools)", projectId, tools.size)
+        } catch (e: Exception) {
+            log.warn("Could not build ToolVectorIndex for project {} (embedding model unavailable?): {}", projectId, e.message)
+        }
     }
 
     /**
@@ -598,8 +646,9 @@ class ProjectMcpInstanceService(
      */
     fun invalidateProjectToolsCache(projectId: String) {
         projectToolsCache.invalidate(projectId)
+        toolVectorIndexCache.invalidate(projectId)
         invalidateMcpClientCache(projectId)
-        log.debug("Invalidated tools and client cache for project {}", projectId)
+        log.debug("Invalidated tools, vector index, and client cache for project {}", projectId)
     }
 
     /**
