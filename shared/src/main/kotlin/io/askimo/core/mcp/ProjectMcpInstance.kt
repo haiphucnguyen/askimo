@@ -5,7 +5,9 @@
 package io.askimo.core.mcp
 
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.connectors.HttpMcpConnector
 import io.askimo.core.mcp.connectors.StdioMcpConnector
+import io.askimo.core.security.SecureKeyManager
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 
@@ -41,7 +43,10 @@ data class ProjectMcpInstance(
      */
     fun toConnector(definition: McpServerDefinition): McpConnector {
         val resolver = TemplateResolver(parameterValues)
-        return createStdioConnector(definition, resolver)
+        return when (definition.transportType) {
+            TransportType.STDIO -> createStdioConnector(definition, resolver)
+            TransportType.HTTP -> createHttpConnector(definition, resolver)
+        }
     }
 
     private fun createStdioConnector(
@@ -71,10 +76,40 @@ data class ProjectMcpInstance(
             ),
         )
     }
+
+    private fun createHttpConnector(
+        definition: McpServerDefinition,
+        resolver: TemplateResolver,
+    ): HttpMcpConnector {
+        val httpConfig = definition.httpConfig
+            ?: throw IllegalStateException("HTTP config missing for ${definition.id}")
+
+        val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
+        val resolvedHeaders = resolver.resolveMap(httpConfig.headersTemplate)
+        log.debug(
+            "Create the HTTP MCP connector with url: {}",
+            resolvedUrl,
+        )
+
+        return HttpMcpConnector(
+            HttpMcpTransportConfig(
+                id = id,
+                name = name,
+                description = "Instance of ${definition.name}",
+                url = resolvedUrl,
+                headers = resolvedHeaders,
+                timeoutMs = httpConfig.timeoutMs,
+            ),
+        )
+    }
 }
 
 /**
- * Serializable version of ProjectMcpInstance for JSON storage
+ * Serializable version of ProjectMcpInstance for JSON storage.
+ *
+ * Secret parameter values are never persisted in this data class.
+ * Instead, their keys are listed in [secretParameterKeys] and the values
+ * are stored/retrieved via [SecureKeyManager] (keychain or encrypted file).
  */
 @Serializable
 data class ProjectMcpInstanceData(
@@ -82,34 +117,80 @@ data class ProjectMcpInstanceData(
     val projectId: String,
     val serverId: String,
     val name: String,
+    /** Non-secret parameter values only — safe to persist in plain YAML. */
     val parameterValues: Map<String, String>,
+    /** Keys whose values are stored in [SecureKeyManager], not in this file. */
+    val secretParameterKeys: Set<String> = emptySet(),
     val enabled: Boolean = true,
     // ISO-8601 format
     val createdAt: String,
     // ISO-8601 format
     val updatedAt: String,
 ) {
-    fun toDomain(): ProjectMcpInstance = ProjectMcpInstance(
-        id = id,
-        projectId = projectId,
-        serverId = serverId,
-        name = name,
-        parameterValues = parameterValues,
-        enabled = enabled,
-        createdAt = LocalDateTime.parse(createdAt),
-        updatedAt = LocalDateTime.parse(updatedAt),
-    )
+    /**
+     * Reconstruct the domain object by merging plain values with secrets
+     * retrieved from [SecureKeyManager].
+     */
+    fun toDomain(): ProjectMcpInstance {
+        val resolvedSecrets = secretParameterKeys.associateWith { key ->
+            SecureKeyManager.retrieveSecretKey(secretKeyId(id, key)) ?: ""
+        }
+        return ProjectMcpInstance(
+            id = id,
+            projectId = projectId,
+            serverId = serverId,
+            name = name,
+            parameterValues = parameterValues + resolvedSecrets,
+            enabled = enabled,
+            createdAt = LocalDateTime.parse(createdAt),
+            updatedAt = LocalDateTime.parse(updatedAt),
+        )
+    }
 
     companion object {
-        fun from(instance: ProjectMcpInstance): ProjectMcpInstanceData = ProjectMcpInstanceData(
-            id = instance.id,
-            projectId = instance.projectId,
-            serverId = instance.serverId,
-            name = instance.name,
-            parameterValues = instance.parameterValues,
-            enabled = instance.enabled,
-            createdAt = instance.createdAt.toString(),
-            updatedAt = instance.updatedAt.toString(),
-        )
+        /**
+         * Converts a domain instance to its serializable form.
+         *
+         * @param instance   The domain object to convert
+         * @param definition Optional server definition used by [SecretDetector] for
+         *                   authoritative secret detection. Falls back to convention-based
+         *                   detection when null.
+         */
+        fun from(
+            instance: ProjectMcpInstance,
+            definition: McpServerDefinition? = null,
+        ): ProjectMcpInstanceData {
+            val plain = mutableMapOf<String, String>()
+            val secretKeys = mutableSetOf<String>()
+
+            instance.parameterValues.forEach { (key, value) ->
+                if (SecretDetector.isSecret(key, definition)) {
+                    SecureKeyManager.storeSecuredKey(secretKeyId(instance.id, key), value)
+                    secretKeys.add(key)
+                } else {
+                    plain[key] = value
+                }
+            }
+
+            return ProjectMcpInstanceData(
+                id = instance.id,
+                projectId = instance.projectId,
+                serverId = instance.serverId,
+                name = instance.name,
+                parameterValues = plain,
+                secretParameterKeys = secretKeys,
+                enabled = instance.enabled,
+                createdAt = instance.createdAt.toString(),
+                updatedAt = instance.updatedAt.toString(),
+            )
+        }
+
+        /**
+         * Namespaced key for [SecureKeyManager] — prevents collisions between
+         * different instances that may share the same parameter name.
+         *
+         * Format: `mcp.<instanceId>.<paramKey>`
+         */
+        fun secretKeyId(instanceId: String, paramKey: String) = "mcp.$instanceId.$paramKey"
     }
 }

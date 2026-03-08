@@ -33,7 +33,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     override fun getProvider(): ModelProvider = ModelProvider.ANTHROPIC
 
-    override fun availableModels(settings: AnthropicSettings): List<String> = AppConfig.models.anthropic.availableModels
+    override fun availableModels(settings: AnthropicSettings): List<String> = AppConfig.models[ModelProvider.ANTHROPIC].availableModels
 
     override fun defaultSettings(): AnthropicSettings = AnthropicSettings()
 
@@ -91,9 +91,9 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         return AnthropicChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models.anthropic.utilityModel)
+            .modelName(AppConfig.models[ModelProvider.ANTHROPIC].utilityModel)
             .baseUrl(settings.baseUrl)
-            .timeout(Duration.ofSeconds(AppConfig.models.anthropic.utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds))
             .build()
     }
 

@@ -4,6 +4,8 @@
  */
 package io.askimo.core.config
 
+import io.askimo.core.providers.ModelProvider
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -13,7 +15,67 @@ import org.junit.jupiter.api.Test
  * Tests for AppConfig field update methods.
  * These tests verify that the domain object update methods work correctly.
  */
+@AskimoTestHome
 class AppConfigTest {
+
+    @Test
+    fun `DEFAULT_YAML snake_case fields are correctly deserialized for all providers`() {
+        // @AskimoTestHome writes DEFAULT_YAML and resets AppConfig — so all fields
+        // should reflect the YAML defaults, not the empty ProviderModelConfig() defaults.
+        val models = AppConfig.models
+
+        // Ollama — the field that was failing in EmbeddingModelFactoryOllamaTest
+        assertEquals("nomic-embed-text:latest", models[ModelProvider.OLLAMA].embeddingModel)
+        assertEquals("llava:latest", models[ModelProvider.OLLAMA].visionModel)
+        assertEquals("stable-diffusion:latest", models[ModelProvider.OLLAMA].imageModel)
+        assertTrue(models[ModelProvider.OLLAMA].availableModels.isEmpty())
+
+        // Anthropic
+        assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].utilityModel)
+        assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].visionModel)
+        assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].imageModel)
+        assertEquals(45L, models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds)
+        assertEquals(listOf("claude-opus-4-6", "claude-sonnet-4-6"), models[ModelProvider.ANTHROPIC].availableModels)
+
+        // Gemini
+        assertEquals("gemini-2.5-flash-lite", models[ModelProvider.GEMINI].utilityModel)
+        assertEquals("gemini-embedding-001", models[ModelProvider.GEMINI].embeddingModel)
+        assertEquals("gemini-1.5-pro", models[ModelProvider.GEMINI].visionModel)
+        assertEquals("gemini-2.0-flash-exp", models[ModelProvider.GEMINI].imageModel)
+        assertTrue(models[ModelProvider.GEMINI].availableModels.isEmpty())
+
+        // OpenAI
+        assertEquals("gpt-3.5-turbo", models[ModelProvider.OPENAI].utilityModel)
+        assertEquals("text-embedding-3-small", models[ModelProvider.OPENAI].embeddingModel)
+        assertEquals("gpt-4o", models[ModelProvider.OPENAI].visionModel)
+        assertEquals("dall-e-3", models[ModelProvider.OPENAI].imageModel)
+        assertTrue(models[ModelProvider.OPENAI].availableModels.isEmpty())
+
+        // XAI
+        assertEquals("grok-3-mini", models[ModelProvider.XAI].utilityModel)
+        assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].visionModel)
+        assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].imageModel)
+        assertTrue(models[ModelProvider.XAI].availableModels.isEmpty())
+
+        // Docker
+        assertTrue(models[ModelProvider.DOCKER].availableModels.isEmpty())
+
+        // LocalAI
+        assertTrue(models[ModelProvider.LOCALAI].availableModels.isEmpty())
+
+        // LMStudio
+        assertTrue(models[ModelProvider.LMSTUDIO].availableModels.isEmpty())
+    }
+
+    @Test
+    fun `YAML round-trip preserves snake_case field values after updateField`() {
+        // Mutate a field, then verify the in-memory value is correct
+        AppConfig.updateField("models.ollama.embeddingModel", "mxbai-embed-large:latest")
+        assertEquals("mxbai-embed-large:latest", AppConfig.models[ModelProvider.OLLAMA].embeddingModel)
+
+        AppConfig.updateField("models.anthropic.utilityModel", "claude-haiku-4")
+        assertEquals("claude-haiku-4", AppConfig.models[ModelProvider.ANTHROPIC].utilityModel)
+    }
 
     @Test
     fun `updateRagField should handle useAbsolutePathInCitations`() {

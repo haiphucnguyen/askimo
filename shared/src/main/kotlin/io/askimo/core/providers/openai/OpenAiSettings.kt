@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class OpenAiSettings(
     override var apiKey: String = "",
-    override val defaultModel: String = "gpt-4o",
+    override val defaultModel: String = "",
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

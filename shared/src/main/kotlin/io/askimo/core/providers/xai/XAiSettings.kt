@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
 data class XAiSettings(
     val baseUrl: String = "https://api.x.ai/v1",
     override var apiKey: String = "",
-    override val defaultModel: String = "grok-4",
+    override val defaultModel: String = "",
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

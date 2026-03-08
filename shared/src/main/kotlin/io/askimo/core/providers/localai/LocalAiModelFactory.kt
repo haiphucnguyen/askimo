@@ -98,7 +98,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey("localai")
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models.localai.imageModel)
+        .modelName(AppConfig.models[ModelProvider.LOCALAI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -112,8 +112,8 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
-            .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models.localai.utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[ModelProvider.LOCALAI].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.LOCALAI].utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -127,7 +127,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
     override fun createEmbeddingModel(settings: LocalAiSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models.localai.embeddingModel
+        val modelName = AppConfig.models[ModelProvider.LOCALAI].embeddingModel
 
         log.display(
             """
@@ -147,5 +147,5 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: LocalAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.localai.embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: LocalAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.LOCALAI].embeddingModel)
 }

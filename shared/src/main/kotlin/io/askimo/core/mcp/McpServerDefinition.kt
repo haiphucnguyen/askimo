@@ -19,6 +19,10 @@ data class McpServerDefinition(
     val transportType: TransportType,
 
     val stdioConfig: StdioConfig? = null,
+    val httpConfig: HttpConfig? = null,
+
+    // Explicit parameter definitions (optional — for richer UI hints)
+    val parameters: List<Parameter> = emptyList(),
 
     // Metadata
     val version: String = "1.0.0",
@@ -26,8 +30,13 @@ data class McpServerDefinition(
     val tags: List<String> = emptyList(),
 ) {
     init {
-        require(transportType == TransportType.STDIO && stdioConfig != null) {
-            "stdioConfig is required for STDIO transport type"
+        when (transportType) {
+            TransportType.STDIO -> require(stdioConfig != null) {
+                "stdioConfig is required for STDIO transport type"
+            }
+            TransportType.HTTP -> require(httpConfig != null) {
+                "httpConfig is required for HTTP transport type"
+            }
         }
     }
 }
@@ -35,6 +44,7 @@ data class McpServerDefinition(
 @Serializable
 enum class TransportType {
     STDIO,
+    HTTP,
 }
 
 /**
@@ -65,6 +75,32 @@ data class StdioConfig(
      * Can also contain variables: "{{projectRoot}}/scripts"
      */
     val workingDirectory: String? = null,
+)
+
+/**
+ * Configuration for HTTP-based MCP servers (remote/hosted servers).
+ * Uses the modern Streamable HTTP transport (StreamableHttpMcpTransport).
+ */
+@Serializable
+data class HttpConfig(
+    /**
+     * URL template for the MCP server endpoint.
+     * Example: "https://{{host}}/mcp"
+     */
+    val urlTemplate: String,
+
+    /**
+     * HTTP header templates sent with every request (optional).
+     * Examples:
+     * - {"Authorization": "Bearer {{apiKey}}"}
+     * - {"X-Api-Key": "{{apiKey}}"}
+     */
+    val headersTemplate: Map<String, String> = emptyMap(),
+
+    /**
+     * Request/connection timeout in milliseconds. Defaults to 60 s.
+     */
+    val timeoutMs: Long = 60_000,
 )
 
 /**
@@ -139,9 +175,19 @@ enum class ParameterLocation {
     ENVIRONMENT,
 
     /**
-     * Parameter can be used in both places
+     * Parameter can be used in both command and environment places
      */
     BOTH,
+
+    /**
+     * Parameter goes into HTTP header templates (headersTemplate)
+     */
+    HTTP_HEADER,
+
+    /**
+     * Parameter goes into the HTTP URL template (urlTemplate)
+     */
+    HTTP_URL,
 }
 
 @Serializable

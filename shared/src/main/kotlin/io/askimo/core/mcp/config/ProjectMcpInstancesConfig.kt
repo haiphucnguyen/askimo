@@ -12,6 +12,8 @@ import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceData
+import io.askimo.core.mcp.SecretDetector
+import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Files
 import java.nio.file.Path
@@ -47,7 +49,7 @@ object ProjectMcpInstancesConfig {
 
         return try {
             val content = Files.readString(path)
-            val wrapper: InstancesWrapper = mapper.readValue(content, InstancesWrapper::class.java)
+            val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
             wrapper.instances.map { it.toDomain() }
         } catch (e: Exception) {
             log.displayError("Failed to load MCP instances for project $projectId", e)
@@ -56,14 +58,20 @@ object ProjectMcpInstancesConfig {
     }
 
     /**
-     * Save all MCP instances for a project
+     * Save all MCP instances for a project.
+     * Looks up each instance's [McpServerDefinition] so [SecretDetector] can use
+     * the authoritative [ParameterType.SECRET] flag instead of relying solely on
+     * naming conventions.
      */
     fun save(projectId: String, instances: List<ProjectMcpInstance>) {
         val path = getConfigPath(projectId)
 
         try {
             path.parent.createDirectories()
-            val data = instances.map { ProjectMcpInstanceData.from(it) }
+            val data = instances.map { instance ->
+                val definition = McpServersConfig.get(instance.serverId)
+                ProjectMcpInstanceData.from(instance, definition)
+            }
             val wrapper = InstancesWrapper(data)
             val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
             Files.writeString(path, yaml)
@@ -84,9 +92,25 @@ object ProjectMcpInstancesConfig {
     }
 
     /**
-     * Remove a specific instance
+     * Remove a specific instance and clean up its secrets from [SecureKeyManager].
      */
     fun remove(projectId: String, instanceId: String) {
+        // Load the raw data (not domain) so we can read secretParameterKeys before deletion
+        val path = getConfigPath(projectId)
+        if (path.exists()) {
+            try {
+                val content = Files.readString(path)
+                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                wrapper.instances
+                    .find { it.id == instanceId }
+                    ?.secretParameterKeys
+                    ?.forEach { key ->
+                        SecureKeyManager.removeSecretKey(ProjectMcpInstanceData.secretKeyId(instanceId, key))
+                    }
+            } catch (e: Exception) {
+                log.displayError("Failed to clean up secrets for instance $instanceId", e)
+            }
+        }
         val instances = load(projectId).filterNot { it.id == instanceId }
         save(projectId, instances)
     }
@@ -104,14 +128,23 @@ object ProjectMcpInstancesConfig {
     }
 
     /**
-     * Delete all instances for a project (when project is deleted)
+     * Delete all instances for a project (when project is deleted).
+     * Also removes all associated secrets from [SecureKeyManager].
      */
     fun deleteAll(projectId: String) {
         val path = getConfigPath(projectId)
         if (path.exists()) {
             try {
+                // Clean up secrets before deleting the file
+                val content = Files.readString(path)
+                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                wrapper.instances.forEach { instance ->
+                    instance.secretParameterKeys.forEach { key ->
+                        SecureKeyManager.removeSecretKey(ProjectMcpInstanceData.secretKeyId(instance.id, key))
+                    }
+                }
                 Files.delete(path)
-                log.debug("Deleted all MCP instances for project $projectId")
+                log.debug("Deleted all MCP instances and secrets for project $projectId")
             } catch (e: Exception) {
                 log.displayError("Failed to delete MCP instances for project $projectId", e)
             }

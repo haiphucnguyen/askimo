@@ -11,6 +11,7 @@ import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.TestToolProviderFactory
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.test.extensions.AskimoTestHome
+import io.askimo.test.extensions.RetryOnFailure
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -72,6 +73,7 @@ class XAiModelFactoryTest {
     }
 
     @Test
+    @RetryOnFailure(maxAttempts = 3)
     @DisplayName("X-AI can call LocalFsTools countEntries function")
     fun canCallCountEntriesTool() {
         val chatService = createChatService()

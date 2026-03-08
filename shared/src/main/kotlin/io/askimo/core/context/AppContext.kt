@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent
 import java.util.Locale
 
 /**
@@ -260,11 +261,6 @@ class AppContext private constructor(
     }
 
     /**
-     * Returns whether the currently active provider supports embedding models.
-     */
-    fun supportsEmbedding(): Boolean = getModelFactory(params.currentProvider)?.supportsEmbedding() ?: false
-
-    /**
      * Returns the embedding model for the currently active provider.
      * The model is cached and reused until the provider or model changes.
      *
@@ -364,16 +360,10 @@ class AppContext private constructor(
     /**
      * Get the vision model name for the current provider.
      */
-    private fun getVisionModelForProvider(provider: ModelProvider): String = when (provider) {
-        ModelProvider.OPENAI -> AppConfig.models.openai.visionModel
-        ModelProvider.ANTHROPIC -> AppConfig.models.anthropic.visionModel
-        ModelProvider.GEMINI -> AppConfig.models.gemini.visionModel
-        ModelProvider.XAI -> AppConfig.models.xai.visionModel
-        ModelProvider.OLLAMA -> AppConfig.models.ollama.visionModel
-        ModelProvider.DOCKER -> AppConfig.models.docker.visionModel
-        ModelProvider.LOCALAI -> AppConfig.models.localai.visionModel
-        ModelProvider.LMSTUDIO -> AppConfig.models.lmstudio.visionModel
-        ModelProvider.UNKNOWN -> params.model // Fallback to current model
+    private fun getVisionModelForProvider(provider: ModelProvider): String = if (provider == ModelProvider.UNKNOWN) {
+        params.model
+    } else {
+        AppConfig.models[provider].visionModel
     }
 
     /**
@@ -466,8 +456,8 @@ class AppContext private constructor(
      * @return ToolProvider instance or null if not available
      */
     fun getToolProvider(): ToolProvider? = try {
-        org.koin.java.KoinJavaComponent.getKoin().getOrNull<ToolProviderImpl>()
-    } catch (e: Exception) {
+        KoinJavaComponent.getKoin().getOrNull<ToolProviderImpl>()
+    } catch (_: Exception) {
         log.debug("ToolProvider not available (Koin not initialized or CLI mode)")
         null
     }

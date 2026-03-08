@@ -107,7 +107,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         return OpenAiImageModel.builder()
             .apiKey("lmstudio")
             .baseUrl(settings.baseUrl)
-            .modelName(AppConfig.models.lmstudio.imageModel)
+            .modelName(AppConfig.models[ModelProvider.LMSTUDIO].imageModel)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -124,8 +124,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         return OpenAiChatModel.builder()
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
-            .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models.lmstudio.utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[ModelProvider.LMSTUDIO].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.LMSTUDIO].utilityModelTimeoutSeconds))
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }
@@ -140,7 +140,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun createEmbeddingModel(settings: LmStudioSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models.lmstudio.embeddingModel
+        val modelName = AppConfig.models[ModelProvider.LMSTUDIO].embeddingModel
 
         log.display(
             """
@@ -160,5 +160,5 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: LmStudioSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models.lmstudio.embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: LmStudioSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.LMSTUDIO].embeddingModel)
 }
