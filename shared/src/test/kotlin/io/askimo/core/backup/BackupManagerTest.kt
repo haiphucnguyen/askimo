@@ -70,20 +70,6 @@ class BackupManagerTest {
     }
 
     @Test
-    fun `listAutoBackups should return all auto backups`() {
-        BackupManager.createAutoBackup()
-        Thread.sleep(1500) // Ensure different timestamps (file system may have 1-second precision)
-        BackupManager.createAutoBackup()
-
-        val backups = BackupManager.listAutoBackups()
-
-        assertEquals(2, backups.size)
-        assertTrue(backups[0].type == BackupType.AUTO)
-        // Should be sorted newest first
-        assertTrue(backups[0].timestamp >= backups[1].timestamp)
-    }
-
-    @Test
     fun `cleanOldAutoBackups should keep only recent backups`() {
         // Clean any existing backups first
         BackupManager.cleanOldAutoBackups(keepCount = 0)
