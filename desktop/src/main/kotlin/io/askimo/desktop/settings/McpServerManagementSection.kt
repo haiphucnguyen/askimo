@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
@@ -34,17 +36,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.extractVariables
 import io.askimo.desktop.common.components.dangerButton
+import io.askimo.desktop.common.components.linkButton
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.ui.clickableCard
+import java.awt.Desktop
+import java.net.URI
 
 @Composable
 fun mcpServerTemplatesSection() {
@@ -73,6 +79,26 @@ fun mcpServerTemplatesSection() {
                     text = stringResource("mcp.servers.description"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                )
+            }
+            linkButton(
+                onClick = {
+                    try {
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
+                        }
+                    } catch (_: Exception) {}
+                },
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource("mcp.servers.guide"),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 4.dp),
                 )
             }
         }

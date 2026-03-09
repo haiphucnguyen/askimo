@@ -57,6 +57,7 @@ import io.askimo.core.mcp.Parameter
 import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.ProjectMcpInstanceData
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpRuntimeValidator
 import io.askimo.core.mcp.config.McpServersConfig
@@ -283,10 +284,13 @@ fun addMcpIntegrationDialog(
                                     )
 
                                     variables.forEach { variable ->
+                                        val isSecret = SecretDetector.isSecret(variable.key, server)
+                                        var showSecret by remember(variable.key) { mutableStateOf(false) }
+
                                         OutlinedTextField(
                                             value = parameterValues.value[variable.key] ?: "",
                                             onValueChange = { newValue ->
-                                                parameterValues.value = parameterValues.value + (variable.key to newValue)
+                                                parameterValues.value += (variable.key to newValue)
                                             },
                                             label = {
                                                 val capitalizedKey = variable.key.replaceFirstChar { it.uppercase() }
@@ -306,6 +310,36 @@ fun addMcpIntegrationDialog(
                                             },
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = true,
+                                            visualTransformation = if (isSecret && !showSecret) {
+                                                PasswordVisualTransformation()
+                                            } else {
+                                                VisualTransformation.None
+                                            },
+                                            trailingIcon = if (isSecret) {
+                                                {
+                                                    IconButton(
+                                                        onClick = { showSecret = !showSecret },
+                                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (showSecret) {
+                                                                Icons.Default.Visibility
+                                                            } else {
+                                                                Icons.Default.VisibilityOff
+                                                            },
+                                                            contentDescription = stringResource(
+                                                                if (showSecret) {
+                                                                    "mcp.integrations.password.hide"
+                                                                } else {
+                                                                    "mcp.integrations.password.show"
+                                                                },
+                                                            ),
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                null
+                                            },
                                             colors = ComponentColors.outlinedTextFieldColors(),
                                         )
 

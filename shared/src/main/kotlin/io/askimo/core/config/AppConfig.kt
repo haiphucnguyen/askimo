@@ -4,6 +4,7 @@
  */
 package io.askimo.core.config
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
@@ -37,19 +38,22 @@ import kotlin.io.path.isRegularFile
 private object AppConfigObject
 private val log = logger<AppConfigObject>()
 
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
 data class EmbeddingConfig(
-    val maxCharsPerChunk: Int = 3000,
-    val chunkOverlap: Int = 100,
-    val preferredDim: Int? = null,
+    @field:JsonAlias("maxCharsPerChunk") val maxCharsPerChunk: Int = 3000,
+    @field:JsonAlias("chunkOverlap") val chunkOverlap: Int = 100,
+    @field:JsonAlias("preferredDim") val preferredDim: Int? = null,
 )
 
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
 data class RetryConfig(
     val attempts: Int = 4,
-    val baseDelayMs: Long = 150,
+    @field:JsonAlias("baseDelayMs") val baseDelayMs: Long = 150,
 )
 
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
 data class ThrottleConfig(
-    val perRequestSleepMs: Long = 30,
+    @field:JsonAlias("perRequestSleepMs") val perRequestSleepMs: Long = 30,
 )
 
 data class ProjectType(
@@ -96,18 +100,21 @@ private class CommaSeparatedListDeserializer : StdDeserializer<List<String>>(Lis
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): List<String> = parseCommaSeparated(p)
 }
 
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
 data class IndexingConfig(
-    val maxFileBytes: Long = 5_000_000,
-    val concurrentIndexingThreads: Int = 10,
+    @field:JsonAlias("maxFileBytes") val maxFileBytes: Long = 5_000_000,
+    @field:JsonAlias("concurrentIndexingThreads") val concurrentIndexingThreads: Int = 10,
     val filters: FilterConfig = FilterConfig(),
     val customExcludes: Set<String> = emptySet(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
+    @field:JsonAlias("supportedExtensions")
     val supportedExtensions: Set<String> = setOf(
         "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
         "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
         "md", "txt", "gradle", "properties", "toml", "pdf",
     ),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
+    @field:JsonAlias("binaryExtensions")
     val binaryExtensions: Set<String> = setOf(
         // Images
         "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp", "tiff", "tif",
@@ -129,6 +136,7 @@ data class IndexingConfig(
         "class", "jar", "war", "ear", "pyc", "pyo",
     ),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
+    @field:JsonAlias("excludeFileNames")
     val excludeFileNames: Set<String> = setOf(
         // System files
         ".DS_Store", "Thumbs.db", "desktop.ini",
@@ -224,10 +232,11 @@ data class DeveloperConfig(
     val active: Boolean = false,
 )
 
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class SamplingConfig(
-    val temperature: Double = 0.7, // Balanced default: not too strict, not too creative
-    val topP: Double = 1.0, // Keep at 1.0 (no nucleus sampling by default)
-    val enabled: Boolean = true, // Allow users to disable sampling parameters
+    val temperature: Double = 0.7,
+    @field:JsonAlias("topP") val topP: Double = 1.0,
+    val enabled: Boolean = true,
 )
 
 enum class ProxyType {
@@ -272,52 +281,57 @@ data class ProxyConfig(
     }
 }
 
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class ChatConfig(
-    val maxTokens: Int = 8000,
-    val summarizationThreshold: Double = 0.75,
-    val enableAsyncSummarization: Boolean = true,
-    val summarizationTimeoutSeconds: Long = 60,
+    @field:JsonAlias("maxTokens") val maxTokens: Int = 8000,
+    @field:JsonAlias("summarizationThreshold") val summarizationThreshold: Double = 0.75,
+    @field:JsonAlias("enableAsyncSummarization") val enableAsyncSummarization: Boolean = true,
+    @field:JsonAlias("summarizationTimeoutSeconds") val summarizationTimeoutSeconds: Long = 60,
     val sampling: SamplingConfig = SamplingConfig(),
-    val defaultResponseAILocale: String? = null,
+    @field:JsonAlias("defaultResponseAILocale") val defaultResponseAILocale: String? = null,
 )
 
 /**
  * Backup and restore configuration
  */
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class BackupConfig(
-    val autoBackupEnabled: Boolean = true,
-    val autoBackupOnStartup: Boolean = false,
-    val autoBackupIntervalHours: Int = 24,
-    val maxAutoBackupsToKeep: Int = 5,
-    val createBackupOnUpgrade: Boolean = true,
-    val createBackupBeforeRestore: Boolean = true,
+    @field:JsonAlias("autoBackupEnabled") val autoBackupEnabled: Boolean = true,
+    @field:JsonAlias("autoBackupOnStartup") val autoBackupOnStartup: Boolean = false,
+    @field:JsonAlias("autoBackupIntervalHours") val autoBackupIntervalHours: Int = 24,
+    @field:JsonAlias("maxAutoBackupsToKeep") val maxAutoBackupsToKeep: Int = 5,
+    @field:JsonAlias("createBackupOnUpgrade") val createBackupOnUpgrade: Boolean = true,
+    @field:JsonAlias("createBackupBeforeRestore") val createBackupBeforeRestore: Boolean = true,
 )
 
 /**
  * RAG (Retrieval-Augmented Generation) configuration.
  * Controls how relevant documents are retrieved from the knowledge base.
  */
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class RagConfig(
     /** Maximum number of documents to retrieve from vector search */
-    val vectorSearchMaxResults: Int = 20,
+    @field:JsonAlias("vectorSearchMaxResults") val vectorSearchMaxResults: Int = 20,
     /** Minimum similarity score for vector search results (0.0 to 1.0) */
-    val vectorSearchMinScore: Double = 0.3,
+    @field:JsonAlias("vectorSearchMinScore") val vectorSearchMinScore: Double = 0.3,
     /** Maximum number of final documents to return after hybrid fusion */
-    val hybridMaxResults: Int = 15,
+    @field:JsonAlias("hybridMaxResults") val hybridMaxResults: Int = 15,
     /** RRF constant for rank fusion algorithm (standard value is 60) */
-    val rankFusionConstant: Int = 60,
+    @field:JsonAlias("rankFusionConstant") val rankFusionConstant: Int = 60,
     /** Use absolute file paths in citations (true) or relative filenames (false) */
-    val useAbsolutePathInCitations: Boolean = true,
+    @field:JsonAlias("useAbsolutePathInCitations") val useAbsolutePathInCitations: Boolean = true,
 )
 
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class ProviderModelConfig(
     @field:JsonDeserialize(using = CommaSeparatedListDeserializer::class)
+    @field:JsonAlias("availableModels")
     val availableModels: List<String> = emptyList(),
-    val utilityModel: String = "",
-    val utilityModelTimeoutSeconds: Long = 45,
-    val embeddingModel: String = "",
-    val visionModel: String = "",
-    val imageModel: String = "",
+    @field:JsonAlias("utilityModel") val utilityModel: String = "",
+    @field:JsonAlias("utilityModelTimeoutSeconds") val utilityModelTimeoutSeconds: Long = 45,
+    @field:JsonAlias("embeddingModel") val embeddingModel: String = "",
+    @field:JsonAlias("visionModel") val visionModel: String = "",
+    @field:JsonAlias("imageModel") val imageModel: String = "",
 )
 
 data class ModelsConfig(
@@ -581,7 +595,17 @@ object AppConfig {
         val path = resolveOrCreateConfigPath()
         return if (path != null && path.isRegularFile()) {
             val raw = Files.readString(path)
-            val interpolated = interpolateEnv(raw)
+            // TODO: Remove migration call in v1.2.25 — only needed for users upgrading from pre-snake_case config files
+            val migrated = migrateCamelToSnake(raw)
+            if (migrated != raw) {
+                try {
+                    Files.writeString(path, migrated)
+                    log.info("Migrated $path from camelCase to snake_case keys")
+                } catch (e: Exception) {
+                    log.displayError("Failed to write migrated config at $path", e)
+                }
+            }
+            val interpolated = interpolateEnv(migrated)
             try {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
@@ -591,6 +615,58 @@ object AppConfig {
         } else {
             envFallback()
         }
+    }
+
+    /**
+     * One-time migration: rewrites camelCase YAML keys to snake_case in-place.
+     * This handles users upgrading from versions prior to the snake_case config format.
+     *
+     * TODO: Remove this method in v1.2.25 along with all @field:JsonAlias camelCase annotations.
+     */
+    private fun migrateCamelToSnake(yaml: String): String {
+        val replacements = mapOf(
+            "availableModels:" to "available_models:",
+            "utilityModel:" to "utility_model:",
+            "utilityModelTimeoutSeconds:" to "utility_model_timeout_seconds:",
+            "embeddingModel:" to "embedding_model:",
+            "visionModel:" to "vision_model:",
+            "imageModel:" to "image_model:",
+            "maxCharsPerChunk:" to "max_chars_per_chunk:",
+            "chunkOverlap:" to "chunk_overlap:",
+            "preferredDim:" to "preferred_dim:",
+            "baseDelayMs:" to "base_delay_ms:",
+            "perRequestSleepMs:" to "per_request_sleep_ms:",
+            "maxFileBytes:" to "max_file_bytes:",
+            "concurrentIndexingThreads:" to "concurrent_indexing_threads:",
+            "supportedExtensions:" to "supported_extensions:",
+            "binaryExtensions:" to "binary_extensions:",
+            "excludeFileNames:" to "exclude_file_names:",
+            "commonExcludes:" to "common_excludes:",
+            "projectTypes:" to "project_types:",
+            "excludePaths:" to "exclude_paths:",
+            "maxTokens:" to "max_tokens:",
+            "summarizationThreshold:" to "summarization_threshold:",
+            "enableAsyncSummarization:" to "enable_async_summarization:",
+            "summarizationTimeoutSeconds:" to "summarization_timeout_seconds:",
+            "defaultResponseAILocale:" to "default_response_ai_locale:",
+            "topP:" to "top_p:",
+            "autoBackupEnabled:" to "auto_backup_enabled:",
+            "autoBackupOnStartup:" to "auto_backup_on_startup:",
+            "autoBackupIntervalHours:" to "auto_backup_interval_hours:",
+            "maxAutoBackupsToKeep:" to "max_auto_backups_to_keep:",
+            "createBackupOnUpgrade:" to "create_backup_on_upgrade:",
+            "createBackupBeforeRestore:" to "create_backup_before_restore:",
+            "vectorSearchMaxResults:" to "vector_search_max_results:",
+            "vectorSearchMinScore:" to "vector_search_min_score:",
+            "hybridMaxResults:" to "hybrid_max_results:",
+            "rankFusionConstant:" to "rank_fusion_constant:",
+            "useAbsolutePathInCitations:" to "use_absolute_path_in_citations:",
+        )
+        var result = yaml
+        for ((camel, snake) in replacements) {
+            result = result.replace(camel, snake)
+        }
+        return result
     }
 
     /**

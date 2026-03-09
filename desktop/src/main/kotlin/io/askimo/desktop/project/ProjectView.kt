@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -69,10 +71,12 @@ import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.chat.CreationMode
 import io.askimo.desktop.chat.chatInputField
+import io.askimo.desktop.common.components.linkButton
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -81,6 +85,8 @@ import io.askimo.desktop.session.SessionActionMenu
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
 import org.koin.java.KoinJavaComponent.get
+import java.awt.Desktop
+import java.net.URI
 import kotlin.collections.emptyList
 import kotlin.let
 
@@ -210,200 +216,13 @@ fun projectView(
                 )
             }
 
-            var isExpanded by remember { mutableStateOf(currentProject.knowledgeSources.isEmpty()) }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                colors = ComponentColors.bannerCardColors(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                ) {
-                    // Collapsible header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Left side - clickable expansion area (only if sources exist)
-                        if (currentProject.knowledgeSources.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable(
-                                        onClick = { isExpanded = !isExpanded },
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                    )
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp),
-                                )
-
-                                Text(
-                                    text = stringResource("projects.sources.count", currentProject.knowledgeSources.size),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-
-                                val rotation by animateFloatAsState(
-                                    targetValue = if (isExpanded) 180f else 0f,
-                                    label = "rotation",
-                                )
-
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = if (isExpanded) {
-                                        stringResource("projects.sources.collapse")
-                                    } else {
-                                        stringResource("projects.sources.expand")
-                                    },
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.rotate(rotation),
-                                )
-
-                                themedTooltip(
-                                    text = stringResource("projects.sources.info.tooltip"),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .pointerHoverIcon(PointerIcon.Hand),
-                                    )
-                                }
-                            }
-                        } else {
-                            // Show empty state with explanation
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp),
-                                )
-
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource("projects.sources.empty.title"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = stringResource("projects.sources.empty.description"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    )
-                                }
-
-                                // Info icon with explanation tooltip
-                                themedTooltip(
-                                    text = stringResource("projects.sources.info.tooltip"),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .pointerHoverIcon(PointerIcon.Hand),
-                                    )
-                                }
-                            }
-                        }
-
-                        // Right side - Add button (always visible)
-                        themedTooltip(text = stringResource("projects.sources.add.tooltip")) {
-                            IconButton(
-                                onClick = {
-                                    showAddReferenceMaterialDialog = true
-                                },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = stringResource("projects.sources.add.tooltip"),
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                    }
-
-                    // Expandable content (only show if sources exist)
-                    if (currentProject.knowledgeSources.isNotEmpty()) {
-                        AnimatedVisibility(
-                            visible = isExpanded,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                HorizontalDivider(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                )
-
-                                // Group knowledge sources by type
-                                val groupedSources = currentProject.knowledgeSources.groupBy { source ->
-                                    when (source) {
-                                        is LocalFoldersKnowledgeSourceConfig -> stringResource("projects.sources.type.local_folders")
-                                        is LocalFilesKnowledgeSourceConfig -> stringResource("projects.sources.type.local_files")
-                                        is UrlKnowledgeSourceConfig -> stringResource("projects.sources.type.urls")
-                                    }
-                                }
-
-                                // Display each group
-                                groupedSources.forEach { (groupName, sources) ->
-                                    // Group header
-                                    Text(
-                                        text = groupName,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                                    )
-
-                                    // Items in this group
-                                    sources.forEach { source ->
-                                        knowledgeSourceItem(
-                                            source = source,
-                                            onDelete = {
-                                                viewModel.deleteKnowledgeSource(source)
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Knowledge Sources Panel
+            knowledgeSourcesPanel(
+                currentProject = currentProject,
+                viewModel = viewModel,
+                onShowAddDialog = { showAddReferenceMaterialDialog = true },
+                modifier = Modifier.padding(bottom = 24.dp),
+            )
 
             // MCP Integrations Panel
             mcpIntegrationsPanel(
@@ -664,6 +483,219 @@ private fun sessionCard(
 }
 
 @Composable
+private fun knowledgeSourcesPanel(
+    currentProject: Project,
+    viewModel: ProjectViewModel,
+    onShowAddDialog: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var isExpanded by remember(currentProject.id) {
+        mutableStateOf(currentProject.knowledgeSources.isEmpty())
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = ComponentColors.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            // Collapsible header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Left side - clickable expansion area (only if sources exist)
+                if (currentProject.knowledgeSources.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(
+                                onClick = { isExpanded = !isExpanded },
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() },
+                            )
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp),
+                        )
+
+                        Text(
+                            text = stringResource("projects.sources.count", currentProject.knowledgeSources.size),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        val rotation by animateFloatAsState(
+                            targetValue = if (isExpanded) 180f else 0f,
+                            label = "rotation",
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isExpanded) {
+                                stringResource("projects.sources.collapse")
+                            } else {
+                                stringResource("projects.sources.expand")
+                            },
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.rotate(rotation),
+                        )
+
+                        themedTooltip(text = stringResource("projects.sources.info.tooltip")) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                            )
+                        }
+                    }
+                } else {
+                    // Empty state
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp),
+                        )
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = stringResource("projects.sources.empty.title"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = stringResource("projects.sources.empty.description"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            )
+                        }
+
+                        themedTooltip(text = stringResource("projects.sources.info.tooltip")) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand),
+                            )
+                        }
+                    }
+                }
+
+                // Right side - Guide link + Add button (always visible)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    linkButton(
+                        onClick = {
+                            try {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/rag/"))
+                                }
+                            } catch (_: Exception) {}
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = stringResource("projects.sources.guide"),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+
+                    themedTooltip(text = stringResource("projects.sources.add.tooltip")) {
+                        IconButton(
+                            onClick = onShowAddDialog,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource("projects.sources.add.tooltip"),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Expandable content
+            if (currentProject.knowledgeSources.isNotEmpty()) {
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        )
+
+                        val groupedSources = currentProject.knowledgeSources.groupBy { source ->
+                            when (source) {
+                                is LocalFoldersKnowledgeSourceConfig -> stringResource("projects.sources.type.local_folders")
+                                is LocalFilesKnowledgeSourceConfig -> stringResource("projects.sources.type.local_files")
+                                is UrlKnowledgeSourceConfig -> stringResource("projects.sources.type.urls")
+                            }
+                        }
+
+                        groupedSources.forEach { (groupName, sources) ->
+                            Text(
+                                text = groupName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                            )
+                            sources.forEach { source ->
+                                knowledgeSourceItem(
+                                    source = source,
+                                    onDelete = { viewModel.deleteKnowledgeSource(source) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun knowledgeSourceItem(
     source: KnowledgeSourceConfig,
     onDelete: () -> Unit = {},
@@ -845,19 +877,45 @@ private fun mcpIntegrationsPanel(
                     }
                 }
 
-                // Right side - Add button (always visible)
-                themedTooltip(text = stringResource("mcp.integrations.add.tooltip")) {
-                    IconButton(
+                // Right side - Guide link + Add button (always visible)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    linkButton(
                         onClick = {
-                            showAddDialog = true
+                            try {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
+                                }
+                            } catch (_: Exception) {}
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource("mcp.integrations.add.tooltip"),
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
                         )
+                        Text(
+                            text = stringResource("mcp.servers.guide"),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+
+                    themedTooltip(text = stringResource("mcp.integrations.add.tooltip")) {
+                        IconButton(
+                            onClick = {
+                                showAddDialog = true
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource("mcp.integrations.add.tooltip"),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
@@ -1002,11 +1060,48 @@ private fun mcpInstanceCard(
                 if (instance.parameterValues.isNotEmpty()) {
                     val displayParams = instance.parameterValues.entries.take(2)
                     displayParams.forEach { (key, value) ->
-                        Text(
-                            text = "$key: ${value.take(200)}${if (value.length > 200) "..." else ""}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        )
+                        val isSecret = SecretDetector.isSecret(key, serverDefinition)
+                        var showSecret by remember(key) { mutableStateOf(false) }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = if (isSecret) {
+                                    "$key: ${if (showSecret) value else "••••••••"}"
+                                } else {
+                                    "$key: ${value.take(200)}${if (value.length > 200) "..." else ""}"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            if (isSecret) {
+                                IconButton(
+                                    onClick = { showSecret = !showSecret },
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Icon(
+                                        imageVector = if (showSecret) {
+                                            Icons.Default.Visibility
+                                        } else {
+                                            Icons.Default.VisibilityOff
+                                        },
+                                        contentDescription = stringResource(
+                                            if (showSecret) {
+                                                "mcp.integrations.password.hide"
+                                            } else {
+                                                "mcp.integrations.password.show"
+                                            },
+                                        ),
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
