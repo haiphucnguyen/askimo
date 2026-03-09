@@ -97,6 +97,41 @@ class ResourceContentProcessor(
     }
 
     /**
+     * Create all TextSegments for a file, choosing line-aware or plain chunking automatically.
+     * Returns null if the file has no extractable content or produces no valid chunks.
+     */
+    fun createSegmentsForFile(filePath: Path): List<TextSegment>? {
+        val text = extractTextFromFile(filePath) ?: return null
+        if (text.isBlank()) return null
+
+        return if (isTextFile(filePath)) {
+            val chunks = chunkTextWithLineNumbers(text)
+            if (chunks.isEmpty()) return null
+            chunks.mapIndexed { idx, chunkData ->
+                createTextSegmentWithMetadata(
+                    chunk = chunkData.text,
+                    filePath = filePath,
+                    chunkIndex = idx,
+                    totalChunks = chunks.size,
+                    startLine = chunkData.startLine,
+                    endLine = chunkData.endLine,
+                )
+            }
+        } else {
+            val chunks = chunkText(text)
+            if (chunks.isEmpty()) return null
+            chunks.mapIndexed { idx, chunk ->
+                createTextSegmentWithMetadata(
+                    chunk = chunk,
+                    filePath = filePath,
+                    chunkIndex = idx,
+                    totalChunks = chunks.size,
+                )
+            }
+        }
+    }
+
+    /**
      * Process web content and create text segments with metadata.
      * Chunks the HTML/text content and creates segments with URL metadata.
      */

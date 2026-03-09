@@ -113,24 +113,13 @@ data class IndexingConfig(
     val customExcludes: Set<String> = emptySet(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     @field:JsonAlias("supportedExtensions")
-    val supportedExtensions: Set<String> = setOf(
-        "java", "kt", "kts", "py", "js", "ts", "jsx", "tsx", "go", "rs", "c", "cpp", "h", "hpp",
-        "cs", "rb", "php", "swift", "scala", "groovy", "sh", "bash", "yaml", "yml", "json", "xml",
-        "md", "txt", "gradle", "properties", "toml", "pdf",
-    ),
+    val supportedExtensions: Set<String> = setOf(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     @field:JsonAlias("binaryExtensions")
     val binaryExtensions: Set<String> = setOf(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     @field:JsonAlias("excludeFileNames")
-    val excludeFileNames: Set<String> = setOf(
-        // System files
-        ".DS_Store", "Thumbs.db", "desktop.ini",
-        // Lock files
-        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock", "Gemfile.lock",
-        // IDE files
-        ".project", ".classpath", ".factorypath",
-    ),
+    val excludeFileNames: Set<String> = setOf(),
     val projectTypes: List<ProjectType> = listOf(
         ProjectType(
             name = "Gradle",
@@ -446,8 +435,8 @@ object AppConfig {
         indexing:
           max_file_bytes:              ${'$'}{ASKIMO_EMBED_MAX_FILE_BYTES:2000000}
           concurrent_indexing_threads: ${'$'}{ASKIMO_INDEXING_CONCURRENT_THREADS:10}
-          supported_extensions: ${'$'}{ASKIMO_INDEXING_SUPPORTED_EXTENSIONS:java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml}
-          binary_extensions: ${'$'}{ASKIMO_INDEXING_BINARY_EXTENSIONS:png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,pdf,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc}
+          supported_extensions: ${'$'}{ASKIMO_INDEXING_SUPPORTED_EXTENSIONS:java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml,pdf}
+          binary_extensions: ${'$'}{ASKIMO_INDEXING_BINARY_EXTENSIONS:png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc}
           exclude_file_names: ${'$'}{ASKIMO_INDEXING_EXCLUDE_FILE_NAMES:.DS_Store,Thumbs.db,desktop.ini,package-lock.json,yarn.lock,pnpm-lock.yaml,poetry.lock,Gemfile.lock}
           common_excludes: ${'$'}{ASKIMO_INDEXING_COMMON_EXCLUDES:.git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/}
           filters:
