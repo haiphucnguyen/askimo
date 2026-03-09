@@ -992,9 +992,20 @@ class ChatViewModel(
      * Note: A new session will be created automatically when the first message is sent.
      */
     fun clearChat() {
+        // Cancel any in-flight streaming for the previous session so it does not
+        // bleed its isLoading / isThinking state into the new blank session.
+        currentJob?.cancel()
+        currentJob = null
+        activeSubscriptions.values.forEach { it.cancel() }
+        activeSubscriptions.clear()
+        stopThinkingTimer()
+
         messages = listOf()
         errorMessage = null
         currentResponse = ""
+        isLoading = false
+        isThinking = false
+        thinkingElapsedSeconds = 0
 
         // Reset pagination state
         currentCursor = null

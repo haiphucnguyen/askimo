@@ -15,8 +15,12 @@ import io.askimo.core.config.IndexingConfig
 import io.askimo.core.config.RetryConfig
 import io.askimo.core.config.ThrottleConfig
 import io.askimo.core.context.AppContextParams
+import io.askimo.core.context.ParamKey
+import io.askimo.core.providers.HasApiKey
+import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.SettingField
 import io.askimo.core.providers.anthropic.AnthropicSettings
 import io.askimo.core.providers.docker.DockerAiSettings
 import io.askimo.core.providers.gemini.GeminiSettings
@@ -48,7 +52,11 @@ class AskimoFeature : Feature {
             ThrottleConfig::class.java,
             IndexingConfig::class.java,
             AppContextParams::class.java,
+            ParamKey::class.java,
             ProviderSettings::class.java,
+            HasApiKey::class.java,
+            HasBaseUrl::class.java,
+            SettingField::class.java,
             OpenAiSettings::class.java,
             AnthropicSettings::class.java,
             GeminiSettings::class.java,

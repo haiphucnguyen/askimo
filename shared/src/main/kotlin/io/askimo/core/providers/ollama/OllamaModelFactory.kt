@@ -116,7 +116,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("ollama")
-            .modelName(AppConfig.models[ModelProvider.OLLAMA].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .modelName(AppConfig.models[ModelProvider.OLLAMA].utilityModel.ifBlank { settings.defaultModel })
             .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OLLAMA].utilityModelTimeoutSeconds))
             .logger(log)
             .logRequests(log.isDebugEnabled)

@@ -61,8 +61,6 @@ class SetParamCommandHandler(
                     .getOrPut(provider) { factory.defaultSettings() }
 
             key.applyTo(appContext.params, providerSettings, valueInput)
-
-            appContext.params.providerSettings[provider] = providerSettings
             appContext.save()
 
             CoroutineScope(Dispatchers.Default).launch {

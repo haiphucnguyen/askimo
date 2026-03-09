@@ -93,7 +93,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .baseUrl(settings.baseUrl)
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models[ModelProvider.XAI].imageModel)
+        .modelName(AppConfig.models[XAI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -103,12 +103,15 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
+        val modelName = AppConfig.models[XAI].utilityModel
+            .ifBlank { settings.defaultModel }
+
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppContext.getInstance().params.model)
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.XAI].utilityModelTimeoutSeconds))
+            .modelName(modelName)
+            .timeout(Duration.ofSeconds(AppConfig.models[XAI].utilityModelTimeoutSeconds))
             .build()
     }
 

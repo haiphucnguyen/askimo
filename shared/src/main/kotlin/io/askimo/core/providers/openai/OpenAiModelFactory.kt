@@ -111,11 +111,13 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
     private fun createSecondaryChatModel(settings: OpenAiSettings): ChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val modelName = AppConfig.models[OPENAI].utilityModel
+            .ifBlank { settings.defaultModel }
 
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models[OPENAI].utilityModel)
+            .modelName(modelName)
             .timeout(Duration.ofSeconds(AppConfig.models[OPENAI].utilityModelTimeoutSeconds))
             .build()
     }

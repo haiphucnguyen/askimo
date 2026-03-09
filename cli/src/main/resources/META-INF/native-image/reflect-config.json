@@ -2804,7 +2804,6 @@
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
-          "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "io.askimo.core.config.ProxyConfig",
@@ -2820,7 +2819,6 @@
           "io.askimo.core.config.IndexingConfig",
           "io.askimo.core.config.DeveloperConfig",
           "io.askimo.core.config.ChatConfig",
-          "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "io.askimo.core.config.ProxyConfig",
@@ -2829,7 +2827,6 @@
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
-      { "name": "getBackup", "parameterTypes": [] },
       { "name": "getChat", "parameterTypes": [] },
       { "name": "getContext", "parameterTypes": [] },
       { "name": "getDeveloper", "parameterTypes": [] },
@@ -2943,44 +2940,6 @@
         "name": "updateRagField should handle useAbsolutePathInCitations",
         "parameterTypes": []
       }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.BackupConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "boolean",
-          "boolean",
-          "int",
-          "int",
-          "boolean",
-          "boolean"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "boolean",
-          "boolean",
-          "int",
-          "int",
-          "boolean",
-          "boolean",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getAutoBackupEnabled", "parameterTypes": [] },
-      { "name": "getAutoBackupIntervalHours", "parameterTypes": [] },
-      { "name": "getAutoBackupOnStartup", "parameterTypes": [] },
-      { "name": "getCreateBackupBeforeRestore", "parameterTypes": [] },
-      { "name": "getCreateBackupOnUpgrade", "parameterTypes": [] },
-      { "name": "getMaxAutoBackupsToKeep", "parameterTypes": [] }
     ]
   },
   {
@@ -3419,15 +3378,7 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "io.askimo.core.providers.ModelProvider",
-          "java.util.Map",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
+      { "name": "<init>", "parameterTypes": [] },
       {
         "name": "<init>",
         "parameterTypes": [
@@ -3453,9 +3404,6 @@
       },
       { "name": "setModel", "parameterTypes": ["java.lang.String"] }
     ]
-  },
-  {
-    "name": "io.askimo.core.context.AppContextParams$$serializer"
   },
   {
     "name": "io.askimo.core.context.AppContextParams$Companion"
@@ -4560,7 +4508,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$IF65kB5h",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$0PyMcV5P",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4794,27 +4742,12 @@
     "methods": [
       {
         "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "java.lang.String",
-          "java.lang.String",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
-      {
-        "name": "<init>",
         "parameterTypes": ["java.lang.String", "java.lang.String"]
       },
       { "name": "getApiKey", "parameterTypes": [] },
       { "name": "getDefaultModel", "parameterTypes": [] },
       { "name": "setApiKey", "parameterTypes": ["java.lang.String"] }
     ]
-  },
-  {
-    "name": "io.askimo.core.providers.openai.OpenAiSettings$$serializer"
-  },
-  {
-    "name": "io.askimo.core.providers.openai.OpenAiSettings$Companion"
   },
   {
     "name": "io.askimo.core.providers.xai.XAiModelFactoryTest",
@@ -6934,7 +6867,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$BZYu1Jix",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$lxecrjiJ",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

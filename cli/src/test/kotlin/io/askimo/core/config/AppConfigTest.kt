@@ -36,28 +36,28 @@ class AppConfigTest {
         assertTrue(models[ModelProvider.OLLAMA].availableModels.isEmpty())
 
         // Anthropic
-        assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].utilityModel)
+        assertEquals("", models[ModelProvider.ANTHROPIC].utilityModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].visionModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].imageModel)
         assertEquals(45L, models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds)
         assertEquals(listOf("claude-opus-4-6", "claude-sonnet-4-6"), models[ModelProvider.ANTHROPIC].availableModels)
 
         // Gemini
-        assertEquals("gemini-2.5-flash-lite", models[ModelProvider.GEMINI].utilityModel)
+        assertEquals("", models[ModelProvider.GEMINI].utilityModel)
         assertEquals("gemini-embedding-001", models[ModelProvider.GEMINI].embeddingModel)
         assertEquals("gemini-1.5-pro", models[ModelProvider.GEMINI].visionModel)
         assertEquals("gemini-2.0-flash-exp", models[ModelProvider.GEMINI].imageModel)
         assertTrue(models[ModelProvider.GEMINI].availableModels.isEmpty())
 
         // OpenAI
-        assertEquals("gpt-3.5-turbo", models[ModelProvider.OPENAI].utilityModel)
+        assertEquals("", models[ModelProvider.OPENAI].utilityModel)
         assertEquals("text-embedding-3-small", models[ModelProvider.OPENAI].embeddingModel)
         assertEquals("gpt-4o", models[ModelProvider.OPENAI].visionModel)
         assertEquals("dall-e-3", models[ModelProvider.OPENAI].imageModel)
         assertTrue(models[ModelProvider.OPENAI].availableModels.isEmpty())
 
         // XAI
-        assertEquals("grok-3-mini", models[ModelProvider.XAI].utilityModel)
+        assertEquals("", models[ModelProvider.XAI].utilityModel)
         assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].visionModel)
         assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].imageModel)
         assertTrue(models[ModelProvider.XAI].availableModels.isEmpty())

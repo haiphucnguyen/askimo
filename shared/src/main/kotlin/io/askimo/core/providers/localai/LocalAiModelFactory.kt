@@ -111,7 +111,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
-            .modelName(AppConfig.models[LOCALAI].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .modelName(AppConfig.models[LOCALAI].utilityModel.ifBlank { settings.defaultModel })
             .timeout(Duration.ofSeconds(AppConfig.models[LOCALAI].utilityModelTimeoutSeconds))
             .build()
     }

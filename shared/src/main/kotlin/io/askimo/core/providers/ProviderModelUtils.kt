@@ -9,12 +9,11 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.util.appJson
+import io.askimo.core.util.httpGet
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.net.HttpURLConnection
-import java.net.URI
 
 object ProviderModelUtils {
     private val log = logger<ProviderModelUtils>()
@@ -39,23 +38,13 @@ object ProviderModelUtils {
         url: String,
         providerName: ModelProvider,
     ): List<String> = try {
-        val uri = URI(url).toURL()
-        val connection = uri.openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.setRequestProperty("Authorization", "Bearer $apiKey")
-        connection.setRequestProperty("Content-Type", "application/json")
-
-        connection.inputStream.bufferedReader().use { reader ->
-            val jsonElement = appJson.parseToJsonElement(reader.readText())
-
-            val data = jsonElement.jsonObject["data"]?.jsonArray.orEmpty()
-
-            data
-                .mapNotNull { element ->
-                    element.jsonObject["id"]?.jsonPrimitive?.contentOrNull
-                }.distinct()
-                .sorted()
-        }
+        val (_, body) = httpGet(url, headers = mapOf("Authorization" to "Bearer $apiKey"))
+        val jsonElement = appJson.parseToJsonElement(body)
+        val data = jsonElement.jsonObject["data"]?.jsonArray.orEmpty()
+        data
+            .mapNotNull { it.jsonObject["id"]?.jsonPrimitive?.contentOrNull }
+            .distinct()
+            .sorted()
     } catch (e: Exception) {
         log.displayError("⚠️ Failed to fetch models from $providerName: ${e.message}", e)
         emptyList()
