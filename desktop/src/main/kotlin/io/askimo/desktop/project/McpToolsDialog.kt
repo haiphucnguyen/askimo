@@ -21,10 +21,15 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -37,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.intent.ToolCategory
@@ -44,6 +51,8 @@ import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolStrategy
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.SecretDetector
+import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
@@ -59,6 +68,7 @@ fun mcpToolsDialog(
     onDismiss: () -> Unit,
 ) {
     val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
+    val serverDefinition = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
     var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -169,11 +179,14 @@ fun mcpToolsDialog(
                                     modifier = Modifier.padding(top = 4.dp),
                                 )
                                 instance.parameterValues.forEach { (key, value) ->
+                                    val isSecret = SecretDetector.isSecret(key, serverDefinition)
+                                    var showSecret by remember(key) { mutableStateOf(false) }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(start = 8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         SelectionContainer {
                                             Text(
@@ -182,13 +195,52 @@ fun mcpToolsDialog(
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                                             )
                                         }
-                                        SelectionContainer {
-                                            Text(
-                                                text = value,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.padding(start = 8.dp),
-                                            )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            if (isSecret && showSecret) {
+                                                SelectionContainer {
+                                                    Text(
+                                                        text = value,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(start = 8.dp),
+                                                    )
+                                                }
+                                            } else {
+                                                Text(
+                                                    text = if (isSecret) "••••••••" else value,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(start = 8.dp),
+                                                )
+                                            }
+                                            if (isSecret) {
+                                                IconButton(
+                                                    onClick = { showSecret = !showSecret },
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .pointerHoverIcon(PointerIcon.Hand),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (showSecret) {
+                                                            Icons.Default.Visibility
+                                                        } else {
+                                                            Icons.Default.VisibilityOff
+                                                        },
+                                                        contentDescription = stringResource(
+                                                            if (showSecret) {
+                                                                "mcp.integrations.password.hide"
+                                                            } else {
+                                                                "mcp.integrations.password.show"
+                                                            },
+                                                        ),
+                                                        modifier = Modifier.size(14.dp),
+                                                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
