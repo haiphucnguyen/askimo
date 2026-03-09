@@ -9,20 +9,14 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.context.AppContext
-import io.askimo.core.event.EventBus
-import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.filter.FilterChain
 import io.askimo.core.rag.state.IndexProgress
-import io.askimo.core.rag.state.IndexStateManager
 import io.askimo.core.rag.state.IndexStatus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.isRegularFile
 
 /**
@@ -31,29 +25,26 @@ import kotlin.io.path.isRegularFile
  * individual files without directory traversal.
  */
 class LocalFilesIndexingCoordinator(
-    private val projectId: String,
-    private val projectName: String,
+    projectId: String,
+    projectName: String,
     override val knowledgeSourceConfig: LocalFilesKnowledgeSourceConfig,
-    private val embeddingStore: EmbeddingStore<TextSegment>,
-    private val embeddingModel: EmbeddingModel,
-    private val appContext: AppContext,
-) : IndexingCoordinator<LocalFilesKnowledgeSourceConfig> {
+    embeddingStore: EmbeddingStore<TextSegment>,
+    embeddingModel: EmbeddingModel,
+    appContext: AppContext,
+) : BaseLocalIndexingCoordinator<LocalFilesKnowledgeSourceConfig>(
+    projectId = projectId,
+    projectName = projectName,
+    embeddingStore = embeddingStore,
+    embeddingModel = embeddingModel,
+    appContext = appContext,
+    stateManagerScope = "files",
+) {
     private val log = logger<LocalFilesIndexingCoordinator>()
 
     private val filePaths = listOf(Paths.get(knowledgeSourceConfig.resourceIdentifier))
 
-    private val resourceContentProcessor = ResourceContentProcessor(appContext)
-    private val stateManager = IndexStateManager(projectId, "files")
-    private val hybridIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
-
-    private val _progress = MutableStateFlow(IndexProgress())
-    override val progress: StateFlow<IndexProgress> = _progress
-
     // Use LOCAL_FILES filter chain which only checks supported extensions
     private val filterChain: FilterChain = FilterChain.LOCAL_FILES
-
-    private val processedFilesCounter = AtomicInteger(0)
-    private val totalFilesCounter = AtomicInteger(0)
 
     /**
      * Check if a file should be excluded from indexing using the filter chain.
@@ -68,7 +59,7 @@ class LocalFilesIndexingCoordinator(
     private suspend fun indexFilesWithProgress(
         paths: List<Path>,
     ): Boolean {
-        _progress.value = IndexProgress(status = IndexStatus.INDEXING)
+        updateProgress { IndexProgress(status = IndexStatus.INDEXING) }
 
         // Reset counters
         processedFilesCounter.set(0)
@@ -98,7 +89,7 @@ class LocalFilesIndexingCoordinator(
             }
 
             totalFilesCounter.set(validFiles.size)
-            _progress.value = _progress.value.copy(totalFiles = validFiles.size)
+            updateProgress { copy(totalFiles = validFiles.size) }
 
             log.info("Found ${validFiles.size} indexable files")
 
@@ -107,87 +98,11 @@ class LocalFilesIndexingCoordinator(
                 indexFile(filePath, fileHashes, previousHashes)
             }
 
-            // Detect and remove deleted files
-            val deletedFiles = detectDeletedFiles(previousHashes, fileHashes)
-            if (deletedFiles.isNotEmpty()) {
-                log.info("Detected ${deletedFiles.size} deleted files, removing from index...")
-                removeDeletedFilesFromIndex(deletedFiles)
-            }
-
-            val skippedFiles = previousHashes.keys.intersect(fileHashes.keys).count { key ->
-                previousHashes[key] == fileHashes[key]
-            }
-
-            // Flush any remaining segments
-            if (!hybridIndexer.flushRemainingSegments()) {
-                _progress.value = _progress.value.copy(
-                    status = IndexStatus.FAILED,
-                    error = "Failed to flush remaining segments",
-                )
-                return false
-            }
-
-            // Save state (only includes current files, deleted files are removed)
-            val processedFiles = fileHashes.size
-            stateManager.saveState(processedFiles, fileHashes.toMap())
-
-            _progress.value = _progress.value.copy(
-                status = IndexStatus.READY,
-                processedFiles = processedFiles,
-            )
-
-            log.info(
-                "Completed indexing for project $projectId: " +
-                    "${processedFiles - skippedFiles} files indexed, " +
-                    "$skippedFiles files skipped (unchanged), " +
-                    "${deletedFiles.size} files removed",
-            )
-            return true
+            return finalizeIndexing(previousHashes, fileHashes)
         } catch (e: Exception) {
             log.error("Indexing failed for project $projectId", e)
-            _progress.value = _progress.value.copy(
-                status = IndexStatus.FAILED,
-                error = e.message ?: "Unknown error",
-            )
+            updateProgress { copy(status = IndexStatus.FAILED, error = e.message ?: "Unknown error") }
             return false
-        }
-    }
-
-    /**
-     * Detect files that were previously indexed but are now deleted.
-     * Returns list of absolute file paths that no longer exist.
-     */
-    private fun detectDeletedFiles(
-        previousHashes: Map<String, String>,
-        currentHashes: Map<String, String>,
-    ): List<String> {
-        // Files in previous state but not in current state = deleted
-        val deletedFiles = previousHashes.keys - currentHashes.keys
-
-        if (deletedFiles.isNotEmpty()) {
-            log.debug("Detected ${deletedFiles.size} deleted files:")
-            deletedFiles.take(5).forEach { log.debug("  - $it") }
-            if (deletedFiles.size > 5) {
-                log.debug("  ... and ${deletedFiles.size - 5} more")
-            }
-        }
-
-        return deletedFiles.toList()
-    }
-
-    /**
-     * Remove deleted files from the hybrid index (vector store + keyword index).
-     */
-    private fun removeDeletedFilesFromIndex(deletedFiles: List<String>) {
-        try {
-            for (absoluteFilePath in deletedFiles) {
-                val filePath = Path.of(absoluteFilePath)
-                hybridIndexer.removeFileFromIndex(filePath)
-                log.debug("Removed deleted file from index: $absoluteFilePath")
-            }
-        } catch (e: Exception) {
-            log.error("Failed to remove deleted files from index", e)
-            throw e
         }
     }
 
@@ -216,80 +131,30 @@ class LocalFilesIndexingCoordinator(
                 return true
             }
 
-            val text = resourceContentProcessor.extractTextFromFile(filePath)
+            val segments = resourceContentProcessor.createSegmentsForFile(filePath)
 
-            // Skip files that can't be read or have blank content
-            if (text.isNullOrBlank()) {
+            // Skip files that can't be read, have blank content, or produce no valid chunks
+            if (segments == null) {
                 log.debug("Skipping file with no extractable content: {}", filePath.fileName)
                 updateProgressAtomic()
                 return true
             }
 
-            // Check if this is a text file where line numbers are meaningful
-            val isTextFile = resourceContentProcessor.isTextFile(filePath)
-
-            if (isTextFile) {
-                // For text files, use line-aware chunking
-                val chunksWithLineNumbers = resourceContentProcessor.chunkTextWithLineNumbers(text)
-
-                // Skip if no valid chunks were created
-                if (chunksWithLineNumbers.isEmpty()) {
-                    log.debug("No valid chunks created for file: {}", filePath.fileName)
-                    updateProgressAtomic()
-                    return true
-                }
-
-                log.debug("Start indexing {} ({} chunks, text file)", filePath.fileName, chunksWithLineNumbers.size)
-                for ((idx, chunkData) in chunksWithLineNumbers.withIndex()) {
-                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
-                        chunk = chunkData.text,
-                        filePath = filePath,
-                        chunkIndex = idx,
-                        totalChunks = chunksWithLineNumbers.size,
-                        startLine = chunkData.startLine,
-                        endLine = chunkData.endLine,
-                    )
-
-                    if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
-                        return false
-                    }
-                }
-
-                val elapsedTime = System.currentTimeMillis() - startTime
-                log.debug(
-                    "Indexed {} ({} chunks, lines tracked) in {}ms",
-                    filePath.fileName,
-                    chunksWithLineNumbers.size,
-                    elapsedTime,
-                )
-            } else {
-                // For binary files (PDF, DOCX, etc.), use regular chunking without line numbers
-                val chunks = resourceContentProcessor.chunkText(text)
-
-                // Skip if no valid chunks were created
-                if (chunks.isEmpty()) {
-                    log.debug("No valid chunks created for file: {}", filePath.fileName)
-                    updateProgressAtomic()
-                    return true
-                }
-
-                log.debug("Start indexing {} ({} chunks, binary file)", filePath.fileName, chunks.size)
-                for ((idx, chunk) in chunks.withIndex()) {
-                    val segment = resourceContentProcessor.createTextSegmentWithMetadata(
-                        chunk = chunk,
-                        filePath = filePath,
-                        chunkIndex = idx,
-                        totalChunks = chunks.size,
-                    )
-
-                    if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
-                        return false
-                    }
-                }
-
-                val elapsedTime = System.currentTimeMillis() - startTime
-                log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, chunks.size, elapsedTime)
+            if (segments.isEmpty()) {
+                log.debug("No valid chunks created for file: {}", filePath.fileName)
+                updateProgressAtomic()
+                return true
             }
+
+            log.debug("Start indexing {} ({} chunks)", filePath.fileName, segments.size)
+            for (segment in segments) {
+                if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
+                    return false
+                }
+            }
+
+            val elapsedTime = System.currentTimeMillis() - startTime
+            log.debug("Indexed {} ({} chunks) in {}ms", filePath.fileName, segments.size, elapsedTime)
 
             updateProgressAtomic()
             return true
@@ -297,26 +162,6 @@ class LocalFilesIndexingCoordinator(
             val elapsedTime = System.currentTimeMillis() - startTime
             log.error("Failed to index file {} after {}ms: {}", filePath.fileName, elapsedTime, e.message, e)
             return false
-        }
-    }
-
-    /**
-     * Update progress atomically
-     */
-    private suspend fun updateProgressAtomic() {
-        val processedFiles = processedFilesCounter.incrementAndGet()
-        val totalFiles = totalFilesCounter.get()
-        _progress.value = _progress.value.copy(processedFiles = processedFiles)
-
-        if (processedFiles % 10 == 0 || processedFiles == totalFiles) {
-            EventBus.emit(
-                IndexingInProgressEvent(
-                    projectId = projectId,
-                    projectName = projectName,
-                    filesIndexed = processedFiles,
-                    totalFiles = totalFiles,
-                ),
-            )
         }
     }
 
