@@ -8,9 +8,7 @@ import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.SettingField
-import kotlinx.serialization.Serializable
 
-@Serializable
 data class OpenAiSettings(
     override var apiKey: String = "",
     override val defaultModel: String = "",

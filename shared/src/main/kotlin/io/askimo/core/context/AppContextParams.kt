@@ -8,9 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.SettingField
-import kotlinx.serialization.Serializable
 
-@Serializable
 data class AppContextParams(
     /**
      * The currently active model provider.

@@ -87,10 +87,13 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
+        val modelName = AppConfig.models[ModelProvider.ANTHROPIC].utilityModel
+            .ifBlank { settings.defaultModel }
+
         return AnthropicChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models[ModelProvider.ANTHROPIC].utilityModel)
+            .modelName(modelName)
             .baseUrl(settings.baseUrl)
             .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds))
             .build()

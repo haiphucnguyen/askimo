@@ -5,8 +5,8 @@
 package io.askimo.core.providers
 
 import io.askimo.core.logging.logger
-import java.net.HttpURLConnection
-import java.net.URI
+import io.askimo.core.util.httpGet
+import io.askimo.core.util.httpPost
 
 /**
  * Result of checking if a model is available on a local provider
@@ -34,13 +34,6 @@ object LocalModelValidator {
     /**
      * Check if a model exists on the provider.
      * This is a generic method that works for both chat models and embedding models.
-     *
-     * @param provider The provider type
-     * @param baseUrl The base URL of the provider
-     * @param modelName The name of the model to check
-     * @param connectTimeoutMs Connection timeout in milliseconds
-     * @param readTimeoutMs Read timeout in milliseconds
-     * @return ModelAvailabilityResult indicating if the model is available
      */
     fun checkModelExists(
         provider: ModelProvider,
@@ -75,27 +68,24 @@ object LocalModelValidator {
         readTimeoutMs: Int,
         canAutoPull: Boolean,
     ): ModelAvailabilityResult {
-        try {
-            val url = URI("${baseUrl.removeSuffix("/")}$apiPath").toURL()
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                this.connectTimeout = connectTimeoutMs
-                this.readTimeout = readTimeoutMs
-                requestMethod = "GET"
-                doInput = true
-            }
+        return try {
+            val url = "${baseUrl.removeSuffix("/")}$apiPath"
+            val (statusCode, body) = httpGet(
+                url = url,
+                connectTimeoutMs = connectTimeoutMs.toLong(),
+                readTimeoutMs = readTimeoutMs.toLong(),
+            )
 
-            val responseCode = conn.responseCode
-            if (responseCode !in 200..299) {
+            if (statusCode !in 200..299) {
                 return ModelAvailabilityResult.ProviderUnreachable(
                     baseUrl = baseUrl,
-                    error = "Cannot connect to $providerName at $baseUrl (HTTP $responseCode)",
+                    error = "Cannot connect to $providerName at $baseUrl (HTTP $statusCode)",
                 )
             }
 
-            val response = conn.inputStream.bufferedReader().use { it.readText() }
-            val hasModel = response.contains("\"id\":\"$modelName\"") || response.contains("\"id\": \"$modelName\"")
+            val hasModel = body.contains("\"id\":\"$modelName\"") || body.contains("\"id\": \"$modelName\"")
 
-            return if (hasModel) {
+            if (hasModel) {
                 ModelAvailabilityResult.Available
             } else {
                 ModelAvailabilityResult.NotAvailable(
@@ -105,7 +95,7 @@ object LocalModelValidator {
             }
         } catch (e: Exception) {
             log.error("Error checking $providerName model: ${e.message}", e)
-            return ModelAvailabilityResult.ProviderUnreachable(
+            ModelAvailabilityResult.ProviderUnreachable(
                 baseUrl = baseUrl,
                 error = e.message ?: "Unknown error",
             )
@@ -121,24 +111,15 @@ object LocalModelValidator {
         connectTimeoutMs: Int = 15_000,
         readTimeoutMs: Int = 600_000,
     ): Boolean = try {
-        val url = URI("${baseUrl.removeSuffix("/")}/api/pull").toURL()
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            this.connectTimeout = connectTimeoutMs
-            this.readTimeout = readTimeoutMs
-            requestMethod = "POST"
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
-        }
-
+        val url = "${baseUrl.removeSuffix("/")}/api/pull"
         val payload = """{"name":"$modelName","stream":false}"""
-        conn.outputStream.use { it.write(payload.toByteArray()) }
-
-        val code = conn.responseCode
-        (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-
-        code in 200..299
+        val (statusCode, _) = httpPost(
+            url = url,
+            body = payload,
+            connectTimeoutMs = connectTimeoutMs.toLong(),
+            readTimeoutMs = readTimeoutMs.toLong(),
+        )
+        statusCode in 200..299
     } catch (e: Exception) {
         log.error("Failed to pull Ollama model $modelName from $baseUrl: ${e.message}", e)
         false

@@ -469,21 +469,21 @@ object AppConfig {
         models:
           anthropic:
             available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-6,claude-sonnet-4-6}
-            utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:claude-sonnet-4-6}
+            utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_ANTHROPIC_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-sonnet-4-6}
             image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-sonnet-4-6}
           gemini:
             available_models: ${'$'}{ASKIMO_GEMINI_MODELS:}
-            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:gemini-2.5-flash-lite}
+            utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
             image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:
             available_models: ${'$'}{ASKIMO_OPENAI_MODELS:}
-            utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:gpt-3.5-turbo}
+            utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
@@ -518,7 +518,7 @@ object AppConfig {
             image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
             available_models: ${'$'}{ASKIMO_XAI_MODELS:}
-            utility_model: ${'$'}{ASKIMO_XAI_UTILITY_MODEL:grok-3-mini}
+            utility_model: ${'$'}{ASKIMO_XAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_XAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}

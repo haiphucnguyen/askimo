@@ -15,7 +15,6 @@ data class GeminiSettings(
     val baseUrl: String = "https://generativelanguage.googleapis.com/v1beta/openai",
     override var apiKey: String = "",
     override val defaultModel: String = "",
-    val enableAiSummarization: Boolean = true,
 ) : ProviderSettings,
     HasApiKey {
     override fun describe(): List<String> = listOf(

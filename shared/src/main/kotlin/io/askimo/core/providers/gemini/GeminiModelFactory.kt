@@ -107,10 +107,13 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
+        val modelName = AppConfig.models[GEMINI].utilityModel
+            .ifBlank { settings.defaultModel }
+
         return GoogleAiGeminiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models[GEMINI].utilityModel)
+            .modelName(modelName)
             .timeout(Duration.ofSeconds(AppConfig.models[GEMINI].utilityModelTimeoutSeconds))
             .build()
     }
