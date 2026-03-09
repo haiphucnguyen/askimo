@@ -5,6 +5,7 @@
 package io.askimo.core.rag.indexing
 
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
+import io.askimo.core.logging.logger
 import io.askimo.core.rag.indexing.providers.LocalFilesIndexingProvider
 import io.askimo.core.rag.indexing.providers.LocalFoldersIndexingProvider
 import io.askimo.core.rag.indexing.providers.UrlIndexingProvider
@@ -23,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object IndexingCoordinatorProviderRegistry {
     private val providers = ConcurrentHashMap<Class<out KnowledgeSourceConfig>, IndexingCoordinatorProvider>()
+
+    private val log = logger<IndexingCoordinatorProvider>()
 
     @Volatile
     private var initialized = false
@@ -58,6 +61,7 @@ object IndexingCoordinatorProviderRegistry {
         registerProvider(LocalFoldersIndexingProvider())
         registerProvider(LocalFilesIndexingProvider())
         registerProvider(UrlIndexingProvider())
+        log.debug("Registered built-in ${providers.size} providers")
     }
 
     /**

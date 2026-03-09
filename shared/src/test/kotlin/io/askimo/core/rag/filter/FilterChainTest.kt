@@ -5,6 +5,7 @@
 package io.askimo.core.rag.filter
 
 import io.askimo.core.config.AppConfig
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -15,6 +16,7 @@ import kotlin.io.path.writeText
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@AskimoTestHome
 class FilterChainTest {
 
     @TempDir

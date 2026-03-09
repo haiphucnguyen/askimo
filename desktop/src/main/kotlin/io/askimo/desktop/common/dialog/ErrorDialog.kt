@@ -38,7 +38,7 @@ fun errorDialog(
     linkText: String? = null,
     linkUrl: String? = null,
 ) {
-    val linkColor = MaterialTheme.colorScheme.primary
+    val linkColor = MaterialTheme.colorScheme.onSurface
 
     ComponentColors.themedAlertDialog(
         onDismissRequest = onDismiss,
