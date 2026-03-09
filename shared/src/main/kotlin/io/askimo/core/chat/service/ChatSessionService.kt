@@ -177,35 +177,28 @@ class ChatSessionService(
      */
     private fun getOrCreateContextForSession(
         sessionId: String,
-        needsVision: Boolean = false,
-    ): SessionChatContext {
-        // Different cache keys for regular vs vision clients
-        val cacheKey = if (needsVision) "${sessionId}_vision" else sessionId
+    ): SessionChatContext = sessionContextCache.get(sessionId) { _ ->
+        val project = projectRepository.findProjectBySessionId(sessionId)
 
-        return sessionContextCache.get(cacheKey) { _ ->
-            val project = projectRepository.findProjectBySessionId(sessionId)
+        // Get or create shared memory - REUSE across both regular and vision clients
+        val sharedMemory = getOrCreateSharedMemory(sessionId)
 
-            // Get or create shared memory - REUSE across both regular and vision clients
-            val sharedMemory = getOrCreateSharedMemory(sessionId)
-
-            // Create content retriever if project has indexed paths
-            val retriever = if (project != null) {
-                log.debug("Session $sessionId belongs to project: ${project.id}")
-                createRetrieverForProject(appContext.createUtilityClient(), project)
-            } else {
-                null
-            }
-
-            // Create client with vision support if requested
-            val chatClient = appContext.createStatefulChatSession(
-                sessionId = sessionId,
-                retriever = retriever,
-                memory = sharedMemory,
-                useVision = needsVision,
-            )
-
-            SessionChatContext(chatClient, sharedMemory)
+        // Create content retriever if project has indexed paths
+        val retriever = if (project != null) {
+            log.debug("Session $sessionId belongs to project: ${project.id}")
+            createRetrieverForProject(appContext.createUtilityClient(), project)
+        } else {
+            null
         }
+
+        // Create client with vision support if requested
+        val chatClient = appContext.createStatefulChatSession(
+            sessionId = sessionId,
+            retriever = retriever,
+            memory = sharedMemory,
+        )
+
+        SessionChatContext(chatClient, sharedMemory)
     }
 
     /**
@@ -214,13 +207,11 @@ class ChatSessionService(
      * Both regular and vision clients share the same conversation memory.
      *
      * @param sessionId The session ID
-     * @param needsVision Whether to get a vision-capable client (default: false)
      * @return ChatClient for the session (vision-capable if requested)
      */
     fun getOrCreateClientForSession(
         sessionId: String,
-        needsVision: Boolean = false,
-    ): ChatClient = getOrCreateContextForSession(sessionId, needsVision).chatClient
+    ): ChatClient = getOrCreateContextForSession(sessionId).chatClient
 
     /**
      * Create a content retriever for a project if it has indexed paths.

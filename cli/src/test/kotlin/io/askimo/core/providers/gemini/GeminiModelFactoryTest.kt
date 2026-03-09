@@ -38,10 +38,9 @@ class GeminiModelFactoryTest {
         val apiKey = System.getenv("GEMINI_API_KEY")
             ?: throw IllegalStateException("GEMINI_API_KEY environment variable is required")
 
-        val settings = GeminiSettings(apiKey = apiKey)
+        val settings = GeminiSettings(apiKey = apiKey, defaultModel = "gemini-2.5-flash")
 
         return GeminiModelFactory().create(
-            model = "gemini-2.5-flash",
             settings = settings,
             toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,

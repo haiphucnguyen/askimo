@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
@@ -396,10 +395,10 @@ class SettingsViewModel(
 
                     // Pre-select the previously selected model if it exists in the available models
                     val previousModel = appContext.params.getModel(provider)
-                    if (previousModel.isNotBlank() && models.contains(previousModel)) {
-                        pendingModelForNewProvider = previousModel
+                    pendingModelForNewProvider = if (previousModel.isNotBlank() && models.contains(previousModel)) {
+                        previousModel
                     } else {
-                        pendingModelForNewProvider = null
+                        null
                     }
                 }
             }
@@ -462,17 +461,12 @@ class SettingsViewModel(
                         appContext.params.currentProvider = provider
                         appContext.setProviderSetting(provider, newSettings)
 
-                        // Use the pending model selected by user, or fall back to existing/default
-                        var model = pendingModelForNewProvider
-                        if (model.isNullOrBlank()) {
-                            model = appContext.params.getModel(provider)
-                            if (model.isBlank()) {
-                                model = newSettings.defaultModel
-                            }
-                        }
+                        // Use the pending model selected by user, or fall back to the provider's defaultModel
+                        val model = pendingModelForNewProvider?.takeIf { it.isNotBlank() }
+                            ?: appContext.params.getModel(provider)
                         appContext.params.model = model
 
-                        AppContextConfigManager.save(appContext.params)
+                        appContext.save()
                         CoroutineScope(Dispatchers.Default).launch {
                             EventBus.emit(ModelChangedEvent(provider, model))
                         }
@@ -610,7 +604,7 @@ class SettingsViewModel(
                     appContext.params.model = newModel
 
                     // Persist the change to disk
-                    AppContextConfigManager.save(appContext.params)
+                    appContext.save()
 
                     CoroutineScope(Dispatchers.Default).launch {
                         EventBus.emit(ModelChangedEvent(appContext.getActiveProvider(), newModel))

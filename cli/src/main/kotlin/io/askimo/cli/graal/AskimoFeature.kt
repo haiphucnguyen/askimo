@@ -14,6 +14,17 @@ import io.askimo.core.config.EmbeddingConfig
 import io.askimo.core.config.IndexingConfig
 import io.askimo.core.config.RetryConfig
 import io.askimo.core.config.ThrottleConfig
+import io.askimo.core.context.AppContextParams
+import io.askimo.core.providers.NoopProviderSettings
+import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.docker.DockerAiSettings
+import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
+import io.askimo.core.providers.localai.LocalAiSettings
+import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
 import org.graalvm.nativeimage.hosted.Feature
@@ -36,6 +47,17 @@ class AskimoFeature : Feature {
             RetryConfig::class.java,
             ThrottleConfig::class.java,
             IndexingConfig::class.java,
+            AppContextParams::class.java,
+            ProviderSettings::class.java,
+            OpenAiSettings::class.java,
+            AnthropicSettings::class.java,
+            GeminiSettings::class.java,
+            XAiSettings::class.java,
+            OllamaSettings::class.java,
+            DockerAiSettings::class.java,
+            LocalAiSettings::class.java,
+            LmStudioSettings::class.java,
+            NoopProviderSettings::class.java,
         )
 
         // Handle LangChain4j internal Jackson deserializer (package-private, cannot import directly)
@@ -67,12 +89,13 @@ class AskimoFeature : Feature {
         )
     }
 
-    /** Register class + all declared constructors & methods for reflection. */
+    /** Register class + all declared constructors, methods, and fields for reflection. */
     private fun registerAllDeclared(vararg classes: Class<*>) {
         classes.forEach { clazz ->
             RuntimeReflection.register(clazz)
             clazz.declaredConstructors.forEach { RuntimeReflection.register(it) }
             clazz.declaredMethods.forEach { RuntimeReflection.register(it) }
+            clazz.declaredFields.forEach { RuntimeReflection.register(it) }
         }
     }
 
@@ -88,6 +111,10 @@ class AskimoFeature : Feature {
 
                 current.declaredMethods.forEach { method ->
                     RuntimeReflection.register(method)
+                }
+
+                current.declaredFields.forEach { field ->
+                    RuntimeReflection.register(field)
                 }
 
                 current = current.superclass

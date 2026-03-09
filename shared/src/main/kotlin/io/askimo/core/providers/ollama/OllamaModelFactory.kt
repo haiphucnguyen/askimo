@@ -60,7 +60,6 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: OllamaSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -78,7 +77,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
                 .builder()
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .baseUrl(settings.baseUrl)
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
@@ -87,7 +86,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = ModelProvider.OLLAMA,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),

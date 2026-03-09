@@ -74,7 +74,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import io.askimo.core.VersionInfo
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.getConfigInfo
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
@@ -139,7 +138,7 @@ private fun aiConfigInfo(onConfigureAiProvider: () -> Unit) {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         appContext.params.model = newModel
-                        AppContextConfigManager.save(appContext.params)
+                        appContext.save()
                         EventBus.emit(ModelChangedEvent(configInfo.provider, newModel))
                     } catch (e: Exception) {
                         log.error("Failed to change model to $newModel for provider ${configInfo.provider}", e)

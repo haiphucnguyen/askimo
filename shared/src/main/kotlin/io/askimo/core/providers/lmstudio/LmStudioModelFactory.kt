@@ -60,7 +60,6 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: LmStudioSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -77,7 +76,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .builder()
                 .baseUrl(settings.baseUrl)
                 .apiKey("lm-studio")
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -88,7 +87,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = ModelProvider.LMSTUDIO,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),

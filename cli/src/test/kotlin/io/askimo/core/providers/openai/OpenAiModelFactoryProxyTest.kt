@@ -82,7 +82,6 @@ class OpenAiModelFactoryProxyTest {
     }
 
     private fun createChatClient(settings: OpenAiSettings = createDefaultSettings()): ChatClient = OpenAiModelFactory().create(
-        model = "gpt-3.5-turbo",
         settings = settings,
         retriever = null,
         executionMode = ExecutionMode.STATELESS_MODE,
@@ -91,7 +90,7 @@ class OpenAiModelFactoryProxyTest {
     private fun createDefaultSettings(): OpenAiSettings {
         val apiKey = System.getenv("OPENAI_API_KEY")
             ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
-        return OpenAiSettings(apiKey = apiKey)
+        return OpenAiSettings(apiKey = apiKey, defaultModel = "gpt-3.5-turbo")
     }
 
     private fun sendPromptAndGetResponse(chatClient: ChatClient, prompt: String): String {

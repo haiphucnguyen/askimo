@@ -78,7 +78,6 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: DockerAiSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -96,7 +95,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .builder()
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .baseUrl(settings.baseUrl)
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -106,7 +105,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = ModelProvider.DOCKER,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),

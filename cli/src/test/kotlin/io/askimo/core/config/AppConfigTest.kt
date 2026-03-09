@@ -4,12 +4,17 @@
  */
 package io.askimo.core.config
 
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.util.AskimoHome
 import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.nio.file.Files
 
 /**
  * Tests for AppConfig field update methods.
@@ -189,9 +194,6 @@ class AppConfigTest {
         config = updateChatFieldHelper(config, "sampling.temperature", 0.7)
         assertEquals(0.7, config.sampling.temperature, 0.001)
 
-        config = updateChatFieldHelper(config, "sampling.topP", 0.9)
-        assertEquals(0.9, config.sampling.topP, 0.001)
-
         config = updateChatFieldHelper(config, "sampling.enabled", false)
         assertFalse(config.sampling.enabled)
 
@@ -200,7 +202,6 @@ class AppConfigTest {
         assertEquals(0.8, config.summarizationThreshold, 0.001)
         assertFalse(config.enableAsyncSummarization)
         assertEquals(0.7, config.sampling.temperature, 0.001)
-        assertEquals(0.9, config.sampling.topP, 0.001)
         assertFalse(config.sampling.enabled)
     }
 
@@ -383,5 +384,92 @@ class AppConfigTest {
 
         config = updateProxyFieldHelper(config, "type", "HTTPS")
         assertEquals(ProxyType.HTTPS, config.type)
+    }
+
+    // saveContext tests
+
+    @Test
+    fun `saveContext updates in-memory cache with given params`() {
+        val params = AppContextParams().apply {
+            currentProvider = ModelProvider.OPENAI
+            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "", defaultModel = "gpt-4o")
+        }
+
+        AppConfig.saveContext(params)
+
+        assertEquals(ModelProvider.OPENAI, AppConfig.context.currentProvider)
+        assertEquals("gpt-4o", AppConfig.context.getModel(ModelProvider.OPENAI))
+    }
+
+    @Test
+    fun `saveContext with no-op params stores UNKNOWN provider`() {
+        val params = AppContextParams.noOp()
+
+        AppConfig.saveContext(params)
+
+        assertEquals(ModelProvider.UNKNOWN, AppConfig.context.currentProvider)
+        assertTrue(AppConfig.context.providerSettings.isEmpty())
+    }
+
+    @Test
+    fun `saveContext sanitizes API key before persisting to disk`() {
+        val params = AppContextParams().apply {
+            currentProvider = ModelProvider.OPENAI
+            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "sk-super-secret-key")
+        }
+
+        AppConfig.saveContext(params)
+
+        // The in-memory context must NOT contain the raw API key — SecureSessionManager
+        // replaces it with a placeholder or encrypted form before writing to disk.
+        val storedKey = (AppConfig.context.providerSettings[ModelProvider.OPENAI] as? OpenAiSettings)?.apiKey
+        assertNotEquals("sk-super-secret-key", storedKey)
+    }
+
+    @Test
+    fun `saveContext persists context to YAML config file on disk`() {
+        val configFile = AskimoHome.base().resolve("askimo.yml")
+
+        val params = AppContextParams().apply {
+            currentProvider = ModelProvider.OPENAI
+            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(apiKey = "", defaultModel = "gpt-4o-mini")
+        }
+
+        AppConfig.saveContext(params)
+
+        assertTrue(Files.exists(configFile), "Config file should exist after saveContext")
+        val yaml = Files.readString(configFile)
+        assertTrue(yaml.contains("OPENAI"), "Persisted YAML should reference OPENAI provider")
+    }
+
+    @Test
+    fun `saveContext preserves existing config fields after save`() {
+        // Verify that saving context does not wipe out unrelated config sections
+        val originalEmbeddingModel = AppConfig.models[ModelProvider.OLLAMA].embeddingModel
+
+        val params = AppContextParams().apply {
+            currentProvider = ModelProvider.OPENAI
+        }
+
+        AppConfig.saveContext(params)
+
+        assertEquals(originalEmbeddingModel, AppConfig.models[ModelProvider.OLLAMA].embeddingModel)
+    }
+
+    @Test
+    fun `saveContext overwrites a previously saved context`() {
+        val firstParams = AppContextParams().apply {
+            currentProvider = ModelProvider.OPENAI
+            providerSettings[ModelProvider.OPENAI] = OpenAiSettings(defaultModel = "gpt-4o")
+        }
+        AppConfig.saveContext(firstParams)
+        assertEquals(ModelProvider.OPENAI, AppConfig.context.currentProvider)
+
+        val secondParams = AppContextParams().apply {
+            currentProvider = ModelProvider.GEMINI
+        }
+        AppConfig.saveContext(secondParams)
+
+        assertEquals(ModelProvider.GEMINI, AppConfig.context.currentProvider)
     }
 }

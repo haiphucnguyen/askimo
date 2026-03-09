@@ -43,7 +43,6 @@ interface ChatModelFactory<T : ProviderSettings> {
     /**
      * Creates a chat service instance with the specified parameters.
      *
-     * @param model The identifier of the model to create
      * @param settings Provider-specific settings to configure the model
      * @param retriever Optional content retriever for RAG (Retrieval-Augmented Generation).
      * If provided, the factory will create a RetrievalAugmentor internally with appropriate
@@ -57,7 +56,6 @@ interface ChatModelFactory<T : ProviderSettings> {
      */
     fun create(
         sessionId: String? = null,
-        model: String,
         settings: T,
         toolProvider: ToolProvider? = null,
         retriever: ContentRetriever? = null,

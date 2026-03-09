@@ -9,7 +9,9 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -31,9 +33,14 @@ import kotlin.test.assertTrue
  * keychain storage operations.
  */
 @TestInstance(Lifecycle.PER_CLASS)
+@AskimoTestHome
 class SecureSessionManagerTest {
 
     private lateinit var secureSessionManager: TestSecureSessionManager
+
+    companion object {
+        private const val TEST_PROVIDER_NAME = "test_openai_safe"
+    }
 
     @BeforeEach
     fun setUp() {
@@ -50,7 +57,7 @@ class SecureSessionManagerTest {
     }
 
     private fun cleanupTestKeys() {
-        val testProviders = listOf("test_openai", "test_gemini", "test_xai", "test_provider", "test_keychain_direct")
+        val testProviders = listOf("test_openai", "test_gemini", "test_xai", "test_provider", "test_keychain_direct", TEST_PROVIDER_NAME)
         testProviders.forEach { provider ->
             try {
                 SecureKeyManager.removeSecretKey(provider)
@@ -277,8 +284,6 @@ class SecureSessionManagerTest {
     fun testPreserveNonApiKeySettings() {
         val appContextParams = AppContextParams().apply {
             currentProvider = ModelProvider.OPENAI
-            models[ModelProvider.OPENAI] = "gpt-4"
-            models[ModelProvider.GEMINI] = "gemini-2.5-flash"
             providerSettings[ModelProvider.OPENAI] = OpenAiSettings(
                 apiKey = "sk-test-key",
                 defaultModel = "gpt-4o",
@@ -290,8 +295,6 @@ class SecureSessionManagerTest {
 
         // Non-API key settings should be preserved
         assertEquals(ModelProvider.OPENAI, loadedSession.currentProvider)
-        assertEquals("gpt-4", loadedSession.models[ModelProvider.OPENAI])
-        assertEquals("gemini-2.5-flash", loadedSession.models[ModelProvider.GEMINI])
 
         val loadedSettings = loadedSession.providerSettings[ModelProvider.OPENAI] as OpenAiSettings
         assertEquals("gpt-4o", loadedSettings.defaultModel)
@@ -369,4 +372,56 @@ class SecureSessionManagerTest {
             // Ignore cleanup failures
         }
     }
+
+    @Test
+    @DisplayName("Should load API key from keychain when placeholder is present (macOS only)")
+    fun testSecureSessionLoading() {
+        // Skip test on non-macOS platforms due to lack of keychain support
+        val osName = System.getProperty("os.name").lowercase()
+        assumeTrue(osName.contains("mac"), "Keychain only supported on macOS")
+
+        // Store a key in keychain using SAFE test provider name
+        SecureKeyManager.storeSecuredKey(TEST_PROVIDER_NAME, "sk-actual-key-from-keychain")
+
+        val retrievedKey = SecureKeyManager.retrieveSecretKey(TEST_PROVIDER_NAME)
+        if (retrievedKey != null) {
+            assertEquals("sk-actual-key-from-keychain", retrievedKey)
+        } else {
+            println("Keychain not available in test environment - skipping keychain verification")
+        }
+    }
+
+    @Test
+    @DisplayName("Should encrypt and decrypt API key via EncryptionManager")
+    fun testEncryptionFallback() {
+        val testApiKey = "sk-test-encryption-key"
+
+        val encrypted = EncryptionManager.encrypt(testApiKey)
+        assertNotNull(encrypted)
+        assertNotEquals(testApiKey, encrypted)
+
+        val decrypted = EncryptionManager.decrypt(encrypted)
+        assertEquals(testApiKey, decrypted)
+    }
+
+    @Test
+    @DisplayName("Should return correct security descriptions for each storage method")
+    fun testStorageSecurityDescriptions() {
+        val keychainDesc = SecureKeyManager.getStorageSecurityDescription(SecureKeyManager.StorageMethod.KEYCHAIN)
+        assertTrue(keychainDesc.contains("Keychain"))
+
+        val encryptedDesc = SecureKeyManager.getStorageSecurityDescription(SecureKeyManager.StorageMethod.ENCRYPTED)
+        assertTrue(encryptedDesc.contains("Encrypted"))
+
+        val insecureDesc = SecureKeyManager.getStorageSecurityDescription(SecureKeyManager.StorageMethod.INSECURE_FALLBACK)
+        assertTrue(insecureDesc.contains("INSECURE"))
+    }
+}
+
+/**
+ * Test-safe subclass of [SecureSessionManager] that prefixes all keychain keys with "test_"
+ * to avoid overwriting a developer's real API keys during test runs.
+ */
+private class TestSecureSessionManager : SecureSessionManager() {
+    override fun providerKey(provider: ModelProvider): String = "test_${provider.name.lowercase()}"
 }

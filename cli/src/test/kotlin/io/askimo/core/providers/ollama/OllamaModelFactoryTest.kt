@@ -52,10 +52,9 @@ class OllamaModelFactoryTest {
     }
 
     private fun createChatService(baseUrl: String): ChatClient {
-        val settings = OllamaSettings(baseUrl = baseUrl)
+        val settings = OllamaSettings(baseUrl = baseUrl, defaultModel = "qwen2.5:0.5b")
 
         return OllamaModelFactory().create(
-            model = "qwen2.5:0.5b",
             settings = settings,
             toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,

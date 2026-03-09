@@ -4,6 +4,18 @@
  */
 package io.askimo.core.providers
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import io.askimo.core.providers.anthropic.AnthropicSettings
+import io.askimo.core.providers.docker.DockerAiSettings
+import io.askimo.core.providers.gemini.GeminiSettings
+import io.askimo.core.providers.lmstudio.LmStudioSettings
+import io.askimo.core.providers.localai.LocalAiSettings
+import io.askimo.core.providers.ollama.OllamaSettings
+import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.xai.XAiSettings
+
 /**
  * Marker interface for model provider-specific configuration settings.
  *
@@ -12,72 +24,41 @@ package io.askimo.core.providers
  * (like OpenAI, Ollama, etc.). Each implementation contains the specific
  * parameters required by its respective provider.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = OpenAiSettings::class, name = "openai"),
+    JsonSubTypes.Type(value = AnthropicSettings::class, name = "anthropic"),
+    JsonSubTypes.Type(value = GeminiSettings::class, name = "gemini"),
+    JsonSubTypes.Type(value = XAiSettings::class, name = "xai"),
+    JsonSubTypes.Type(value = OllamaSettings::class, name = "ollama"),
+    JsonSubTypes.Type(value = DockerAiSettings::class, name = "docker"),
+    JsonSubTypes.Type(value = LocalAiSettings::class, name = "localai"),
+    JsonSubTypes.Type(value = LmStudioSettings::class, name = "lmstudio"),
+)
 interface ProviderSettings {
     val defaultModel: String
 
-    /**
-     * Returns a human-readable description of the provider settings.
-     *
-     * This method returns a list of strings where each string represents
-     * a key configuration parameter in a formatted way. Implementations
-     * should include the most important settings and may hide sensitive
-     * information (like API keys) for security reasons.
-     *
-     * @return A list of strings describing the current configuration settings
-     */
+    @JsonIgnore
     fun describe(): List<String>
 
-    /**
-     * Returns the list of configurable fields for this provider's settings.
-     */
+    @JsonIgnore
     fun getFields(): List<SettingField>
 
-    /**
-     * Updates a field value in the settings and returns the updated settings.
-     */
     fun updateField(fieldName: String, value: String): ProviderSettings
 
-    /**
-     * Validates that this provider's settings are properly configured.
-     * Each provider can implement its own validation logic.
-     *
-     * @return true if settings are valid and provider is ready to use, false otherwise
-     */
+    @JsonIgnore
     fun validate(): Boolean = true
 
-    /**
-     * Returns helpful guidance text to display when settings validation fails.
-     * Each provider can provide specific instructions for setup.
-     *
-     * @param messageResolver Function to resolve i18n message keys. For CLI, pass default English resolver.
-     * @return Help text explaining how to properly configure this provider
-     */
+    @JsonIgnore
     fun getSetupHelpText(messageResolver: (String) -> String): String = "Please check your provider configuration."
 
-    /**
-     * Returns the configuration fields required to set up this provider.
-     * Each provider can define what fields users need to configure.
-     *
-     * @param messageResolver Function to resolve i18n message keys. For CLI, pass default English resolver.
-     * @return List of configuration fields for UI display
-     */
+    @JsonIgnore
     fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = emptyList()
 
-    /**
-     * Applies configuration field values to create updated settings.
-     * Each provider handles how to merge new values with existing settings.
-     *
-     * @param fields Map of field names to their new values
-     * @return Updated settings with the new field values applied
-     */
+    @JsonIgnore
     fun applyConfigFields(fields: Map<String, String>): ProviderSettings = this
 
-    /**
-     * Creates a deep copy of these settings to avoid shared mutable state.
-     * Used for defensive copying when loading/saving sessions.
-     *
-     * @return A new instance with the same values
-     */
+    @JsonIgnore
     fun deepCopy(): ProviderSettings
 }
 

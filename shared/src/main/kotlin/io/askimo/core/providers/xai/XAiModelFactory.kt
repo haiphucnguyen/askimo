@@ -50,7 +50,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: XAiSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -69,7 +68,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
                 .baseUrl(settings.baseUrl)
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -78,7 +77,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = XAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
