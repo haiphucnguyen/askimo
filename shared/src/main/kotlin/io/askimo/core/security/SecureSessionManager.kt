@@ -15,7 +15,7 @@ import io.askimo.core.security.SecureKeyManager.StorageMethod
  * Secure wrapper for AppContextParams that handles API key storage/retrieval transparently.
  * API keys are stored in system keychain or encrypted storage instead of plain text.
  */
-class SecureSessionManager {
+open class SecureSessionManager {
     private val log = logger<SecureSessionManager>()
 
     companion object {
@@ -29,7 +29,6 @@ class SecureSessionManager {
     fun loadSecureSession(appContextParams: AppContextParams): AppContextParams {
         // Clone the session params with deep copy of provider settings
         val secureParams = appContextParams.copy(
-            models = appContextParams.models.toMutableMap(),
             providerSettings = appContextParams.providerSettings.mapValues { (_, settings) ->
                 deepCopyProviderSettings(settings)
             }.toMutableMap(),
@@ -51,7 +50,6 @@ class SecureSessionManager {
     fun saveSecureSession(appContextParams: AppContextParams): AppContextParams {
         // Clone the session params with deep copy of provider settings
         val sanitizedParams = appContextParams.copy(
-            models = appContextParams.models.toMutableMap(),
             providerSettings = appContextParams.providerSettings.mapValues { (_, settings) ->
                 deepCopyProviderSettings(settings)
             }.toMutableMap(),
@@ -67,6 +65,12 @@ class SecureSessionManager {
         return sanitizedParams
     }
 
+    /**
+     * Returns the keychain storage key for a given provider.
+     * Override in tests to use a safe prefix and avoid touching real keychain entries.
+     */
+    protected open fun providerKey(provider: ModelProvider): String = provider.name.lowercase()
+
     private fun loadApiKeyForProvider(
         provider: ModelProvider,
         settings: HasApiKey,
@@ -79,7 +83,7 @@ class SecureSessionManager {
         }
 
         // Try to load from secure storage
-        val secureKey = SecureKeyManager.retrieveSecretKey(provider.name.lowercase())
+        val secureKey = SecureKeyManager.retrieveSecretKey(providerKey(provider))
         if (secureKey != null) {
             settings.apiKey = secureKey
             log.trace("Loaded API key for ${provider.name} from secure storage")
@@ -108,7 +112,7 @@ class SecureSessionManager {
             return
         }
 
-        val result = SecureKeyManager.storeSecuredKey(provider.name.lowercase(), apiKey)
+        val result = SecureKeyManager.storeSecuredKey(providerKey(provider), apiKey)
 
         if (result.success) {
             // Replace with appropriate placeholder

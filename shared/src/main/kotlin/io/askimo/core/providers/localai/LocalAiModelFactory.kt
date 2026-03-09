@@ -54,7 +54,6 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: LocalAiSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -73,7 +72,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .baseUrl(settings.baseUrl)
                 .apiKey("localai")
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .timeout(Duration.ofMinutes(5))
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
@@ -82,7 +81,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = LOCALAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
@@ -98,7 +97,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
     ): ImageModel = OpenAiImageModel.builder()
         .apiKey("localai")
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models[ModelProvider.LOCALAI].imageModel)
+        .modelName(AppConfig.models[LOCALAI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -112,8 +111,8 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
-            .modelName(AppConfig.models[ModelProvider.LOCALAI].utilityModel.ifBlank { AppContext.getInstance().params.model })
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.LOCALAI].utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[LOCALAI].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[LOCALAI].utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -127,7 +126,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
     override fun createEmbeddingModel(settings: LocalAiSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models[ModelProvider.LOCALAI].embeddingModel
+        val modelName = AppConfig.models[LOCALAI].embeddingModel
 
         log.display(
             """
@@ -147,5 +146,5 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: LocalAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.LOCALAI].embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: LocalAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[LOCALAI].embeddingModel)
 }

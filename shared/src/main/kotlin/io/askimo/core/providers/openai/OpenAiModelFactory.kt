@@ -60,7 +60,6 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: OpenAiSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -79,7 +78,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .builder()
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -88,7 +87,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = OPENAI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),

@@ -37,7 +37,6 @@ class AnthropicModelFactoryTest {
             mode = ExecutionMode.STATELESS_MODE,
             AppContextParams(
                 currentProvider = ModelProvider.ANTHROPIC,
-                models = mutableMapOf(ModelProvider.ANTHROPIC to "claude-sonnet-4-5"),
             ),
         )
     }
@@ -48,11 +47,10 @@ class AnthropicModelFactoryTest {
         val apiKey = System.getenv("ANTHROPIC_API_KEY")
             ?: throw IllegalStateException("ANTHROPIC_API_KEY environment variable is required")
 
-        val settings = AnthropicSettings(apiKey = apiKey)
+        val settings = AnthropicSettings(apiKey = apiKey, defaultModel = "claude-sonnet-4-6")
 
         val chatClient: ChatClient =
             AnthropicModelFactory().create(
-                model = "claude-sonnet-4-5",
                 settings = settings,
                 toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
                 retriever = null,

@@ -535,8 +535,6 @@ private fun samplingSettingsCard() {
                         onValueChange = { newValue ->
                             sliderValue = newValue
                             AppConfig.updateField("chat.sampling.temperature", newValue.toDouble())
-                            // Keep topP at 1.0
-                            AppConfig.updateField("chat.sampling.topP", 1.0)
                         },
                         valueRange = 0f..1f,
                     )

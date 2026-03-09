@@ -38,10 +38,9 @@ class OpenAiModelFactoryTest {
         val apiKey = System.getenv("OPENAI_API_KEY")
             ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
 
-        val settings = OpenAiSettings(apiKey = apiKey)
+        val settings = OpenAiSettings(apiKey = apiKey, defaultModel = "gpt-3.5-turbo")
 
         return OpenAiModelFactory().create(
-            model = "gpt-3.5-turbo",
             settings = settings,
             toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,

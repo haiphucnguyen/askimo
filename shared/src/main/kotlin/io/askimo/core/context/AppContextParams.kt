@@ -4,16 +4,14 @@
  */
 package io.askimo.core.context
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
+import io.askimo.core.providers.SettingField
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AppContextParams(
-    /**
-     * Maps each provider to its last-used model name.
-     */
-    var models: MutableMap<ModelProvider, String> = mutableMapOf(),
     /**
      * The currently active model provider.
      */
@@ -28,23 +26,26 @@ data class AppContextParams(
     }
 
     /**
-     * Current model for the active provider.
+     * Current model for the active provider — reads/writes defaultModel on the active provider's settings.
      */
+    @get:JsonIgnore
+    @set:JsonIgnore
     var model: String
-        get() = models[currentProvider] ?: ""
+        get() = getModel(currentProvider)
         set(value) {
-            models[currentProvider] = value
+            val settings = providerSettings[currentProvider] ?: return
+            providerSettings[currentProvider] = settings.updateField(SettingField.DEFAULT_MODEL, value)
         }
 
     /**
-     * Gets the last-used model for a given provider.
+     * Gets the last-used model for a given provider, sourced from its defaultModel setting.
      */
-    fun getModel(provider: ModelProvider): String = models[provider] ?: ""
+    fun getModel(provider: ModelProvider): String = providerSettings[provider]?.defaultModel ?: ""
 
     override fun toString(): String {
         val maskedSettings = providerSettings.mapValues { (_, settings) ->
             settings.toString()
         }
-        return "AppContextParams(models=$models, currentProvider=$currentProvider, providerSettings=$maskedSettings)"
+        return "AppContextParams(currentProvider=$currentProvider, providerSettings=$maskedSettings)"
     }
 }

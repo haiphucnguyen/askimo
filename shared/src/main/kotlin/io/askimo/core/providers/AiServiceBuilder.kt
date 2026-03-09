@@ -45,7 +45,7 @@ object AiServiceBuilder {
      */
     fun buildChatClient(
         sessionId: String?,
-        model: String,
+        settings: ProviderSettings,
         provider: ModelProvider,
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
@@ -59,17 +59,17 @@ object AiServiceBuilder {
 
         if (toolsRequested) {
             // Check if we've already tested this model's tool support
-            if (!ModelCapabilitiesCache.hasTestedToolSupport(provider, model)) {
+            if (!ModelCapabilitiesCache.hasTestedToolSupport(provider, settings.defaultModel)) {
                 // Not tested yet - test and save result
-                val supportsTools = testToolSupport(model, chatModel, executionMode)
-                ModelCapabilitiesCache.setToolSupport(provider, model, supportsTools)
+                val supportsTools = testToolSupport(settings.defaultModel, chatModel, executionMode)
+                ModelCapabilitiesCache.setToolSupport(provider, settings.defaultModel, supportsTools)
             }
             // else: already tested, supportsTools value is cached (true or false)
         }
 
         return buildChatClientInternal(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = provider,
             chatModel = chatModel,
             secondaryChatModel = secondaryChatModel,
@@ -144,7 +144,7 @@ object AiServiceBuilder {
      */
     private fun buildChatClientInternal(
         sessionId: String?,
-        model: String,
+        settings: ProviderSettings,
         provider: ModelProvider,
         chatModel: StreamingChatModel,
         secondaryChatModel: ChatModel,
@@ -175,7 +175,7 @@ object AiServiceBuilder {
                     chatRequest,
                     memoryId,
                     provider,
-                    model,
+                    settings,
                 )
             }
 

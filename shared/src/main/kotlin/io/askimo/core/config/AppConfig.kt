@@ -9,14 +9,18 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.askimo.core.context.AppContextParams
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.logging.displayError
@@ -24,6 +28,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.security.SecureKeyManager.StorageMethod
+import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.util.AskimoHome
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -235,7 +240,6 @@ data class DeveloperConfig(
 // TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class SamplingConfig(
     val temperature: Double = 0.7,
-    @field:JsonAlias("topP") val topP: Double = 1.0,
     val enabled: Boolean = true,
 )
 
@@ -380,6 +384,7 @@ data class AppConfigData(
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
     val proxy: ProxyConfig = ProxyConfig(),
+    val context: AppContextParams = AppContextParams.noOp(),
 )
 
 object AppConfig {
@@ -391,6 +396,7 @@ object AppConfig {
     val backup: BackupConfig get() = delegate.backup
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
+    val context: AppContextParams get() = delegate.context
 
     /**
      * Proxy configuration with password loaded from secure storage.
@@ -438,7 +444,7 @@ object AppConfig {
     }
 
     private val mapper: ObjectMapper =
-        ObjectMapper(YAMLFactory())
+        ObjectMapper(YAMLFactory().disable(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID))
             .registerModule(
                 KotlinModule.Builder()
                     .withReflectionCacheSize(512)
@@ -582,6 +588,11 @@ object AppConfig {
         developer:
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:true}
           active:  ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
+
+        context:
+          current_provider: ${'$'}{ASKIMO_CONTEXT_CURRENT_PROVIDER:UNKNOWN}
+          models: {}
+          provider_settings: {}
         """.trimIndent()
 
     // Lazy, thread-safe init
@@ -605,7 +616,9 @@ object AppConfig {
                     log.displayError("Failed to write migrated config at $path", e)
                 }
             }
-            val interpolated = interpolateEnv(migrated)
+            // Migrate session JSON -> context: block in YAML (one-time, only if context: is absent)
+            val withContext = migrateSessionJsonToYaml(migrated, path)
+            val interpolated = interpolateEnv(withContext)
             try {
                 mapper.readValue<AppConfigData>(interpolated)
             } catch (e: Exception) {
@@ -649,7 +662,6 @@ object AppConfig {
             "enableAsyncSummarization:" to "enable_async_summarization:",
             "summarizationTimeoutSeconds:" to "summarization_timeout_seconds:",
             "defaultResponseAILocale:" to "default_response_ai_locale:",
-            "topP:" to "top_p:",
             "autoBackupEnabled:" to "auto_backup_enabled:",
             "autoBackupOnStartup:" to "auto_backup_on_startup:",
             "autoBackupIntervalHours:" to "auto_backup_interval_hours:",
@@ -667,6 +679,163 @@ object AppConfig {
             result = result.replace(camel, snake)
         }
         return result
+    }
+
+    /**
+     * One-time migration: reads the legacy JSON session file and injects its content
+     * as a `context:` block into the YAML string, then persists the updated YAML.
+     *
+     * Only runs when:
+     *  - The YAML does not already contain a non-empty `context:` section, AND
+     *  - The JSON session file exists and is parseable.
+     *
+     * The JSON uses `__type` with full class names; the YAML uses `type` with short names.
+     */
+    private fun migrateSessionJsonToYaml(yaml: String, yamlPath: Path): String {
+        // Skip if context block already has real content beyond the defaults
+        if (hasContextSection(yaml)) return yaml
+
+        val sessionFile = AskimoHome.sessionFile()
+        if (!sessionFile.toFile().exists()) return yaml
+
+        return try {
+            val jsonMapper = ObjectMapper()
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            val root = jsonMapper.readTree(Files.readString(sessionFile)) as? ObjectNode
+                ?: return yaml
+
+            val contextYaml = buildContextYaml(root)
+            val merged = mergeContextIntoYaml(yaml, contextYaml)
+
+            Files.writeString(yamlPath, merged)
+            log.info("Migrated session JSON from $sessionFile into context: block in $yamlPath")
+            merged
+        } catch (e: Exception) {
+            log.displayError("Failed to migrate session JSON to YAML context block", e)
+            yaml
+        }
+    }
+
+    /** Returns true if the YAML already has a populated context section (not just empty maps/defaults). */
+    private fun hasContextSection(yaml: String): Boolean {
+        val contextIdx = yaml.indexOf("\ncontext:")
+        if (contextIdx < 0) return false
+        // Check if any meaningful sub-key follows beyond empty maps
+        val afterContext = yaml.substring(contextIdx).lines().drop(1).take(10)
+        return afterContext.any { line ->
+            val trimmed = line.trimStart()
+            trimmed.isNotEmpty() && !trimmed.startsWith("#") &&
+                // Not just the empty-map defaults we wrote in DEFAULT_YAML
+                trimmed != "models: {}" && trimmed != "provider_settings: {}" &&
+                trimmed != "current_provider: UNKNOWN" && trimmed != "current_provider: \${ASKIMO_CONTEXT_CURRENT_PROVIDER:UNKNOWN}"
+        }
+    }
+
+    /**
+     * Maps the kotlinx.serialization full class name (used as `__type` in JSON)
+     * to the short Jackson type name (used as `type` in YAML).
+     */
+    private val jsonTypeToYamlType = mapOf(
+        "io.askimo.core.providers.openai.OpenAiSettings" to "openai",
+        "io.askimo.core.providers.anthropic.AnthropicSettings" to "anthropic",
+        "io.askimo.core.providers.gemini.GeminiSettings" to "gemini",
+        "io.askimo.core.providers.xai.XAiSettings" to "xai",
+        "io.askimo.core.providers.ollama.OllamaSettings" to "ollama",
+        "io.askimo.core.providers.docker.DockerAiSettings" to "docker",
+        "io.askimo.core.providers.localai.LocalAiSettings" to "localai",
+        "io.askimo.core.providers.lmstudio.LmStudioSettings" to "lmstudio",
+    )
+
+    /** Builds an indented YAML `context:` block from the parsed JSON session root. */
+    private fun buildContextYaml(root: ObjectNode): String {
+        val sb = StringBuilder()
+        sb.appendLine("context:")
+
+        // current_provider
+        val currentProvider = root.get("currentProvider")?.asText("UNKNOWN") ?: "UNKNOWN"
+        sb.appendLine("  current_provider: $currentProvider")
+
+        // Build a lookup of provider -> selected model from the JSON models map.
+        // These values are folded into default_model inside each provider's settings block
+        // rather than kept as a separate models: section.
+        val modelsMap: Map<String, String> = root.get("models")
+            ?.takeIf { it.isObject }
+            ?.properties()
+            ?.associate { (provider, modelNode) -> provider to modelNode.asText() }
+            ?: emptyMap()
+
+        // provider_settings — default_model is written from modelsMap, overriding the
+        // (usually empty) defaultModel field that was stored in the JSON settings object
+        val settingsNode = root.get("providerSettings")
+        if (settingsNode != null && settingsNode.isObject && settingsNode.size() > 0) {
+            sb.appendLine("  provider_settings:")
+            settingsNode.properties().forEach { (provider, settingNode) ->
+                if (settingNode !is ObjectNode) return@forEach
+                sb.appendLine("    $provider:")
+                // Resolve short type name from __type
+                val fullType = settingNode.get("__type")?.asText()
+                val shortType = jsonTypeToYamlType[fullType] ?: fullType?.substringAfterLast('.') ?: "unknown"
+                sb.appendLine("      type: $shortType")
+                // Write remaining fields, skipping __type.
+                // default_model is overridden by the value from the models map if present.
+                settingNode.properties().forEach { (key, valueNode) ->
+                    if (key == "__type") return@forEach
+                    val snakeKey = camelToSnakeKey(key)
+                    val yamlValue = if (key == "defaultModel") {
+                        yamlScalar(modelsMap[provider] ?: valueNode.asText())
+                    } else {
+                        yamlScalar(valueNode)
+                    }
+                    sb.appendLine("      $snakeKey: $yamlValue")
+                }
+            }
+        } else {
+            sb.appendLine("  provider_settings: {}")
+        }
+
+        return sb.toString().trimEnd()
+    }
+
+    /** Replaces or appends the `context:` block in the YAML string. */
+    private fun mergeContextIntoYaml(yaml: String, contextYaml: String): String {
+        val contextIdx = yaml.indexOf("\ncontext:")
+        return if (contextIdx >= 0) {
+            // Find end of existing context block (next top-level key or EOF)
+            val afterContext = yaml.indexOf("\n", contextIdx + 1)
+            val nextTopLevel = if (afterContext >= 0) {
+                val rest = yaml.substring(afterContext + 1)
+                val nextIdx = rest.indexOfFirst { it.isLetter() || it == '#' }
+                if (nextIdx >= 0) afterContext + 1 + nextIdx else -1
+            } else {
+                -1
+            }
+
+            if (nextTopLevel >= 0) {
+                yaml.substring(0, contextIdx + 1) + contextYaml + "\n\n" + yaml.substring(nextTopLevel)
+            } else {
+                yaml.substring(0, contextIdx + 1) + contextYaml
+            }
+        } else {
+            yaml.trimEnd() + "\n\n" + contextYaml
+        }
+    }
+
+    /** Converts a camelCase key to snake_case for YAML output. */
+    private fun camelToSnakeKey(key: String): String = key.replace(Regex("([A-Z])")) { "_${it.value.lowercase()}" }
+
+    /** Renders a plain string as a YAML scalar (quoted if it contains special chars or is empty). */
+    private fun yamlScalar(text: String): String = if (text.isEmpty() || text.any { it in ":#{}[]|>&*!,'\"" } || text == "true" || text == "false") {
+        "\"${text.replace("\"", "\\\"")}\""
+    } else {
+        text
+    }
+
+    /** Renders a Jackson JsonNode as a plain YAML scalar (strings quoted if needed). */
+    private fun yamlScalar(node: JsonNode): String = when {
+        node.isNull -> "~"
+        node.isBoolean -> node.asText()
+        node.isNumber -> node.asText()
+        else -> yamlScalar(node.asText())
     }
 
     /**
@@ -796,7 +965,6 @@ object AppConfig {
                 defaultResponseAILocale = System.getenv("ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE")?.takeIf { it.isNotBlank() },
                 sampling = SamplingConfig(
                     temperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
-                    topP = envDouble("ASKIMO_CHAT_SAMPLING_TOP_P", 1.0),
                     enabled = System.getenv("ASKIMO_CHAT_SAMPLING_ENABLED")?.toBoolean() ?: true,
                 ),
             )
@@ -893,6 +1061,30 @@ object AppConfig {
     }
 
     /**
+     * Persists the given [AppContextParams] into the in-memory cache and YAML file,
+     * replacing the current `context:` section.
+     * API keys are sanitised via [SecureSessionManager] before writing to disk.
+     */
+    fun saveContext(params: AppContextParams) {
+        synchronized(this) {
+            val sanitized = SecureSessionManager().saveSecureSession(params)
+            val current = cached ?: loadOnce()
+            cached = current.copy(context = sanitized)
+
+            val configPath = resolveOrCreateConfigPath()
+            if (configPath != null && configPath.exists()) {
+                try {
+                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(cached)
+                    Files.writeString(configPath, updatedYaml)
+                    log.info("Saved context to $configPath")
+                } catch (e: Exception) {
+                    log.displayError("Failed to persist context to config file", e)
+                }
+            }
+        }
+    }
+
+    /**
      * Generic method to update any config field and persist to YAML file.
      *
      * @param path Dot-separated path to the field (e.g., "developer.active", "chat.maxRecentMessages")
@@ -973,7 +1165,6 @@ object AppConfig {
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
         "sampling.temperature" -> config.copy(sampling = config.sampling.copy(temperature = (value as Number).toDouble()))
-        "sampling.topP" -> config.copy(sampling = config.sampling.copy(topP = (value as Number).toDouble()))
         "sampling.enabled" -> config.copy(sampling = config.sampling.copy(enabled = value as Boolean))
         "defaultResponseAILocale" -> {
             val newLocale = if (value is String && value.isBlank()) null else value as? String

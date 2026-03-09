@@ -20,6 +20,7 @@ import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ToolProviderImpl
+import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.telemetry.TelemetryCollector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,8 @@ class AppContext private constructor(
          *
          * @param mode The execution mode for the application
          * @param params Optional parameters to use for initialization. If not provided,
-         *               parameters will be loaded from AppContextConfigManager.
+         *               parameters will be loaded from [AppConfig.context] with API keys
+         *               populated from secure storage.
          * @return The initialized AppContext instance
          */
         fun initialize(mode: ExecutionMode, params: AppContextParams? = null): AppContext {
@@ -61,7 +63,7 @@ class AppContext private constructor(
             executionMode = mode
 
             synchronized(this) {
-                val contextParams = params ?: AppContextConfigManager.load()
+                val contextParams = params ?: SecureSessionManager().loadSecureSession(AppConfig.context)
                 return AppContext(contextParams).also { instance = it }
             }
         }
@@ -177,6 +179,13 @@ class AppContext private constructor(
     }
 
     /**
+     * Persists the current [params] to the YAML config file via [AppConfig].
+     */
+    fun save() {
+        AppConfig.saveContext(params)
+    }
+
+    /**
      * Returns the registered factory for the given provider.
      */
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
@@ -188,11 +197,9 @@ class AppContext private constructor(
                 ?: error("No model factory registered for $provider")
 
         val settings = getOrCreateProviderSettings(provider)
-        val modelName = params.model
 
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
-            model = modelName,
             settings = settings,
             executionMode = ExecutionMode.STATELESS_MODE,
         )
@@ -331,24 +338,15 @@ class AppContext private constructor(
         sessionId: String,
         retriever: ContentRetriever? = null,
         memory: ChatMemory,
-        useVision: Boolean = false,
     ): ChatClient {
         val provider = params.currentProvider
         val factory = getModelFactory(provider)
             ?: error("No model factory registered for $provider")
         val settings = getOrCreateProviderSettings(provider)
 
-        // Select model based on vision requirement
-        val modelName = if (useVision) {
-            getVisionModelForProvider(provider)
-        } else {
-            params.model
-        }
-
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).create(
             sessionId = sessionId,
-            model = modelName,
             settings = settings,
             toolProvider = getToolProvider(),
             retriever = retriever,

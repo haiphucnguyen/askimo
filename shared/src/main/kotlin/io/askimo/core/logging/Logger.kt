@@ -18,5 +18,8 @@ fun Logger.display(message: String) {
 
 fun Logger.displayError(message: String, throwable: Throwable? = null) {
     println(message)
+    throwable?.let {
+        throwable.printStackTrace(System.err)
+    }
     this.error(message, throwable)
 }

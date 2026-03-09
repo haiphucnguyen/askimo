@@ -49,9 +49,9 @@ object ChatRequestTransformers {
         chatRequest: ChatRequest,
         memoryId: Any?,
         provider: ModelProvider,
-        model: String,
+        settings: ProviderSettings,
     ): ChatRequest {
-        val modelKey = ModelCapabilitiesCache.modelKey(provider, model)
+        val modelKey = ModelCapabilitiesCache.modelKey(provider, settings.defaultModel)
         val contextSize = ModelCapabilitiesCache.get(modelKey).contextSize
 
         log.debug("Processing chat request for $modelKey with context size: $contextSize tokens")
@@ -60,7 +60,7 @@ object ChatRequestTransformers {
         val requestWithCustomMessages = buildRequestWithCustomMessages(sessionId, chatRequest, memoryId)
 
         // Then, enforce token budget
-        return enforceTokenBudget(requestWithCustomMessages, contextSize, provider, model)
+        return enforceTokenBudget(requestWithCustomMessages, contextSize, provider, settings.defaultModel)
     }
 
     private fun buildRequestWithCustomMessages(

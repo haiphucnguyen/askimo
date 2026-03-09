@@ -108,7 +108,6 @@ fun ChatClient.sendStreamingMessageWithCallback(
                             AppConfig.chat.sampling.let { samplingConfig ->
                                 builder
                                     .temperature(samplingConfig.temperature)
-                                    .topP(samplingConfig.topP)
                                 hasParams = true
                             }
                         }

@@ -5,7 +5,6 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.context.ParamKey
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
@@ -64,7 +63,7 @@ class SetParamCommandHandler(
             key.applyTo(appContext.params, providerSettings, valueInput)
 
             appContext.params.providerSettings[provider] = providerSettings
-            AppContextConfigManager.save(appContext.params)
+            appContext.save()
 
             CoroutineScope(Dispatchers.Default).launch {
                 EventBus.emit(ModelChangedEvent(provider, ""))

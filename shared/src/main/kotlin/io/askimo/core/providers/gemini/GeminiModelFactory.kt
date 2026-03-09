@@ -55,7 +55,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: GeminiSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -73,7 +72,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                 .builder()
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -82,7 +81,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = GEMINI,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
@@ -98,7 +97,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
     ): ImageModel = GoogleAiGeminiImageModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models[ModelProvider.GEMINI].imageModel)
+        .modelName(AppConfig.models[GEMINI].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -111,8 +110,8 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         return GoogleAiGeminiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(AppConfig.models[ModelProvider.GEMINI].utilityModel)
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.GEMINI].utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[GEMINI].utilityModel)
+            .timeout(Duration.ofSeconds(AppConfig.models[GEMINI].utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -130,7 +129,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         .build()
 
     override fun getEmbeddingTokenLimit(settings: GeminiSettings): Int {
-        val modelName = AppConfig.models[ModelProvider.GEMINI].embeddingModel.lowercase()
+        val modelName = AppConfig.models[GEMINI].embeddingModel.lowercase()
         return when {
             modelName.contains("embedding-001") -> 2048
             modelName.contains("text-embedding-004") -> 2048

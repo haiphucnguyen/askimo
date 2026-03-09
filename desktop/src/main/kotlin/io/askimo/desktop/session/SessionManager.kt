@@ -19,7 +19,6 @@ import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.vision.ImageProcessor
-import io.askimo.core.vision.needsVision
 import io.askimo.desktop.chat.ChatViewModel
 import io.askimo.desktop.chat.CreationMode
 import kotlinx.coroutines.CoroutineScope
@@ -220,7 +219,7 @@ class SessionManager(
             try {
                 if (mode is CreationMode.Chat) {
                     val fullResponse = chatSessionService
-                        .getOrCreateClientForSession(sessionId, userMessage.needsVision())
+                        .getOrCreateClientForSession(sessionId)
                         .sendStreamingMessageWithCallback(
                             projectId = projectId,
                             userMessage = promptWithContext,

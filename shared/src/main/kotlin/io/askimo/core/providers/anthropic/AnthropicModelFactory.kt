@@ -39,7 +39,6 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     override fun create(
         sessionId: String?,
-        model: String,
         settings: AnthropicSettings,
         toolProvider: ToolProvider?,
         retriever: ContentRetriever?,
@@ -57,7 +56,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                 .builder()
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
-                .modelName(model)
+                .modelName(settings.defaultModel)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)
@@ -67,7 +66,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
-            model = model,
+            settings = settings,
             provider = ModelProvider.ANTHROPIC,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),

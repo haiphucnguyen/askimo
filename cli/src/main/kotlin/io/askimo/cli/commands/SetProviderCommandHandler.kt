@@ -5,7 +5,6 @@
 package io.askimo.cli.commands
 
 import io.askimo.core.context.AppContext
-import io.askimo.core.context.AppContextConfigManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.logging.display
@@ -68,14 +67,9 @@ class SetProviderCommandHandler(
             providerSettings,
         )
 
-        var model = appContext.params.getModel(provider)
-        if (model.isBlank()) {
-            // Use default model if available, else the first discovered
-            model = providerSettings.defaultModel
-        }
-        appContext.params.model = model
+        appContext.params.model = appContext.params.getModel(provider)
 
-        AppContextConfigManager.save(appContext.params)
+        appContext.save()
         CoroutineScope(Dispatchers.Default).launch {
             EventBus.emit(ModelChangedEvent(provider, ""))
         }

@@ -44,32 +44,4 @@ object CliInteractiveContext {
             log.debug("CLI session changed from $oldSessionId to $newSessionId")
         }
     }
-
-    /**
-     * Clear the current CLI session reference.
-     * This doesn't delete the session, just clears the in-memory reference.
-     */
-    fun clearCurrentSession() {
-        val sessionId = currentChatSession?.id
-        currentChatSession = null
-        log.debug("Cleared current CLI chat session: $sessionId")
-    }
-
-    /**
-     * Check if there is an active session.
-     * @return true if a session is currently set
-     */
-    fun hasActiveSession(): Boolean = currentChatSession != null
-
-    /**
-     * Get the current session ID, if any.
-     * @return The current session ID, or null if no session is active
-     */
-    fun getCurrentSessionId(): String? = currentChatSession?.id
-
-    /**
-     * Get the current session's directive ID, if any.
-     * @return The current session's directive ID, or null if no session or no directive
-     */
-    fun getCurrentDirectiveId(): String? = currentChatSession?.directiveId
 }

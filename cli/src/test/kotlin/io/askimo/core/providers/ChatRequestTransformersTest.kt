@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.request.ChatRequest
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.util.AskimoHome
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -77,7 +78,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - should have at least the original number of non-system messages
@@ -110,7 +111,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-3.5-turbo",
+                settings = OpenAiSettings(defaultModel = "gpt-3.5-turbo"),
             )
 
             // Then - should have significantly fewer messages than original
@@ -149,7 +150,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-3.5-turbo",
+                settings = OpenAiSettings(defaultModel = "gpt-3.5-turbo"),
             )
 
             // Then - recent messages should be in the result
@@ -192,7 +193,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.ANTHROPIC,
-                model = "claude-3-opus",
+                settings = OpenAiSettings(defaultModel = "claude-3-opus"),
             )
 
             // Then - all messages should be kept (well under budget)
@@ -226,7 +227,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - should work and keep user messages
@@ -253,7 +254,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - should work without session directive
@@ -282,7 +283,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - conversation messages should maintain chronological order
@@ -314,7 +315,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - all short messages should be kept
@@ -342,7 +343,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - should handle without errors
@@ -371,7 +372,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then
@@ -395,7 +396,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.ANTHROPIC,
-                model = "claude-3-opus",
+                settings = OpenAiSettings(defaultModel = "claude-3-opus"),
             )
 
             // Then
@@ -419,7 +420,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.GEMINI,
-                model = "gemini-pro",
+                settings = OpenAiSettings(defaultModel = "gemini-pro"),
             )
 
             // Then
@@ -443,7 +444,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OLLAMA,
-                model = "llama3",
+                settings = OpenAiSettings(defaultModel = "llama3"),
             )
 
             // Then
@@ -468,7 +469,7 @@ class ChatRequestTransformersTest {
                 chatRequest = chatRequest,
                 memoryId = null,
                 provider = ModelProvider.OPENAI,
-                model = "gpt-4",
+                settings = OpenAiSettings(defaultModel = "gpt-4"),
             )
 
             // Then - all system messages should come before any user/ai messages

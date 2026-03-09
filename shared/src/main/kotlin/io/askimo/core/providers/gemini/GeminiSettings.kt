@@ -44,6 +44,7 @@ data class GeminiSettings(
     override fun updateField(fieldName: String, value: String): ProviderSettings = when (fieldName) {
         SettingField.API_KEY -> copy(apiKey = value)
         SettingField.BASE_URL -> copy(baseUrl = value)
+        SettingField.DEFAULT_MODEL -> copy(defaultModel = value)
         else -> this
     }
 

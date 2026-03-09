@@ -39,10 +39,9 @@ class XAiModelFactoryTest {
         val apiKey = System.getenv("X_API_KEY")
             ?: throw IllegalStateException("X_API_KEY environment variable is required")
 
-        val settings = XAiSettings(apiKey = apiKey)
+        val settings = XAiSettings(apiKey = apiKey, defaultModel = "grok-4")
 
         return XAiModelFactory().create(
-            model = "grok-4",
             settings = settings,
             toolProvider = TestToolProviderFactory.createCountEntriesToolProvider(),
             retriever = null,

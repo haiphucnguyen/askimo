@@ -754,8 +754,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -2808,7 +2807,8 @@
           "io.askimo.core.config.BackupConfig",
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
-          "io.askimo.core.config.ProxyConfig"
+          "io.askimo.core.config.ProxyConfig",
+          "io.askimo.core.context.AppContextParams"
         ]
       },
       {
@@ -2824,12 +2824,14 @@
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "io.askimo.core.config.ProxyConfig",
+          "io.askimo.core.context.AppContextParams",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getBackup", "parameterTypes": [] },
       { "name": "getChat", "parameterTypes": [] },
+      { "name": "getContext", "parameterTypes": [] },
       { "name": "getDeveloper", "parameterTypes": [] },
       { "name": "getEmbedding", "parameterTypes": [] },
       { "name": "getIndexing", "parameterTypes": [] },
@@ -2867,6 +2869,30 @@
       },
       {
         "name": "YAML round-trip preserves snake_case field values after updateField",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext overwrites a previously saved context",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext persists context to YAML config file on disk",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext preserves existing config fields after save",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext sanitizes API key before persisting to disk",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext updates in-memory cache with given params",
+        "parameterTypes": []
+      },
+      {
+        "name": "saveContext with no-op params stores UNKNOWN provider",
         "parameterTypes": []
       },
       {
@@ -3335,11 +3361,10 @@
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "methods": [
-      { "name": "<init>", "parameterTypes": ["double", "double", "boolean"] },
+      { "name": "<init>", "parameterTypes": ["double", "boolean"] },
       {
         "name": "<init>",
         "parameterTypes": [
-          "double",
           "double",
           "boolean",
           "int",
@@ -3347,8 +3372,7 @@
         ]
       },
       { "name": "getEnabled", "parameterTypes": [] },
-      { "name": "getTemperature", "parameterTypes": [] },
-      { "name": "getTopP", "parameterTypes": [] }
+      { "name": "getTemperature", "parameterTypes": [] }
     ]
   },
   {
@@ -3399,16 +3423,42 @@
         "name": "<init>",
         "parameterTypes": [
           "int",
-          "java.util.Map",
           "io.askimo.core.providers.ModelProvider",
           "java.util.Map",
           "kotlinx.serialization.internal.SerializationConstructorMarker"
         ]
       },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.providers.ModelProvider",
+          "java.util.Map"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.providers.ModelProvider",
+          "java.util.Map",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
       { "name": "getCurrentProvider", "parameterTypes": [] },
       { "name": "getModel", "parameterTypes": [] },
-      { "name": "getProviderSettings", "parameterTypes": [] }
+      { "name": "getProviderSettings", "parameterTypes": [] },
+      {
+        "name": "setCurrentProvider",
+        "parameterTypes": ["io.askimo.core.providers.ModelProvider"]
+      },
+      { "name": "setModel", "parameterTypes": ["java.lang.String"] }
     ]
+  },
+  {
+    "name": "io.askimo.core.context.AppContextParams$$serializer"
+  },
+  {
+    "name": "io.askimo.core.context.AppContextParams$Companion"
   },
   {
     "name": "io.askimo.core.db.AbstractSQLiteRepository",
@@ -4510,7 +4560,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$FL7sPFJd",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$IF65kB5h",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4598,15 +4648,29 @@
   {
     "name": "io.askimo.core.providers.HasApiKey",
     "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.providers.ModelProvider"
+    "name": "io.askimo.core.providers.ModelProvider",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.core.providers.ModelProvider$Companion"
+  },
+  {
+    "name": "io.askimo.core.providers.ProviderConfigField"
   },
   {
     "name": "io.askimo.core.providers.ProviderSettings",
     "allDeclaredClasses": true,
-    "queryAllPublicMethods": true
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "methods": [{ "name": "getDefaultModel", "parameterTypes": [] }]
+  },
+  {
+    "name": "io.askimo.core.providers.SettingField"
   },
   {
     "name": "io.askimo.core.providers.TestToolProviderFactory",
@@ -4630,6 +4694,12 @@
     ]
   },
   {
+    "name": "io.askimo.core.providers.anthropic.AnthropicSettings"
+  },
+  {
+    "name": "io.askimo.core.providers.docker.DockerAiSettings"
+  },
+  {
     "name": "io.askimo.core.providers.gemini.GeminiModelFactoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4649,6 +4719,15 @@
     ]
   },
   {
+    "name": "io.askimo.core.providers.gemini.GeminiSettings"
+  },
+  {
+    "name": "io.askimo.core.providers.lmstudio.LmStudioSettings"
+  },
+  {
+    "name": "io.askimo.core.providers.localai.LocalAiSettings"
+  },
+  {
     "name": "io.askimo.core.providers.ollama.OllamaModelFactoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4661,6 +4740,9 @@
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "io.askimo.core.providers.ollama.OllamaSettings"
   },
   {
     "name": "io.askimo.core.providers.openai.OpenAiModelFactoryProxyTest",
@@ -4705,6 +4787,36 @@
     ]
   },
   {
+    "name": "io.askimo.core.providers.openai.OpenAiSettings",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": ["java.lang.String", "java.lang.String"]
+      },
+      { "name": "getApiKey", "parameterTypes": [] },
+      { "name": "getDefaultModel", "parameterTypes": [] },
+      { "name": "setApiKey", "parameterTypes": ["java.lang.String"] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.providers.openai.OpenAiSettings$$serializer"
+  },
+  {
+    "name": "io.askimo.core.providers.openai.OpenAiSettings$Companion"
+  },
+  {
     "name": "io.askimo.core.providers.xai.XAiModelFactoryTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4722,6 +4834,9 @@
       { "name": "defaultSettingsTest", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "io.askimo.core.providers.xai.XAiSettings"
   },
   {
     "name": "io.askimo.core.recipes.DefaultRecipeInitializerTest",
@@ -5085,28 +5200,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.security.SecureApiKeyStorageTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] },
-      { "name": "tearDown", "parameterTypes": [] },
-      { "name": "test encryption fallback", "parameterTypes": [] },
-      { "name": "test secure session loading", "parameterTypes": [] },
-      { "name": "test storage security descriptions", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.security.SecureApiKeyStorageTest$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.askimo.core.security.SecureKeyManagerLinuxIntegrationTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -5177,6 +5270,12 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.security.SecureSessionManager",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.askimo.core.security.SecureSessionManagerTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -5189,6 +5288,7 @@
       { "name": "tearDown", "parameterTypes": [] },
       { "name": "testCorruptedEncryptedApiKey", "parameterTypes": [] },
       { "name": "testEncryptedApiKeyHandling", "parameterTypes": [] },
+      { "name": "testEncryptionFallback", "parameterTypes": [] },
       { "name": "testKeychainOperationsDirectly", "parameterTypes": [] },
       { "name": "testKeychainPlaceholderHandling", "parameterTypes": [] },
       { "name": "testLoadSessionWithEmptyApiKeys", "parameterTypes": [] },
@@ -5196,8 +5296,16 @@
       { "name": "testPreserveNonApiKeySettings", "parameterTypes": [] },
       { "name": "testRoundTripSaveAndLoad", "parameterTypes": [] },
       { "name": "testSaveSessionWithApiKeys", "parameterTypes": [] },
-      { "name": "testSessionParamsCopyBehavior", "parameterTypes": [] }
+      { "name": "testSecureSessionLoading", "parameterTypes": [] },
+      { "name": "testSessionParamsCopyBehavior", "parameterTypes": [] },
+      { "name": "testStorageSecurityDescriptions", "parameterTypes": [] }
     ]
+  },
+  {
+    "name": "io.askimo.core.security.SecureSessionManagerTest$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
   },
   {
     "name": "io.askimo.core.security.TestProviderSettings",
@@ -5219,18 +5327,6 @@
   },
   {
     "name": "io.askimo.core.security.TestSecureSessionManager",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.security.TestSecureSessionManager$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.security.TestSecureSessionManager$WhenMappings",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -6185,6 +6281,9 @@
     "name": "kotlin.Float"
   },
   {
+    "name": "kotlin.Function1"
+  },
+  {
     "name": "kotlin.Int"
   },
   {
@@ -6835,7 +6934,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$z0gGZUNI",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$BZYu1Jix",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
