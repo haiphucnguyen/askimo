@@ -120,26 +120,7 @@ data class IndexingConfig(
     ),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     @field:JsonAlias("binaryExtensions")
-    val binaryExtensions: Set<String> = setOf(
-        // Images
-        "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp", "tiff", "tif",
-        // Videos
-        "mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v",
-        // Audio
-        "mp3", "wav", "ogg", "flac", "aac", "m4a", "wma",
-        // Archives
-        "zip", "tar", "gz", "bz2", "7z", "rar", "xz", "tgz",
-        // Executables
-        "exe", "dll", "so", "dylib", "bin", "obj", "o", "a", "lib",
-        // Databases
-        "db", "sqlite", "sqlite3", "mdb", "accdb",
-        // Documents (binary formats - now excluding pdf as we can extract text from it)
-        "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-        // Fonts
-        "ttf", "otf", "woff", "woff2", "eot",
-        // Other binary
-        "class", "jar", "war", "ear", "pyc", "pyo",
-    ),
+    val binaryExtensions: Set<String> = setOf(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)
     @field:JsonAlias("excludeFileNames")
     val excludeFileNames: Set<String> = setOf(
@@ -296,19 +277,6 @@ data class ChatConfig(
 )
 
 /**
- * Backup and restore configuration
- */
-// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
-data class BackupConfig(
-    @field:JsonAlias("autoBackupEnabled") val autoBackupEnabled: Boolean = true,
-    @field:JsonAlias("autoBackupOnStartup") val autoBackupOnStartup: Boolean = false,
-    @field:JsonAlias("autoBackupIntervalHours") val autoBackupIntervalHours: Int = 24,
-    @field:JsonAlias("maxAutoBackupsToKeep") val maxAutoBackupsToKeep: Int = 5,
-    @field:JsonAlias("createBackupOnUpgrade") val createBackupOnUpgrade: Boolean = true,
-    @field:JsonAlias("createBackupBeforeRestore") val createBackupBeforeRestore: Boolean = true,
-)
-
-/**
  * RAG (Retrieval-Augmented Generation) configuration.
  * Controls how relevant documents are retrieved from the knowledge base.
  */
@@ -380,7 +348,6 @@ data class AppConfigData(
     val indexing: IndexingConfig = IndexingConfig(),
     val developer: DeveloperConfig = DeveloperConfig(),
     val chat: ChatConfig = ChatConfig(),
-    val backup: BackupConfig = BackupConfig(),
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
     val proxy: ProxyConfig = ProxyConfig(),
@@ -393,7 +360,6 @@ object AppConfig {
     val indexing: IndexingConfig get() = delegate.indexing
     val developer: DeveloperConfig get() = delegate.developer
     val chat: ChatConfig get() = delegate.chat
-    val backup: BackupConfig get() = delegate.backup
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
     val context: AppContextParams get() = delegate.context
@@ -502,7 +468,6 @@ object AppConfig {
           default_response_ai_locale:    ${'$'}{ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE:}
           sampling:
             temperature: ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
-            top_p:       ${'$'}{ASKIMO_CHAT_SAMPLING_TOP_P:1.0}
             enabled:     ${'$'}{ASKIMO_CHAT_SAMPLING_ENABLED:true}
 
         rag:
@@ -511,14 +476,6 @@ object AppConfig {
           hybrid_max_results:             ${'$'}{ASKIMO_RAG_HYBRID_MAX_RESULTS:15}
           rank_fusion_constant:           ${'$'}{ASKIMO_RAG_RANK_FUSION_CONSTANT:60}
           use_absolute_path_in_citations: ${'$'}{ASKIMO_RAG_USE_ABSOLUTE_PATH:true}
-
-        backup:
-          auto_backup_enabled:          ${'$'}{ASKIMO_BACKUP_AUTO_ENABLED:true}
-          auto_backup_on_startup:       ${'$'}{ASKIMO_BACKUP_ON_STARTUP:false}
-          auto_backup_interval_hours:   ${'$'}{ASKIMO_BACKUP_INTERVAL_HOURS:24}
-          max_auto_backups_to_keep:     ${'$'}{ASKIMO_BACKUP_MAX_TO_KEEP:5}
-          create_backup_on_upgrade:     ${'$'}{ASKIMO_BACKUP_ON_UPGRADE:true}
-          create_backup_before_restore: ${'$'}{ASKIMO_BACKUP_BEFORE_RESTORE:true}
 
         models:
           anthropic:
@@ -662,12 +619,6 @@ object AppConfig {
             "enableAsyncSummarization:" to "enable_async_summarization:",
             "summarizationTimeoutSeconds:" to "summarization_timeout_seconds:",
             "defaultResponseAILocale:" to "default_response_ai_locale:",
-            "autoBackupEnabled:" to "auto_backup_enabled:",
-            "autoBackupOnStartup:" to "auto_backup_on_startup:",
-            "autoBackupIntervalHours:" to "auto_backup_interval_hours:",
-            "maxAutoBackupsToKeep:" to "max_auto_backups_to_keep:",
-            "createBackupOnUpgrade:" to "create_backup_on_upgrade:",
-            "createBackupBeforeRestore:" to "create_backup_before_restore:",
             "vectorSearchMaxResults:" to "vector_search_max_results:",
             "vectorSearchMinScore:" to "vector_search_min_score:",
             "hybridMaxResults:" to "hybrid_max_results:",
@@ -936,7 +887,7 @@ object AppConfig {
                 maxFileBytes = envLong("ASKIMO_EMBED_MAX_FILE_BYTES", 2_000_000L),
                 concurrentIndexingThreads = envInt("ASKIMO_INDEXING_CONCURRENT_THREADS", 10),
                 supportedExtensions = envList("ASKIMO_INDEXING_SUPPORTED_EXTENSIONS", "java,kt,kts,py,js,ts,jsx,tsx,go,rs,c,cpp,h,hpp,cs,rb,php,swift,scala,groovy,sh,bash,yaml,yml,json,xml,md,txt,gradle,properties,toml,pdf"),
-                binaryExtensions = envList("ASKIMO_INDEXING_BINARY_EXTENSIONS", "png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,pdf,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc"),
+                binaryExtensions = envList("ASKIMO_INDEXING_BINARY_EXTENSIONS", "png,jpg,jpeg,gif,svg,ico,webp,bmp,mp4,avi,mov,mkv,mp3,wav,ogg,flac,zip,tar,gz,7z,rar,exe,dll,so,dylib,bin,db,sqlite,doc,docx,xls,xlsx,ppt,pptx,ttf,otf,woff,woff2,class,jar,pyc"),
                 excludeFileNames = envList("ASKIMO_INDEXING_EXCLUDE_FILE_NAMES", ".DS_Store,Thumbs.db,desktop.ini,package-lock.json,yarn.lock,pnpm-lock.yaml,poetry.lock,Gemfile.lock"),
                 commonExcludes = envList("ASKIMO_INDEXING_COMMON_EXCLUDES", ".git/,.svn/,.hg/,.idea/,.vscode/,.DS_Store,*.log,*.tmp,*.temp,*.swp,*.bak,.history/"),
                 filters = FilterConfig(
@@ -967,16 +918,6 @@ object AppConfig {
                     temperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
                     enabled = System.getenv("ASKIMO_CHAT_SAMPLING_ENABLED")?.toBoolean() ?: true,
                 ),
-            )
-
-        val backup =
-            BackupConfig(
-                autoBackupEnabled = System.getenv("ASKIMO_BACKUP_AUTO_ENABLED")?.toBoolean() ?: true,
-                autoBackupOnStartup = System.getenv("ASKIMO_BACKUP_ON_STARTUP")?.toBoolean() ?: false,
-                autoBackupIntervalHours = envInt("ASKIMO_BACKUP_INTERVAL_HOURS", 24),
-                maxAutoBackupsToKeep = envInt("ASKIMO_BACKUP_MAX_TO_KEEP", 5),
-                createBackupOnUpgrade = System.getenv("ASKIMO_BACKUP_ON_UPGRADE")?.toBoolean() ?: true,
-                createBackupBeforeRestore = System.getenv("ASKIMO_BACKUP_BEFORE_RESTORE")?.toBoolean() ?: true,
             )
 
         val rag =
@@ -1057,7 +998,7 @@ object AppConfig {
                 password = env("ASKIMO_PROXY_PASSWORD", ""),
             )
 
-        return AppConfigData(emb, r, t, idx, dev, chat, backup, rag, models, proxy)
+        return AppConfigData(emb, r, t, idx, dev, chat, rag, models, proxy)
     }
 
     /**
@@ -1112,7 +1053,6 @@ object AppConfig {
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
-                "backup" -> current.copy(backup = updateBackupField(current.backup, field, value))
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
                 "proxy" -> current.copy(proxy = updateProxyField(current.proxy, field, value))
@@ -1173,16 +1113,6 @@ object AppConfig {
             )
             config.copy(defaultResponseAILocale = newLocale)
         }
-        else -> config
-    }
-
-    private fun updateBackupField(config: BackupConfig, field: String, value: Any): BackupConfig = when (field) {
-        "autoBackupEnabled" -> config.copy(autoBackupEnabled = value as Boolean)
-        "autoBackupOnStartup" -> config.copy(autoBackupOnStartup = value as Boolean)
-        "autoBackupIntervalHours" -> config.copy(autoBackupIntervalHours = value as Int)
-        "maxAutoBackupsToKeep" -> config.copy(maxAutoBackupsToKeep = value as Int)
-        "createBackupOnUpgrade" -> config.copy(createBackupOnUpgrade = value as Boolean)
-        "createBackupBeforeRestore" -> config.copy(createBackupBeforeRestore = value as Boolean)
         else -> config
     }
 

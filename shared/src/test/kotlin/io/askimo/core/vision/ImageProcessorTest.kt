@@ -27,7 +27,7 @@ class ImageProcessorTest {
         Assertions.assertTrue(result.processedHeight!! <= ImageProcessor.DEFAULT_MAX_HEIGHT)
 
         // Aspect ratio should be maintained (4:3)
-        val aspectRatio = result.processedWidth!!.toDouble() / result.processedHeight!!
+        val aspectRatio = result.processedWidth.toDouble() / result.processedHeight
         Assertions.assertEquals(4.0 / 3.0, aspectRatio, 0.01)
     }
 

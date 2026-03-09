@@ -61,7 +61,7 @@ fun tutorialWizardDialog(
     onSkip: () -> Unit,
 ) {
     var currentStep by remember { mutableStateOf(0) }
-    val totalSteps = 4
+    val totalSteps = 3
     val scrollState = rememberScrollState()
 
     Dialog(onDismissRequest = { /* Prevent dismissal */ }) {
@@ -111,8 +111,7 @@ fun tutorialWizardDialog(
                         when (currentStep) {
                             0 -> tutorialStepQuickStart()
                             1 -> tutorialStepProjects()
-                            2 -> tutorialStepShortcuts()
-                            3 -> tutorialStepNextSteps()
+                            2 -> tutorialStepNextSteps()
                         }
                     }
 
@@ -282,32 +281,6 @@ private fun tutorialStepProjects() {
 }
 
 @Composable
-private fun tutorialStepShortcuts() {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Spacing.medium),
-    ) {
-        Text(
-            text = stringResource("tutorial.step3.title"),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        Text(
-            text = stringResource("tutorial.step3.description"),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.small))
-
-        tutorialShortcutCard("tutorial.step3.shortcut.new.chat")
-        tutorialShortcutCard("tutorial.step3.shortcut.search")
-        tutorialShortcutCard("tutorial.step3.shortcut.projects")
-        tutorialShortcutCard("tutorial.step3.shortcut.settings")
-    }
-}
-
-@Composable
 private fun tutorialStepNextSteps() {
     val uriHandler = LocalUriHandler.current
 
@@ -390,39 +363,6 @@ private fun tutorialFeatureCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-    }
-}
-
-@Composable
-private fun tutorialShortcutCard(key: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.large),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(key),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            ) {
-                Text(
-                    text = stringResource("$key.key"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
         }
     }
 }

@@ -70,10 +70,6 @@ import io.askimo.core.context.getConfigInfo
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.error.IndexingErrorEvent
-import io.askimo.core.event.error.IndexingErrorType
-import io.askimo.core.event.error.ModelNotAvailableEvent
-import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
 import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
@@ -122,11 +118,13 @@ import io.askimo.desktop.settings.aboutDialog
 import io.askimo.desktop.settings.fileViewerDialog
 import io.askimo.desktop.settings.providerSelectionDialog
 import io.askimo.desktop.settings.settingsViewWithSidebar
+import io.askimo.desktop.shell.ErrorDialogState
 import io.askimo.desktop.shell.NativeMenuBar
 import io.askimo.desktop.shell.UpdateViewModel
 import io.askimo.desktop.shell.eventLogPanel
 import io.askimo.desktop.shell.eventLogWindow
 import io.askimo.desktop.shell.footerBar
+import io.askimo.desktop.shell.globalErrorHandler
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
@@ -308,11 +306,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
     var editingProjectId by remember { mutableStateOf<String?>(null) }
-    var showErrorDialog by remember { mutableStateOf(false) }
-    var errorDialogTitle by remember { mutableStateOf("") }
-    var errorDialogMessage by remember { mutableStateOf("") }
-    var errorDialogLinkText by remember { mutableStateOf<String?>(null) }
-    var errorDialogLinkUrl by remember { mutableStateOf<String?>(null) }
+    var errorDialogState by remember { mutableStateOf(ErrorDialogState()) }
     var showFileViewerDialog by remember { mutableStateOf(false) }
     var fileViewerPath by remember { mutableStateOf("") }
     var fileViewerContent by remember { mutableStateOf("") }
@@ -364,68 +358,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
     }
 
-    // Listen for errors
-    LaunchedEffect(Unit) {
-        EventBus.errorEvents.collect { event ->
-            when (event) {
-                is IndexingErrorEvent -> {
-                    when (event.errorType) {
-                        IndexingErrorType.EMBEDDING_MODEL_NOT_FOUND -> {
-                            val modelName = event.details["modelName"] ?: "unknown"
-                            val provider = event.details["provider"] ?: "AI provider"
-                            errorDialogTitle = LocalizationManager.getString("error.indexing.model_not_found.title")
-                            errorDialogMessage = LocalizationManager.getString("error.indexing.model_not_found.message", modelName, provider)
-                            errorDialogLinkText = null
-                            errorDialogLinkUrl = null
-                            showErrorDialog = true
-                        }
-                        IndexingErrorType.IO_ERROR -> {
-                            errorDialogTitle = LocalizationManager.getString("error.indexing.io_error.title")
-                            errorDialogMessage = event.details["message"] ?: LocalizationManager.getString("error.indexing.io_error.message")
-                            errorDialogLinkText = null
-                            errorDialogLinkUrl = null
-                            showErrorDialog = true
-                        }
-                        IndexingErrorType.UNKNOWN_ERROR -> {
-                            errorDialogTitle = LocalizationManager.getString("error.indexing.unknown.title")
-                            errorDialogMessage = event.details["message"] ?: LocalizationManager.getString("error.indexing.unknown.message")
-                            errorDialogLinkText = null
-                            errorDialogLinkUrl = null
-                            showErrorDialog = true
-                        }
-                    }
-                }
-                is ModelNotAvailableEvent -> {
-                    errorDialogTitle = if (event.isEmbedding) {
-                        LocalizationManager.getString("error.model.not_available.title.embedding")
-                    } else {
-                        LocalizationManager.getString("error.model.not_available.title.chat")
-                    }
-                    errorDialogMessage = if (event.isEmbedding) {
-                        LocalizationManager.getString("error.model.not_available.message.embedding", event.modelName)
-                    } else {
-                        LocalizationManager.getString("error.model.not_available.message.chat", event.modelName)
-                    }
-                    if (event.isEmbedding) {
-                        errorDialogLinkText = LocalizationManager.getString("error.model.not_available.config_link")
-                        errorDialogLinkUrl = LocalizationManager.getString("error.model.not_available.config_url")
-                    } else {
-                        errorDialogLinkText = null
-                        errorDialogLinkUrl = null
-                    }
-                    showErrorDialog = true
-                }
-                is SendMessageErrorEvent -> {
-                    errorDialogTitle = LocalizationManager.getString("error.send_message.title")
-                    errorDialogMessage = event.throwable.message
-                        ?: LocalizationManager.getString("error.send_message.message")
-                    errorDialogLinkText = null
-                    errorDialogLinkUrl = null
-                    showErrorDialog = true
-                }
-            }
-        }
-    }
+    // Listen for errors – handled by the dedicated GlobalErrorHandler
+    globalErrorHandler { state -> errorDialogState = state }
 
     val scope = rememberCoroutineScope()
 
@@ -456,18 +390,18 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         BackupManager.exportBackup(Paths.get(selectedPath))
                     }
 
-                    errorDialogTitle = LocalizationManager.getString("backup.export.success.title")
-                    errorDialogMessage = LocalizationManager.getString("backup.export.success.message", backupFile.toString())
-                    errorDialogLinkText = null
-                    errorDialogLinkUrl = null
-                    showErrorDialog = true
+                    errorDialogState = ErrorDialogState(
+                        show = true,
+                        title = LocalizationManager.getString("backup.export.success.title"),
+                        message = LocalizationManager.getString("backup.export.success.message", backupFile.toString()),
+                    )
                 }
             } catch (e: Exception) {
-                errorDialogTitle = LocalizationManager.getString("backup.export.error.title")
-                errorDialogMessage = LocalizationManager.getString("backup.export.error.message", e.message ?: "Unknown error")
-                errorDialogLinkText = null
-                errorDialogLinkUrl = null
-                showErrorDialog = true
+                errorDialogState = ErrorDialogState(
+                    show = true,
+                    title = LocalizationManager.getString("backup.export.error.title"),
+                    message = LocalizationManager.getString("backup.export.error.message", e.message ?: "Unknown error"),
+                )
                 log.error("Error exporting backup", e)
             }
         }
@@ -490,11 +424,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     showImportBackupConfirm = true
                 }
             } catch (e: Exception) {
-                errorDialogTitle = LocalizationManager.getString("backup.import.error.title")
-                errorDialogMessage = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error")
-                errorDialogLinkText = null
-                errorDialogLinkUrl = null
-                showErrorDialog = true
+                errorDialogState = ErrorDialogState(
+                    show = true,
+                    title = LocalizationManager.getString("backup.import.error.title"),
+                    message = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error"),
+                )
                 log.error("Error importing backup", e)
             }
         }
@@ -723,9 +657,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     showFileViewerDialog = true
                 },
                 onShowError = { title, message ->
-                    errorDialogTitle = title
-                    errorDialogMessage = message
-                    showErrorDialog = true
+                    errorDialogState = ErrorDialogState(show = true, title = title, message = message)
                 },
             ),
         ) {
@@ -1190,17 +1122,17 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     BackupManager.importBackup(path)
                                                 }
 
-                                                errorDialogTitle = LocalizationManager.getString("backup.import.success.title")
-                                                errorDialogMessage = LocalizationManager.getString("backup.import.success.message")
-                                                errorDialogLinkText = null
-                                                errorDialogLinkUrl = null
-                                                showErrorDialog = true
+                                                errorDialogState = ErrorDialogState(
+                                                    show = true,
+                                                    title = LocalizationManager.getString("backup.import.success.title"),
+                                                    message = LocalizationManager.getString("backup.import.success.message"),
+                                                )
                                             } catch (e: Exception) {
-                                                errorDialogTitle = LocalizationManager.getString("backup.import.error.title")
-                                                errorDialogMessage = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error")
-                                                errorDialogLinkText = null
-                                                errorDialogLinkUrl = null
-                                                showErrorDialog = true
+                                                errorDialogState = ErrorDialogState(
+                                                    show = true,
+                                                    title = LocalizationManager.getString("backup.import.error.title"),
+                                                    message = LocalizationManager.getString("backup.import.error.message", e.message ?: "Unknown error"),
+                                                )
                                                 log.error("Error importing backup.", e)
                                             } finally {
                                                 pendingImportBackupPath = null
@@ -1562,16 +1494,14 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     )
                 }
 
-                if (showErrorDialog) {
+                if (errorDialogState.show) {
                     errorDialog(
-                        title = errorDialogTitle,
-                        message = errorDialogMessage,
-                        linkText = errorDialogLinkText,
-                        linkUrl = errorDialogLinkUrl,
+                        title = errorDialogState.title,
+                        message = errorDialogState.message,
+                        linkText = errorDialogState.linkText,
+                        linkUrl = errorDialogState.linkUrl,
                         onDismiss = {
-                            showErrorDialog = false
-                            errorDialogLinkText = null
-                            errorDialogLinkUrl = null
+                            errorDialogState = ErrorDialogState()
                         },
                     )
                 }

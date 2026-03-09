@@ -5,6 +5,7 @@
 package io.askimo.core.rag.filter
 
 import io.askimo.core.config.ProjectType
+import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
+@AskimoTestHome
 class ProjectTypeFilterTest {
 
     @Test
