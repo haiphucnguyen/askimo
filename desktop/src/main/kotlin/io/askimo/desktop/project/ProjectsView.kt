@@ -8,6 +8,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -15,11 +17,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -62,6 +67,7 @@ import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.ThemePreferences
 
 @Composable
 fun projectsView(
@@ -70,167 +76,200 @@ fun projectsView(
     onEditProject: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    val scrollState = rememberScrollState()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource("projects.title"),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            IconButton(
-                onClick = { viewModel.refresh() },
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-            ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Refresh projects",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Success message banner
-        viewModel.deleteProjectSuccessfulBannerMessage?.let { message ->
-            Surface(
+            Column(
                 modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium,
+                    .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 24.dp),
             ) {
+                // ── Header ────────────────────────────────────────────────────────
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Text(
+                        text = stringResource("projects.title"),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh projects",
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
                     }
-                    IconButton(
-                        onClick = { viewModel.dismissSuccessMessage() },
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Success banner ────────────────────────────────────────────────
+                viewModel.deleteProjectSuccessfulBannerMessage?.let { message ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.medium,
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Content area
-        Box(modifier = Modifier.weight(1f)) {
-            when {
-                viewModel.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-                }
-
-                viewModel.errorMessage != null -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource("projects.error", viewModel.errorMessage ?: ""),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        TextButton(onClick = {
-                            viewModel.clearError()
-                            viewModel.refresh()
-                        }) {
-                            Text(stringResource("action.retry"))
-                        }
-                    }
-                }
-
-                viewModel.pagedProjects?.isEmpty == true -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            text = stringResource("projects.empty"),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource("projects.empty.hint"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // Projects list
-                        val pagedProjects = viewModel.pagedProjects!!
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            pagedProjects.items.forEach { project ->
-                                projectCard(
-                                    project = project,
-                                    onSelectProject = onSelectProject,
-                                    onEditProject = onEditProject,
-                                    onDeleteProject = { viewModel.deleteProject(it) },
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                            IconButton(onClick = { viewModel.dismissSuccessMessage() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 )
                             }
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                // ── Scrollable content ────────────────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+                ) {
+                    when {
+                        viewModel.isLoading -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
 
-                        // Pagination controls
-                        if (pagedProjects.totalPages > 1) {
-                            paginationControls(
-                                currentPage = pagedProjects.currentPage,
-                                totalPages = pagedProjects.totalPages,
-                                hasPrevious = pagedProjects.hasPreviousPage,
-                                hasNext = pagedProjects.hasNextPage,
-                                onPrevious = { viewModel.previousPage() },
-                                onNext = { viewModel.nextPage() },
-                            )
+                        viewModel.errorMessage != null -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource("projects.error", viewModel.errorMessage ?: ""),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    TextButton(onClick = {
+                                        viewModel.clearError()
+                                        viewModel.refresh()
+                                    }) {
+                                        Text(stringResource("action.retry"))
+                                    }
+                                }
+                            }
+                        }
+
+                        viewModel.pagedProjects?.isEmpty == true -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource("projects.empty"),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = stringResource("projects.empty.hint"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        else -> {
+                            val pagedProjects = viewModel.pagedProjects!!
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                pagedProjects.items.forEach { project ->
+                                    projectCard(
+                                        project = project,
+                                        onSelectProject = onSelectProject,
+                                        onEditProject = onEditProject,
+                                        onDeleteProject = { viewModel.deleteProject(it) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
+
+                // ── Pagination — fixed footer, always visible ─────────────────────
+                val pagedProjects = viewModel.pagedProjects
+                if (pagedProjects != null && pagedProjects.totalPages > 1) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    paginationControls(
+                        currentPage = pagedProjects.currentPage,
+                        totalPages = pagedProjects.totalPages,
+                        hasPrevious = pagedProjects.hasPreviousPage,
+                        hasNext = pagedProjects.hasNextPage,
+                        onPrevious = { viewModel.previousPage() },
+                        onNext = { viewModel.nextPage() },
+                    )
+                }
+            } // end width-constrained column
+        } // end scrollable column
+
+        // ── Scrollbar ─────────────────────────────────────────────────────────
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
+        )
     }
 }
 

@@ -9,17 +9,22 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -80,6 +85,7 @@ import io.askimo.desktop.common.components.linkButton
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.session.SessionActionMenu
 import org.koin.core.context.GlobalContext
@@ -138,158 +144,201 @@ fun projectView(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-    ) {
-        // Scrollable content (Reference Materials + MCP + Sessions)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = currentProject.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+    // ProjectView has a sticky chat input at the bottom — it needs a bounded Column
+    // so that weight(1f) works correctly. We apply CONTENT_MAX_WIDTH manually.
+    val scrollState = rememberScrollState()
 
-                Box {
-                    themedTooltip(text = stringResource("project.menu.tooltip")) {
-                        IconButton(
-                            onClick = { showProjectMenu = true },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringResource("project.menu.tooltip"),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
+    Box(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            // Scrollable content — full width captures all scroll events
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Width-constrained inner content
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = currentProject.name,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        Box {
+                            themedTooltip(text = stringResource("project.menu.tooltip")) {
+                                IconButton(
+                                    onClick = { showProjectMenu = true },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = stringResource("project.menu.tooltip"),
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+
+                            ComponentColors.themedDropdownMenu(
+                                expanded = showProjectMenu,
+                                onDismissRequest = { showProjectMenu = false },
+                            ) {
+                                SessionActionMenu.projectActionMenu(
+                                    onEditProject = {
+                                        onEditProject(currentProject.id)
+                                        showProjectMenu = false
+                                    },
+                                    onDeleteProject = {
+                                        showDeleteDialog = true
+                                        showProjectMenu = false
+                                    },
+                                    onReindexProject = {
+                                        EventBus.post(
+                                            ProjectReIndexEvent(
+                                                projectId = currentProject.id,
+                                                reason = "Manual re-index requested by user from project menu",
+                                            ),
+                                        )
+                                        showProjectMenu = false
+                                    },
+                                    onDismiss = { showProjectMenu = false },
+                                )
+                            }
                         }
                     }
 
-                    ComponentColors.themedDropdownMenu(
-                        expanded = showProjectMenu,
-                        onDismissRequest = { showProjectMenu = false },
-                    ) {
-                        SessionActionMenu.projectActionMenu(
-                            onEditProject = {
-                                onEditProject(currentProject.id)
-                                showProjectMenu = false
-                            },
-                            onDeleteProject = {
-                                showDeleteDialog = true
-                                showProjectMenu = false
-                            },
-                            onReindexProject = {
-                                EventBus.post(
-                                    ProjectReIndexEvent(
-                                        projectId = currentProject.id,
-                                        reason = "Manual re-index requested by user from project menu",
-                                    ),
+                    // Project Description (if exists)
+                    currentProject.description?.let { desc ->
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 16.dp),
+                        )
+                    }
+
+                    // Knowledge Sources Panel
+                    knowledgeSourcesPanel(
+                        currentProject = currentProject,
+                        viewModel = viewModel,
+                        onShowAddDialog = { showAddReferenceMaterialDialog = true },
+                        modifier = Modifier.padding(bottom = 24.dp),
+                    )
+
+                    // MCP Integrations Panel
+                    mcpIntegrationsPanel(
+                        projectId = currentProject.id,
+                        modifier = Modifier.padding(bottom = 24.dp),
+                    )
+
+                    // Sessions Section
+                    if (projectSessions.isNotEmpty()) {
+                        Text(
+                            text = stringResource("project.recent.chats"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+
+                    // Display sessions (no LazyColumn, just iterate)
+                    if (projectSessions.isEmpty()) {
+                        Text(
+                            text = stringResource("project.no.chats"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            projectSessions.forEachIndexed { index, session ->
+                                sessionCard(
+                                    session = session,
+                                    index = index,
+                                    onClick = { onResumeSession(session.id) },
+                                    onDeleteSession = { sessionId ->
+                                        onDeleteSession(sessionId, currentProject.id)
+                                    },
+                                    onRenameSession = onRenameSession,
+                                    onExportSession = onExportSession,
+                                    currentProject = currentProject,
+                                    allProjects = allProjects,
+                                    viewModel = viewModel,
                                 )
-                                showProjectMenu = false
-                            },
-                            onDismiss = { showProjectMenu = false },
-                        )
+                            }
+                        }
                     }
                 }
-            }
+            } // end scrollable content column
 
-            // Project Description (if exists)
-            currentProject.description?.let { desc ->
-                Text(
-                    text = desc,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-            }
-
-            // Knowledge Sources Panel
-            knowledgeSourcesPanel(
-                currentProject = currentProject,
-                viewModel = viewModel,
-                onShowAddDialog = { showAddReferenceMaterialDialog = true },
-                modifier = Modifier.padding(bottom = 24.dp),
-            )
-
-            // MCP Integrations Panel
-            mcpIntegrationsPanel(
-                projectId = currentProject.id,
-                modifier = Modifier.padding(bottom = 24.dp),
-            )
-
-            // Sessions Section
-            if (projectSessions.isNotEmpty()) {
-                Text(
-                    text = stringResource("project.recent.chats"),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 12.dp),
-                )
-            }
-
-            // Display sessions (no LazyColumn, just iterate)
-            if (projectSessions.isEmpty()) {
-                Text(
-                    text = stringResource("project.no.chats"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp),
-                )
-            } else {
+            // Fixed chat input footer — width-constrained, outside scroll
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 36.dp, bottom = 24.dp),
                 ) {
-                    projectSessions.forEachIndexed { index, session ->
-                        sessionCard(
-                            session = session,
-                            index = index,
-                            onClick = { onResumeSession(session.id) },
-                            onDeleteSession = { sessionId ->
-                                onDeleteSession(sessionId, currentProject.id)
-                            },
-                            onRenameSession = onRenameSession,
-                            onExportSession = onExportSession,
-                            currentProject = currentProject,
-                            allProjects = allProjects,
-                            viewModel = viewModel,
-                        )
-                    }
+                    chatInputField(
+                        inputText = inputText,
+                        onInputTextChange = { inputText = it },
+                        attachments = attachments,
+                        onAttachmentsChange = { attachments = it },
+                        onSendMessage = { mode ->
+                            if (inputText.text.isNotBlank()) {
+                                onStartChat(currentProject.id, mode, inputText.text, attachments)
+                                inputText = TextFieldValue("")
+                                attachments = emptyList()
+                            }
+                        },
+                        sessionId = currentProject.id,
+                        placeholder = stringResource("project.new.chat.placeholder", currentProject.name),
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
                 }
             }
-        }
+        } // end outer Column
 
-        chatInputField(
-            inputText = inputText,
-            onInputTextChange = { inputText = it },
-            attachments = attachments,
-            onAttachmentsChange = { attachments = it },
-            onSendMessage = { mode ->
-                if (inputText.text.isNotBlank()) {
-                    onStartChat(currentProject.id, mode, inputText.text, attachments)
-                    inputText = TextFieldValue("")
-                    attachments = emptyList()
-                }
-            },
-            sessionId = currentProject.id,
-            placeholder = stringResource("project.new.chat.placeholder", currentProject.name),
-            modifier = Modifier.padding(top = 16.dp),
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
         )
-    }
+    } // end outer Box
 
     // Delete project confirmation dialog
     if (showDeleteDialog) {

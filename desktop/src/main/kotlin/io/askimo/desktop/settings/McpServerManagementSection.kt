@@ -4,15 +4,23 @@
  */
 package io.askimo.desktop.settings
 
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -48,6 +56,7 @@ import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
+import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.clickableCard
 import java.awt.Desktop
 import java.net.URI
@@ -59,110 +68,139 @@ fun mcpServerTemplatesSection() {
     var editingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var deletingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Spacing.medium),
-    ) {
-        // Section Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column {
-                Text(
-                    text = stringResource("mcp.servers.title"),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = stringResource("mcp.servers.description"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                )
-            }
-            linkButton(
-                onClick = {
-                    try {
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
-                        }
-                    } catch (_: Exception) {}
-                },
+            Column(
+                modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
             ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = stringResource("mcp.servers.guide"),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-            }
-        }
-
-        // Action Buttons
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-        ) {
-            primaryButton(
-                onClick = { showAddDialog = true },
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(Spacing.small))
-                Text(stringResource("mcp.servers.add"))
-            }
-
-            secondaryButton(
-                onClick = { showResetConfirm = true },
-            ) {
-                Icon(Icons.Default.RestartAlt, contentDescription = null)
-                Spacer(Modifier.width(Spacing.small))
-                Text(stringResource("mcp.servers.reset"))
-            }
-        }
-
-        // Server List
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = ComponentColors.bannerCardColors(),
-        ) {
-            if (servers.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.extraLarge),
-                    contentAlignment = Alignment.Center,
+                // Section Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = stringResource("mcp.servers.empty"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
-                    )
-                }
-            } else {
-                Column(
-                    modifier = Modifier.padding(Spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.small),
-                ) {
-                    servers.forEach { server ->
-                        mcpServerTemplateCard(
-                            server = server,
-                            onEdit = { editingServer = server },
-                            onDelete = { deletingServer = server },
+                    Column {
+                        Text(
+                            text = stringResource("mcp.servers.title"),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            text = stringResource("mcp.servers.description"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        )
+                    }
+                    linkButton(
+                        onClick = {
+                            try {
+                                if (Desktop.isDesktopSupported()) {
+                                    Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
+                                }
+                            } catch (_: Exception) {}
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = stringResource("mcp.servers.guide"),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 4.dp),
                         )
                     }
                 }
+
+                // Action Buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                ) {
+                    primaryButton(
+                        onClick = { showAddDialog = true },
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(Spacing.small))
+                        Text(stringResource("mcp.servers.add"))
+                    }
+
+                    secondaryButton(
+                        onClick = { showResetConfirm = true },
+                    ) {
+                        Icon(Icons.Default.RestartAlt, contentDescription = null)
+                        Spacer(Modifier.width(Spacing.small))
+                        Text(stringResource("mcp.servers.reset"))
+                    }
+                }
+
+                // Server List
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ComponentColors.bannerCardColors(),
+                ) {
+                    if (servers.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.extraLarge),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource("mcp.servers.empty"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.padding(Spacing.medium),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.small),
+                        ) {
+                            servers.forEach { server ->
+                                mcpServerTemplateCard(
+                                    server = server,
+                                    onEdit = { editingServer = server },
+                                    onDelete = { deletingServer = server },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Server count
+                Text(
+                    text = stringResource("mcp.servers.count", servers.size.toString()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                )
             }
         }
 
-        // Server count
-        Text(
-            text = stringResource("mcp.servers.count", servers.size.toString()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
         )
     }
 

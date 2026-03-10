@@ -4,6 +4,8 @@
  */
 package io.askimo.desktop.settings
 
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -60,82 +64,108 @@ import java.io.File
 fun appearanceSettingsSection() {
     val currentThemeMode by ThemePreferences.themeMode.collectAsState()
     val currentAccentColor by ThemePreferences.accentColor.collectAsState()
+    val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.large),
-    ) {
-        Text(
-            text = stringResource("settings.appearance"),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = Spacing.small),
-        )
-
-        // Theme Mode Section
-        Text(
-            text = stringResource("settings.theme"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        // Light Mode
-        themeOption(
-            title = stringResource("theme.light"),
-            description = stringResource("theme.light.description"),
-            icon = { Icon(Icons.Default.LightMode, contentDescription = null) },
-            selected = currentThemeMode == ThemeMode.LIGHT,
-            onClick = { ThemePreferences.setThemeMode(ThemeMode.LIGHT) },
-        )
-
-        // Dark Mode
-        themeOption(
-            title = stringResource("theme.dark"),
-            description = stringResource("theme.dark.description"),
-            icon = { Icon(Icons.Default.DarkMode, contentDescription = null) },
-            selected = currentThemeMode == ThemeMode.DARK,
-            onClick = { ThemePreferences.setThemeMode(ThemeMode.DARK) },
-        )
-
-        // System Mode
-        themeOption(
-            title = stringResource("theme.system"),
-            description = stringResource("theme.system.description"),
-            icon = { Icon(Icons.Default.Contrast, contentDescription = null) },
-            selected = currentThemeMode == ThemeMode.SYSTEM,
-            onClick = { ThemePreferences.setThemeMode(ThemeMode.SYSTEM) },
-        )
-
-        // Accent Color Section
-        Text(
-            text = stringResource("settings.accent.color"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(top = Spacing.small),
-        )
-
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AccentColor.entries.forEach { accentColor ->
-                Box(
-                    modifier = Modifier.widthIn(min = 120.dp, max = 160.dp),
+            Column(
+                modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
+            ) {
+                Text(
+                    text = stringResource("settings.appearance"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = Spacing.small),
+                )
+
+                // Theme Mode Section
+                Text(
+                    text = stringResource("settings.theme"),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+
+                // Light Mode
+                themeOption(
+                    title = stringResource("theme.light"),
+                    description = stringResource("theme.light.description"),
+                    icon = { Icon(Icons.Default.LightMode, contentDescription = null) },
+                    selected = currentThemeMode == ThemeMode.LIGHT,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.LIGHT) },
+                )
+
+                // Dark Mode
+                themeOption(
+                    title = stringResource("theme.dark"),
+                    description = stringResource("theme.dark.description"),
+                    icon = { Icon(Icons.Default.DarkMode, contentDescription = null) },
+                    selected = currentThemeMode == ThemeMode.DARK,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.DARK) },
+                )
+
+                // System Mode
+                themeOption(
+                    title = stringResource("theme.system"),
+                    description = stringResource("theme.system.description"),
+                    icon = { Icon(Icons.Default.Contrast, contentDescription = null) },
+                    selected = currentThemeMode == ThemeMode.SYSTEM,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.SYSTEM) },
+                )
+
+                // Accent Color Section
+                Text(
+                    text = stringResource("settings.accent.color"),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = Spacing.small),
+                )
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.medium),
                 ) {
-                    accentColorOption(
-                        accentColor = accentColor,
-                        selected = currentAccentColor == accentColor,
-                        onClick = { ThemePreferences.setAccentColor(accentColor) },
-                    )
+                    AccentColor.entries.forEach { accentColor ->
+                        Box(
+                            modifier = Modifier.widthIn(min = 120.dp, max = 160.dp),
+                        ) {
+                            accentColorOption(
+                                accentColor = accentColor,
+                                selected = currentAccentColor == accentColor,
+                                onClick = { ThemePreferences.setAccentColor(accentColor) },
+                            )
+                        }
+                    }
                 }
+
+                // AI Avatar Section
+                aiAvatarSettingsSection()
             }
         }
 
-        // AI Avatar Section (User avatar moved to User Profile)
-        aiAvatarSettingsSection()
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
+        )
     }
 }
 

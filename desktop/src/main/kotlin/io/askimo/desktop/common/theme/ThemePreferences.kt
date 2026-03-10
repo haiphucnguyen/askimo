@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.common.theme
 
+import androidx.compose.ui.unit.dp
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
@@ -15,6 +16,12 @@ import java.util.Locale
 import java.util.prefs.Preferences
 
 object ThemePreferences {
+    /**
+     * Maximum width for the main content area (chat messages, settings panels, etc.).
+     * Keeping this consistent prevents lines from becoming too long on wide displays.
+     */
+    val CONTENT_MAX_WIDTH = 900.dp
+
     private const val THEME_MODE_KEY = "theme_mode"
     private const val ACCENT_COLOR_KEY = "accent_color"
     private const val FONT_FAMILY_KEY = "font_family"

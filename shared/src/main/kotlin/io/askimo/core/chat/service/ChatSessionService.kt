@@ -265,7 +265,7 @@ class ChatSessionService(
      * @param pageSize The number of sessions per page
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
-    fun getSessionsPagedWithoutProject(page: Int, pageSize: Int): Pageable<ChatSession> = sessionRepository.getSessionsPaged(page, pageSize, projectFilter = true)
+    fun getSessionsPagedWithoutProject(page: Int, pageSize: Int): Pageable<ChatSession> = sessionRepository.getSessionsPaged(page, pageSize, projectFilter = false)
 
     /**
      * Get a session by ID.

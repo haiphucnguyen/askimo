@@ -256,9 +256,7 @@ fun settingsViewWithSidebar(
 
                 // Main Content Area
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     when (selectedSection) {
                         SettingsSection.GENERAL -> generalSettingsSection()

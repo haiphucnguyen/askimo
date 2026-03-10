@@ -7,14 +7,20 @@ package io.askimo.desktop.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -44,139 +50,167 @@ import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
+import io.askimo.desktop.common.theme.ThemePreferences
 import kotlinx.coroutines.delay
 import java.awt.Desktop
 import java.net.URI
 
 @Composable
 fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.large),
-    ) {
-        Text(
-            text = stringResource("settings.ai.provider"),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = Spacing.small),
-        )
+    val scrollState = rememberScrollState()
 
-        // Chat Configuration Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = ComponentColors.bannerCardColors(),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
                 modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                     .fillMaxWidth()
-                    .padding(Spacing.large),
-                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                    .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
-                // Provider
-                Row(
+                Text(
+                    text = stringResource("settings.ai.provider"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = Spacing.small),
+                )
+
+                // Chat Configuration Card
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    colors = ComponentColors.bannerCardColors(),
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource("settings.provider"),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Text(
-                            text = viewModel.provider?.name ?: stringResource("provider.not.set"),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                    secondaryButton(
-                        onClick = { viewModel.onChangeProvider() },
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Spacing.large),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.medium),
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null)
-                        Text(
-                            stringResource("settings.provider.change.button"),
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
-
-                HorizontalDivider()
-
-                // Model
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource("settings.model"),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Text(
-                            text = viewModel.model,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                    secondaryButton(
-                        onClick = { viewModel.onChangeModel() },
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null)
-                        Text(
-                            stringResource("settings.model.change.button"),
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
-
-                // Settings
-                if (viewModel.settingsDescription.isNotEmpty()) {
-                    HorizontalDivider()
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+                        // Provider
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = stringResource("settings.title"),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            )
-                            viewModel.settingsDescription.forEach { setting ->
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = setting,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = stringResource("settings.provider"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                                Text(
+                                    text = viewModel.provider?.name ?: stringResource("provider.not.set"),
+                                    style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
                             }
+                            secondaryButton(
+                                onClick = { viewModel.onChangeProvider() },
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                                Text(
+                                    stringResource("settings.provider.change.button"),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
                         }
-                        secondaryButton(
-                            onClick = { viewModel.onChangeSettings() },
+
+                        HorizontalDivider()
+
+                        // Model
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null)
-                            Text(
-                                stringResource("settings.change.button"),
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource("settings.model"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                                Text(
+                                    text = viewModel.model,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                            }
+                            secondaryButton(
+                                onClick = { viewModel.onChangeModel() },
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                                Text(
+                                    stringResource("settings.model.change.button"),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                        }
+
+                        // Settings
+                        if (viewModel.settingsDescription.isNotEmpty()) {
+                            HorizontalDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+                                ) {
+                                    Text(
+                                        text = stringResource("settings.title"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                    viewModel.settingsDescription.forEach { setting ->
+                                        Text(
+                                            text = setting,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        )
+                                    }
+                                }
+                                secondaryButton(
+                                    onClick = { viewModel.onChangeSettings() },
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                    Text(
+                                        stringResource("settings.change.button"),
+                                        modifier = Modifier.padding(start = 8.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        // Model Config Card — only shown when a provider is selected
-        viewModel.provider?.let { provider ->
-            providerModelConfigCard(provider)
-        }
+                // Model Config Card — only shown when a provider is selected
+                viewModel.provider?.let { provider ->
+                    providerModelConfigCard(provider)
+                }
+            } // end inner content Column
+        } // end scrollable outer Column
+
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
+        )
     }
 }
 
