@@ -31,7 +31,7 @@ sealed class RunnableLanguage(
 
         /** Registry of all supported runnable languages — add new entries here. */
         private val registered: List<RunnableLanguage> by lazy {
-            listOf(BashLanguage, PythonLanguage)
+            listOf(BashLanguage, PythonLanguage, JavaScriptLanguage)
         }
 
         fun resolve(language: String?): RunnableLanguage? {
