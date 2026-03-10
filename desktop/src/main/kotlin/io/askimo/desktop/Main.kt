@@ -71,6 +71,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.LanguageDirectiveChangedEvent
+import io.askimo.core.event.internal.RunCodeEvent
 import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
@@ -128,7 +129,8 @@ import io.askimo.desktop.shell.globalErrorHandler
 import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
 import io.askimo.desktop.shell.starPromptDialog
-import io.askimo.desktop.terminal.TerminalPanel
+import io.askimo.desktop.terminal.PendingTerminalCommand
+import io.askimo.desktop.terminal.terminalPanel
 import io.askimo.desktop.tutorial.languageSelectionDialog
 import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
@@ -301,6 +303,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var eventLogPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var showTerminalPanel by remember { mutableStateOf(false) }
     var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
+    var pendingTerminalCommand by remember { mutableStateOf<PendingTerminalCommand?>(null) }
     var showStarPromptDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
@@ -355,6 +358,16 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
             if (eventLogEvents.size > 1000) {
                 eventLogEvents.removeAt(1000)
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        EventBus.internalEvents.filterIsInstance<RunCodeEvent>().collect { event ->
+            showTerminalPanel = true
+            pendingTerminalCommand = PendingTerminalCommand(
+                code = event.code,
+                couldExecute = event.couldExecute,
+            )
         }
     }
 
@@ -1021,11 +1034,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     // Terminal Panel - BOTTOM position
                     if (showTerminalPanel) {
                         terminalPanel(
-                            onClose = {
-                                showTerminalPanel = false
-                            },
+                            onClose = { showTerminalPanel = false },
                             size = terminalPanelSize,
                             onSizeChange = { newSize -> terminalPanelSize = newSize },
+                            pendingCommand = pendingTerminalCommand,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1734,12 +1746,14 @@ private fun terminalPanel(
     onClose: () -> Unit,
     size: Dp,
     onSizeChange: (Dp) -> Unit,
+    pendingCommand: PendingTerminalCommand?,
     modifier: Modifier = Modifier,
 ) {
-    TerminalPanel(
+    terminalPanel(
         onClose = onClose,
         panelHeight = size,
         onHeightChange = onSizeChange,
+        pendingCommand = pendingCommand,
         modifier = modifier.fillMaxWidth(),
     )
 }

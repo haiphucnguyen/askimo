@@ -5,7 +5,9 @@
 package io.askimo.desktop.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +23,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -60,6 +65,8 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -159,6 +166,10 @@ fun chatView(
     // Session memory dialog state
     var showSessionMemoryDialog by remember { mutableStateOf(false) }
     var sessionMemorySessionId by remember { mutableStateOf<String?>(null) }
+
+    // Hoisted scroll state — owned here so the whole messages area responds to scroll
+    // regardless of mouse position within the chat panel.
+    val messagesScrollState = rememberScrollState()
 
     // RAG indexing status state
     var ragIndexingStatus by remember { mutableStateOf<String?>(null) }
@@ -947,100 +958,177 @@ fun chatView(
                 }
             }
 
-            // Messages area
+            // ── Auto-scroll logic ────────────────────────────────────────────
+            val currentUserMessageCount = messages.count { it.isUser }
+            var lastUserMessageCount by remember { mutableStateOf(0) }
+            var userScrolledUp by remember { mutableStateOf(false) }
+            var lastSeenPrependGeneration by remember { mutableStateOf(prependGeneration) }
+            var savedScrollValue by remember { mutableStateOf(-1) }
+            var savedScrollMax by remember { mutableStateOf(-1) }
+
+            if (prependGeneration != lastSeenPrependGeneration) {
+                savedScrollValue = messagesScrollState.value
+                savedScrollMax = messagesScrollState.maxValue
+                lastSeenPrependGeneration = prependGeneration
+            }
+
+            LaunchedEffect(currentUserMessageCount) {
+                if (currentUserMessageCount > lastUserMessageCount) {
+                    lastUserMessageCount = currentUserMessageCount
+                    userScrolledUp = false
+                    messagesScrollState.scrollTo(messagesScrollState.maxValue)
+                }
+            }
+
+            LaunchedEffect(messagesScrollState.value, messagesScrollState.maxValue) {
+                if (isThinking || messages.lastOrNull()?.isUser == false) {
+                    val distanceFromBottom = messagesScrollState.maxValue - messagesScrollState.value
+                    userScrolledUp = distanceFromBottom > 100
+                }
+            }
+
+            LaunchedEffect(messagesScrollState.maxValue) {
+                val sv = savedScrollValue
+                val sm = savedScrollMax
+                if (sv >= 0 && sm >= 0 && messagesScrollState.maxValue > sm) {
+                    val addedHeight = messagesScrollState.maxValue - sm
+                    messagesScrollState.scrollTo((sv + addedHeight).coerceIn(0, messagesScrollState.maxValue))
+                    savedScrollValue = -1
+                    savedScrollMax = -1
+                } else if (!userScrolledUp && sv < 0) {
+                    messagesScrollState.scrollTo(messagesScrollState.maxValue)
+                }
+            }
+
+            LaunchedEffect(messagesScrollState.value) {
+                if (messagesScrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
+                    actions.loadPrevious()
+                }
+            }
+
+            LaunchedEffect(currentSearchResultIndex, searchQuery) {
+                if (searchQuery.isNotBlank() && messages.isNotEmpty()) {
+                    val estimatedItemHeight = 150f
+                    val targetPosition = (
+                        currentSearchResultIndex * estimatedItemHeight *
+                            messagesScrollState.maxValue / (messages.size * estimatedItemHeight)
+                        ).toInt()
+                    messagesScrollState.animateScrollTo(targetPosition)
+                }
+            }
+
+            // ── Messages area ────────────────────────────────────────────────
+            // The outer Box is the scroll container — the full chat area scrolls,
+            // not just the inner column. This means scroll works regardless of
+            // where the mouse is within the chat panel.
+            var viewportBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                    .fillMaxWidth(),
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .widthIn(max = 900.dp)
-                        .align(Alignment.TopCenter)
-                        .fillMaxHeight(),
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(end = 8.dp) // room for scrollbar
+                        .verticalScroll(messagesScrollState)
+                        .onGloballyPositioned { coords ->
+                            if (coords.isAttached) viewportBounds = coords.boundsInWindow()
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    when {
-                        isSearchMode && searchResults.isEmpty() && !isSearching -> {
-                            Text(
-                                stringResource("chat.search.not.found", searchQuery),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                        }
-                        isSearchMode -> {
-                            messageList(
-                                messages = searchResults,
-                                isThinking = false,
-                                thinkingElapsedSeconds = 0,
-                                spinnerFrame = spinnerFrame.toString(),
-                                hasMoreMessages = false,
-                                isLoadingPrevious = false,
-                                onLoadPrevious = {},
-                                searchQuery = searchQuery,
-                                currentSearchResultIndex = currentSearchResultIndex,
-                                onMessageClick = onJumpToMessage,
-                                onEditMessage = { message ->
-                                    if (message.isUser) {
-                                        // User message - set editing mode
-                                        editingMessage = message
-                                        inputText = TextFieldValue(
-                                            text = message.content,
-                                            selection = TextRange(0),
-                                        )
-                                        attachments = message.attachments
-                                    } else {
-                                        // AI message - show edit dialog
-                                        editingAIMessage = message
-                                    }
-                                },
-                                onDownloadAttachment = downloadAttachment,
-                                userAvatarPainter = userAvatarPainter,
-                                aiAvatarPainter = aiAvatarPainter,
-                                onRetryMessage = actions::retryMessage,
-                            )
-                        }
-                        messages.isEmpty() -> {
-                            Text(
-                                stringResource("chat.welcome"),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                        }
-                        else -> {
-                            messageList(
-                                messages = messages,
-                                isThinking = isThinking,
-                                thinkingElapsedSeconds = thinkingElapsedSeconds,
-                                spinnerFrame = spinnerFrame.toString(),
-                                hasMoreMessages = hasMoreMessages,
-                                isLoadingPrevious = isLoadingPrevious,
-                                onLoadPrevious = actions::loadPrevious,
-                                prependGeneration = prependGeneration,
-                                onEditMessage = { message ->
-                                    if (message.isUser) {
-                                        // User message - set editing mode
-                                        editingMessage = message
-                                        inputText = TextFieldValue(
-                                            text = message.content,
-                                            selection = TextRange(0),
-                                        )
-                                        attachments = message.attachments
-                                    } else {
-                                        // AI message - show edit dialog
-                                        editingAIMessage = message
-                                    }
-                                },
-                                onDownloadAttachment = downloadAttachment,
-                                userAvatarPainter = userAvatarPainter,
-                                aiAvatarPainter = aiAvatarPainter,
-                                onRetryMessage = actions::retryMessage,
-                            )
+                    // Constrain content width while allowing scroll to fill the whole area
+                    Box(modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth()) {
+                        when {
+                            isSearchMode && searchResults.isEmpty() && !isSearching -> {
+                                Text(
+                                    stringResource("chat.search.not.found", searchQuery),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.align(Alignment.Center).padding(top = 32.dp),
+                                )
+                            }
+                            isSearchMode -> {
+                                messageList(
+                                    messages = searchResults,
+                                    isThinking = false,
+                                    thinkingElapsedSeconds = 0,
+                                    spinnerFrame = spinnerFrame.toString(),
+                                    hasMoreMessages = false,
+                                    isLoadingPrevious = false,
+                                    onLoadPrevious = {},
+                                    searchQuery = searchQuery,
+                                    currentSearchResultIndex = currentSearchResultIndex,
+                                    onMessageClick = onJumpToMessage,
+                                    onEditMessage = { message ->
+                                        if (message.isUser) {
+                                            editingMessage = message
+                                            inputText = TextFieldValue(text = message.content, selection = TextRange(0))
+                                            attachments = message.attachments
+                                        } else {
+                                            editingAIMessage = message
+                                        }
+                                    },
+                                    onDownloadAttachment = downloadAttachment,
+                                    userAvatarPainter = userAvatarPainter,
+                                    aiAvatarPainter = aiAvatarPainter,
+                                    onRetryMessage = actions::retryMessage,
+                                    viewportTopY = viewportBounds?.top,
+                                )
+                            }
+                            messages.isEmpty() -> {
+                                Text(
+                                    stringResource("chat.welcome"),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.align(Alignment.Center).padding(top = 32.dp),
+                                )
+                            }
+                            else -> {
+                                messageList(
+                                    messages = messages,
+                                    isThinking = isThinking,
+                                    thinkingElapsedSeconds = thinkingElapsedSeconds,
+                                    spinnerFrame = spinnerFrame.toString(),
+                                    hasMoreMessages = hasMoreMessages,
+                                    isLoadingPrevious = isLoadingPrevious,
+                                    onLoadPrevious = actions::loadPrevious,
+                                    prependGeneration = prependGeneration,
+                                    onEditMessage = { message ->
+                                        if (message.isUser) {
+                                            editingMessage = message
+                                            inputText = TextFieldValue(text = message.content, selection = TextRange(0))
+                                            attachments = message.attachments
+                                        } else {
+                                            editingAIMessage = message
+                                        }
+                                    },
+                                    onDownloadAttachment = downloadAttachment,
+                                    userAvatarPainter = userAvatarPainter,
+                                    aiAvatarPainter = aiAvatarPainter,
+                                    onRetryMessage = actions::retryMessage,
+                                    viewportTopY = viewportBounds?.top,
+                                )
+                            }
                         }
                     }
-                } // end centered Box
+                }
+
+                // Scrollbar — belongs to ChatView, spans the full messages area
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(messagesScrollState),
+                    style = ScrollbarStyle(
+                        minimalHeight = 16.dp,
+                        thickness = 8.dp,
+                        shape = MaterialTheme.shapes.small,
+                        hoverDurationMillis = 300,
+                        unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    ),
+                )
             }
 
             // Input area

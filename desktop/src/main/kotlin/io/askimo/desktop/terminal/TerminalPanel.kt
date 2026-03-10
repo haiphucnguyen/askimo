@@ -63,8 +63,10 @@ import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import com.pty4j.PtyProcess
 import com.pty4j.PtyProcessBuilder
 import com.pty4j.WinSize
+import io.askimo.core.util.AskimoHome
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.secondaryButton
+import kotlinx.coroutines.delay
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -79,17 +81,22 @@ import javax.swing.plaf.basic.BasicScrollBarUI
  * Terminal panel component with tabbed interface using JediTerm.
  * Supports multiple terminal tabs, creating new tabs, and closing tabs.
  */
-@Suppress("ktlint:standard:function-naming")
 @Composable
-fun TerminalPanel(
+fun terminalPanel(
     onClose: () -> Unit,
     panelHeight: Dp = 300.dp,
     onHeightChange: (Dp) -> Unit = {},
+    pendingCommand: PendingTerminalCommand? = null,
     modifier: Modifier = Modifier,
 ) {
     // Get theme colors from Material3
     val backgroundColor = MaterialTheme.colorScheme.surface
     val foregroundColor = MaterialTheme.colorScheme.onSurface
+
+    // Askimo workspace — used as the working directory for all terminal tabs
+    val workspaceDir = remember {
+        AskimoHome.rootBase().resolve("workspace").toFile().also { it.mkdirs() }.absolutePath
+    }
 
     // Terminal tabs state
     val terminalTabs = remember { mutableStateListOf<TerminalTab>() }
@@ -105,6 +112,7 @@ fun TerminalPanel(
             widget = createTerminalWidget(
                 backgroundColor = Color(backgroundColor.toArgb()),
                 foregroundColor = Color(foregroundColor.toArgb()),
+                workDir = workspaceDir,
             ),
         )
         terminalTabs.add(initialTab)
@@ -114,6 +122,24 @@ fun TerminalPanel(
     // Ensure selectedTabId is valid
     if (selectedTabId == null || terminalTabs.none { it.id == selectedTabId }) {
         selectedTabId = terminalTabs.firstOrNull()?.id
+    }
+
+    // Inject pending command into the active terminal tab.
+    // Wait until the terminal is fully started and the connector is ready
+    // before writing — avoids double-injection from composition racing with PTY startup.
+    LaunchedEffect(pendingCommand) {
+        if (pendingCommand == null) return@LaunchedEffect
+
+        val activeTab = terminalTabs.firstOrNull { it.id == selectedTabId }
+            ?: terminalTabs.firstOrNull()
+            ?: return@LaunchedEffect
+
+        // Wait for the terminal to finish its PTY startup before writing
+        delay(2000)
+
+        val connector = activeTab.widget.ttyConnector ?: return@LaunchedEffect
+        connector.write(pendingCommand.code)
+        if (pendingCommand.couldExecute) connector.write("\n")
     }
 
     // Calculate the selected index for ScrollableTabRow
@@ -224,22 +250,18 @@ fun TerminalPanel(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        // Tab title with double-click and context menu
+                                        // Tab title — single click switches tab, double click renames
                                         @OptIn(ExperimentalFoundationApi::class)
                                         Text(
                                             text = tab.title,
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier.combinedClickable(
+                                                onClick = { selectedTabId = tab.id },
                                                 onDoubleClick = {
                                                     renamingTabId = tab.id
                                                     renameDialogText = tab.title
                                                 },
-                                                onLongClick = {
-                                                    showContextMenu = true
-                                                },
-                                                onClick = {
-                                                    // Regular click handled by Tab's onClick
-                                                },
+                                                onLongClick = { showContextMenu = true },
                                             ),
                                         )
 
@@ -263,11 +285,10 @@ fun TerminalPanel(
                                                         tabs = terminalTabs,
                                                         tabId = tab.id,
                                                         selectedTabId = selectedTabId,
-                                                        onSelectedTabIdChange = { newId ->
-                                                            selectedTabId = newId
-                                                        },
+                                                        onSelectedTabIdChange = { newId -> selectedTabId = newId },
                                                         backgroundColor = Color(backgroundColor.toArgb()),
                                                         foregroundColor = Color(foregroundColor.toArgb()),
+                                                        workDir = workspaceDir,
                                                     )
                                                     showContextMenu = false
                                                 },
@@ -281,11 +302,10 @@ fun TerminalPanel(
                                                     tabs = terminalTabs,
                                                     tabId = tab.id,
                                                     selectedTabId = selectedTabId,
-                                                    onSelectedTabIdChange = { newId ->
-                                                        selectedTabId = newId
-                                                    },
+                                                    onSelectedTabIdChange = { newId -> selectedTabId = newId },
                                                     backgroundColor = Color(backgroundColor.toArgb()),
                                                     foregroundColor = Color(foregroundColor.toArgb()),
+                                                    workDir = workspaceDir,
                                                 )
                                             },
                                             modifier = Modifier
@@ -315,6 +335,7 @@ fun TerminalPanel(
                             widget = createTerminalWidget(
                                 backgroundColor = Color(backgroundColor.toArgb()),
                                 foregroundColor = Color(foregroundColor.toArgb()),
+                                workDir = workspaceDir,
                             ),
                         )
                         terminalTabs.add(newTab)
@@ -460,6 +481,7 @@ private fun closeTab(
     onSelectedTabIdChange: (String) -> Unit,
     backgroundColor: Color,
     foregroundColor: Color,
+    workDir: String,
 ) {
     val indexToClose = tabs.indexOfFirst { it.id == tabId }
     if (indexToClose == -1) return
@@ -481,6 +503,7 @@ private fun closeTab(
             widget = createTerminalWidget(
                 backgroundColor = backgroundColor,
                 foregroundColor = foregroundColor,
+                workDir = workDir,
             ),
             isStarted = false,
         )
@@ -524,6 +547,7 @@ private data class TerminalTab(
 private fun createTerminalWidget(
     backgroundColor: Color,
     foregroundColor: Color,
+    workDir: String,
 ): JediTermWidget {
     val settingsProvider = object : DefaultSettingsProvider() {
         override fun getDefaultBackground(): TerminalColor = TerminalColor {
@@ -551,7 +575,7 @@ private fun createTerminalWidget(
     }
 
     return JediTermWidget(settingsProvider).apply {
-        val ttyConnector = createTtyConnector()
+        val ttyConnector = createTtyConnector(workDir)
         this.ttyConnector = ttyConnector
 
         // Force initial size to prevent buffer errors
@@ -658,9 +682,8 @@ private fun applyThemeToScrollBar(panel: javax.swing.JComponent, bgColor: Color,
  * Creates a PTY connector for the terminal.
  * Automatically detects the shell based on the operating system.
  */
-private fun createTtyConnector(): TtyConnector {
+private fun createTtyConnector(workDir: String): TtyConnector {
     val shell = getShellCommand()
-    val homeDir = System.getProperty("user.home")
 
     val envs = mutableMapOf<String, String>()
     envs.putAll(System.getenv())
@@ -682,11 +705,9 @@ private fun createTtyConnector(): TtyConnector {
         }
     }
 
-    val command = arrayOf(shell)
-
     val process = PtyProcessBuilder()
-        .setCommand(command)
-        .setDirectory(homeDir)
+        .setCommand(arrayOf(shell))
+        .setDirectory(workDir)
         .setEnvironment(envs)
         .start()
 
@@ -737,6 +758,18 @@ private fun getShellCommand(): String {
         }
     }
 }
+
+/**
+ * A command waiting to be injected into the active terminal tab.
+ *
+ * @param code          The script/command text to send.
+ * @param couldExecute  When true the terminal submits immediately (appends \n).
+ *                      When false the command is only pasted so the user can review it.
+ */
+data class PendingTerminalCommand(
+    val code: String,
+    val couldExecute: Boolean = false,
+)
 
 /**
  * Wrapper for PtyProcess to implement TtyConnector interface.
