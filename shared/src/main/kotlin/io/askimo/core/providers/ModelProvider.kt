@@ -64,6 +64,12 @@ enum class ModelProvider {
     LMSTUDIO,
 
     /**
+     * Represents any OpenAI API-compatible provider (e.g., custom endpoints, proxies, etc.).
+     */
+    @SerialName("OPENAI_COMPATIBLE")
+    OPENAI_COMPATIBLE,
+
+    /**
      * Represents an unidentified or unsupported model provider.
      */
     @SerialName("UNKNOWN")
@@ -82,6 +88,7 @@ enum class ModelProvider {
         ANTHROPIC -> "anthropic"
         LOCALAI -> "localai"
         LMSTUDIO -> "lmstudio"
+        OPENAI_COMPATIBLE -> "openai-compatible"
         UNKNOWN -> "unknown"
     }
 }

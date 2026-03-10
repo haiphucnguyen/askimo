@@ -14,6 +14,7 @@ import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.localai.LocalAiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.openaicompatible.OpenAiCompatibleSettings
 import io.askimo.core.providers.xai.XAiSettings
 
 /**
@@ -34,6 +35,7 @@ import io.askimo.core.providers.xai.XAiSettings
     JsonSubTypes.Type(value = DockerAiSettings::class, name = "docker"),
     JsonSubTypes.Type(value = LocalAiSettings::class, name = "localai"),
     JsonSubTypes.Type(value = LmStudioSettings::class, name = "lmstudio"),
+    JsonSubTypes.Type(value = OpenAiCompatibleSettings::class, name = "openai_compatible"),
 )
 interface ProviderSettings {
     val defaultModel: String

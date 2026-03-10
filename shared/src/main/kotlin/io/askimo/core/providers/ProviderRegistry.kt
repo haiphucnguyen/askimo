@@ -11,6 +11,7 @@ import io.askimo.core.providers.ModelProvider.LMSTUDIO
 import io.askimo.core.providers.ModelProvider.LOCALAI
 import io.askimo.core.providers.ModelProvider.OLLAMA
 import io.askimo.core.providers.ModelProvider.OPENAI
+import io.askimo.core.providers.ModelProvider.OPENAI_COMPATIBLE
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.anthropic.AnthropicModelFactory
 import io.askimo.core.providers.docker.DockerAiModelFactory
@@ -19,6 +20,7 @@ import io.askimo.core.providers.lmstudio.LmStudioModelFactory
 import io.askimo.core.providers.localai.LocalAiModelFactory
 import io.askimo.core.providers.ollama.OllamaModelFactory
 import io.askimo.core.providers.openai.OpenAiModelFactory
+import io.askimo.core.providers.openaicompatible.OpenAiCompatibleModelFactory
 import io.askimo.core.providers.xai.XAiModelFactory
 
 /**
@@ -47,6 +49,7 @@ object ProviderRegistry {
             ANTHROPIC to AnthropicModelFactory(),
             LOCALAI to LocalAiModelFactory(),
             LMSTUDIO to LmStudioModelFactory(),
+            OPENAI_COMPATIBLE to OpenAiCompatibleModelFactory(),
         )
 
     /**

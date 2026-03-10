@@ -3134,12 +3134,14 @@
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig"
         ]
       },
       {
         "name": "<init>",
         "parameterTypes": [
+          "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
@@ -3159,6 +3161,7 @@
       { "name": "getLocalai", "parameterTypes": [] },
       { "name": "getOllama", "parameterTypes": [] },
       { "name": "getOpenai", "parameterTypes": [] },
+      { "name": "getOpenai_compatible", "parameterTypes": [] },
       { "name": "getXai", "parameterTypes": [] }
     ]
   },
@@ -4508,7 +4511,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$0PyMcV5P",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$xR8jsBv8",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4748,6 +4751,9 @@
       { "name": "getDefaultModel", "parameterTypes": [] },
       { "name": "setApiKey", "parameterTypes": ["java.lang.String"] }
     ]
+  },
+  {
+    "name": "io.askimo.core.providers.openaicompatible.OpenAiCompatibleSettings"
   },
   {
     "name": "io.askimo.core.providers.xai.XAiModelFactoryTest",
@@ -6867,7 +6873,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$lxecrjiJ",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$FO4GttvF",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

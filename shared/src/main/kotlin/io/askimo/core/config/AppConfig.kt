@@ -304,6 +304,7 @@ data class ModelsConfig(
     val localai: ProviderModelConfig = ProviderModelConfig(),
     val lmstudio: ProviderModelConfig = ProviderModelConfig(),
     val xai: ProviderModelConfig = ProviderModelConfig(),
+    val openai_compatible: ProviderModelConfig = ProviderModelConfig(),
 ) {
     operator fun get(provider: ModelProvider): ProviderModelConfig = when (provider) {
         ModelProvider.OPENAI -> openai
@@ -314,6 +315,7 @@ data class ModelsConfig(
         ModelProvider.DOCKER -> docker
         ModelProvider.LOCALAI -> localai
         ModelProvider.LMSTUDIO -> lmstudio
+        ModelProvider.OPENAI_COMPATIBLE -> openai_compatible
         ModelProvider.UNKNOWN -> ProviderModelConfig()
     }
 
@@ -326,6 +328,7 @@ data class ModelsConfig(
         ModelProvider.DOCKER -> copy(docker = updated)
         ModelProvider.LOCALAI -> copy(localai = updated)
         ModelProvider.LMSTUDIO -> copy(lmstudio = updated)
+        ModelProvider.OPENAI_COMPATIBLE -> copy(openai_compatible = updated)
         ModelProvider.UNKNOWN -> this
     }
 }
@@ -523,6 +526,13 @@ object AppConfig {
             embedding_model: ${'$'}{ASKIMO_XAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
             image_model: ${'$'}{ASKIMO_XAI_IMAGE_MODEL:grok-2-vision-latest}
+          openai_compatible:
+            available_models:
+            utility_model:
+            utility_model_timeout_seconds: 45
+            embedding_model:
+            vision_model:
+            image_model:
 
         proxy:
           type: ${'$'}{ASKIMO_PROXY_TYPE:NONE}
@@ -975,6 +985,13 @@ object AppConfig {
                 embeddingModel = env("ASKIMO_XAI_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_XAI_VISION_MODEL", "grok-2-vision-latest"),
                 imageModel = env("ASKIMO_XAI_IMAGE_MODEL", "grok-2-vision-latest"),
+            ),
+            openai_compatible = ProviderModelConfig(
+                utilityModel = "",
+                utilityModelTimeoutSeconds = 45L,
+                embeddingModel = "",
+                visionModel = "",
+                imageModel = "",
             ),
         )
 
