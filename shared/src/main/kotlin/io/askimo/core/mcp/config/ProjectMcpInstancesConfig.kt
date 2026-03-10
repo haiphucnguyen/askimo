@@ -85,10 +85,11 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
      * Add or update a single instance
      */
     override fun add(instance: McpInstance) {
-        val instances = load(instance.projectId).toMutableList()
+        val projectId = instance.projectId ?: return
+        val instances = load(projectId).toMutableList()
         instances.removeIf { it.id == instance.id }
         instances.add(instance)
-        save(instance.projectId, instances)
+        save(projectId, instances)
     }
 
     /**

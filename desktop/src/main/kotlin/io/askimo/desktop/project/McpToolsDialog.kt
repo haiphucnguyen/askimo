@@ -45,12 +45,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolStrategy
+import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.McpInstance
-import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.desktop.common.components.inlineErrorMessage
@@ -67,7 +68,7 @@ fun mcpToolsDialog(
     instance: McpInstance,
     onDismiss: () -> Unit,
 ) {
-    val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)
+    val mcpClientFactory = get<McpClientFactory>(McpClientFactory::class.java)
     val serverDefinition = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
     var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -91,7 +92,7 @@ fun mcpToolsDialog(
         errorMessage = null
         try {
             tools = withContext(Dispatchers.IO) {
-                mcpService.listTools(instance.projectId, instance.id)
+                mcpClientFactory.listTools(instance)
             }
         } catch (e: Exception) {
             val isTimeout = e is TimeoutException ||
@@ -188,6 +189,7 @@ fun mcpToolsDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
+                                        // Key — fixed, never shrinks
                                         SelectionContainer {
                                             Text(
                                                 text = key,
@@ -196,16 +198,20 @@ fun mcpToolsDialog(
                                             )
                                         }
                                         Row(
+                                            modifier = Modifier.weight(1f, fill = false),
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            horizontalArrangement = Arrangement.End,
                                         ) {
+                                            // Value — takes remaining space, truncates if too long
                                             if (isSecret && showSecret) {
-                                                SelectionContainer {
+                                                SelectionContainer(modifier = Modifier.weight(1f, fill = false)) {
                                                     Text(
                                                         text = value,
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                                                         modifier = Modifier.padding(start = 8.dp),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
                                                     )
                                                 }
                                             } else {
@@ -213,21 +219,26 @@ fun mcpToolsDialog(
                                                     text = if (isSecret) "••••••••" else value,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(start = 8.dp),
+                                                    modifier = Modifier
+                                                        .weight(1f, fill = false)
+                                                        .padding(start = 8.dp),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
                                                 )
                                             }
+                                            // Icon — always reserved space, never squeezed out
                                             if (isSecret) {
                                                 IconButton(
                                                     onClick = { showSecret = !showSecret },
                                                     modifier = Modifier
-                                                        .size(20.dp)
+                                                        .size(28.dp)
                                                         .pointerHoverIcon(PointerIcon.Hand),
                                                 ) {
                                                     Icon(
                                                         imageVector = if (showSecret) {
-                                                            Icons.Default.Visibility
-                                                        } else {
                                                             Icons.Default.VisibilityOff
+                                                        } else {
+                                                            Icons.Default.Visibility
                                                         },
                                                         contentDescription = stringResource(
                                                             if (showSecret) {

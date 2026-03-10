@@ -19,11 +19,13 @@ import io.askimo.core.mcp.config.McpServersConfig
  */
 class GlobalMcpInstanceService(
     serversConfig: McpServersConfig = McpServersConfig,
+    mcpClientFactory: McpClientFactory = McpClientFactory(),
 ) {
 
     private val delegate = ProjectMcpInstanceService(
         instancesConfig = GlobalMcpInstancesConfig,
         serversConfig = serversConfig,
+        mcpClientFactory = mcpClientFactory,
     )
 
     fun getInstances(): List<McpInstance> = delegate.getInstances(GLOBAL_MCP_SCOPE_ID)
