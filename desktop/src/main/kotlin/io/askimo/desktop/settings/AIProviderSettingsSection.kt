@@ -246,18 +246,12 @@ private fun providerModelConfigCard(provider: ModelProvider) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource("settings.provider.model.config.title"),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Text(
-                        text = stringResource("settings.provider.model.config.description"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    )
-                }
+                Text(
+                    text = stringResource("settings.provider.model.config.title"),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
                 linkButton(
                     onClick = {
                         try {
@@ -279,6 +273,12 @@ private fun providerModelConfigCard(provider: ModelProvider) {
                     )
                 }
             }
+
+            Text(
+                text = stringResource("settings.provider.model.config.description"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            )
 
             // Utility model
             providerModelField(
