@@ -15,6 +15,7 @@ import io.askimo.core.intent.ToolSource
 import io.askimo.core.intent.ToolStrategy
 import io.askimo.core.intent.ToolVectorIndex
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.config.McpInstancesConfig
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.ProjectMcpInstancesConfig
 import io.askimo.core.mcp.config.ProjectMcpToolsConfig
@@ -33,7 +34,7 @@ private val log = logger<ProjectMcpInstanceService>()
  * This service is registered as a singleton in Koin for dependency injection.
  */
 class ProjectMcpInstanceService(
-    private val instancesConfig: ProjectMcpInstancesConfig = ProjectMcpInstancesConfig,
+    private val instancesConfig: McpInstancesConfig = ProjectMcpInstancesConfig,
     private val serversConfig: McpServersConfig = McpServersConfig,
 ) {
     /**

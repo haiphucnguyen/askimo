@@ -10,9 +10,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.GLOBAL_MCP_SCOPE_ID
 import io.askimo.core.mcp.ProjectMcpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceData
-import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Files
@@ -20,10 +20,19 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
-private object ProjectMcpInstancesConfigObject
-private val log = logger<ProjectMcpInstancesConfigObject>()
+private object GlobalMcpInstancesConfigObject
+private val log = logger<GlobalMcpInstancesConfigObject>()
 
-object ProjectMcpInstancesConfig : McpInstancesConfig {
+/**
+ * Global MCP instances (available to Universal Chat).
+ *
+ * Stored at: ~/.askimo/<profile>/mcp-instances.yml
+ *
+ * We reuse [ProjectMcpInstance] to avoid duplicating connector creation and
+ * secret handling. The [ProjectMcpInstance.projectId] is always normalised to
+ * [GLOBAL_MCP_SCOPE_ID].
+ */
+object GlobalMcpInstancesConfig : McpInstancesConfig {
 
     private val mapper: ObjectMapper =
         ObjectMapper(YAMLFactory())
@@ -32,71 +41,60 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
 
     private const val CONFIG_FILE_NAME = "mcp-instances.yml"
 
-    private fun getConfigPath(projectId: String): Path = AskimoHome.base()
-        .resolve("projects")
-        .resolve(projectId)
-        .resolve(CONFIG_FILE_NAME)
+    private fun getConfigPath(): Path = AskimoHome.base().resolve(CONFIG_FILE_NAME)
 
-    /**
-     * Load all MCP instances for a project
-     */
     override fun load(projectId: String): List<ProjectMcpInstance> {
-        val path = getConfigPath(projectId)
-
-        if (!path.exists()) {
-            return emptyList()
-        }
+        // projectId is ignored; global scope only
+        val path = getConfigPath()
+        if (!path.exists()) return emptyList()
 
         return try {
             val content = Files.readString(path)
             val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
             wrapper.instances.map { it.toDomain() }
+                .map { it.copy(projectId = GLOBAL_MCP_SCOPE_ID) }
         } catch (e: Exception) {
-            log.displayError("Failed to load MCP instances for project $projectId", e)
+            log.displayError("Failed to load global MCP instances", e)
             emptyList()
         }
     }
 
-    /**
-     * Save all MCP instances for a project.
-     * Looks up each instance's [McpServerDefinition] so [SecretDetector] can use
-     * the authoritative [ParameterType.SECRET] flag instead of relying solely on
-     * naming conventions.
-     */
     override fun save(projectId: String, instances: List<ProjectMcpInstance>) {
-        val path = getConfigPath(projectId)
+        // projectId is ignored
+        val path = getConfigPath()
 
         try {
             path.parent.createDirectories()
+
             val data = instances.map { instance ->
-                val definition = McpServersConfig.get(instance.serverId)
-                ProjectMcpInstanceData.from(instance, definition)
+                val normalized = instance.copy(projectId = GLOBAL_MCP_SCOPE_ID)
+                val definition = McpServersConfig.get(normalized.serverId)
+                ProjectMcpInstanceData.from(normalized, definition)
             }
+
             val wrapper = InstancesWrapper(data)
             val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
             Files.writeString(path, yaml)
-            log.debug("Saved ${instances.size} MCP instances for project $projectId")
+            log.debug("Saved ${instances.size} global MCP instances")
         } catch (e: Exception) {
-            log.displayError("Failed to save MCP instances for project $projectId", e)
+            log.displayError("Failed to save global MCP instances", e)
         }
     }
 
-    /**
-     * Add or update a single instance
-     */
     override fun add(instance: ProjectMcpInstance) {
-        val instances = load(instance.projectId).toMutableList()
-        instances.removeIf { it.id == instance.id }
-        instances.add(instance)
-        save(instance.projectId, instances)
+        val normalized = instance.copy(projectId = GLOBAL_MCP_SCOPE_ID)
+        val instances = load(GLOBAL_MCP_SCOPE_ID).toMutableList()
+        instances.removeIf { it.id == normalized.id }
+        instances.add(normalized)
+        save(GLOBAL_MCP_SCOPE_ID, instances)
     }
 
-    /**
-     * Remove a specific instance and clean up its secrets from [SecureKeyManager].
-     */
+    override fun get(projectId: String, instanceId: String): ProjectMcpInstance? = load(GLOBAL_MCP_SCOPE_ID).find { it.id == instanceId }
+
     override fun remove(projectId: String, instanceId: String) {
-        // Load the raw data (not domain) so we can read secretParameterKeys before deletion
-        val path = getConfigPath(projectId)
+        val path = getConfigPath()
+
+        // Clean up secrets for this instance first
         if (path.exists()) {
             try {
                 val content = Files.readString(path)
@@ -108,34 +106,17 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
                         SecureKeyManager.removeSecretKey(ProjectMcpInstanceData.secretKeyId(instanceId, key))
                     }
             } catch (e: Exception) {
-                log.displayError("Failed to clean up secrets for instance $instanceId", e)
+                log.displayError("Failed to clean up secrets for global instance $instanceId", e)
             }
         }
-        val instances = load(projectId).filterNot { it.id == instanceId }
-        save(projectId, instances)
+
+        save(GLOBAL_MCP_SCOPE_ID, load(GLOBAL_MCP_SCOPE_ID).filterNot { it.id == instanceId })
     }
 
-    /**
-     * Get a specific instance
-     */
-    override fun get(projectId: String, instanceId: String): ProjectMcpInstance? = load(projectId).find { it.id == instanceId }
-
-    /**
-     * Update an existing instance
-     */
-    override fun update(instance: ProjectMcpInstance) {
-        add(instance)
-    }
-
-    /**
-     * Delete all instances for a project (when project is deleted).
-     * Also removes all associated secrets from [SecureKeyManager].
-     */
     override fun deleteAll(projectId: String) {
-        val path = getConfigPath(projectId)
+        val path = getConfigPath()
         if (path.exists()) {
             try {
-                // Clean up secrets before deleting the file
                 val content = Files.readString(path)
                 val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances.forEach { instance ->
@@ -144,17 +125,20 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
                     }
                 }
                 Files.delete(path)
-                log.debug("Deleted all MCP instances and secrets for project $projectId")
+                log.debug("Deleted all global MCP instances and secrets")
             } catch (e: Exception) {
-                log.displayError("Failed to delete MCP instances for project $projectId", e)
+                log.displayError("Failed to delete global MCP instances", e)
             }
         }
     }
-}
 
-/**
- * Wrapper for YAML serialization
- */
-private data class InstancesWrapper(
-    val instances: List<ProjectMcpInstanceData>,
-)
+    // Convenience helpers
+    fun load(): List<ProjectMcpInstance> = load(GLOBAL_MCP_SCOPE_ID)
+    fun save(instances: List<ProjectMcpInstance>) = save(GLOBAL_MCP_SCOPE_ID, instances)
+    fun get(instanceId: String): ProjectMcpInstance? = get(GLOBAL_MCP_SCOPE_ID, instanceId)
+    fun remove(instanceId: String) = remove(GLOBAL_MCP_SCOPE_ID, instanceId)
+
+    private data class InstancesWrapper(
+        val instances: List<ProjectMcpInstanceData>,
+    )
+}
