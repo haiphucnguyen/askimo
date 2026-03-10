@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
@@ -645,29 +646,88 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             },
     ) {
         val scrollState = rememberScrollState()
+        val lines = code.lines().let {
+            // Drop a trailing empty line that commonmark always appends
+            if (it.lastOrNull()?.isEmpty() == true) it.dropLast(1) else it
+        }
+        val lineCount = lines.size
+        val lineNumberColor = ComponentColors.codeBlockContentColor().copy(alpha = 0.4f)
+        val lineNumberWidth = when {
+            lineCount >= 1000 -> 52.dp
+            lineCount >= 100 -> 42.dp
+            else -> 32.dp
+        }
+        // Gutter background: slightly darker/lighter than the code area depending on theme
+        val gutterBackground = ComponentColors.codeBlockBackground().let { base ->
+            if (ComponentColors.isCodeBlockDark()) {
+                base.copy(
+                    red = (base.red * 0.80f).coerceIn(0f, 1f),
+                    green = (base.green * 0.80f).coerceIn(0f, 1f),
+                    blue = (base.blue * 0.80f).coerceIn(0f, 1f),
+                )
+            } else {
+                base.copy(
+                    red = (base.red * 0.93f).coerceIn(0f, 1f),
+                    green = (base.green * 0.93f).coerceIn(0f, 1f),
+                    blue = (base.blue * 0.93f).coerceIn(0f, 1f),
+                )
+            }
+        }
+        val dividerColor = lineNumberColor.copy(alpha = 0.15f)
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = highlightedCode,
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = FontFamily.Monospace,
-                color = ComponentColors.codeBlockContentColor(),
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            // ── Gutter: line numbers ──────────────────────────────────────────
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .horizontalScroll(scrollState),
+                    .width(lineNumberWidth)
+                    .fillMaxHeight()
+                    .background(gutterBackground)
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
+                lines.forEachIndexed { index, _ ->
+                    Text(
+                        text = "${index + 1}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = FontFamily.Monospace,
+                        color = lineNumberColor,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+
+            // ── Divider ───────────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight()
+                    .background(dividerColor),
             )
 
-            // Horizontal scrollbar
-            HorizontalScrollbar(
-                adapter = rememberScrollbarAdapter(scrollState),
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-            )
+            // ── Code ──────────────────────────────────────────────────────────
+            Box(modifier = Modifier.weight(1f)) {
+                SelectionContainer {
+                    Text(
+                        text = highlightedCode,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = FontFamily.Monospace,
+                        color = ComponentColors.codeBlockContentColor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, bottom = 20.dp, start = 12.dp, end = 12.dp)
+                            .horizontalScroll(scrollState),
+                    )
+                }
+
+                // Horizontal scrollbar
+                HorizontalScrollbar(
+                    adapter = rememberScrollbarAdapter(scrollState),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                )
+            }
         }
 
         // Simple: button inside code block, just adjust offset
@@ -734,7 +794,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                     themedTooltip(text = stringResource("code.copy")) {
                         IconButton(
                             onClick = {
-                                clipboardManager.setText(AnnotatedString(codeBlock.literal))
+                                clipboardManager.setText(AnnotatedString(codeBlock.literal.trimEnd('\n', '\r')))
                                 showCopyFeedback = true
                                 coroutineScope.launch {
                                     delay(2000)
