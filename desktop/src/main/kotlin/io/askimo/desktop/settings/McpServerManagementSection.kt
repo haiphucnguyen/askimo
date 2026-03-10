@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -326,6 +327,15 @@ fun mcpServerTemplatesSection() {
                                 globalInstances.forEach { instance ->
                                     globalMcpInstanceCard(
                                         instance = instance,
+                                        onToggleEnabled = {
+                                            scope.launch {
+                                                globalMcpService.updateInstance(
+                                                    instanceId = instance.id,
+                                                    enabled = !instance.enabled,
+                                                )
+                                                globalInstances = globalMcpService.getInstances()
+                                            }
+                                        },
                                         onDelete = { deletingGlobalInstance = instance },
                                     )
                                 }
@@ -473,6 +483,7 @@ fun mcpServerTemplatesSection() {
 @Composable
 private fun globalMcpInstanceCard(
     instance: McpInstance,
+    onToggleEnabled: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val serverDef = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
@@ -509,18 +520,6 @@ private fun globalMcpInstanceCard(
                             )
                         },
                     )
-                    if (!instance.enabled) {
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    text = stringResource("mcp.instance.disabled"),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                        )
-                    }
                 }
 
                 serverDef?.let { def ->
@@ -538,7 +537,29 @@ private fun globalMcpInstanceCard(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Enable / disable toggle
+                themedTooltip(
+                    text = stringResource(
+                        if (instance.enabled) {
+                            "mcp.global.instance.disable.tooltip"
+                        } else {
+                            "mcp.global.instance.enable.tooltip"
+                        },
+                    ),
+                ) {
+                    Switch(
+                        checked = instance.enabled,
+                        onCheckedChange = { onToggleEnabled() },
+                        modifier = Modifier
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .size(width = 44.dp, height = 24.dp),
+                    )
+                }
+
                 themedTooltip(text = stringResource("mcp.integrations.view.tools.tooltip")) {
                     IconButton(
                         onClick = { showToolsDialog = true },
