@@ -677,10 +677,13 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
 
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // ── Gutter: line numbers ──────────────────────────────────────────
+            // Clip to the parent code block shape so the gutter background respects
+            // the rounded left corners and doesn't bleed into the border.
             Column(
                 modifier = Modifier
                     .width(lineNumberWidth)
                     .fillMaxHeight()
+                    .clip(codeBlockShape)
                     .background(gutterBackground)
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.End,

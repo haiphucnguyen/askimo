@@ -5,8 +5,6 @@
 package io.askimo.desktop.chat
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollbarStyle
-import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,18 +14,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ContentCopy
@@ -44,7 +38,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -62,8 +54,6 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -107,198 +97,91 @@ fun messageList(
     userAvatarPainter: BitmapPainter? = null,
     aiAvatarPainter: BitmapPainter? = null,
     onRetryMessage: ((String) -> Unit)? = null,
+    viewportTopY: Float? = null,
 ) {
-    val scrollState = rememberScrollState()
-
     // Retry confirmation dialog state
     var showRetryConfirmDialog by remember { mutableStateOf(false) }
     var retryMessageId by remember { mutableStateOf<String?>(null) }
 
-    // Track if user has manually scrolled up during AI response
-    var userScrolledUp by remember { mutableStateOf(false) }
-
-    // Track the last user message count to detect new messages being sent
-    var lastUserMessageCount by remember { mutableStateOf(0) }
-    val currentUserMessageCount = messages.count { it.isUser }
-
-    // ---- Prepend scroll anchor ----
-    // prependGeneration increments in the ViewModel each time previous messages
-    // are prepended. We detect the change here (during composition, before layout)
-    // and capture the current scrollValue + maxValue so we can restore the position
-    // after the new content is laid out.
-    var lastSeenPrependGeneration by remember { mutableStateOf(prependGeneration) }
-    // scrollValue captured right before a prepend is laid out
-    var savedScrollValue by remember { mutableStateOf(-1) }
-    // maxValue captured right before a prepend is laid out
-    var savedScrollMax by remember { mutableStateOf(-1) }
-
-    if (prependGeneration != lastSeenPrependGeneration) {
-        // This runs during composition — layout has NOT yet reflected the new messages,
-        // so scrollState still has the pre-prepend values. Capture them.
-        savedScrollValue = scrollState.value
-        savedScrollMax = scrollState.maxValue
-        lastSeenPrependGeneration = prependGeneration
-    }
-
-    // When a new user message is sent, reset auto-scroll and scroll to bottom
-    LaunchedEffect(currentUserMessageCount) {
-        if (currentUserMessageCount > lastUserMessageCount) {
-            lastUserMessageCount = currentUserMessageCount
-            userScrolledUp = false
-            scrollState.scrollTo(scrollState.maxValue)
-        }
-    }
-
-    // Track user manual scroll - if they scroll significantly up, disable auto-scroll
-    LaunchedEffect(scrollState.value, scrollState.maxValue) {
-        // Only check if we're receiving AI response (thinking or messages being streamed)
-        if (isThinking || messages.lastOrNull()?.isUser == false) {
-            val distanceFromBottom = scrollState.maxValue - scrollState.value
-            if (distanceFromBottom > 100) {
-                userScrolledUp = true
-            } else if (distanceFromBottom < 50) {
-                userScrolledUp = false
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        // Show loading indicator when loading previous messages
+        if (isLoadingPrevious) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = stringResource("message.loading.previous"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
             }
         }
-    }
 
-    // Auto-scroll or restore position when content height changes.
-    LaunchedEffect(scrollState.maxValue) {
-        val sv = savedScrollValue
-        val sm = savedScrollMax
-        if (sv >= 0 && sm >= 0 && scrollState.maxValue > sm) {
-            // A prepend just increased maxValue — restore the viewport so the
-            // previously-visible content stays in place.
-            val addedHeight = scrollState.maxValue - sm
-            scrollState.scrollTo((sv + addedHeight).coerceIn(0, scrollState.maxValue))
-            savedScrollValue = -1
-            savedScrollMax = -1
-        } else if (!userScrolledUp && sv < 0) {
-            // Normal streaming / new-message append — scroll to bottom.
-            scrollState.scrollTo(scrollState.maxValue)
-        }
-    }
+        // Group messages into active and outdated branches
+        val messageGroups = groupMessagesWithOutdatedBranches(messages)
 
-    // Load previous messages when scrolled to top
-    LaunchedEffect(scrollState.value) {
-        if (scrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
-            onLoadPrevious()
-        }
-    }
-
-    // Auto-scroll to active search result when it changes
-    LaunchedEffect(currentSearchResultIndex, searchQuery) {
-        if (searchQuery.isNotBlank() && messages.isNotEmpty()) {
-            val estimatedItemHeight = 150f
-            val targetPosition = (currentSearchResultIndex * estimatedItemHeight * scrollState.maxValue / (messages.size * estimatedItemHeight)).toInt()
-            scrollState.animateScrollTo(targetPosition)
-        }
-    }
-
-    var scrollableColumnBounds by remember { mutableStateOf<Rect?>(null) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(end = 12.dp) // Add padding for scrollbar
-                .verticalScroll(scrollState)
-                .onGloballyPositioned { coordinates ->
-                    if (coordinates.isAttached) {
-                        scrollableColumnBounds = coordinates.boundsInWindow()
-                    }
-                },
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            // Show loading indicator when loading previous messages
-            if (isLoadingPrevious) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = stringResource("message.loading.previous"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        var messageIndex = 0
+        var isFirstMessage = true
+        messageGroups.forEach { group ->
+            when (group) {
+                is MessageGroup.ActiveMessage -> {
+                    val isActiveResult = searchQuery.isNotBlank() && messageIndex == currentSearchResultIndex
+                    messageBubble(
+                        message = group.message,
+                        searchQuery = searchQuery,
+                        isActiveSearchResult = isActiveResult,
+                        onMessageClick = onMessageClick,
+                        onEditMessage = onEditMessage,
+                        onDownloadAttachment = onDownloadAttachment,
+                        userAvatarPainter = userAvatarPainter,
+                        aiAvatarPainter = aiAvatarPainter,
+                        onRetryMessage = onRetryMessage,
+                        addTopPadding = isFirstMessage,
+                        viewportTopY = viewportTopY,
+                        allMessages = messages,
+                        onShowRetryConfirmDialog = { messageId ->
+                            retryMessageId = messageId
+                            showRetryConfirmDialog = true
+                        },
                     )
+                    isFirstMessage = false
+                    messageIndex++
                 }
-            }
-
-            // Group messages into active and outdated branches
-            val messageGroups = groupMessagesWithOutdatedBranches(messages)
-
-            var messageIndex = 0
-            var isFirstMessage = true
-            messageGroups.forEach { group ->
-                when (group) {
-                    is MessageGroup.ActiveMessage -> {
-                        val isActiveResult = searchQuery.isNotBlank() && messageIndex == currentSearchResultIndex
-                        messageBubble(
-                            message = group.message,
-                            searchQuery = searchQuery,
-                            isActiveSearchResult = isActiveResult,
-                            onMessageClick = onMessageClick,
-                            onEditMessage = onEditMessage,
-                            onDownloadAttachment = onDownloadAttachment,
-                            userAvatarPainter = userAvatarPainter,
-                            aiAvatarPainter = aiAvatarPainter,
-                            onRetryMessage = onRetryMessage,
-                            addTopPadding = isFirstMessage,
-                            viewportTopY = scrollableColumnBounds?.top,
-                            allMessages = messages,
-                            onShowRetryConfirmDialog = { messageId ->
-                                retryMessageId = messageId
-                                showRetryConfirmDialog = true
-                            },
-                        )
-                        isFirstMessage = false
-                        messageIndex++
-                    }
-                    is MessageGroup.OutdatedBranch -> {
-                        outdatedBranchComponent(
-                            messages = group.messages,
-                            userAvatarPainter = userAvatarPainter,
-                            aiAvatarPainter = aiAvatarPainter,
-                        )
-                        isFirstMessage = false
-                        messageIndex += group.messages.size
-                    }
-                }
-            }
-
-            // Show "Thinking..." indicator when AI is processing but hasn't returned first token
-            if (isThinking) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start,
-                ) {
-                    Text(
-                        text = "$spinnerFrame ${stringResource("message.thinking", thinkingElapsedSeconds)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                is MessageGroup.OutdatedBranch -> {
+                    outdatedBranchComponent(
+                        messages = group.messages,
+                        userAvatarPainter = userAvatarPainter,
+                        aiAvatarPainter = aiAvatarPainter,
                     )
+                    isFirstMessage = false
+                    messageIndex += group.messages.size
                 }
             }
         }
 
-        VerticalScrollbar(
-            modifier = Modifier.align(Alignment.CenterEnd),
-            adapter = rememberScrollbarAdapter(scrollState),
-            style = ScrollbarStyle(
-                minimalHeight = 16.dp,
-                thickness = 8.dp,
-                shape = MaterialTheme.shapes.small,
-                hoverDurationMillis = 300,
-                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            ),
-        )
+        // Show "Thinking..." indicator when AI is processing but hasn't returned first token
+        if (isThinking) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = "$spinnerFrame ${stringResource("message.thinking", thinkingElapsedSeconds)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
     }
 
     // Retry confirmation dialog
