@@ -4,6 +4,7 @@
  */
 package io.askimo.desktop.common.ui
 
+import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -76,6 +78,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import io.askimo.core.executable.RunnableLanguage
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.desktop.common.i18n.stringResource
@@ -121,12 +124,17 @@ private val log = currentFileLogger()
 
 /**
  * Simple Markdown renderer for Compose.
+ *
+ * @param onRunRequest Called when the user clicks the Run button on a code block.
+ *   The host is responsible for showing the confirmation dialog outside any
+ *   SelectionContainer to avoid "layouts are not part of the same hierarchy" crashes.
  */
 @Composable
 fun markdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     viewportTopY: Float? = null,
+    onRunRequest: ((code: String, language: String) -> Unit)? = null,
 ) {
     val parser = Parser.builder()
         .extensions(listOf(TablesExtension.create(), AutolinkExtension.create()))
@@ -134,17 +142,16 @@ fun markdownText(
     val document = parser.parse(markdown)
 
     Column(modifier = modifier) {
-        renderNode(document, viewportTopY)
+        renderNode(document, viewportTopY, onRunRequest)
     }
 }
 
 @Composable
-private fun renderNode(node: Node, viewportTopY: Float? = null) {
+private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((String, String) -> Unit)? = null) {
     var child = node.firstChild
     while (child != null) {
         when (child) {
             is Paragraph -> {
-                // Check if paragraph contains only a video link
                 val videoUrl = extractVideoUrl(child)
                 if (videoUrl != null) {
                     renderVideo(videoUrl)
@@ -155,11 +162,10 @@ private fun renderNode(node: Node, viewportTopY: Float? = null) {
             is Heading -> renderHeading(child)
             is BulletList -> renderBulletList(child)
             is OrderedList -> renderOrderedList(child)
-            is FencedCodeBlock -> renderCodeBlock(child, viewportTopY)
-            is BlockQuote -> renderBlockQuote(child, viewportTopY)
+            is FencedCodeBlock -> renderCodeBlock(child, viewportTopY, onRunRequest)
+            is BlockQuote -> renderBlockQuote(child, viewportTopY, onRunRequest)
             is TableBlock -> renderTable(child)
             is Image -> {
-                // Check if it's actually a video
                 val destination = child.destination
                 if (isVideoUrl(destination)) {
                     renderVideo(destination)
@@ -167,7 +173,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null) {
                     renderImage(child)
                 }
             }
-            else -> renderNode(child, viewportTopY)
+            else -> renderNode(child, viewportTopY, onRunRequest)
         }
         child = child.next
     }
@@ -529,9 +535,12 @@ private fun renderListItem(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null) {
+private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, onRunRequest: ((String, String) -> Unit)? = null) {
     val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
     val code = codeBlock.literal
+    // Resolved once per code block; null means the Run button should not be shown
+    // (either unsupported language or executable not found on PATH)
+    val runnableLanguage = remember(language) { RunnableLanguage.resolve(language) }
 
     // Check if this "code block" is actually just prose text
     // (AI sometimes wraps regular text in code fences by mistake)
@@ -652,8 +661,8 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             )
 
             // Horizontal scrollbar
-            androidx.compose.foundation.HorizontalScrollbar(
-                adapter = androidx.compose.foundation.rememberScrollbarAdapter(scrollState),
+            HorizontalScrollbar(
+                adapter = rememberScrollbarAdapter(scrollState),
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
@@ -683,6 +692,36 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                         style = MaterialTheme.typography.labelLarge,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                // Run button — shown only when the language is runnable and its executable is on PATH
+                if (runnableLanguage != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    ) {
+                        themedTooltip(text = stringResource("code.run")) {
+                            IconButton(
+                                onClick = {
+                                    onRunRequest?.invoke(
+                                        runnableLanguage.buildTerminalCommand(code),
+                                        runnableLanguage.aliases.first(),
+                                    )
+                                },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = stringResource("code.run.description"),
+                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
 
                 // Copy button
@@ -719,7 +758,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
 }
 
 @Composable
-private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null) {
+private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null, onRunRequest: ((String, String) -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -727,7 +766,7 @@ private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .padding(8.dp),
     ) {
-        renderNode(blockQuote, viewportTopY)
+        renderNode(blockQuote, viewportTopY, onRunRequest)
     }
 }
 

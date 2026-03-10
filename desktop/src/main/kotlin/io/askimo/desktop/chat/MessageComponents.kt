@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.RunCodeEvent
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.common.components.primaryButton
@@ -359,6 +361,8 @@ fun messageBubble(
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isHovered by remember { mutableStateOf(false) }
+    // Holds a pending run request from a code block — dialog shown outside SelectionContainer
+    var pendingRunRequest by remember { mutableStateOf<Pair<String, String>?>(null) }
     val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
 
     Box(
@@ -523,6 +527,9 @@ fun messageBubble(
                                                     bottom = 12.dp,
                                                 ),
                                                 viewportTopY = viewportTopY,
+                                                onRunRequest = { cmd, lang ->
+                                                    pendingRunRequest = Pair(cmd, lang)
+                                                },
                                             )
                                         }
                                     }
@@ -840,6 +847,49 @@ fun messageBubble(
                 }
             } // Close Column
         } // Close BoxWithConstraints
+
+        val runRequest = pendingRunRequest
+        if (runRequest != null) {
+            Dialog(onDismissRequest = { pendingRunRequest = null }) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp).width(360.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = stringResource("code.run.dialog.title"),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = stringResource("code.run.dialog.message"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        ) {
+                            secondaryButton(onClick = {
+                                pendingRunRequest = null
+                                EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = false))
+                            }) {
+                                Text(stringResource("code.run.dialog.paste"))
+                            }
+                            primaryButton(onClick = {
+                                pendingRunRequest = null
+                                EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = true))
+                            }) {
+                                Text(stringResource("code.run.dialog.execute"))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     } // Close outer hover-tracking Box
 }
 
