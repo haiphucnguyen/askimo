@@ -28,6 +28,7 @@ import io.askimo.core.providers.lmstudio.LmStudioSettings
 import io.askimo.core.providers.localai.LocalAiSettings
 import io.askimo.core.providers.ollama.OllamaSettings
 import io.askimo.core.providers.openai.OpenAiSettings
+import io.askimo.core.providers.openaicompatible.OpenAiCompatibleSettings
 import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.tools.fs.LocalFsTools
 import io.askimo.tools.git.GitTools
@@ -65,6 +66,7 @@ class AskimoFeature : Feature {
             DockerAiSettings::class.java,
             LocalAiSettings::class.java,
             LmStudioSettings::class.java,
+            OpenAiCompatibleSettings::class.java,
             NoopProviderSettings::class.java,
         )
 
