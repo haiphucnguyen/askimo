@@ -52,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.langchain4j.agent.tool.ToolSpecification
 import io.askimo.core.chat.domain.Project
-import io.askimo.core.mcp.ProjectMcpInstance
+import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -74,7 +74,7 @@ fun mcpTabContent(project: Project?) {
     }
 
     val mcpService = remember { KoinGlobalContext.get().get<ProjectMcpInstanceService>() }
-    var instances by remember(project.id) { mutableStateOf<List<ProjectMcpInstance>>(emptyList()) }
+    var instances by remember(project.id) { mutableStateOf<List<McpInstance>>(emptyList()) }
     var selectedInstanceId by remember { mutableStateOf<String?>(null) }
     var instanceTools by remember { mutableStateOf<Map<String, List<ToolSpecification>>>(emptyMap()) }
     var loadingTools by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -176,7 +176,7 @@ fun mcpTabContent(project: Project?) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun mcpInstanceItem(
-    instance: ProjectMcpInstance,
+    instance: McpInstance,
     isSelected: Boolean,
     isExpanded: Boolean,
     isLoadingTools: Boolean,

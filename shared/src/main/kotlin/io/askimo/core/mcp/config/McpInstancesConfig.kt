@@ -4,7 +4,7 @@
  */
 package io.askimo.core.mcp.config
 
-import io.askimo.core.mcp.ProjectMcpInstance
+import io.askimo.core.mcp.McpInstance
 
 /**
  * Abstraction over MCP instance persistence.
@@ -13,15 +13,15 @@ import io.askimo.core.mcp.ProjectMcpInstance
  * - Global scope: instances stored under ~/.askimo/<profile>/mcp-instances.yml via synthetic project id.
  */
 interface McpInstancesConfig {
-    fun load(projectId: String): List<ProjectMcpInstance>
-    fun save(projectId: String, instances: List<ProjectMcpInstance>)
+    fun load(projectId: String): List<McpInstance>
+    fun save(projectId: String, instances: List<McpInstance>)
 
-    fun add(instance: ProjectMcpInstance)
+    fun add(instance: McpInstance)
     fun remove(projectId: String, instanceId: String)
 
-    fun get(projectId: String, instanceId: String): ProjectMcpInstance?
+    fun get(projectId: String, instanceId: String): McpInstance?
 
-    fun update(instance: ProjectMcpInstance) = add(instance)
+    fun update(instance: McpInstance) = add(instance)
 
     fun deleteAll(projectId: String)
 }

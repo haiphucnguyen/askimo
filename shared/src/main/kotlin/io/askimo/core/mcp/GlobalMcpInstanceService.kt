@@ -26,15 +26,15 @@ class GlobalMcpInstanceService(
         serversConfig = serversConfig,
     )
 
-    fun getInstances(): List<ProjectMcpInstance> = delegate.getInstances(GLOBAL_MCP_SCOPE_ID)
+    fun getInstances(): List<McpInstance> = delegate.getInstances(GLOBAL_MCP_SCOPE_ID)
 
-    fun getInstance(instanceId: String): ProjectMcpInstance? = delegate.getInstance(GLOBAL_MCP_SCOPE_ID, instanceId)
+    fun getInstance(instanceId: String): McpInstance? = delegate.getInstance(GLOBAL_MCP_SCOPE_ID, instanceId)
 
     fun createInstance(
         serverId: String,
         name: String,
         parameterValues: Map<String, String>,
-    ): Result<ProjectMcpInstance> = delegate.createInstance(
+    ): Result<McpInstance> = delegate.createInstance(
         projectId = GLOBAL_MCP_SCOPE_ID,
         serverId = serverId,
         name = name,
@@ -46,7 +46,7 @@ class GlobalMcpInstanceService(
         name: String? = null,
         parameterValues: Map<String, String>? = null,
         enabled: Boolean? = null,
-    ): Result<ProjectMcpInstance> = delegate.updateInstance(
+    ): Result<McpInstance> = delegate.updateInstance(
         projectId = GLOBAL_MCP_SCOPE_ID,
         instanceId = instanceId,
         name = name,

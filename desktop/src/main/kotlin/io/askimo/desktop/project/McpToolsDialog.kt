@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolStrategy
-import io.askimo.core.mcp.ProjectMcpInstance
+import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
@@ -64,7 +64,7 @@ import java.util.concurrent.TimeoutException
 
 @Composable
 fun mcpToolsDialog(
-    instance: ProjectMcpInstance,
+    instance: McpInstance,
     onDismiss: () -> Unit,
 ) {
     val mcpService = get<ProjectMcpInstanceService>(ProjectMcpInstanceService::class.java)

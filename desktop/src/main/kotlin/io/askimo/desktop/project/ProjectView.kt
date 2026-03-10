@@ -74,7 +74,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
-import io.askimo.core.mcp.ProjectMcpInstance
+import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
@@ -1058,7 +1058,7 @@ private fun mcpIntegrationsPanel(
 
 @Composable
 private fun mcpInstanceCard(
-    instance: ProjectMcpInstance,
+    instance: McpInstance,
     onDelete: () -> Unit,
 ) {
     val serverDefinition = remember(instance.serverId) {

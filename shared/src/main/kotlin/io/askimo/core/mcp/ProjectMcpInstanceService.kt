@@ -85,12 +85,12 @@ class ProjectMcpInstanceService(
     /**
      * Get all MCP instances for a project
      */
-    fun getInstances(projectId: String): List<ProjectMcpInstance> = instancesConfig.load(projectId)
+    fun getInstances(projectId: String): List<McpInstance> = instancesConfig.load(projectId)
 
     /**
      * Get a specific instance by ID
      */
-    fun getInstance(projectId: String, instanceId: String): ProjectMcpInstance? = instancesConfig.get(projectId, instanceId)
+    fun getInstance(projectId: String, instanceId: String): McpInstance? = instancesConfig.get(projectId, instanceId)
 
     /**
      * Create a new MCP instance for a project
@@ -100,14 +100,14 @@ class ProjectMcpInstanceService(
         serverId: String,
         name: String,
         parameterValues: Map<String, String>,
-    ): Result<ProjectMcpInstance> {
+    ): Result<McpInstance> {
         return try {
             // Validate server definition exists
             val definition = serversConfig.get(serverId)
                 ?: return Result.failure(IllegalArgumentException("MCP server definition not found: $serverId"))
 
             // Create instance
-            val instance = ProjectMcpInstance(
+            val instance = McpInstance(
                 id = UUID.randomUUID().toString(),
                 projectId = projectId,
                 serverId = serverId,
@@ -144,7 +144,7 @@ class ProjectMcpInstanceService(
         name: String? = null,
         parameterValues: Map<String, String>? = null,
         enabled: Boolean? = null,
-    ): Result<ProjectMcpInstance> {
+    ): Result<McpInstance> {
         return try {
             val existing = getInstance(projectId, instanceId)
                 ?: return Result.failure(IllegalArgumentException("Instance not found: $instanceId"))
@@ -202,7 +202,7 @@ class ProjectMcpInstanceService(
     /**
      * Get all enabled instances for a project
      */
-    fun getEnabledInstances(projectId: String): List<ProjectMcpInstance> = getInstances(projectId).filter { it.enabled }
+    fun getEnabledInstances(projectId: String): List<McpInstance> = getInstances(projectId).filter { it.enabled }
 
     /**
      * Create an MCP client for a specific instance.
@@ -212,7 +212,7 @@ class ProjectMcpInstanceService(
      * @return DefaultMcpClient or null if creation fails
      */
     suspend fun createMcpClient(
-        instance: ProjectMcpInstance,
+        instance: McpInstance,
         clientKey: String,
     ): DefaultMcpClient? {
         return try {
@@ -475,7 +475,7 @@ class ProjectMcpInstanceService(
      */
     private suspend fun fetchToolsFromInstance(
         projectId: String,
-        instance: ProjectMcpInstance,
+        instance: McpInstance,
         userConfigs: Map<String, ToolConfigData> = emptyMap(),
         newlyInferredConfigs: MutableList<ToolConfigData> = mutableListOf(),
     ): List<ToolConfig>? {
@@ -758,7 +758,7 @@ class ProjectMcpInstanceService(
             val definition = serversConfig.get(serverId)
                 ?: return Result.failure(IllegalArgumentException("Server not found: $serverId"))
 
-            val tempInstance = ProjectMcpInstance(
+            val tempInstance = McpInstance(
                 id = "temp",
                 projectId = "temp",
                 serverId = serverId,

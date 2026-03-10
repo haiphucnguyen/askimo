@@ -10,8 +10,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
-import io.askimo.core.mcp.ProjectMcpInstance
-import io.askimo.core.mcp.ProjectMcpInstanceData
+import io.askimo.core.mcp.McpInstance
+import io.askimo.core.mcp.McpInstanceData
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.util.AskimoHome
@@ -40,7 +40,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
     /**
      * Load all MCP instances for a project
      */
-    override fun load(projectId: String): List<ProjectMcpInstance> {
+    override fun load(projectId: String): List<McpInstance> {
         val path = getConfigPath(projectId)
 
         if (!path.exists()) {
@@ -63,14 +63,14 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
      * the authoritative [ParameterType.SECRET] flag instead of relying solely on
      * naming conventions.
      */
-    override fun save(projectId: String, instances: List<ProjectMcpInstance>) {
+    override fun save(projectId: String, instances: List<McpInstance>) {
         val path = getConfigPath(projectId)
 
         try {
             path.parent.createDirectories()
             val data = instances.map { instance ->
                 val definition = McpServersConfig.get(instance.serverId)
-                ProjectMcpInstanceData.from(instance, definition)
+                McpInstanceData.from(instance, definition)
             }
             val wrapper = InstancesWrapper(data)
             val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
@@ -84,7 +84,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
     /**
      * Add or update a single instance
      */
-    override fun add(instance: ProjectMcpInstance) {
+    override fun add(instance: McpInstance) {
         val instances = load(instance.projectId).toMutableList()
         instances.removeIf { it.id == instance.id }
         instances.add(instance)
@@ -105,7 +105,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
                     .find { it.id == instanceId }
                     ?.secretParameterKeys
                     ?.forEach { key ->
-                        SecureKeyManager.removeSecretKey(ProjectMcpInstanceData.secretKeyId(instanceId, key))
+                        SecureKeyManager.removeSecretKey(McpInstanceData.secretKeyId(instanceId, key))
                     }
             } catch (e: Exception) {
                 log.displayError("Failed to clean up secrets for instance $instanceId", e)
@@ -118,12 +118,12 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
     /**
      * Get a specific instance
      */
-    override fun get(projectId: String, instanceId: String): ProjectMcpInstance? = load(projectId).find { it.id == instanceId }
+    override fun get(projectId: String, instanceId: String): McpInstance? = load(projectId).find { it.id == instanceId }
 
     /**
      * Update an existing instance
      */
-    override fun update(instance: ProjectMcpInstance) {
+    override fun update(instance: McpInstance) {
         add(instance)
     }
 
@@ -140,7 +140,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
                 val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances.forEach { instance ->
                     instance.secretParameterKeys.forEach { key ->
-                        SecureKeyManager.removeSecretKey(ProjectMcpInstanceData.secretKeyId(instance.id, key))
+                        SecureKeyManager.removeSecretKey(McpInstanceData.secretKeyId(instance.id, key))
                     }
                 }
                 Files.delete(path)
@@ -156,5 +156,5 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
  * Wrapper for YAML serialization
  */
 private data class InstancesWrapper(
-    val instances: List<ProjectMcpInstanceData>,
+    val instances: List<McpInstanceData>,
 )
