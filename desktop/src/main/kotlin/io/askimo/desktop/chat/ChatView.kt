@@ -89,6 +89,7 @@ import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.service.AvatarService
 import io.askimo.desktop.session.manageDirectivesDialog
@@ -1040,7 +1041,7 @@ fun chatView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     // Constrain content width while allowing scroll to fill the whole area
-                    Box(modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth()) {
+                    Box(modifier = Modifier.widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH).fillMaxWidth()) {
                         when {
                             isSearchMode && searchResults.isEmpty() && !isSearching -> {
                                 Text(
@@ -1161,7 +1162,7 @@ fun chatView(
                     },
                     sessionId = sessionId,
                     modifier = Modifier
-                        .widthIn(max = 900.dp)
+                        .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                         .fillMaxWidth()
                         .padding(16.dp),
                 )

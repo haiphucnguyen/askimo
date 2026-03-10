@@ -7,17 +7,22 @@ package io.askimo.desktop.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -68,38 +73,64 @@ private val log = currentFileLogger()
 @Composable
 fun advancedSettingsSection() {
     var showLogViewerDialog by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Spacing.large),
-    ) {
-        Text(
-            text = stringResource("settings.advanced"),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = Spacing.small),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
+            ) {
+                Text(
+                    text = stringResource("settings.advanced"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = Spacing.small),
+                )
+
+                // Log Level Section
+                Text(
+                    text = stringResource("settings.log.level"),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                logLevelCard()
+
+                // Log Viewer Section
+                logViewerCard(
+                    onViewLogs = { showLogViewerDialog = true },
+                )
+
+                // RAG Configuration Section
+                ragConfigurationSection()
+
+                // Developer Mode Section
+                developerModeSection()
+            }
+        }
+
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
         )
-
-        // Log Level Section
-        Text(
-            text = stringResource("settings.log.level"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        logLevelCard()
-
-        // Log Viewer Section
-        logViewerCard(
-            onViewLogs = { showLogViewerDialog = true },
-        )
-
-        // RAG Configuration Section
-        ragConfigurationSection()
-
-        // Developer Mode Section
-        developerModeSection()
     }
 
     // Log Viewer Dialog

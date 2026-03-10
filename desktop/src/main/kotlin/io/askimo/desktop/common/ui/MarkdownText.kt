@@ -634,7 +634,8 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                 color = ComponentColors.codeBlockBorderColor(),
                 shape = codeBlockShape,
             )
-            .background(backgroundColor, shape = codeBlockShape)
+            .clip(codeBlockShape)
+            .background(backgroundColor)
             .pointerHoverIcon(PointerIcon.Hand)
             .onPointerEvent(PointerEventType.Enter) { isHovered = true }
             .onPointerEvent(PointerEventType.Exit) { isHovered = false }
@@ -683,7 +684,6 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                 modifier = Modifier
                     .width(lineNumberWidth)
                     .fillMaxHeight()
-                    .clip(codeBlockShape)
                     .background(gutterBackground)
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.End,

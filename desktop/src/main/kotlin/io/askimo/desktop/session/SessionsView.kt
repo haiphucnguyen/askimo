@@ -4,6 +4,8 @@
  */
 package io.askimo.desktop.session
 
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -11,11 +13,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -49,6 +54,7 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.util.TimeUtil
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.desktop.common.theme.ThemePreferences
 
 @Composable
 fun sessionsView(
@@ -56,138 +62,147 @@ fun sessionsView(
     onResumeSession: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    val scrollState = rememberScrollState()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // Full-width scrollable column — captures scroll events everywhere in the viewport
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource("sessions.title"),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            IconButton(
-                onClick = { viewModel.refresh() },
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-            ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Refresh sessions",
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Success message banner
-        viewModel.successMessage?.let { message ->
-            Surface(
+            // Width-constrained content column
+            Column(
                 modifier = Modifier
+                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium,
+                    .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 24.dp),
             ) {
+                // ── Header ────────────────────────────────────────────────────
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.dismissSuccessMessage() },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Content area
-        Box(modifier = Modifier.weight(1f)) {
-            when {
-                viewModel.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
+                    Text(
+                        text = stringResource("sessions.title"),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh sessions",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
                 }
 
-                viewModel.errorMessage != null -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Success banner ────────────────────────────────────────────
+                viewModel.successMessage?.let { message ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.medium,
                     ) {
-                        Text(
-                            text = stringResource("sessions.error", viewModel.errorMessage ?: ""),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        TextButton(onClick = {
-                            viewModel.clearError()
-                            viewModel.refresh()
-                        }) {
-                            Text(stringResource("action.retry"))
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                            IconButton(onClick = { viewModel.dismissSuccessMessage() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
                         }
                     }
                 }
 
-                viewModel.pagedSessions?.isEmpty == true -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            text = stringResource("sessions.empty"),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource("sessions.empty.hint"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                // ── Content ───────────────────────────────────────────────────
+                when {
+                    viewModel.isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-
-                else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // Sessions list
+                    viewModel.errorMessage != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = stringResource("sessions.error", viewModel.errorMessage ?: ""),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(onClick = {
+                                    viewModel.clearError()
+                                    viewModel.refresh()
+                                }) {
+                                    Text(stringResource("action.retry"))
+                                }
+                            }
+                        }
+                    }
+                    viewModel.pagedSessions?.isEmpty == true -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = stringResource("sessions.empty"),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = stringResource("sessions.empty.hint"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    else -> {
                         val pagedSessions = viewModel.pagedSessions!!
                         Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState()),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             pagedSessions.items.forEach { session ->
@@ -198,24 +213,40 @@ fun sessionsView(
                                 )
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Pagination controls
-                        if (pagedSessions.totalPages > 1) {
-                            paginationControls(
-                                currentPage = pagedSessions.currentPage,
-                                totalPages = pagedSessions.totalPages,
-                                hasPrevious = pagedSessions.hasPreviousPage,
-                                hasNext = pagedSessions.hasNextPage,
-                                onPrevious = { viewModel.previousPage() },
-                                onNext = { viewModel.nextPage() },
-                            )
-                        }
                     }
                 }
-            }
-        }
+
+                // ── Pagination ────────────────────────────────────────────────
+                val pagedSessions = viewModel.pagedSessions
+                if (pagedSessions != null && pagedSessions.totalPages > 1) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    paginationControls(
+                        currentPage = pagedSessions.currentPage,
+                        totalPages = pagedSessions.totalPages,
+                        hasPrevious = pagedSessions.hasPreviousPage,
+                        hasNext = pagedSessions.hasNextPage,
+                        onPrevious = { viewModel.previousPage() },
+                        onNext = { viewModel.nextPage() },
+                    )
+                }
+            } // end width-constrained column
+        } // end scrollable column
+
+        // ── Scrollbar ─────────────────────────────────────────────────────────
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 8.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
+        )
     }
 }
 
