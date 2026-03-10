@@ -60,7 +60,7 @@ val desktopModule = module {
     single { ProjectMcpInstanceService(mcpClientFactory = get()) }
     single { GlobalMcpInstanceService(mcpClientFactory = get()) }
 
-    single { ToolProviderImpl(projectMcpInstanceService = get()) }
+    single { ToolProviderImpl(projectMcpInstanceService = get(), globalMcpInstanceService = get()) }
 
     single { SystemResourceMonitor() }
 

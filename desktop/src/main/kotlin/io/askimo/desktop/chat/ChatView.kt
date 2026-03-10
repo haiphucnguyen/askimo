@@ -584,6 +584,10 @@ fun chatView(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            // Global MCP tools indicator — only in non-project chats
+                            if (project == null) {
+                                globalMcpToolsIndicator()
+                            }
                             Text(
                                 text = stringResource("chat.directive"),
                                 style = MaterialTheme.typography.bodyMedium,
