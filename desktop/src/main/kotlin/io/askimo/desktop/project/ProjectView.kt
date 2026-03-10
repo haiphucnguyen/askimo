@@ -615,7 +615,7 @@ private fun knowledgeSourcesPanel(
                         }
                     }
                 } else {
-                    // Empty state
+                    // Empty state header
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -628,30 +628,12 @@ private fun knowledgeSourcesPanel(
                             modifier = Modifier.size(20.dp),
                         )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = stringResource("projects.sources.empty.title"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = stringResource("projects.sources.empty.description"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            )
-                        }
-
-                        themedTooltip(text = stringResource("projects.sources.info.tooltip")) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                            )
-                        }
+                        Text(
+                            text = stringResource("projects.sources.empty.title"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
 
@@ -738,6 +720,24 @@ private fun knowledgeSourcesPanel(
                             }
                         }
                     }
+                }
+            } else {
+                // Empty state description below the header
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                    Text(
+                        text = stringResource("projects.sources.empty.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    )
                 }
             }
         }
@@ -881,7 +881,7 @@ private fun mcpIntegrationsPanel(
                         }
                     }
                 } else {
-                    // Show empty state with explanation
+                    // Empty state header
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -894,35 +894,12 @@ private fun mcpIntegrationsPanel(
                             modifier = Modifier.size(20.dp),
                         )
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = stringResource("mcp.integrations.empty.title"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = stringResource("mcp.integrations.empty.description"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            )
-                        }
-
-                        // Info icon with explanation tooltip
-                        themedTooltip(
-                            text = stringResource("mcp.integrations.info.tooltip"),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .pointerHoverIcon(PointerIcon.Hand),
-                            )
-                        }
+                        Text(
+                            text = stringResource("mcp.integrations.empty.title"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
 
@@ -998,6 +975,24 @@ private fun mcpIntegrationsPanel(
                             )
                         }
                     }
+                }
+            } else {
+                // Empty state description below the header
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                    Text(
+                        text = stringResource("mcp.integrations.empty.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    )
                 }
             }
         }
