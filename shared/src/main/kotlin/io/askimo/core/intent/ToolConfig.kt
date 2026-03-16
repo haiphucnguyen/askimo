@@ -14,6 +14,8 @@ data class ToolConfig(
     val category: ToolCategory,
     val strategy: Int,
     val source: ToolSource,
+    /** The MCP instance ID this tool belongs to. Null for built-in Askimo tools. */
+    val serverId: String? = null,
 )
 
 /**

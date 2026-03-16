@@ -78,7 +78,7 @@ class ProjectMcpInstanceService(
         .expireAfterWrite(30.minutes.toJavaDuration())
         .removalListener<String, DefaultMcpClient> { key, client, cause ->
             if (client != null && key != null) {
-                log.debug("Evicting MCP client for tool {} (cause: {})", key, cause)
+                log.trace("Evicting MCP client for tool {} (cause: {})", key, cause)
             }
         }
         .build()
@@ -269,6 +269,7 @@ class ProjectMcpInstanceService(
                     category = ToolCategory.valueOf(userConfig.category),
                     strategy = userConfig.strategy,
                     source = ToolSource.MCP_EXTERNAL,
+                    serverId = instance.id,
                 )
             } else {
                 // Auto-infer classification
@@ -293,6 +294,7 @@ class ProjectMcpInstanceService(
                     category = inferredCategory,
                     strategy = inferredStrategy,
                     source = ToolSource.MCP_EXTERNAL,
+                    serverId = instance.id,
                 )
             }
         }

@@ -17,6 +17,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ChatContext
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.vision.ImageProcessor
 import io.askimo.desktop.chat.ChatViewModel
@@ -218,6 +219,10 @@ class SessionManager(
         streamingScope.launch(thread.job) {
             try {
                 if (mode is CreationMode.Chat) {
+                    // Copy session-scoped disabled servers into this IO thread's ThreadLocal
+                    // so ToolProviderImpl can read them synchronously during the request.
+                    ChatContext.applyDisabledServersForThread(sessionId)
+
                     val fullResponse = chatSessionService
                         .getOrCreateClientForSession(sessionId)
                         .sendStreamingMessageWithCallback(

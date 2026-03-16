@@ -18,31 +18,84 @@ import io.askimo.core.logging.logger
 import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * ThreadLocal storage for passing project context from ChatClient to ToolProvider.
+ * ThreadLocal storage for passing request-scoped context from ChatClient to ToolProvider.
+ *
+ * Two-level design:
+ * - [sessionDisabledServers]: session-keyed map written by the UI thread, survives coroutine
+ *   boundaries because it is keyed by sessionId rather than bound to a thread.
+ * - [disabledServersThreadLocal]: copied from the session map inside the streaming coroutine
+ *   (same thread that calls [ToolProviderImpl]) so ToolProvider can read it without knowing
+ *   the sessionId.
  */
-object ProjectContext {
+object ChatContext {
     private val projectIdThreadLocal = ThreadLocal<String?>()
+    private val disabledServersThreadLocal = ThreadLocal<Set<String>>()
 
     /**
-     * Set the project ID for the current thread.
-     * Should be called before invoking the AI model.
+     * Persistent session → disabled-server-IDs map.
+     * Written by the UI before send; consumed inside the streaming coroutine.
      */
-    fun setProjectId(projectId: String?) {
-        projectIdThreadLocal.set(projectId)
-    }
+    private val sessionDisabledServers = ConcurrentHashMap<String, Set<String>>()
 
-    /**
-     * Get the project ID for the current thread.
-     */
+    fun setProjectId(projectId: String?) = projectIdThreadLocal.set(projectId)
     fun getProjectId(): String? = projectIdThreadLocal.get()
 
     /**
-     * Clear all thread-local state. Must be called in a finally block.
+     * Called by the UI when the user presses Send.
+     * Stores the current disabled-server set for [sessionId] so the streaming coroutine
+     * can retrieve it later via [applyDisabledServersForThread].
+     */
+    fun setDisabledServers(sessionId: String, disabledServerIds: Set<String>) {
+        if (disabledServerIds.isEmpty()) {
+            sessionDisabledServers.remove(sessionId)
+        } else {
+            sessionDisabledServers[sessionId] = disabledServerIds
+        }
+    }
+
+    /**
+     * Returns the persisted disabled-server set for [sessionId].
+     * Used by the UI to restore selections when navigating back to a session.
+     */
+    fun getDisabledServers(sessionId: String): Set<String> = sessionDisabledServers[sessionId] ?: emptySet()
+
+    /**
+     * Returns true if [sessionId] already has an entry in the session map,
+     * regardless of whether that set is empty or not.
+     * Used by the UI to distinguish a brand-new session (apply defaults) from one
+     * where the user has already made explicit selections (restore as-is).
+     */
+    fun hasSessionState(sessionId: String): Boolean = sessionDisabledServers.containsKey(sessionId)
+
+    /**
+     * Called inside the streaming coroutine (before [sendStreamingMessageWithCallback])
+     * to copy the session's disabled-server set into the current thread's ThreadLocal.
+     */
+    fun applyDisabledServersForThread(sessionId: String) {
+        disabledServersThreadLocal.set(sessionDisabledServers[sessionId] ?: emptySet())
+    }
+
+    /**
+     * Read by [ToolProviderImpl] on the IO thread.
+     */
+    fun getDisabledServers(): Set<String> = disabledServersThreadLocal.get() ?: emptySet()
+
+    /**
+     * Clear all thread-local state. Must be called in a finally block after each request.
      */
     fun clear() {
         projectIdThreadLocal.remove()
+        disabledServersThreadLocal.remove()
+    }
+
+    /**
+     * Remove the session entry from the session map (e.g. when a session is deleted).
+     */
+    fun clearSession(sessionId: String) {
+        sessionDisabledServers.remove(sessionId)
     }
 }
 
@@ -66,7 +119,7 @@ class ToolProviderImpl(
 
         log.debug("Providing tools for request: {}", request)
 
-        val projectId = ProjectContext.getProjectId()
+        val projectId = ChatContext.getProjectId()
 
         // Project-scoped tools — only when inside a project
         val projectTools: List<ToolConfig> = if (projectId != null) {
@@ -99,66 +152,70 @@ class ToolProviderImpl(
 
         if (userIntent.tools.isEmpty()) return null
 
+        val disabledServers = ChatContext.getDisabledServers()
+
         val builder = ToolProviderResult.builder()
 
-        userIntent.tools.forEach { tool ->
-            if (tool.source == ToolSource.ASKIMO_BUILTIN) {
-                val className = tool.specification.metadata()["className"]
-                val methodName = tool.specification.metadata()["methodName"]
-                if (className != null && methodName != null) {
-                    try {
-                        val clazz = Class.forName(className as String)
-                        val kotlinClass = clazz.kotlin
-                        val objectInstance = kotlinClass.objectInstance
-                            ?: throw IllegalStateException("Class '$className' is not a Kotlin object")
-                        val toolMethod = clazz.methods.find { it.name == methodName }
-                            ?: throw NoSuchMethodException("Method '$methodName' not found in class '$className'")
+        userIntent.tools
+            .filter { tool -> tool.serverId !in disabledServers }
+            .forEach { tool ->
+                if (tool.source == ToolSource.ASKIMO_BUILTIN) {
+                    val className = tool.specification.metadata()["className"]
+                    val methodName = tool.specification.metadata()["methodName"]
+                    if (className != null && methodName != null) {
+                        try {
+                            val clazz = Class.forName(className as String)
+                            val kotlinClass = clazz.kotlin
+                            val objectInstance = kotlinClass.objectInstance
+                                ?: throw IllegalStateException("Class '$className' is not a Kotlin object")
+                            val toolMethod = clazz.methods.find { it.name == methodName }
+                                ?: throw NoSuchMethodException("Method '$methodName' not found in class '$className'")
 
-                        builder.add(
-                            tool.specification,
-                            DefaultToolExecutor.builder()
-                                .`object`(objectInstance)
-                                .methodToInvoke(toolMethod)
-                                .originalMethod(toolMethod)
-                                .wrapToolArgumentsExceptions(true)
-                                .propagateToolExecutionExceptions(true)
-                                .build(),
+                            builder.add(
+                                tool.specification,
+                                DefaultToolExecutor.builder()
+                                    .`object`(objectInstance)
+                                    .methodToInvoke(toolMethod)
+                                    .originalMethod(toolMethod)
+                                    .wrapToolArgumentsExceptions(true)
+                                    .propagateToolExecutionExceptions(true)
+                                    .build(),
+                            )
+                        } catch (e: ClassNotFoundException) {
+                            log.error("Class '{}' not found", className, e)
+                        } catch (e: NoSuchMethodException) {
+                            log.error("Method '{}' not found in class '{}'", methodName, className, e)
+                        } catch (e: Exception) {
+                            log.error("Error creating tool provider for {}.{}", className, methodName, e)
+                        }
+                    } else {
+                        log.warn(
+                            "Missing className or methodName metadata for askimo tool: {}. " +
+                                "Please check the tool again since all askimo must have both these attributes",
+                            tool.specification.name(),
                         )
-                    } catch (e: ClassNotFoundException) {
-                        log.error("Class '{}' not found", className, e)
-                    } catch (e: NoSuchMethodException) {
-                        log.error("Method '{}' not found in class '{}'", methodName, className, e)
-                    } catch (e: Exception) {
-                        log.error("Error creating tool provider for {}.{}", className, methodName, e)
                     }
                 } else {
-                    log.warn(
-                        "Missing className or methodName metadata for askimo tool: {}. " +
-                            "Please check the tool again since all askimo must have both these attributes",
-                        tool.specification.name(),
-                    )
-                }
-            } else {
-                val toolName = tool.specification.name()
-                // Try project client first, fall back to global
-                val mcpClient = if (projectId != null) {
-                    projectMcpInstanceService.getMcpClientForTool(projectId, toolName)
-                        ?: globalMcpInstanceService.getMcpClientForTool(toolName)
-                } else {
-                    globalMcpInstanceService.getMcpClientForTool(toolName)
-                }
+                    val toolName = tool.specification.name()
+                    // Try project client first, fall back to global
+                    val mcpClient = if (projectId != null) {
+                        projectMcpInstanceService.getMcpClientForTool(projectId, toolName)
+                            ?: globalMcpInstanceService.getMcpClientForTool(toolName)
+                    } else {
+                        globalMcpInstanceService.getMcpClientForTool(toolName)
+                    }
 
-                if (mcpClient != null) {
-                    builder.add(tool.specification, McpToolExecutor(mcpClient), ReturnBehavior.TO_LLM)
-                } else {
-                    log.error(
-                        "Could not find MCP client for tool '{}' (projectId={}, global fallback attempted)",
-                        toolName,
-                        projectId,
-                    )
+                    if (mcpClient != null) {
+                        builder.add(tool.specification, McpToolExecutor(mcpClient), ReturnBehavior.TO_LLM)
+                    } else {
+                        log.error(
+                            "Could not find MCP client for tool '{}' (projectId={}, global fallback attempted)",
+                            toolName,
+                            projectId,
+                        )
+                    }
                 }
             }
-        }
 
         return builder.build()
     }

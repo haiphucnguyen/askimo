@@ -15,18 +15,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -51,12 +63,19 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
+import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.intent.ToolConfig
+import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.providers.ChatContext
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.common.i18n.stringResource
@@ -66,6 +85,9 @@ import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.common.ui.util.FileDialogUtils
 import io.askimo.desktop.util.Platform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.koin.java.KoinJavaComponent.get
 import java.awt.Cursor
 import java.awt.FileDialog
 import java.awt.Frame
@@ -114,6 +136,30 @@ fun chatInputField(
     // State for creation mode (Chat, Image, etc.)
     // Reset to Chat mode when switching to a different session
     var creationMode by remember(sessionId) { mutableStateOf<CreationMode>(CreationMode.Chat) }
+
+    // Session-scoped set of server IDs disabled by the user via the tools popup.
+    // Seeded from ChatContext so selections survive navigating away and back.
+    // Built-in tools are disabled by default — users must explicitly opt in.
+    var disabledServerIds by remember(sessionId) {
+        mutableStateOf(
+            if (sessionId != null) {
+                // If the session already has persisted state, use it.
+                // Otherwise default to built-in tools being disabled.
+                val persisted = ChatContext.getDisabledServers(sessionId)
+                if (ChatContext.hasSessionState(sessionId)) persisted else setOf(ToolRegistry.BUILTIN_SERVER_ID)
+            } else {
+                setOf(ToolRegistry.BUILTIN_SERVER_ID)
+            },
+        )
+    }
+
+    // Persist the initial default immediately so hasSessionState() returns true on
+    // subsequent recomposes (e.g. navigating away and back to this session).
+    LaunchedEffect(sessionId) {
+        if (sessionId != null && !ChatContext.hasSessionState(sessionId)) {
+            ChatContext.setDisabledServers(sessionId, disabledServerIds)
+        }
+    }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
@@ -466,7 +512,7 @@ fun chatInputField(
                             ) {
                                 Icon(
                                     Icons.Default.Stop,
-                                    contentDescription = "Stop",
+                                    contentDescription = "Chat stop",
                                     tint = MaterialTheme.colorScheme.error,
                                 )
                             }
@@ -562,10 +608,451 @@ fun chatInputField(
                         }
                     }
 
+                    // Tools indicator button
+                    toolsIndicatorButton(
+                        sessionId = sessionId,
+                        isLoading = isLoading,
+                        disabledServerIds = disabledServerIds,
+                        onDisabledServerIdsChange = { updated ->
+                            disabledServerIds = updated
+                            // Persist immediately so the selection survives session navigation
+                            if (sessionId != null) {
+                                ChatContext.setDisabledServers(sessionId, updated)
+                            }
+                        },
+                    )
+
                     // Spacer to push any future right-aligned controls
                     Spacer(modifier = Modifier.weight(1f))
 
                     // Future controls can be added here (e.g., character count, settings)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Tools indicator button that shows available MCP servers and tools.
+ * Displays tool count badge and opens a popup with server/tool hierarchy.
+ *
+ * @param sessionId Optional session ID to determine if this is a project chat
+ * @param isLoading Whether the chat is currently loading
+ */
+@Composable
+private fun toolsIndicatorButton(
+    sessionId: String?,
+    isLoading: Boolean,
+    disabledServerIds: Set<String>,
+    onDisabledServerIdsChange: (Set<String>) -> Unit,
+) {
+    var showToolsPopup by remember { mutableStateOf(false) }
+    var mcpServers by remember { mutableStateOf<List<McpServerInfo>>(emptyList()) }
+    var isLoadingServers by remember { mutableStateOf(false) }
+
+    // Get services
+    val globalMcpService = remember {
+        try {
+            get<io.askimo.core.mcp.GlobalMcpInstanceService>(
+                io.askimo.core.mcp.GlobalMcpInstanceService::class.java,
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+    val projectMcpService = remember {
+        try {
+            get<io.askimo.core.mcp.ProjectMcpInstanceService>(
+                io.askimo.core.mcp.ProjectMcpInstanceService::class.java,
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // Determine if this session belongs to a project
+    var projectId by remember(sessionId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(sessionId) {
+        if (sessionId != null) {
+            projectId = withContext(Dispatchers.IO) {
+                try {
+                    val sessionService = get<ChatSessionService>(
+                        ChatSessionService::class.java,
+                    )
+                    sessionService.getSessionById(sessionId)?.projectId
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    // Load MCP servers eagerly once projectId is resolved, and cache for the lifetime
+    // of this composable. Re-opening the popup is instant — no loading spinner shown again.
+    // Re-fetches only when projectId changes (session switch to a different project).
+    LaunchedEffect(projectId) {
+        // Skip if already loaded for this projectId
+        if (mcpServers.isNotEmpty()) return@LaunchedEffect
+
+        isLoadingServers = true
+        val servers = mutableListOf<McpServerInfo>()
+
+        // Add built-in Askimo tools first
+        val builtInTools = ToolRegistry.getIntentBased()
+        if (builtInTools.isNotEmpty()) {
+            servers.add(
+                McpServerInfo(
+                    name = "Askimo Built-in Tools",
+                    id = ToolRegistry.BUILTIN_SERVER_ID,
+                    isGlobal = true,
+                    isBuiltIn = true,
+                    tools = builtInTools,
+                ),
+            )
+        }
+
+        mcpServers = withContext(Dispatchers.IO) {
+            // Load global MCP servers with their tools
+            globalMcpService?.getInstances()?.filter { it.enabled }?.forEach { instance ->
+                val tools = try {
+                    globalMcpService.listTools(instance.id)
+                } catch (e: Exception) {
+                    log.error("Error loading tools for global server ${instance.name}", e)
+                    emptyList()
+                }
+                servers.add(McpServerInfo(instance.name, instance.id, isGlobal = true, tools = tools))
+            }
+
+            // Load project MCP servers with their tools if in project context
+            if (projectId != null) {
+                projectMcpService?.getInstances(projectId!!)?.filter { it.enabled }?.forEach { instance ->
+                    val tools = try {
+                        projectMcpService.listTools(projectId!!, instance.id)
+                    } catch (e: Exception) {
+                        log.error("Error loading tools for project server ${instance.name}", e)
+                        emptyList()
+                    }
+                    servers.add(McpServerInfo(instance.name, instance.id, isGlobal = false, tools = tools))
+                }
+            }
+
+            servers
+        }
+        isLoadingServers = false
+    }
+
+    val totalServers = mcpServers.size
+    val enabledServers = mcpServers.count { it.id !in disabledServerIds }
+    val hasDisabled = disabledServerIds.isNotEmpty() && totalServers > 0
+
+    Box {
+        themedTooltip(
+            text = if (hasDisabled) {
+                stringResource("chat.tools.button.disabled", (totalServers - enabledServers).toString())
+            } else {
+                stringResource("chat.tools.button")
+            },
+        ) {
+            IconButton(
+                onClick = { showToolsPopup = true },
+                enabled = !isLoading,
+                modifier = Modifier
+                    .size(36.dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                BadgedBox(
+                    badge = {
+                        if (totalServers > 0) {
+                            Badge(
+                                containerColor = if (hasDisabled) {
+                                    MaterialTheme.colorScheme.secondary
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                                contentColor = if (hasDisabled) {
+                                    MaterialTheme.colorScheme.onSecondary
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimary
+                                },
+                            ) {
+                                Text(
+                                    text = enabledServers.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                        }
+                    },
+                ) {
+                    Icon(
+                        Icons.Default.Build,
+                        contentDescription = stringResource("chat.tools.button"),
+                        tint = if (hasDisabled) {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        if (showToolsPopup) {
+            Popup(
+                onDismissRequest = { showToolsPopup = false },
+                alignment = Alignment.BottomStart,
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .widthIn(min = 300.dp, max = 420.dp)
+                        .heightIn(max = 400.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource("chat.tools.popup.title"),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        HorizontalDivider()
+
+                        // Content
+                        when {
+                            isLoadingServers -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource("chat.tools.popup.loading"))
+                                }
+                            }
+                            mcpServers.isEmpty() -> {
+                                Text(
+                                    text = if (projectId != null) {
+                                        stringResource("chat.tools.popup.no.servers.project")
+                                    } else {
+                                        stringResource("chat.tools.popup.no.servers.global")
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            else -> {
+                                // List MCP servers
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 300.dp)
+                                        .verticalScroll(rememberScrollState()),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    mcpServers.forEach { server ->
+                                        mcpServerItem(
+                                            server = server,
+                                            isEnabled = server.id !in disabledServerIds,
+                                            onToggle = {
+                                                onDisabledServerIdsChange(
+                                                    if (server.id in disabledServerIds) {
+                                                        disabledServerIds - server.id
+                                                    } else {
+                                                        disabledServerIds + server.id
+                                                    },
+                                                )
+                                            },
+                                            onCloseAll = { showToolsPopup = false },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Data class representing MCP server or built-in tools information.
+ */
+private data class McpServerInfo(
+    val name: String,
+    val id: String,
+    val isGlobal: Boolean,
+    val isBuiltIn: Boolean = false,
+    val tools: List<ToolConfig> = emptyList(),
+    val isLoadingTools: Boolean = false,
+    val toolsError: String? = null,
+)
+
+/**
+ * Displays a single MCP server item with a toggle checkbox and a dropdown submenu for its tools.
+ *
+ * The card has two separate interaction zones:
+ * - Checkbox (left): toggles the server enabled/disabled for this session.
+ * - Chevron / card body (right): opens the tools submenu (read-only tool list).
+ */
+@Composable
+private fun mcpServerItem(
+    server: McpServerInfo,
+    isEnabled: Boolean = true,
+    onToggle: () -> Unit = {},
+    onCloseAll: () -> Unit = {},
+) {
+    var showToolsSubmenu by remember { mutableStateOf(false) }
+
+    val contentAlpha = if (isEnabled) 1f else 0.4f
+
+    Box {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = server.tools.isNotEmpty()) {
+                    showToolsSubmenu = true
+                }
+                .pointerHoverIcon(
+                    if (server.tools.isNotEmpty()) PointerIcon.Hand else PointerIcon.Default,
+                ),
+            colors = ComponentColors.surfaceVariantCardColors(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Checkbox — separate click target, does NOT propagate to card click
+                Checkbox(
+                    checked = isEnabled,
+                    onCheckedChange = { onToggle() },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}, // absorb — Checkbox handles its own tap
+                        ),
+                )
+
+                // Server info
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = server.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                        )
+                        if (server.tools.isNotEmpty()) {
+                            Badge(
+                                containerColor = if (server.isBuiltIn) {
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f * contentAlpha)
+                                } else {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f * contentAlpha)
+                                },
+                                contentColor = if (server.isBuiltIn) {
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = contentAlpha)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                                },
+                            ) {
+                                Text(
+                                    text = server.tools.size.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = if (server.isBuiltIn) {
+                            stringResource("chat.tools.server.scope.builtin")
+                        } else if (server.isGlobal) {
+                            stringResource("chat.tools.server.scope.global")
+                        } else {
+                            stringResource("chat.tools.server.scope.project")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                    )
+                }
+
+                // Submenu indicator — only shown when there are tools to browse
+                if (server.tools.isNotEmpty()) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        // Submenu dropdown with tools
+        ComponentColors.themedDropdownMenu(
+            expanded = showToolsSubmenu,
+            onDismissRequest = {
+                showToolsSubmenu = false
+                onCloseAll()
+            },
+            offset = DpOffset(x = 200.dp, y = (-48).dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 200.dp, max = 350.dp)
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                server.tools.forEach { tool ->
+                    val toolName = tool.specification.name()
+                    val toolDescription = tool.specification.description() ?: stringResource("chat.tools.tool.no.description")
+
+                    DropdownMenuItem(
+                        text = {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                Text(
+                                    text = toolName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = toolDescription,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                            }
+                        },
+                        onClick = { /* Tools are read-only for now */ },
+                    )
                 }
             }
         }

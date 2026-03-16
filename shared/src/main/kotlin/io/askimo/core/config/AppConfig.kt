@@ -495,29 +495,29 @@ object AppConfig {
             available_models: ${'$'}{ASKIMO_OLLAMA_MODELS:}
             utility_model: ${'$'}{ASKIMO_OLLAMA_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:nomic-embed-text:latest}
-            vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:llava:latest}
-            image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:stable-diffusion:latest}
+            embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:}
+            vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:}
+            image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:}
           docker:
             available_models: ${'$'}{ASKIMO_DOCKER_MODELS:}
             utility_model: ${'$'}{ASKIMO_DOCKER_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:ai/qwen3-embedding:0.6B-F16}
-            vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:llava:latest}
-            image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:stable-diffusion:latest}
+            embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:}
+            vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:}
+            image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:}
           localai:
             available_models: ${'$'}{ASKIMO_LOCALAI_MODELS:}
             utility_model: ${'$'}{ASKIMO_LOCALAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:nomic-embed-text:latest}
-            vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:bakllava}
-            image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:stable-diffusion}
+            embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:}
+            vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:}
+            image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:}
           lmstudio:
             available_models: ${'$'}{ASKIMO_LMSTUDIO_MODELS:}
             utility_model: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
-            embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:nomic-embed-text:latest}
-            vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:llava-v1.6-mistral-7b}
+            embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:}
+            vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
             available_models: ${'$'}{ASKIMO_XAI_MODELS:}
@@ -954,30 +954,30 @@ object AppConfig {
             ollama = ProviderModelConfig(
                 utilityModel = env("ASKIMO_OLLAMA_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_OLLAMA_UTILITY_TIMEOUT", 45L),
-                embeddingModel = env("ASKIMO_OLLAMA_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-                visionModel = env("ASKIMO_OLLAMA_VISION_MODEL", "llava:latest"),
-                imageModel = env("ASKIMO_OLLAMA_IMAGE_MODEL", "stable-diffusion:latest"),
+                embeddingModel = env("ASKIMO_OLLAMA_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_OLLAMA_VISION_MODEL", ""),
+                imageModel = env("ASKIMO_OLLAMA_IMAGE_MODEL", ""),
             ),
             docker = ProviderModelConfig(
                 utilityModel = env("ASKIMO_DOCKER_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_DOCKER_UTILITY_TIMEOUT", 45L),
-                embeddingModel = env("ASKIMO_DOCKER_EMBEDDING_MODEL", "ai/qwen3-embedding:0.6B-F16"),
-                visionModel = env("ASKIMO_DOCKER_VISION_MODEL", "llava:latest"),
-                imageModel = env("ASKIMO_DOCKER_IMAGE_MODEL", "stable-diffusion:latest"),
+                embeddingModel = env("ASKIMO_DOCKER_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_DOCKER_VISION_MODEL", ""),
+                imageModel = env("ASKIMO_DOCKER_IMAGE_MODEL", ""),
             ),
             localai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_LOCALAI_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_LOCALAI_UTILITY_TIMEOUT", 45L),
-                embeddingModel = env("ASKIMO_LOCALAI_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-                visionModel = env("ASKIMO_LOCALAI_VISION_MODEL", "bakllava"),
-                imageModel = env("ASKIMO_LOCALAI_IMAGE_MODEL", "stable-diffusion"),
+                embeddingModel = env("ASKIMO_LOCALAI_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_LOCALAI_VISION_MODEL", ""),
+                imageModel = env("ASKIMO_LOCALAI_IMAGE_MODEL", ""),
             ),
             lmstudio = ProviderModelConfig(
                 utilityModel = env("ASKIMO_LMSTUDIO_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_LMSTUDIO_UTILITY_TIMEOUT", 45L),
-                embeddingModel = env("ASKIMO_LMSTUDIO_EMBEDDING_MODEL", "nomic-embed-text:latest"),
-                visionModel = env("ASKIMO_LMSTUDIO_VISION_MODEL", "llava-v1.6-mistral-7b"),
-                imageModel = env("ASKIMO_LMSTUDIO_IMAGE_MODEL", "stable-diffusion"),
+                embeddingModel = env("ASKIMO_LMSTUDIO_EMBEDDING_MODEL", ""),
+                visionModel = env("ASKIMO_LMSTUDIO_VISION_MODEL", ""),
+                imageModel = env("ASKIMO_LMSTUDIO_IMAGE_MODEL", ""),
             ),
             xai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_XAI_UTILITY_MODEL", "grok-3-mini"),

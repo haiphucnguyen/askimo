@@ -154,6 +154,8 @@ object ApplicationPreferences {
 
     private const val PROJECT_SIDE_PANEL_WIDTH_KEY = "ui.project_side_panel_width"
     private const val DEFAULT_PROJECT_SIDE_PANEL_WIDTH = 400
+    private const val PROJECT_SIDE_PANEL_EXPANDED_KEY = "ui.project_side_panel_expanded"
+    private const val DEFAULT_PROJECT_SIDE_PANEL_EXPANDED = true
 
     /**
      * Get the project side panel width in pixels.
@@ -167,9 +169,17 @@ object ApplicationPreferences {
         prefs.putInt(PROJECT_SIDE_PANEL_WIDTH_KEY, width)
     }
 
-    // ============================================================
-    // RESET & TESTING
-    // ============================================================
+    /**
+     * Get the project side panel expanded state.
+     */
+    fun getProjectSidePanelExpanded(): Boolean = prefs.getBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, DEFAULT_PROJECT_SIDE_PANEL_EXPANDED)
+
+    /**
+     * Set the project side panel expanded state.
+     */
+    fun setProjectSidePanelExpanded(expanded: Boolean) {
+        prefs.putBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, expanded)
+    }
 
     /**
      * Reset all tutorial-related preferences (for testing).
