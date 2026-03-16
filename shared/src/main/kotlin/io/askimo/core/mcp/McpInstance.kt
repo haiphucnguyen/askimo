@@ -24,9 +24,9 @@ import java.time.LocalDateTime
  *   - Instance: serverId="mongodb-mcp-server", name="Local MongoDB"
  *               parameterValues={mongoUri: "mongodb://localhost/dev", readOnly: "false"}
  */
-data class ProjectMcpInstance(
+data class McpInstance(
     val id: String,
-    val projectId: String,
+    val projectId: String? = null, // null = not project-scoped
     val serverId: String, // References McpServerDefinition.id
     val name: String,
     val parameterValues: Map<String, String>, // User-provided values
@@ -35,7 +35,7 @@ data class ProjectMcpInstance(
     val updatedAt: LocalDateTime,
 ) {
 
-    private val log = logger<ProjectMcpInstance>()
+    private val log = logger<McpInstance>()
 
     /**
      * Creates an MCP connector from this instance + its definition.
@@ -105,16 +105,16 @@ data class ProjectMcpInstance(
 }
 
 /**
- * Serializable version of ProjectMcpInstance for JSON storage.
+ * Serializable version of McpInstance for JSON storage.
  *
  * Secret parameter values are never persisted in this data class.
  * Instead, their keys are listed in [secretParameterKeys] and the values
  * are stored/retrieved via [SecureKeyManager] (keychain or encrypted file).
  */
 @Serializable
-data class ProjectMcpInstanceData(
+data class McpInstanceData(
     val id: String,
-    val projectId: String,
+    val projectId: String?,
     val serverId: String,
     val name: String,
     /** Non-secret parameter values only — safe to persist in plain YAML. */
@@ -131,11 +131,11 @@ data class ProjectMcpInstanceData(
      * Reconstruct the domain object by merging plain values with secrets
      * retrieved from [SecureKeyManager].
      */
-    fun toDomain(): ProjectMcpInstance {
+    fun toDomain(): McpInstance {
         val resolvedSecrets = secretParameterKeys.associateWith { key ->
             SecureKeyManager.retrieveSecretKey(secretKeyId(id, key)) ?: ""
         }
-        return ProjectMcpInstance(
+        return McpInstance(
             id = id,
             projectId = projectId,
             serverId = serverId,
@@ -157,9 +157,9 @@ data class ProjectMcpInstanceData(
          *                   detection when null.
          */
         fun from(
-            instance: ProjectMcpInstance,
+            instance: McpInstance,
             definition: McpServerDefinition? = null,
-        ): ProjectMcpInstanceData {
+        ): McpInstanceData {
             val plain = mutableMapOf<String, String>()
             val secretKeys = mutableSetOf<String>()
 
@@ -172,7 +172,7 @@ data class ProjectMcpInstanceData(
                 }
             }
 
-            return ProjectMcpInstanceData(
+            return McpInstanceData(
                 id = instance.id,
                 projectId = instance.projectId,
                 serverId = instance.serverId,

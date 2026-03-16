@@ -6,6 +6,7 @@ package io.askimo.core.providers.gemini
 
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.chat.Capability
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
@@ -112,6 +113,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
         return GoogleAiGeminiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
+            .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(modelName)
             .timeout(Duration.ofSeconds(AppConfig.models[GEMINI].utilityModelTimeoutSeconds))

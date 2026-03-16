@@ -15,6 +15,7 @@ import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.intent.ToolSource
 import io.askimo.core.logging.logger
+import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import kotlinx.coroutines.runBlocking
 
@@ -55,6 +56,7 @@ object ProjectContext {
  */
 class ToolProviderImpl(
     private val projectMcpInstanceService: ProjectMcpInstanceService,
+    private val globalMcpInstanceService: GlobalMcpInstanceService,
 ) : ToolProvider {
 
     private val log = logger<ToolProviderImpl>()
@@ -66,13 +68,27 @@ class ToolProviderImpl(
 
         val projectId = ProjectContext.getProjectId()
 
-        val mcpTools: List<ToolConfig> = if (projectId != null) {
+        // Project-scoped tools — only when inside a project
+        val projectTools: List<ToolConfig> = if (projectId != null) {
             runBlocking { projectMcpInstanceService.getProjectTools(projectId) }
         } else {
             emptyList()
         }
 
-        val toolVectorIndex = if (projectId != null) projectMcpInstanceService.getToolVectorIndex(projectId) else null
+        // Global tools — always available in every chat
+        val globalTools: List<ToolConfig> = runBlocking { globalMcpInstanceService.getGlobalTools() }
+
+        // Merge: project tools take precedence over global tools with same name
+        val projectToolNames = projectTools.map { it.specification.name() }.toSet()
+        val mcpTools = projectTools + globalTools.filter { it.specification.name() !in projectToolNames }
+
+        // Prefer project vector index when in project context, fall back to global
+        val toolVectorIndex = if (projectId != null) {
+            projectMcpInstanceService.getToolVectorIndex(projectId)
+                ?: globalMcpInstanceService.getToolVectorIndex()
+        } else {
+            globalMcpInstanceService.getToolVectorIndex()
+        }
 
         val userIntent = DetectUserIntentCommand.execute(
             userMessage = request.userMessage().singleText() ?: "",
@@ -123,17 +139,23 @@ class ToolProviderImpl(
                     )
                 }
             } else {
-                if (projectId != null) {
-                    val mcpClient = projectMcpInstanceService.getMcpClientForTool(projectId, tool.specification.name())
-                    if (mcpClient != null) {
-                        builder.add(tool.specification, McpToolExecutor(mcpClient), ReturnBehavior.TO_LLM)
-                    } else {
-                        log.error(
-                            "Could not find mcp client for tool {} in project {}. Perhaps the caching issue?",
-                            tool.specification.name(),
-                            projectId,
-                        )
-                    }
+                val toolName = tool.specification.name()
+                // Try project client first, fall back to global
+                val mcpClient = if (projectId != null) {
+                    projectMcpInstanceService.getMcpClientForTool(projectId, toolName)
+                        ?: globalMcpInstanceService.getMcpClientForTool(toolName)
+                } else {
+                    globalMcpInstanceService.getMcpClientForTool(toolName)
+                }
+
+                if (mcpClient != null) {
+                    builder.add(tool.specification, McpToolExecutor(mcpClient), ReturnBehavior.TO_LLM)
+                } else {
+                    log.error(
+                        "Could not find MCP client for tool '{}' (projectId={}, global fallback attempted)",
+                        toolName,
+                        projectId,
+                    )
                 }
             }
         }

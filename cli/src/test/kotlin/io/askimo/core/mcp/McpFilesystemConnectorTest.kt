@@ -252,7 +252,7 @@ class McpFilesystemConnectorTest {
             assertNotNull(definition, "Filesystem server definition should exist")
             println("Server definition found: ${definition.name}")
 
-            val instance = ProjectMcpInstance(
+            val instance = McpInstance(
                 id = "test-id",
                 projectId = projectId,
                 serverId = "filesystem-mcp-server",
