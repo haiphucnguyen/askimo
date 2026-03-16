@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap
  * MCP external tools default to FOLLOW_UP_ONLY for safety (v1).
  */
 object ToolRegistry {
+    /** Server ID used for all Askimo built-in tools. */
+    const val BUILTIN_SERVER_ID = "builtin"
+
     private val tools = ConcurrentHashMap<String, ToolConfig>()
     private val log = logger<ToolRegistry>()
 
@@ -31,6 +34,7 @@ object ToolRegistry {
                     category = ToolCategory.VISUALIZE,
                     strategy = ToolStrategy.BOTH,
                     source = ToolSource.ASKIMO_BUILTIN,
+                    serverId = BUILTIN_SERVER_ID,
                 ),
             )
         }

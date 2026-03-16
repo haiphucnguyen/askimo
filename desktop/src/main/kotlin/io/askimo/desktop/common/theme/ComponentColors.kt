@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
@@ -345,6 +346,7 @@ object ComponentColors {
         expanded: Boolean,
         onDismissRequest: () -> Unit,
         modifier: Modifier = Modifier,
+        offset: DpOffset = DpOffset.Zero,
         content: @Composable ColumnScope.() -> Unit,
     ) {
         MaterialTheme(
@@ -355,6 +357,7 @@ object ComponentColors {
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
+                offset = offset,
                 modifier = modifier
                     .border(
                         width = 1.dp,

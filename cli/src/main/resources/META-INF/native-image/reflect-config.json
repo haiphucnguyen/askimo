@@ -1031,6 +1031,12 @@
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicError",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicMessage",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1621,44 +1627,6 @@
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.embedding.Embedding$Builder",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "build", "parameterTypes": [] },
-      { "name": "embedding", "parameterTypes": ["java.util.List"] },
-      { "name": "index", "parameterTypes": ["java.lang.Integer"] }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.embedding.EmbeddingRequest",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.embedding.EmbeddingResponse$Builder",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "build", "parameterTypes": [] },
-      { "name": "data", "parameterTypes": ["java.util.List"] },
-      { "name": "model", "parameterTypes": ["java.lang.String"] },
-      {
-        "name": "usage",
-        "parameterTypes": ["dev.langchain4j.model.openai.internal.shared.Usage"]
-      }
-    ]
-  },
-  {
-    "name": "dev.langchain4j.model.openai.internal.embedding.OpenAiEmbeddingDeserializer",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "dev.langchain4j.model.openai.internal.shared.CompletionTokensDetails$Builder",
@@ -3771,6 +3739,78 @@
     ]
   },
   {
+    "name": "io.askimo.core.mcp.McpInstance"
+  },
+  {
+    "name": "io.askimo.core.mcp.McpInstanceData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.util.Set",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "kotlinx.serialization.internal.SerializationConstructorMarker"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.util.Set",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "java.util.Map",
+          "java.util.Set",
+          "boolean",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getCreatedAt", "parameterTypes": [] },
+      { "name": "getEnabled", "parameterTypes": [] },
+      { "name": "getId", "parameterTypes": [] },
+      { "name": "getName", "parameterTypes": [] },
+      { "name": "getParameterValues", "parameterTypes": [] },
+      { "name": "getProjectId", "parameterTypes": [] },
+      { "name": "getSecretParameterKeys", "parameterTypes": [] },
+      { "name": "getServerId", "parameterTypes": [] },
+      { "name": "getUpdatedAt", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.mcp.McpInstanceData$$serializer"
+  },
+  {
+    "name": "io.askimo.core.mcp.McpInstanceData$Companion"
+  },
+  {
     "name": "io.askimo.core.mcp.McpServerDefinition",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3897,78 +3937,6 @@
   },
   {
     "name": "io.askimo.core.mcp.ParameterType$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.ProjectMcpInstance"
-  },
-  {
-    "name": "io.askimo.core.mcp.ProjectMcpInstanceData",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.Map",
-          "java.util.Set",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.Map",
-          "java.util.Set",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.util.Map",
-          "java.util.Set",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getCreatedAt", "parameterTypes": [] },
-      { "name": "getEnabled", "parameterTypes": [] },
-      { "name": "getId", "parameterTypes": [] },
-      { "name": "getName", "parameterTypes": [] },
-      { "name": "getParameterValues", "parameterTypes": [] },
-      { "name": "getProjectId", "parameterTypes": [] },
-      { "name": "getSecretParameterKeys", "parameterTypes": [] },
-      { "name": "getServerId", "parameterTypes": [] },
-      { "name": "getUpdatedAt", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.mcp.ProjectMcpInstanceData$$serializer"
-  },
-  {
-    "name": "io.askimo.core.mcp.ProjectMcpInstanceData$Companion"
   },
   {
     "name": "io.askimo.core.mcp.StdioConfig",
@@ -4480,19 +4448,6 @@
     ]
   },
   {
-    "name": "io.askimo.core.project.EmbeddingModelFactoryOllamaTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "autoPullsMissingModelAndEmbeds", "parameterTypes": [] },
-      { "name": "setUp", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "io.askimo.core.providers.ChatClient",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -4511,7 +4466,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$xR8jsBv8",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$ZXV4wdpS",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6873,7 +6828,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$FO4GttvF",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$DtaqfO1m",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

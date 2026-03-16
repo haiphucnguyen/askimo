@@ -23,10 +23,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import org.koin.java.KoinJavaComponent.get
 import java.nio.channels.UnresolvedAddressException
 import java.util.concurrent.CountDownLatch
-import kotlin.text.get
 
 /**
  * Default chat request parameters with no custom sampling settings.
@@ -80,7 +78,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
 
     try {
         // Set project ID in ThreadLocal for ToolProvider to access
-        ProjectContext.setProjectId(projectId)
+        ChatContext.setProjectId(projectId)
 
         // Get provider and model from AppContext
         val appContext = AppContext.getInstance()
@@ -291,7 +289,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
         throw IllegalStateException("Failed to send message after ${maxContextRetries + 1} context retries")
     } finally {
         // Always clear ThreadLocal to prevent memory leaks
-        ProjectContext.clear()
+        ChatContext.clear()
     }
 }
 

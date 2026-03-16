@@ -30,9 +30,9 @@ class AppConfigTest {
         val models = AppConfig.models
 
         // Ollama — the field that was failing in EmbeddingModelFactoryOllamaTest
-        assertEquals("nomic-embed-text:latest", models[ModelProvider.OLLAMA].embeddingModel)
-        assertEquals("llava:latest", models[ModelProvider.OLLAMA].visionModel)
-        assertEquals("stable-diffusion:latest", models[ModelProvider.OLLAMA].imageModel)
+        assertEquals("", models[ModelProvider.OLLAMA].embeddingModel)
+        assertEquals("", models[ModelProvider.OLLAMA].visionModel)
+        assertEquals("", models[ModelProvider.OLLAMA].imageModel)
         assertTrue(models[ModelProvider.OLLAMA].availableModels.isEmpty())
 
         // Anthropic

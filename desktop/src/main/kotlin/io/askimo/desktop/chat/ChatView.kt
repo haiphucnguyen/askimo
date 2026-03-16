@@ -88,6 +88,7 @@ import io.askimo.core.util.TimeUtil.formatDisplay
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.keymap.KeyMapManager
 import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
+import io.askimo.desktop.common.preferences.ApplicationPreferences
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.themedTooltip
@@ -177,13 +178,11 @@ fun chatView(
     var ragIndexingPercentage by remember { mutableStateOf<Int?>(null) }
 
     // Side panel state (RAG sources, MCP, etc.)
-    var sidePanelExpanded by remember { mutableStateOf(true) }
+    var sidePanelExpanded by remember { mutableStateOf(ApplicationPreferences.getProjectSidePanelExpanded()) }
 
-    // Auto-expand panel when project has knowledge sources
-    LaunchedEffect(project?.id, project?.knowledgeSources?.size) {
-        if (project != null && project.knowledgeSources.isNotEmpty() && !sidePanelExpanded) {
-            sidePanelExpanded = true
-        }
+    // Save panel state when it changes
+    LaunchedEffect(sidePanelExpanded) {
+        ApplicationPreferences.setProjectSidePanelExpanded(sidePanelExpanded)
     }
 
     // Check initial RAG status when project changes and subscribe to indexing events
@@ -584,10 +583,6 @@ fun chatView(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // Global MCP tools indicator — only in non-project chats
-                            if (project == null) {
-                                globalMcpToolsIndicator()
-                            }
                             Text(
                                 text = stringResource("chat.directive"),
                                 style = MaterialTheme.typography.bodyMedium,
