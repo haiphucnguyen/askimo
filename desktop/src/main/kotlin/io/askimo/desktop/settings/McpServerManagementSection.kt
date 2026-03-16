@@ -9,6 +9,7 @@ import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,6 +24,7 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -32,19 +34,29 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.askimo.core.mcp.GLOBAL_MCP_SCOPE_ID
+import io.askimo.core.mcp.GlobalMcpInstanceService
+import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpServersConfig
@@ -58,6 +70,11 @@ import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.clickableCard
+import io.askimo.desktop.common.ui.themedTooltip
+import io.askimo.desktop.project.addMcpIntegrationDialog
+import io.askimo.desktop.project.mcpToolsDialog
+import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.get
 import java.awt.Desktop
 import java.net.URI
 
@@ -68,6 +85,15 @@ fun mcpServerTemplatesSection() {
     var editingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var deletingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var showResetConfirm by remember { mutableStateOf(false) }
+
+    // Global MCP instance state
+    val globalMcpService = remember { get<GlobalMcpInstanceService>(GlobalMcpInstanceService::class.java) }
+    var globalInstances by remember { mutableStateOf(globalMcpService.getInstances()) }
+    var showAddGlobalDialog by remember { mutableStateOf(false) }
+    var deletingGlobalInstance by remember { mutableStateOf<McpInstance?>(null) }
+    var showAddDropdown by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     val scrollState = rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -82,117 +108,253 @@ fun mcpServerTemplatesSection() {
                     .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                     .fillMaxWidth()
                     .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
-                // Section Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                // ── Server Templates Section ─────────────────────────────────
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource("mcp.servers.title"),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                text = stringResource("mcp.servers.description"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            )
+                        }
+                        linkButton(
+                            onClick = {
+                                try {
+                                    if (Desktop.isDesktopSupported()) {
+                                        Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
+                                    }
+                                } catch (_: Exception) {}
+                            },
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text(
+                                text = stringResource("mcp.servers.guide"),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                        }
+                    }
+
+                    // Action buttons row — split "Add" dropdown
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                        Box {
+                            primaryButton(
+                                onClick = { showAddDropdown = true },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(Modifier.width(Spacing.small))
+                                Text(stringResource("mcp.servers.add"))
+                            }
+
+                            ComponentColors.themedDropdownMenu(
+                                expanded = showAddDropdown,
+                                onDismissRequest = { showAddDropdown = false },
+                            ) {
+                                DropdownMenuItem(
+                                    modifier = Modifier
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .layout { measurable, constraints ->
+                                            val placeable = measurable.measure(constraints)
+                                            // Shift item up by 8dp to cancel menu's top inset
+                                            val offset = 8.dp.roundToPx()
+                                            layout(placeable.width, placeable.height + offset) {
+                                                placeable.placeRelative(0, -offset)
+                                            }
+                                        },
+                                    contentPadding = PaddingValues(
+                                        horizontal = 16.dp,
+                                        vertical = Spacing.medium,
+                                    ),
+                                    text = {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        ) {
+                                            Text(
+                                                text = stringResource("mcp.servers.add.template"),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                            Text(
+                                                text = stringResource("mcp.servers.add.template.desc"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        showAddDropdown = false
+                                        showAddDialog = true
+                                    },
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    modifier = Modifier
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .layout { measurable, constraints ->
+                                            val placeable = measurable.measure(constraints)
+                                            // Extend item down by 8dp to cancel menu's bottom inset
+                                            val offset = 8.dp.roundToPx()
+                                            layout(placeable.width, placeable.height + offset) {
+                                                placeable.placeRelative(0, 0)
+                                            }
+                                        },
+                                    contentPadding = PaddingValues(
+                                        horizontal = 16.dp,
+                                        vertical = Spacing.medium,
+                                    ),
+                                    text = {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        ) {
+                                            Text(
+                                                text = stringResource("mcp.global.instance.add"),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                            Text(
+                                                text = stringResource("mcp.global.instance.add.desc"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        showAddDropdown = false
+                                        showAddGlobalDialog = true
+                                    },
+                                )
+                            }
+                        }
+
+                        secondaryButton(onClick = { showResetConfirm = true }) {
+                            Icon(Icons.Default.RestartAlt, contentDescription = null)
+                            Spacer(Modifier.width(Spacing.small))
+                            Text(stringResource("mcp.servers.reset"))
+                        }
+                    }
+
+                    // Templates list
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.bannerCardColors(),
+                    ) {
+                        if (servers.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(Spacing.extraLarge),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource("mcp.servers.empty"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
+                                )
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier.padding(Spacing.medium),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.small),
+                            ) {
+                                servers.forEach { server ->
+                                    mcpServerTemplateCard(
+                                        server = server,
+                                        onEdit = { editingServer = server },
+                                        onDelete = { deletingServer = server },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = stringResource("mcp.servers.count", servers.size.toString()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    )
+                }
+
+                HorizontalDivider()
+
+                // ── Global MCP Instances Section ─────────────────────────────
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
                     Column {
                         Text(
-                            text = stringResource("mcp.servers.title"),
+                            text = stringResource("mcp.global.instances.title"),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
-                            text = stringResource("mcp.servers.description"),
+                            text = stringResource("mcp.global.instances.description"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         )
                     }
-                    linkButton(
-                        onClick = {
-                            try {
-                                if (Desktop.isDesktopSupported()) {
-                                    Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/mcp-integration/"))
-                                }
-                            } catch (_: Exception) {}
-                        },
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = stringResource("mcp.servers.guide"),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
-                    }
-                }
 
-                // Action Buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                ) {
-                    primaryButton(
-                        onClick = { showAddDialog = true },
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ComponentColors.bannerCardColors(),
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(Spacing.small))
-                        Text(stringResource("mcp.servers.add"))
-                    }
-
-                    secondaryButton(
-                        onClick = { showResetConfirm = true },
-                    ) {
-                        Icon(Icons.Default.RestartAlt, contentDescription = null)
-                        Spacer(Modifier.width(Spacing.small))
-                        Text(stringResource("mcp.servers.reset"))
-                    }
-                }
-
-                // Server List
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
-                ) {
-                    if (servers.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(Spacing.extraLarge),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource("mcp.servers.empty"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
-                            )
-                        }
-                    } else {
-                        Column(
-                            modifier = Modifier.padding(Spacing.medium),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.small),
-                        ) {
-                            servers.forEach { server ->
-                                mcpServerTemplateCard(
-                                    server = server,
-                                    onEdit = { editingServer = server },
-                                    onDelete = { deletingServer = server },
+                        if (globalInstances.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(Spacing.extraLarge),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource("mcp.global.instances.empty"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
                                 )
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier.padding(Spacing.medium),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.small),
+                            ) {
+                                globalInstances.forEach { instance ->
+                                    globalMcpInstanceCard(
+                                        instance = instance,
+                                        onToggleEnabled = {
+                                            scope.launch {
+                                                globalMcpService.updateInstance(
+                                                    instanceId = instance.id,
+                                                    enabled = !instance.enabled,
+                                                )
+                                                globalInstances = globalMcpService.getInstances()
+                                            }
+                                        },
+                                        onDelete = { deletingGlobalInstance = instance },
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                // Server count
-                Text(
-                    text = stringResource("mcp.servers.count", servers.size.toString()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                )
+                    Text(
+                        text = stringResource("mcp.global.instances.count", globalInstances.size.toString()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    )
+                }
             }
         }
 
         VerticalScrollbar(
             adapter = rememberScrollbarAdapter(scrollState),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight(),
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             style = ScrollbarStyle(
                 minimalHeight = 16.dp,
                 thickness = 8.dp,
@@ -204,7 +366,7 @@ fun mcpServerTemplatesSection() {
         )
     }
 
-    // Add/Edit Dialog
+    // Add/Edit Template Dialog
     if (showAddDialog || editingServer != null) {
         mcpServerTemplateDialog(
             server = editingServer,
@@ -221,7 +383,26 @@ fun mcpServerTemplatesSection() {
         )
     }
 
-    // Delete Confirmation
+    // Add Global MCP Instance Dialog — reuses addMcpIntegrationDialog with GLOBAL_MCP_SCOPE_ID
+    if (showAddGlobalDialog) {
+        addMcpIntegrationDialog(
+            projectId = GLOBAL_MCP_SCOPE_ID,
+            onDismiss = { showAddGlobalDialog = false },
+            onSave = { serverId, name, parameters, toolCategories, toolStrategies ->
+                scope.launch {
+                    globalMcpService.createInstance(
+                        serverId = serverId,
+                        name = name,
+                        parameterValues = parameters,
+                    )
+                    globalInstances = globalMcpService.getInstances()
+                }
+                showAddGlobalDialog = false
+            },
+        )
+    }
+
+    // Delete Template Confirmation
     deletingServer?.let { server ->
         ComponentColors.themedAlertDialog(
             onDismissRequest = { deletingServer = null },
@@ -246,7 +427,34 @@ fun mcpServerTemplatesSection() {
         )
     }
 
-    // Reset Confirmation
+    // Delete Global Instance Confirmation
+    deletingGlobalInstance?.let { instance ->
+        ComponentColors.themedAlertDialog(
+            onDismissRequest = { deletingGlobalInstance = null },
+            title = { Text(stringResource("mcp.global.instance.delete.confirm.title")) },
+            text = { Text(stringResource("mcp.global.instance.delete.confirm.message", instance.name)) },
+            confirmButton = {
+                dangerButton(
+                    onClick = {
+                        scope.launch {
+                            globalMcpService.deleteInstance(instance.id)
+                            globalInstances = globalMcpService.getInstances()
+                        }
+                        deletingGlobalInstance = null
+                    },
+                ) {
+                    Text(stringResource("mcp.servers.delete"))
+                }
+            },
+            dismissButton = {
+                secondaryButton(onClick = { deletingGlobalInstance = null }) {
+                    Text(stringResource("dialog.cancel"))
+                }
+            },
+        )
+    }
+
+    // Reset Templates Confirmation
     if (showResetConfirm) {
         ComponentColors.themedAlertDialog(
             onDismissRequest = { showResetConfirm = false },
@@ -268,6 +476,129 @@ fun mcpServerTemplatesSection() {
                     Text(stringResource("dialog.cancel"))
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun globalMcpInstanceCard(
+    instance: McpInstance,
+    onToggleEnabled: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val serverDef = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
+    var showToolsDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.medium),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = instance.name,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                text = stringResource("mcp.global.instance.badge"),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        },
+                    )
+                }
+
+                serverDef?.let { def ->
+                    Text(
+                        text = def.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+
+                Text(
+                    text = stringResource("mcp.global.instance.server.label", instance.serverId),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Enable / disable toggle
+                themedTooltip(
+                    text = stringResource(
+                        if (instance.enabled) {
+                            "mcp.global.instance.disable.tooltip"
+                        } else {
+                            "mcp.global.instance.enable.tooltip"
+                        },
+                    ),
+                ) {
+                    Switch(
+                        checked = instance.enabled,
+                        onCheckedChange = { onToggleEnabled() },
+                        modifier = Modifier
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .size(width = 44.dp, height = 24.dp),
+                    )
+                }
+
+                themedTooltip(text = stringResource("mcp.integrations.view.tools.tooltip")) {
+                    IconButton(
+                        onClick = { showToolsDialog = true },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = stringResource("mcp.integrations.view.tools.tooltip"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+
+                themedTooltip(text = stringResource("mcp.integrations.delete.tooltip")) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource("mcp.integrations.delete.tooltip"),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showToolsDialog) {
+        mcpToolsDialog(
+            instance = instance,
+            onDismiss = { showToolsDialog = false },
         )
     }
 }

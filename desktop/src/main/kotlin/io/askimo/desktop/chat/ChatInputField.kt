@@ -21,17 +21,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -303,281 +301,271 @@ fun chatInputField(
             }
         }
 
-        Row(
+        // Wrap in BoxWithConstraints to get max available height
+        BoxWithConstraints(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
         ) {
-            // Action dropdown menu (attachments, image creation, etc.)
-            var actionMenuExpanded by remember { mutableStateOf(false) }
+            val maxAvailableHeight = maxHeight
+            val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(defaultTextFieldHeight)
 
-            Box(
-                modifier = Modifier.height(textFieldHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                themedTooltip(
-                    text = stringResource("chat.attach.file", Platform.modifierKey),
-                ) {
-                    IconButton(
-                        onClick = { actionMenuExpanded = true },
-                        colors = ComponentColors.primaryIconButtonColors(),
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Actions menu",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-
-                ComponentColors.themedDropdownMenu(
-                    expanded = actionMenuExpanded,
-                    onDismissRequest = { actionMenuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Default.AttachFile,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Text(
-                                    text = stringResource("chat.attach.file.menu"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        },
-                        onClick = {
-                            actionMenuExpanded = false
-                            openFileDialog()
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
-
-                    HorizontalDivider()
-
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Default.Image,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Text(
-                                    text = stringResource("chat.create.image.menu"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        },
-                        onClick = {
-                            actionMenuExpanded = false
-                            creationMode = CreationMode.Image
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
+            // Auto-calculate height if not manually resized
+            LaunchedEffect(calculatedHeight, manuallyResized) {
+                if (!manuallyResized) {
+                    textFieldHeight = calculatedHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
                 }
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Wrap in BoxWithConstraints to get max available height
-            BoxWithConstraints(
-                modifier = Modifier.weight(1f),
-            ) {
-                val maxAvailableHeight = maxHeight
-                val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(defaultTextFieldHeight)
-
-                // Auto-calculate height if not manually resized
-                LaunchedEffect(calculatedHeight, manuallyResized) {
-                    if (!manuallyResized) {
-                        textFieldHeight = calculatedHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
-                    }
-                }
-
-                Column {
-                    // Resize handle
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .pointerHoverIcon(
-                                PointerIcon(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR)),
-                            )
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    val newHeight = textFieldHeight - dragAmount.toDp()
-                                    textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
-                                    manuallyResized = true
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
+            Column {
+                // Main input row with text field and send button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
                     ) {
-                        // Visual indicator
+                        // Resize handle
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    RoundedCornerShape(2.dp),
-                                ),
-                        )
-                    }
-
-                    // Text field
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = onInputTextChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(textFieldHeight)
-                            .focusRequester(inputFocusRequester)
-                            .onGloballyPositioned { coordinates ->
-                                // Capture the actual width of the text field for wrapping calculation
-                                textFieldWidthPx = coordinates.size.width.toFloat()
-                            }
-                            .onPreviewKeyEvent { keyEvent ->
-                                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
-                                when (shortcut) {
-                                    AppShortcut.NEW_LINE -> {
-                                        val cursorPosition = inputText.selection.start
-                                        val textBeforeCursor = inputText.text.substring(0, cursorPosition)
-                                        val textAfterCursor = inputText.text.substring(cursorPosition)
-                                        val newText = textBeforeCursor + "\n" + textAfterCursor
-                                        val newCursorPosition = cursorPosition + 1
-                                        onInputTextChange(
-                                            TextFieldValue(
-                                                text = newText,
-                                                selection = TextRange(newCursorPosition),
-                                            ),
-                                        )
-                                        true
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .pointerHoverIcon(
+                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR)),
+                                )
+                                .pointerInput(Unit) {
+                                    detectVerticalDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        val newHeight = textFieldHeight - dragAmount.toDp()
+                                        textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
+                                        manuallyResized = true
                                     }
-                                    AppShortcut.SEND_MESSAGE -> {
-                                        if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                            onSendMessage(creationMode)
-                                        }
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            },
-                        placeholder = { Text(placeholder) },
-                        maxLines = Int.MAX_VALUE,
-                        isError = errorMessage != null,
-                        supportingText = if (errorMessage != null) {
-                            { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                        } else {
-                            null
-                        },
-                        colors = ComponentColors.outlinedTextFieldColors(),
-                    )
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // Visual indicator
+                            Box(
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .height(4.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        RoundedCornerShape(2.dp),
+                                    ),
+                            )
+                        }
 
-                    // Status badge bar - height is 0 when no status
-                    if (statusBarHeight > 0.dp) {
-                        Row(
+                        // Text field
+                        OutlinedTextField(
+                            value = inputText,
+                            onValueChange = onInputTextChange,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(statusBarHeight)
-                                .padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Image creation mode badge
-                            if (creationMode is CreationMode.Image) {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    tonalElevation = 2.dp,
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
+                                .height(textFieldHeight)
+                                .focusRequester(inputFocusRequester)
+                                .onGloballyPositioned { coordinates ->
+                                    // Capture the actual width of the text field for wrapping calculation
+                                    textFieldWidthPx = coordinates.size.width.toFloat()
+                                }
+                                .onPreviewKeyEvent { keyEvent ->
+                                    val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+                                    when (shortcut) {
+                                        AppShortcut.NEW_LINE -> {
+                                            val cursorPosition = inputText.selection.start
+                                            val textBeforeCursor = inputText.text.substring(0, cursorPosition)
+                                            val textAfterCursor = inputText.text.substring(cursorPosition)
+                                            val newText = textBeforeCursor + "\n" + textAfterCursor
+                                            val newCursorPosition = cursorPosition + 1
+                                            onInputTextChange(
+                                                TextFieldValue(
+                                                    text = newText,
+                                                    selection = TextRange(newCursorPosition),
+                                                ),
+                                            )
+                                            true
+                                        }
+                                        AppShortcut.SEND_MESSAGE -> {
+                                            if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
+                                                onSendMessage(creationMode)
+                                            }
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                },
+                            placeholder = { Text(placeholder) },
+                            maxLines = Int.MAX_VALUE,
+                            isError = errorMessage != null,
+                            supportingText = if (errorMessage != null) {
+                                { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                            } else {
+                                null
+                            },
+                            colors = ComponentColors.outlinedTextFieldColors(),
+                        )
+
+                        // Status badge bar - height is 0 when no status
+                        if (statusBarHeight > 0.dp) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(statusBarHeight)
+                                    .padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Image creation mode badge
+                                if (creationMode is CreationMode.Image) {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        tonalElevation = 2.dp,
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Image,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                        Text(
-                                            text = stringResource("chat.create.image.mode"),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = stringResource("chat.create.image.mode.cancel"),
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .clickable { creationMode = CreationMode.Chat }
-                                                .pointerHoverIcon(PointerIcon.Hand),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Image,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Text(
+                                                text = stringResource("chat.create.image.mode"),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = stringResource("chat.create.image.mode.cancel"),
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clickable { creationMode = CreationMode.Chat }
+                                                    .pointerHoverIcon(PointerIcon.Hand),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-            Box(
-                modifier = Modifier.height(textFieldHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isLoading || isThinking) {
-                    IconButton(
-                        onClick = onStopResponse,
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    // Send/Stop button
+                    Box(
+                        modifier = Modifier.height(textFieldHeight),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Default.Stop,
-                            contentDescription = "Stop",
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                } else {
-                    themedTooltip(
-                        text = if (editingMessage != null) {
-                            stringResource("message.update.regenerate")
+                        if (isLoading || isThinking) {
+                            IconButton(
+                                onClick = onStopResponse,
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.Stop,
+                                    contentDescription = "Stop",
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
                         } else {
-                            stringResource("message.send")
-                        },
-                    ) {
-                        IconButton(
-                            onClick = { onSendMessage(creationMode) },
-                            enabled = inputText.text.isNotBlank(),
-                            colors = ComponentColors.primaryIconButtonColors(),
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Icon(
-                                if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
-                                contentDescription = if (editingMessage != null) {
+                            themedTooltip(
+                                text = if (editingMessage != null) {
                                     stringResource("message.update.regenerate")
                                 } else {
                                     stringResource("message.send")
                                 },
+                            ) {
+                                IconButton(
+                                    onClick = { onSendMessage(creationMode) },
+                                    enabled = inputText.text.isNotBlank(),
+                                    colors = ComponentColors.primaryIconButtonColors(),
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Icon(
+                                        if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = if (editingMessage != null) {
+                                            stringResource("message.update.regenerate")
+                                        } else {
+                                            stringResource("message.send")
+                                        },
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom control toolbar (no divider, seamless integration)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Attach file button
+                    themedTooltip(
+                        text = stringResource("chat.attach.file", Platform.modifierKey),
+                    ) {
+                        IconButton(
+                            onClick = openFileDialog,
+                            enabled = !isLoading,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.AttachFile,
+                                contentDescription = stringResource("chat.attach.file.menu"),
                                 tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
+
+                    // Create image button
+                    themedTooltip(
+                        text = stringResource("chat.create.image.menu"),
+                    ) {
+                        IconButton(
+                            onClick = {
+                                creationMode = if (creationMode is CreationMode.Image) {
+                                    CreationMode.Chat
+                                } else {
+                                    CreationMode.Image
+                                }
+                            },
+                            enabled = !isLoading,
+                            colors = if (creationMode is CreationMode.Image) {
+                                ComponentColors.primaryIconButtonColors()
+                            } else {
+                                IconButtonDefaults.iconButtonColors()
+                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = stringResource("chat.create.image.menu"),
+                                tint = if (creationMode is CreationMode.Image) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    // Spacer to push any future right-aligned controls
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Future controls can be added here (e.g., character count, settings)
                 }
             }
         }

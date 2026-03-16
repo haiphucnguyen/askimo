@@ -45,6 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,7 +75,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
-import io.askimo.core.mcp.ProjectMcpInstance
+import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
@@ -968,6 +969,14 @@ private fun mcpIntegrationsPanel(
                         mcpInstances.forEach { instance ->
                             mcpInstanceCard(
                                 instance = instance,
+                                onToggleEnabled = {
+                                    mcpService.updateInstance(
+                                        projectId = projectId,
+                                        instanceId = instance.id,
+                                        enabled = !instance.enabled,
+                                    )
+                                    mcpInstances = mcpService.getInstances(projectId)
+                                },
                                 onDelete = {
                                     mcpService.deleteInstance(projectId, instance.id)
                                     mcpInstances = mcpService.getInstances(projectId)
@@ -1058,7 +1067,8 @@ private fun mcpIntegrationsPanel(
 
 @Composable
 private fun mcpInstanceCard(
-    instance: ProjectMcpInstance,
+    instance: McpInstance,
+    onToggleEnabled: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val serverDefinition = remember(instance.serverId) {
@@ -1152,7 +1162,27 @@ private fun mcpInstanceCard(
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Enable / disable toggle
+                themedTooltip(
+                    text = stringResource(
+                        if (instance.enabled) {
+                            "mcp.global.instance.disable.tooltip"
+                        } else {
+                            "mcp.global.instance.enable.tooltip"
+                        },
+                    ),
+                ) {
+                    Switch(
+                        checked = instance.enabled,
+                        onCheckedChange = { onToggleEnabled() },
+                        modifier = Modifier
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .size(width = 44.dp, height = 24.dp),
+                    )
+                }
+
                 // Tools button
                 themedTooltip(text = stringResource("mcp.integrations.view.tools.tooltip")) {
                     IconButton(

@@ -52,10 +52,10 @@ import androidx.compose.ui.window.Dialog
 import dev.langchain4j.agent.tool.ToolSpecification
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolStrategy
+import io.askimo.core.mcp.McpInstanceData
 import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.Parameter
 import io.askimo.core.mcp.ParameterType
-import io.askimo.core.mcp.ProjectMcpInstanceData
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.TransportType
@@ -413,7 +413,7 @@ fun addMcpIntegrationDialog(
 
                                                     // Create temporary instance to test connection
                                                     val now = LocalDateTime.now().toString()
-                                                    val tempInstanceData = ProjectMcpInstanceData(
+                                                    val tempInstanceData = McpInstanceData(
                                                         id = "temp-${System.currentTimeMillis()}",
                                                         projectId = projectId,
                                                         serverId = selectedServer!!.id,
@@ -662,7 +662,7 @@ fun addMcpIntegrationDialog(
                                                 try {
                                                     withContext(Dispatchers.IO) {
                                                         val now = LocalDateTime.now().toString()
-                                                        val tempInstanceData = ProjectMcpInstanceData(
+                                                        val tempInstanceData = McpInstanceData(
                                                             id = "temp-${System.currentTimeMillis()}",
                                                             projectId = projectId,
                                                             serverId = server.id,

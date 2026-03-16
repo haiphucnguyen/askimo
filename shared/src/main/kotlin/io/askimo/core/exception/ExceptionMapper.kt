@@ -4,6 +4,7 @@
  */
 package io.askimo.core.exception
 
+import dev.langchain4j.exception.ModelNotFoundException
 import io.askimo.core.logging.logger
 import java.net.ConnectException
 import java.net.NoRouteToHostException
@@ -91,6 +92,11 @@ object ExceptionMapper {
         is SocketTimeoutException,
         is java.util.concurrent.TimeoutException,
         -> TimeoutException(timeoutSeconds = 30, cause = exception)
+
+        is ModelNotFoundException -> ModelConfigurationException(
+            issue = "Specified model not found",
+            cause = exception,
+        )
 
         // Add more type-based matches as needed
         else -> null
