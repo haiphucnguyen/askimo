@@ -124,12 +124,20 @@ class ToolProviderImpl(
         // Project-scoped tools — only when inside a project
         val projectTools: List<ToolConfig> = if (projectId != null) {
             runBlocking { projectMcpInstanceService.getProjectTools(projectId) }
+                .getOrElse { e ->
+                    log.warn("Failed to load project MCP tools for project {}: {}", projectId, e.message)
+                    emptyList()
+                }
         } else {
             emptyList()
         }
 
         // Global tools — always available in every chat
         val globalTools: List<ToolConfig> = runBlocking { globalMcpInstanceService.getGlobalTools() }
+            .getOrElse { e ->
+                log.warn("Failed to load global MCP tools: {}", e.message)
+                emptyList()
+            }
 
         // Merge: project tools take precedence over global tools with same name
         val projectToolNames = projectTools.map { it.specification.name() }.toSet()

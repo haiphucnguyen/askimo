@@ -74,6 +74,9 @@ import androidx.compose.ui.window.Popup
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.AppErrorEvent
+import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.currentFileLogger
@@ -719,24 +722,36 @@ private fun toolsIndicatorButton(
         mcpServers = withContext(Dispatchers.IO) {
             // Load global MCP servers with their tools
             globalMcpService?.getInstances()?.filter { it.enabled }?.forEach { instance ->
-                val tools = try {
-                    globalMcpService.listTools(instance.id)
-                } catch (e: Exception) {
-                    log.error("Error loading tools for global server ${instance.name}", e)
-                    emptyList()
-                }
+                val tools = globalMcpService.listTools(instance.id)
+                    .getOrElse { e ->
+                        log.error("Error loading tools for global server ${instance.name}", e)
+                        EventBus.emit(
+                            AppErrorEvent(
+                                title = LocalizationManager.getString("error.app.title"),
+                                message = LocalizationManager.getString("error.app.message", e.message ?: instance.name),
+                                cause = e,
+                            ),
+                        )
+                        emptyList()
+                    }
                 servers.add(McpServerInfo(instance.name, instance.id, isGlobal = true, tools = tools))
             }
 
             // Load project MCP servers with their tools if in project context
             if (projectId != null) {
                 projectMcpService?.getInstances(projectId!!)?.filter { it.enabled }?.forEach { instance ->
-                    val tools = try {
-                        projectMcpService.listTools(projectId!!, instance.id)
-                    } catch (e: Exception) {
-                        log.error("Error loading tools for project server ${instance.name}", e)
-                        emptyList()
-                    }
+                    val tools = projectMcpService.listTools(projectId!!, instance.id)
+                        .getOrElse { e ->
+                            log.error("Error loading tools for project server ${instance.name}", e)
+                            EventBus.emit(
+                                AppErrorEvent(
+                                    title = LocalizationManager.getString("error.app.title"),
+                                    message = LocalizationManager.getString("error.app.message", e.message ?: instance.name),
+                                    cause = e,
+                                ),
+                            )
+                            emptyList()
+                        }
                     servers.add(McpServerInfo(instance.name, instance.id, isGlobal = false, tools = tools))
                 }
             }

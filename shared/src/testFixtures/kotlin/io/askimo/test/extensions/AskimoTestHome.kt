@@ -99,6 +99,7 @@ class AskimoTestHomeExtension :
         // any code that calls AppConfig will load the default values from the YAML
         // (e.g. models[OLLAMA].embeddingModel == "nomic-embed-text:latest")
         AppConfig.initForTest(AskimoHome.base())
+        AppConfig.setSecureSessionManagerForTest(TestSecureSessionManager())
 
         // Also use thread-local for compatibility
         val testBaseScope = AskimoHome.withTestBase(tempDir, profileName)

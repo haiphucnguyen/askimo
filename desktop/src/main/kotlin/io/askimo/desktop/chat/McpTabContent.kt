@@ -60,6 +60,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.koin.core.context.GlobalContext as KoinGlobalContext
 
 /**
@@ -143,18 +144,20 @@ fun mcpTabContent(project: Project?) {
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
                                         // Add timeout to prevent hanging
-                                        kotlinx.coroutines.withTimeout(15000L) {
+                                        withTimeout(15000L) {
                                             // 15 second timeout
-                                            val client = mcpService.createMcpClient(instance, "ui_${instance.id}")
-                                            if (client != null) {
-                                                val tools = client.listTools()
-                                                // Update UI state - no need for withContext since we're already in a coroutine
-                                                instanceTools = instanceTools + (instance.id to tools)
-                                                loadingTools = loadingTools - instance.id
-                                            } else {
-                                                loadingTools = loadingTools - instance.id
-                                                failedInstances = failedInstances + instance.id
-                                            }
+                                            val clientResult = mcpService.createMcpClient(instance, "ui_${instance.id}")
+                                            clientResult.fold(
+                                                onSuccess = { client ->
+                                                    val tools = client.listTools()
+                                                    instanceTools = instanceTools + (instance.id to tools)
+                                                    loadingTools = loadingTools - instance.id
+                                                },
+                                                onFailure = {
+                                                    loadingTools = loadingTools - instance.id
+                                                    failedInstances = failedInstances + instance.id
+                                                },
+                                            )
                                         }
                                     } catch (e: TimeoutCancellationException) {
                                         // Connection timeout

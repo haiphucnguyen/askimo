@@ -91,18 +91,23 @@ fun mcpToolsDialog(
         isLoading = true
         errorMessage = null
         try {
-            tools = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 mcpClientFactory.listTools(instance)
             }
+            result.fold(
+                onSuccess = { tools = it },
+                onFailure = { e ->
+                    val isTimeout = e is TimeoutException ||
+                        e.cause is TimeoutException ||
+                        e.message?.contains("TimeoutException", ignoreCase = true) == true
+                    errorMessage = if (isTimeout) {
+                        "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
+                    } else {
+                        e.message ?: "Failed to load tools"
+                    }
+                },
+            )
         } catch (e: Exception) {
-            val isTimeout = e is TimeoutException ||
-                e.cause is TimeoutException ||
-                e.message?.contains("TimeoutException", ignoreCase = true) == true
-            errorMessage = if (isTimeout) {
-                "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
-            } else {
-                "Failed to load tools: ${e.message ?: "Unknown error occurred"}"
-            }
         } finally {
             isLoading = false
         }

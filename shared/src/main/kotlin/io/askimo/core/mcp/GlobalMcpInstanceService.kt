@@ -89,11 +89,11 @@ class GlobalMcpInstanceService(
      *
      * Note: For MVP, we call through [ProjectMcpInstanceService.getProjectTools] directly.
      */
-    suspend fun getGlobalTools(): List<ToolConfig> = delegate.getProjectTools(GLOBAL_MCP_SCOPE_ID)
+    suspend fun getGlobalTools(): Result<List<ToolConfig>> = delegate.getProjectTools(GLOBAL_MCP_SCOPE_ID)
 
     fun getToolVectorIndex(): ToolVectorIndex? = delegate.getToolVectorIndex(GLOBAL_MCP_SCOPE_ID)
 
-    suspend fun listTools(instanceId: String): List<ToolConfig> = delegate.listTools(GLOBAL_MCP_SCOPE_ID, instanceId)
+    suspend fun listTools(instanceId: String): Result<List<ToolConfig>> = delegate.listTools(GLOBAL_MCP_SCOPE_ID, instanceId)
 
     fun getMcpClientForTool(toolName: String): DefaultMcpClient? = delegate.getMcpClientForTool(GLOBAL_MCP_SCOPE_ID, toolName)
 

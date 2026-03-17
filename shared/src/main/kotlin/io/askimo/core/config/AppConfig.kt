@@ -369,6 +369,17 @@ object AppConfig {
 
     @Volatile private var cached: AppConfigData? = null
 
+    @Volatile private var secureSessionManager: SecureSessionManager = SecureSessionManager()
+
+    /**
+     * Replaces the [SecureSessionManager] used by [saveContext].
+     * **For testing only** — call from [AppConfig.initForTest] to prevent keychain collisions.
+     */
+    @Synchronized
+    fun setSecureSessionManagerForTest(manager: SecureSessionManager) {
+        secureSessionManager = manager
+    }
+
     /**
      * Clears the cached configuration, forcing it to be reloaded on next access.
      * Useful for testing to ensure clean state between tests.
@@ -376,6 +387,7 @@ object AppConfig {
     @Synchronized
     fun reset() {
         cached = null
+        secureSessionManager = SecureSessionManager()
     }
 
     /**
@@ -989,7 +1001,7 @@ object AppConfig {
      */
     fun saveContext(params: AppContextParams) {
         synchronized(this) {
-            val sanitized = SecureSessionManager().saveSecureSession(params)
+            val sanitized = secureSessionManager.saveSecureSession(params)
             val current = cached ?: loadOnce()
             cached = current.copy(context = sanitized)
 

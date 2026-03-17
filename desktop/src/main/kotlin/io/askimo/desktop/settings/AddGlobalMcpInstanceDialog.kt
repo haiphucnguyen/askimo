@@ -266,18 +266,21 @@ fun addGlobalMcpInstanceDialog(
                         updatedAt = now,
                     )
 
-                    val mcpClient = mcpClientFactory.createMcpClient(
+                    val clientResult = mcpClientFactory.createMcpClient(
                         instance,
                         "test-connection-$serverId",
                     )
 
-                    if (mcpClient != null) {
-                        val tools = mcpClient.listTools()
-                        availableTools = tools
-                        return@withContext true to serverId
-                    } else {
-                        return@withContext false to null
-                    }
+                    clientResult.fold(
+                        onSuccess = { mcpClient ->
+                            val tools = mcpClient.listTools()
+                            availableTools = tools
+                        },
+                        onFailure = { e ->
+                            return@withContext false to e.message
+                        },
+                    )
+                    return@withContext true to serverId
                 } finally {
                     // Clean up temporary server definition only if not editing
                     if (existingInstance == null) {
