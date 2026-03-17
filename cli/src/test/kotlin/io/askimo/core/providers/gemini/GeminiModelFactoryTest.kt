@@ -28,6 +28,9 @@ import kotlin.test.assertTrue
 @TestInstance(Lifecycle.PER_CLASS)
 class GeminiModelFactoryTest {
 
+    private val apiKey = System.getenv("GEMINI_API_KEY")
+        ?: throw IllegalStateException("GEMINI_API_KEY environment variable is required")
+
     @BeforeEach
     fun setUp() {
         AppContext.reset()
@@ -35,9 +38,6 @@ class GeminiModelFactoryTest {
     }
 
     private fun createChatService(): ChatClient {
-        val apiKey = System.getenv("GEMINI_API_KEY")
-            ?: throw IllegalStateException("GEMINI_API_KEY environment variable is required")
-
         val settings = GeminiSettings(apiKey = apiKey, defaultModel = "gemini-2.5-flash")
 
         return GeminiModelFactory().create(
@@ -105,12 +105,12 @@ class GeminiModelFactoryTest {
     }
 
     @Test
-    @DisplayName("GeminiModelFactory returns empty list when no API key provided")
-    fun availableModelsReturnsEmptyListWithoutApiKey() {
-        val settings = GeminiSettings(apiKey = "")
+    @DisplayName("GeminiModelFactory returns available models when API key provided")
+    fun availableModelsReturnsModelsWithApiKey() {
+        val settings = GeminiSettings(apiKey = apiKey, defaultModel = "gemini-2.5-flash")
         val models = GeminiModelFactory().availableModels(settings)
 
-        assertTrue(models.isEmpty(), "Expected empty list when no API key provided")
+        assertTrue(models.isNotEmpty(), "Expected non-empty list of models when API key is provided")
     }
 
     @Test

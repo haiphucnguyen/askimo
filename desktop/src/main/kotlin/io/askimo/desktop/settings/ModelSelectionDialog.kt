@@ -100,7 +100,9 @@ fun modelSelectionDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             Text(
                                 text = stringResource("settings.model.loading"),
                                 modifier = Modifier.padding(start = Spacing.large),

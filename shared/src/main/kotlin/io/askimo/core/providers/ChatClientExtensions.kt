@@ -5,8 +5,6 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.data.message.UserMessage
-import dev.langchain4j.model.chat.request.ChatRequestParameters
-import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.exception.ToolExecutionException
 import io.askimo.core.intent.DetectAiResponseIntentCommand
@@ -25,12 +23,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.channels.UnresolvedAddressException
 import java.util.concurrent.CountDownLatch
-
-/**
- * Default chat request parameters with no custom sampling settings.
- * Used when sampling is disabled or not supported by the model.
- */
-private val DEFAULT_PARAMETERS = ChatRequestParameters.builder().build()
 
 /**
  * Extension function to detect if an exception is due to unsupported sampling parameters.
@@ -94,26 +86,6 @@ fun ChatClient.sendStreamingMessageWithCallback(
                     log.debug("Retrying request with reduced context (attempt ${contextRetryCount + 1}/${maxContextRetries + 1})")
                 }
 
-                // Build combined request parameters with sampling and tools
-                val customParams = run {
-                    val builder = ChatRequestParameters.builder()
-                    var hasParams = false
-
-                    // Add sampling parameters if enabled and supported
-                    if (AppConfig.chat.sampling.enabled) {
-                        val supportsSampling = ModelCapabilitiesCache.supportsSampling(provider, model)
-                        if (supportsSampling) {
-                            AppConfig.chat.sampling.let { samplingConfig ->
-                                builder
-                                    .temperature(samplingConfig.temperature)
-                                hasParams = true
-                            }
-                        }
-                    }
-
-                    if (hasParams) builder.build() else DEFAULT_PARAMETERS
-                }
-
                 // Execute the streaming request with retry logic for transient errors
                 return RetryUtils.retry(RetryPresets.STREAMING_ERRORS) {
                     val sb = StringBuilder()
@@ -122,7 +94,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                     var isConfigurationError = false
                     var capturedError: Throwable? = null
 
-                    sendMessageStreaming(userMessage, customParams)
+                    sendMessageStreaming(userMessage)
                         .onPartialResponse { chunk ->
                             sb.append(chunk)
                             onToken(chunk)

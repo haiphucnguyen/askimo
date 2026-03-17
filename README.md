@@ -108,11 +108,11 @@ Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM6
 
 **💬 AI Chat with RAG:** Ask questions about your files, documents, and code using any AI model
 
-[![Askimo Desktop Chat Demo](public/desktop-demo.gif)](https://askimo.chat/app/)
+[![Askimo Desktop Chat Demo](public/desktop-demo.gif)]
 
 **🐍 Run Scripts in a Safe Sandbox:** Ask AI to write and execute Python or Bash scripts directly inside the app, safely and instantly
 
-[![Askimo Run Script Demo](public/askimo_run_script.gif)](https://askimo.chat/app/)
+[![Askimo Run Script Demo](public/askimo_run_script.gif)]
 
 ### 🎯 What You Get
 
@@ -120,7 +120,7 @@ Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM6
 - 🔄 **Use the Best AI for Each Task** - Need help with code? Use Claude. General questions? Try ChatGPT. Writing a quick email? Use a free local model. Switch instantly between different AIs
 - 🔒 **Complete Privacy** - Everything stays on your computer. Your conversations, your data, your control. Nothing is sent to the cloud unless you choose to ask an AI
 - 🧠 **Ask Questions About Your Files** - Point Askimo to folders, files, or web URLs and ask "What does this project do?" or "How does the login work?" Get answers from your actual documents and code
-✅ **Connect Custom Tools (Experimental)** - Extend AI capabilities with MCP (Model Context Protocol) integrations supporting both **stdio** and **HTTP** transports. Connect your own tools and services for specialized workflows
+✅ **Connect Custom Tools** - Extend AI capabilities with MCP (Model Context Protocol) integrations supporting both **stdio** and **HTTP** transports. Connect your own tools and services for specialized workflows
 - ⭐ **Stay Organized** - Star your favorite conversations, search through everything you've ever asked, and keep work separate from personal chats
 - 📊 **Beautiful Formatting** - See code with syntax highlighting, tables, diagrams, and properly formatted text. Copy and paste ready to use
 - 🎯 **Save Your Favorite Prompts** - Create reusable templates for things you ask often. One click to use your "proofreader" or "code reviewer" assistant

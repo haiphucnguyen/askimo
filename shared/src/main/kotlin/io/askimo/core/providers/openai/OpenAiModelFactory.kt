@@ -79,6 +79,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .apiKey(safeApiKey(settings.apiKey))
                 .modelName(settings.defaultModel)
+                .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)

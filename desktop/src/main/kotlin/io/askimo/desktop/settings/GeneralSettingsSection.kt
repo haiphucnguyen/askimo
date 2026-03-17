@@ -30,7 +30,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -515,78 +514,64 @@ private fun samplingSettingsCard() {
                 .padding(Spacing.large),
             verticalArrangement = Arrangement.spacedBy(Spacing.medium),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource("settings.sampling.title"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Text(
-                        text = stringResource("settings.sampling.description"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    )
-                }
-                Switch(
-                    checked = AppConfig.chat.sampling.enabled,
-                    onCheckedChange = { newEnabled ->
-                        AppConfig.updateField("chat.sampling.enabled", newEnabled)
-                    },
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource("settings.sampling.title"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource("settings.sampling.description"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                 )
             }
 
-            if (AppConfig.chat.sampling.enabled) {
-                HorizontalDivider()
+            HorizontalDivider()
 
-                // Creativity Slider (Temperature 0.0 - 1.0)
-                var sliderValue by remember { mutableStateOf(AppConfig.chat.sampling.temperature.toFloat()) }
+            // Creativity Slider (Temperature 0.0 - 1.0)
+            var sliderValue by remember { mutableStateOf(AppConfig.chat.samplingTemperature.toFloat()) }
 
-                // Sync slider with AppConfig when AppConfig changes externally
-                sliderValue = AppConfig.chat.sampling.temperature.toFloat()
+            // Sync slider with AppConfig when AppConfig changes externally
+            sliderValue = AppConfig.chat.samplingTemperature.toFloat()
 
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                Text(
+                    text = stringResource("settings.sampling.creativity"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+
+                Text(
+                    text = stringResource("settings.sampling.creativity.description"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                )
+
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { newValue ->
+                        sliderValue = newValue
+                        AppConfig.updateField("chat.samplingTemperature", newValue.toDouble())
+                    },
+                    valueRange = 0f..1f,
+                )
+
+                // Slider labels
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     Text(
-                        text = stringResource("settings.sampling.creativity"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-
-                    Text(
-                        text = stringResource("settings.sampling.creativity.description"),
+                        text = stringResource("settings.sampling.creativity.strict"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                     )
-
-                    Slider(
-                        value = sliderValue,
-                        onValueChange = { newValue ->
-                            sliderValue = newValue
-                            AppConfig.updateField("chat.sampling.temperature", newValue.toDouble())
-                        },
-                        valueRange = 0f..1f,
+                    Text(
+                        text = stringResource("settings.sampling.creativity.creative"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                     )
-
-                    // Slider labels
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = stringResource("settings.sampling.creativity.strict"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                        )
-                        Text(
-                            text = stringResource("settings.sampling.creativity.creative"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                        )
-                    }
                 }
             }
         }

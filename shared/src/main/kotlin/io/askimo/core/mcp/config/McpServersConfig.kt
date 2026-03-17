@@ -16,6 +16,7 @@ import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.Parameter
 import io.askimo.core.mcp.ParameterLocation
 import io.askimo.core.mcp.ParameterType
+import io.askimo.core.mcp.ServerDefinitionSecretManager
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TemplateResolver
 import io.askimo.core.mcp.TransportType
@@ -80,9 +81,15 @@ object McpServersConfig {
     fun remove(id: String) {
         synchronized(this) {
             val current = getAll().toMutableList()
+            val removed = current.find { it.id == id }
             if (current.removeIf { it.id == id }) {
                 cached = current
                 persist(current)
+
+                // Clean up secrets for global instances
+                if (removed?.tags?.contains("global") == true) {
+                    ServerDefinitionSecretManager.cleanupSecrets(id)
+                }
             }
         }
     }

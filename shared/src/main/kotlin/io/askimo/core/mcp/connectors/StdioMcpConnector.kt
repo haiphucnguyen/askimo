@@ -24,7 +24,21 @@ class StdioMcpConnector(
 
     override suspend fun createTransport(): McpTransport {
         // Resolve executable paths (handles Windows .cmd/.bat extensions, macOS PATH issues, etc.)
-        val command = ExecutableResolver.resolveCommand(config.command)
+        var command = ExecutableResolver.resolveCommand(config.command)
+
+        // If working directory is specified, wrap command to execute from that directory
+        if (config.workingDirectory != null) {
+            val workDir = config.workingDirectory
+            val isWindows = System.getProperty("os.name").lowercase().contains("win")
+
+            command = if (isWindows) {
+                // Windows: cmd /c "cd /d <dir> && <command>"
+                listOf("cmd", "/c", "cd /d \"$workDir\" && ${command.joinToString(" ")}")
+            } else {
+                // Unix/Mac: bash -c "cd <dir> && <command>"
+                listOf("bash", "-c", "cd \"$workDir\" && ${command.joinToString(" ")}")
+            }
+        }
 
         val builder = StdioMcpTransport.builder()
             .logger(log)

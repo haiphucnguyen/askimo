@@ -23,13 +23,14 @@
         </encoder>
     </appender>
 
-    <!-- Root logger configuration - default to ERROR for all packages -->
-    <root level="ERROR">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
+    <!-- Root logger configuration - suppress all other packages -->
+    <root level="OFF">
     </root>
 
     <!-- Askimo application logging - controlled by LOGBACK_LEVEL env var -->
-    <logger name="io.askimo" level="${LOGBACK_LEVEL:-INFO}" />
+    <logger name="io.askimo" level="${LOGBACK_LEVEL:-INFO}" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </logger>
 </configuration>
 

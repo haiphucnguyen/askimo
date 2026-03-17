@@ -96,6 +96,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
                 .httpClientBuilder(jdkHttpClientBuilder)
                 .baseUrl(settings.baseUrl)
                 .modelName(settings.defaultModel)
+                .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)

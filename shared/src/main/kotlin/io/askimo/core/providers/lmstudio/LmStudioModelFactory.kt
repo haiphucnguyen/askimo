@@ -77,6 +77,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .baseUrl(settings.baseUrl)
                 .apiKey("lm-studio")
                 .modelName(settings.defaultModel)
+                .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)

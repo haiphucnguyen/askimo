@@ -315,6 +315,7 @@ public class CredentialManager {
                     Marshal.Copy(cred.CredentialBlob, passwordBytes, 0, (int)cred.CredentialBlobSize);
                     return Encoding.Unicode.GetString(passwordBytes);
                 }
+                return \""\"";
             } finally {
                 CredFree(credPtr);
             }
@@ -325,7 +326,7 @@ public class CredentialManager {
 
             val powershellScript = "Add-Type -TypeDefinition '$csCode'; " +
                 "\$password = [CredentialManager]::GetPassword('$target'); " +
-                "if (\$password -ne \$null) { Write-Output \$password; exit 0 } " +
+                "if (\$password -ne \$null) { Write-Output \"FOUND:\$password\"; exit 0 } " +
                 "else { [Console]::Error.WriteLine('Credential not found'); exit 1 }"
 
             val process =
@@ -343,8 +344,8 @@ public class CredentialManager {
             val errorOutput = process.errorStream.bufferedReader().readText().trim()
             val exitCode = process.waitFor()
 
-            if (exitCode == 0 && output.isNotBlank()) {
-                return output
+            if (exitCode == 0 && output.startsWith("FOUND:")) {
+                return output.removePrefix("FOUND:")
             } else if (errorOutput.isNotBlank()) {
                 log.error("PowerShell credential retrieval failed with exit code $exitCode: $errorOutput")
             } else {

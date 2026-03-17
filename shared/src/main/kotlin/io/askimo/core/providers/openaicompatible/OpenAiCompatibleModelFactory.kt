@@ -75,6 +75,7 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(apiKey))
             .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)

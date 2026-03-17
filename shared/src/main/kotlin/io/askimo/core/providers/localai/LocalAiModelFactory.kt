@@ -74,6 +74,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
                 .apiKey("localai")
                 .modelName(settings.defaultModel)
                 .timeout(Duration.ofMinutes(5))
+                .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)

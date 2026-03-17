@@ -53,17 +53,20 @@ class McpClientFactory(
                 return null
             }
 
-            log.debug("Creating connector for instance '${instance.name}' (${instance.serverId})")
-            val connector = instance.toConnector(definition)
+            // Resolve secret references before creating connector
+            val resolvedDefinition = ServerDefinitionSecretManager.resolveSecrets(definition)
 
-            log.debug("Validating connector '${instance.name}'")
+            log.trace("Creating connector for instance '${instance.name}' (${instance.serverId})")
+            val connector = instance.toConnector(resolvedDefinition)
+
+            log.trace("Validating connector '${instance.name}'")
             val validationResult = connector.validate()
             if (!validationResult.isValid) {
                 log.warn("Connector '${instance.name}' validation failed: ${validationResult.errors.joinToString(", ")}")
                 return null
             }
 
-            log.debug("Creating transport for connector '${instance.name}'")
+            log.trace("Creating transport for connector '${instance.name}'")
             val transport = try {
                 connector.createTransport()
             } catch (e: Exception) {
@@ -74,7 +77,7 @@ class McpClientFactory(
                 return null
             }
 
-            log.debug("Creating MCP client for instance '${instance.name}'")
+            log.trace("Creating MCP client for instance '${instance.name}'")
             val client = DefaultMcpClient.builder()
                 .key(clientKey)
                 .transport(transport)
@@ -223,7 +226,7 @@ class McpClientFactory(
             return ToolCategory.EXECUTE
         }
 
-        log.debug("Tool '${toolSpec.name()}' classified as OTHER (unrecognized category)")
+        log.trace("Tool '${toolSpec.name()}' classified as OTHER (unrecognized category)")
         return ToolCategory.OTHER
     }
 
@@ -245,7 +248,7 @@ class McpClientFactory(
                     description.contains("drop table")
                 )
         ) {
-            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (database destruction)")
+            log.trace("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (database destruction)")
             return ToolStrategy.FOLLOW_UP_BASED
         }
 
@@ -261,7 +264,7 @@ class McpClientFactory(
                     description.contains("bulk delete") || description.contains("mass delete")
                 )
         ) {
-            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (bulk deletion)")
+            log.trace("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (bulk deletion)")
             return ToolStrategy.FOLLOW_UP_BASED
         }
 
@@ -272,7 +275,7 @@ class McpClientFactory(
             description.contains("irreversible") || description.contains("cannot be undone") ||
             description.contains("permanent deletion")
         ) {
-            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (system danger)")
+            log.trace("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (system danger)")
             return ToolStrategy.FOLLOW_UP_BASED
         }
 
@@ -284,11 +287,11 @@ class McpClientFactory(
                     description.contains("bypass security")
                 )
         ) {
-            log.debug("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (security risk)")
+            log.trace("Tool '${toolSpec.name()}' classified as FOLLOW_UP_BASED (security risk)")
             return ToolStrategy.FOLLOW_UP_BASED
         }
 
-        log.debug("Tool '${toolSpec.name()}' classified as INTENT_BASED (safe operation)")
+        log.trace("Tool '${toolSpec.name()}' classified as INTENT_BASED (safe operation)")
         return ToolStrategy.INTENT_BASED
     }
 }

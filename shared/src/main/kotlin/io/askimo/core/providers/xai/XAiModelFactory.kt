@@ -69,6 +69,7 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
                 .apiKey(safeApiKey(settings.apiKey))
                 .baseUrl(settings.baseUrl)
                 .modelName(settings.defaultModel)
+                .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
                 .logResponses(log.isTraceEnabled)

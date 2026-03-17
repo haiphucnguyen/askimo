@@ -28,6 +28,9 @@ import kotlin.test.assertTrue
 @AskimoTestHome
 class OpenAiModelFactoryTest {
 
+    private val apiKey = System.getenv("OPENAI_API_KEY")
+        ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
+
     @BeforeEach
     fun setUp() {
         AppContext.reset()
@@ -35,9 +38,6 @@ class OpenAiModelFactoryTest {
     }
 
     private fun createChatService(): ChatClient {
-        val apiKey = System.getenv("OPENAI_API_KEY")
-            ?: throw IllegalStateException("OPENAI_API_KEY environment variable is required")
-
         val settings = OpenAiSettings(apiKey = apiKey, defaultModel = "gpt-3.5-turbo")
 
         return OpenAiModelFactory().create(
@@ -102,6 +102,15 @@ class OpenAiModelFactoryTest {
             toolWasCalled,
             "Expected response to contain file/directory count information indicating tool was called, but got: '$output'",
         )
+    }
+
+    @Test
+    @DisplayName("OpenAiModelFactory returns available models when API key provided")
+    fun availableModelsReturnsModelsWithApiKey() {
+        val settings = OpenAiSettings(apiKey = apiKey, defaultModel = "gpt-3.5-turbo")
+        val models = OpenAiModelFactory().availableModels(settings)
+
+        assertTrue(models.isNotEmpty(), "Expected non-empty list of models when API key is provided")
     }
 
     @Test

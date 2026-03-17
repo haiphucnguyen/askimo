@@ -7,6 +7,7 @@ package io.askimo.desktop.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,6 +66,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,6 +77,8 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.mcp.GlobalMcpInstanceService
+import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.core.providers.ChatContext
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
@@ -653,8 +657,8 @@ private fun toolsIndicatorButton(
     // Get services
     val globalMcpService = remember {
         try {
-            get<io.askimo.core.mcp.GlobalMcpInstanceService>(
-                io.askimo.core.mcp.GlobalMcpInstanceService::class.java,
+            get<GlobalMcpInstanceService>(
+                GlobalMcpInstanceService::class.java,
             )
         } catch (_: Exception) {
             null
@@ -662,8 +666,8 @@ private fun toolsIndicatorButton(
     }
     val projectMcpService = remember {
         try {
-            get<io.askimo.core.mcp.ProjectMcpInstanceService>(
-                io.askimo.core.mcp.ProjectMcpInstanceService::class.java,
+            get<ProjectMcpInstanceService>(
+                ProjectMcpInstanceService::class.java,
             )
         } catch (_: Exception) {
             null
@@ -925,24 +929,25 @@ private fun mcpServerItem(
 
     Box {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = server.tools.isNotEmpty()) {
-                    showToolsSubmenu = true
-                }
-                .pointerHoverIcon(
-                    if (server.tools.isNotEmpty()) PointerIcon.Hand else PointerIcon.Default,
-                ),
+            modifier = Modifier.fillMaxWidth(),
             colors = ComponentColors.surfaceVariantCardColors(),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable(
+                        enabled = server.tools.isNotEmpty(),
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showToolsSubmenu = true },
+                    )
+                    .pointerHoverIcon(
+                        if (server.tools.isNotEmpty()) PointerIcon.Hand else PointerIcon.Default,
+                    )
                     .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Checkbox — separate click target, does NOT propagate to card click
                 Checkbox(
                     checked = isEnabled,
                     onCheckedChange = { onToggle() },
@@ -950,9 +955,9 @@ private fun mcpServerItem(
                         .size(36.dp)
                         .pointerHoverIcon(PointerIcon.Hand)
                         .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = {}, // absorb — Checkbox handles its own tap
+                            onClick = { /* Handled by onCheckedChange */ },
                         ),
                 )
 
@@ -1047,11 +1052,12 @@ private fun mcpServerItem(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         },
                         onClick = { /* Tools are read-only for now */ },
+                        colors = ComponentColors.menuItemColors(),
                     )
                 }
             }

@@ -87,6 +87,7 @@ import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.desktop.common.ui.clickableCard
 import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.session.SessionActionMenu
 import org.koin.core.context.GlobalContext
@@ -416,8 +417,7 @@ private fun sessionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .pointerHoverIcon(PointerIcon.Hand),
+            .clickableCard(cornerRadius = 8.dp, onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor,

@@ -73,6 +73,7 @@ data class McpInstance(
                 description = "Instance of ${definition.name}",
                 command = resolvedCommand,
                 env = resolvedEnv,
+                workingDirectory = resolvedWorkingDir,
             ),
         )
     }

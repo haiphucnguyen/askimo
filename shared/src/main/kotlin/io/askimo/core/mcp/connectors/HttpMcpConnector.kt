@@ -34,9 +34,6 @@ class HttpMcpConnector(
         val builder = StreamableHttpMcpTransport.builder()
             .url(config.url)
             .timeout(timeout)
-            .logRequests(log.isDebugEnabled)
-            .logResponses(log.isTraceEnabled)
-            .logger(log)
 
         if (config.headers.isNotEmpty()) {
             builder.customHeaders(config.headers)

@@ -17,6 +17,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.NavigationRailItemColors
@@ -368,6 +370,23 @@ object ComponentColors {
             )
         }
     }
+
+    /**
+     * Menu item colors that disable the hover/focus background effect.
+     * This prevents the rectangular border/background from appearing when hovering
+     * over menu items that already have their own background styling.
+     *
+     * Use this for DropdownMenuItem components to avoid hover artifacts.
+     */
+    @Composable
+    fun menuItemColors(): MenuItemColors = MenuDefaults.itemColors(
+        textColor = MaterialTheme.colorScheme.onSurface,
+        leadingIconColor = MaterialTheme.colorScheme.onSurface,
+        trailingIconColor = MaterialTheme.colorScheme.onSurface,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    )
 
     /**
      * Themed AlertDialog that uses correct theme colors.

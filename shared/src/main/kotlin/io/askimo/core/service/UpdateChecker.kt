@@ -85,10 +85,6 @@ class UpdateChecker(
 
         val isNewVersion = isNewerVersion(latestVersion, currentVersion)
 
-        if (isNewVersion) {
-            log.info("New version available: $latestVersion (current: $currentVersion)")
-        }
-
         UpdateInfo(
             currentVersion = currentVersion,
             latestVersion = latestVersion,

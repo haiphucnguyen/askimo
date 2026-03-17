@@ -22,9 +22,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -178,24 +178,43 @@ fun mcpServerTemplateDialog(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        TabRow(
+                        SecondaryTabRow(
                             selectedTabIndex = selectedTab,
                             modifier = Modifier.fillMaxWidth(),
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
                         ) {
                             Tab(
                                 selected = selectedTab == 0,
                                 onClick = { if (!isEditMode) selectedTab = 0 },
                                 enabled = !isEditMode,
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                text = { Text(stringResource("mcp.template.transport.stdio")) },
+                                text = {
+                                    Text(
+                                        text = stringResource("mcp.template.transport.stdio"),
+                                        color = if (selectedTab == 0) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                },
                             )
                             Tab(
                                 selected = selectedTab == 1,
                                 onClick = { if (!isEditMode) selectedTab = 1 },
                                 enabled = !isEditMode,
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                text = { Text(stringResource("mcp.template.transport.http")) },
+                                text = {
+                                    Text(
+                                        text = stringResource("mcp.template.transport.http"),
+                                        color = if (selectedTab == 1) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                },
                             )
                         }
 
