@@ -4608,7 +4608,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$9MnoMmTz",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$czKLlMIH",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5317,12 +5317,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.askimo.core.security.SecureSessionManager",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.askimo.core.security.SecureSessionManagerTest",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -5368,12 +5362,6 @@
   },
   {
     "name": "io.askimo.core.security.TestProviderSettings$Companion",
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.askimo.core.security.TestSecureSessionManager",
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
@@ -6984,7 +6972,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$IGApxVfY",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$dFuXftxe",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

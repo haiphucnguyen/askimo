@@ -428,32 +428,29 @@ fun addMcpIntegrationDialog(
                                                     val tempInstance = tempInstanceData.toDomain()
 
                                                     // Try to fetch tools
-                                                    val mcpClient = mcpService.createMcpClient(
+                                                    val clientResult = mcpService.createMcpClient(
                                                         tempInstance,
                                                         "test-connection",
                                                     )
 
-                                                    if (mcpClient != null) {
-                                                        val tools = mcpClient.listTools()
-                                                        availableTools = tools
+                                                    clientResult.fold(
+                                                        onSuccess = { mcpClient ->
+                                                            val tools = mcpClient.listTools()
+                                                            availableTools = tools
 
-                                                        // Auto-infer categories and strategies for each tool
-                                                        val inferredCategories = mutableMapOf<String, ToolCategory>()
-                                                        val inferredStrategies = mutableMapOf<String, Int>()
-
-                                                        tools.forEach { toolSpec ->
-                                                            val category = mcpService.inferToolCategory(toolSpec)
-                                                            val strategy = mcpService.inferToolStrategy(toolSpec)
-
-                                                            inferredCategories[toolSpec.name()] = category
-                                                            inferredStrategies[toolSpec.name()] = strategy
-                                                        }
-
-                                                        toolCategories = inferredCategories
-                                                        toolStrategies = inferredStrategies
-                                                    } else {
-                                                        dialogState.setError("Failed to create MCP client. Check your parameters.")
-                                                    }
+                                                            val inferredCategories = mutableMapOf<String, ToolCategory>()
+                                                            val inferredStrategies = mutableMapOf<String, Int>()
+                                                            tools.forEach { toolSpec ->
+                                                                inferredCategories[toolSpec.name()] = mcpService.inferToolCategory(toolSpec)
+                                                                inferredStrategies[toolSpec.name()] = mcpService.inferToolStrategy(toolSpec)
+                                                            }
+                                                            toolCategories = inferredCategories
+                                                            toolStrategies = inferredStrategies
+                                                        },
+                                                        onFailure = { e ->
+                                                            dialogState.setError(e.message ?: "Failed to create MCP client")
+                                                        },
+                                                    )
                                                 }
                                             } catch (e: Exception) {
                                                 dialogState.setError(e, "Error loading tools")
@@ -673,23 +670,18 @@ fun addMcpIntegrationDialog(
                                                             updatedAt = now,
                                                         )
                                                         val tempInstance = tempInstanceData.toDomain()
-                                                        val mcpClient = mcpService.createMcpClient(tempInstance, "auto-load-tools")
-
-                                                        if (mcpClient != null) {
-                                                            val tools = mcpClient.listTools()
-                                                            val inferredCategories = mutableMapOf<String, ToolCategory>()
-                                                            val inferredStrategies = mutableMapOf<String, Int>()
-
-                                                            tools.forEach { toolSpec ->
-                                                                val category = mcpService.inferToolCategory(toolSpec)
-                                                                val strategy = mcpService.inferToolStrategy(toolSpec)
-                                                                inferredCategories[toolSpec.name()] = category
-                                                                inferredStrategies[toolSpec.name()] = strategy
+                                                        mcpService.createMcpClient(tempInstance, "auto-load-tools")
+                                                            .onSuccess { mcpClient ->
+                                                                val tools = mcpClient.listTools()
+                                                                val inferredCategories = mutableMapOf<String, ToolCategory>()
+                                                                val inferredStrategies = mutableMapOf<String, Int>()
+                                                                tools.forEach { toolSpec ->
+                                                                    inferredCategories[toolSpec.name()] = mcpService.inferToolCategory(toolSpec)
+                                                                    inferredStrategies[toolSpec.name()] = mcpService.inferToolStrategy(toolSpec)
+                                                                }
+                                                                toolCategories = inferredCategories
+                                                                toolStrategies = inferredStrategies
                                                             }
-
-                                                            toolCategories = inferredCategories
-                                                            toolStrategies = inferredStrategies
-                                                        }
                                                     }
                                                 } catch (e: Exception) {
                                                     // If auto-load fails, continue without tools

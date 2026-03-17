@@ -29,31 +29,25 @@ class McpClientFactory(
     private val serversConfig: McpServersConfig = McpServersConfig,
 ) {
 
-    // ── Client creation ───────────────────────────────────────────────────────
-
     /**
      * Creates a [DefaultMcpClient] for the given [instance].
      *
-     * Steps:
-     * 1. Look up the [McpServerDefinition] by [McpInstance.serverId]
-     * 2. Build and validate the connector
-     * 3. Create the transport
-     * 4. Build and return the client
-     *
-     * Returns `null` (instead of throwing) if any step fails, so callers can
-     * decide whether to skip or surface the error.
+     * Returns [Result.failure] with the root-cause exception intact so callers
+     * can surface a meaningful message to the user instead of a generic error.
      */
     suspend fun createMcpClient(
         instance: McpInstance,
         clientKey: String,
-    ): DefaultMcpClient? {
+    ): Result<DefaultMcpClient> {
         return try {
-            val definition = serversConfig.get(instance.serverId) ?: run {
-                log.warn("Server definition not found for instance '${instance.name}': ${instance.serverId}")
-                return null
-            }
+            val definition = serversConfig.get(instance.serverId)
+                ?: return Result.failure(
+                    IllegalStateException(
+                        "Server definition not found for '${instance.name}' (serverId: ${instance.serverId}). " +
+                            "The server may have been deleted.",
+                    ),
+                )
 
-            // Resolve secret references before creating connector
             val resolvedDefinition = ServerDefinitionSecretManager.resolveSecrets(definition)
 
             log.trace("Creating connector for instance '${instance.name}' (${instance.serverId})")
@@ -62,19 +56,23 @@ class McpClientFactory(
             log.trace("Validating connector '${instance.name}'")
             val validationResult = connector.validate()
             if (!validationResult.isValid) {
-                log.warn("Connector '${instance.name}' validation failed: ${validationResult.errors.joinToString(", ")}")
-                return null
+                return Result.failure(
+                    IllegalStateException(
+                        "Invalid configuration for '${instance.name}': ${validationResult.errors.joinToString(", ")}",
+                    ),
+                )
             }
 
             log.trace("Creating transport for connector '${instance.name}'")
             val transport = try {
                 connector.createTransport()
             } catch (e: Exception) {
-                log.error(
-                    "Failed to create transport for '${instance.name}': ${e.javaClass.simpleName}: ${e.message}",
-                    e,
+                return Result.failure(
+                    IllegalStateException(
+                        "Cannot connect to '${instance.name}': ${e.message}",
+                        e,
+                    ),
                 )
-                return null
             }
 
             log.trace("Creating MCP client for instance '${instance.name}'")
@@ -84,34 +82,43 @@ class McpClientFactory(
                 .build()
 
             log.debug("Successfully created MCP client for '${instance.name}'")
-            client
+            Result.success(client)
         } catch (e: Exception) {
-            log.error(
-                "Failed to create MCP client for '${instance.name}': ${e.javaClass.simpleName}: ${e.message}",
-                e,
+            Result.failure(
+                IllegalStateException(
+                    "Failed to create MCP client for '${instance.name}': ${e.message}",
+                    e,
+                ),
             )
-            null
         }
     }
 
     /**
      * Connects to [instance], fetches its tool list, and returns classified [ToolConfig]s.
      *
-     * This overload requires no `projectId` — it is suitable for one-off tool listing
-     * (e.g. the Tools dialog, the Add Integration dialog preview) where caching is
-     * handled by the caller or not needed at all.
+     * Returns [Result.failure] with the root cause so callers can surface a meaningful message.
      */
-    suspend fun listTools(instance: McpInstance): List<ToolConfig> {
+    suspend fun listTools(instance: McpInstance): Result<List<ToolConfig>> {
         val clientKey = "list_${instance.id}_${System.currentTimeMillis()}"
         val mcpClient = createMcpClient(instance, clientKey)
-            ?: throw IllegalStateException("Failed to create MCP client for instance '${instance.name}'")
+            .getOrElse { return Result.failure(it) }
 
-        return mcpClient.listTools().map { toolSpec ->
-            ToolConfig(
-                specification = toolSpec,
-                category = inferToolCategory(toolSpec),
-                strategy = inferToolStrategy(toolSpec),
-                source = ToolSource.MCP_EXTERNAL,
+        return try {
+            val tools = mcpClient.listTools().map { toolSpec ->
+                ToolConfig(
+                    specification = toolSpec,
+                    category = inferToolCategory(toolSpec),
+                    strategy = inferToolStrategy(toolSpec),
+                    source = ToolSource.MCP_EXTERNAL,
+                )
+            }
+            Result.success(tools)
+        } catch (e: Exception) {
+            Result.failure(
+                IllegalStateException(
+                    "Failed to list tools from '${instance.name}': ${e.message}",
+                    e,
+                ),
             )
         }
     }

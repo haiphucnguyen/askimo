@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.event.error.IndexingErrorEvent
 import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
@@ -118,6 +119,15 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                             title = LocalizationManager.getString("error.send_message.title"),
                             message = event.throwable.message
                                 ?: LocalizationManager.getString("error.send_message.message"),
+                        ),
+                    )
+                }
+                is AppErrorEvent -> {
+                    onStateChange(
+                        ErrorDialogState(
+                            show = true,
+                            title = event.title,
+                            message = event.message,
                         ),
                     )
                 }

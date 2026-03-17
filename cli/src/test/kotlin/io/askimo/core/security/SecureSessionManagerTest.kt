@@ -10,6 +10,7 @@ import io.askimo.core.providers.gemini.GeminiSettings
 import io.askimo.core.providers.openai.OpenAiSettings
 import io.askimo.core.providers.xai.XAiSettings
 import io.askimo.test.extensions.AskimoTestHome
+import io.askimo.test.extensions.TestSecureSessionManager
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
@@ -416,12 +417,4 @@ class SecureSessionManagerTest {
         val insecureDesc = SecureKeyManager.getStorageSecurityDescription(SecureKeyManager.StorageMethod.INSECURE_FALLBACK)
         assertTrue(insecureDesc.contains("INSECURE"))
     }
-}
-
-/**
- * Test-safe subclass of [SecureSessionManager] that prefixes all keychain keys with "test_"
- * to avoid overwriting a developer's real API keys during test runs.
- */
-private class TestSecureSessionManager : SecureSessionManager() {
-    override fun providerKey(provider: ModelProvider): String = "test_${provider.name.lowercase()}"
 }
