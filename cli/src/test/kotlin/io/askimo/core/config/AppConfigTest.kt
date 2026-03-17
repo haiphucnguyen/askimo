@@ -33,43 +33,29 @@ class AppConfigTest {
         assertEquals("", models[ModelProvider.OLLAMA].embeddingModel)
         assertEquals("", models[ModelProvider.OLLAMA].visionModel)
         assertEquals("", models[ModelProvider.OLLAMA].imageModel)
-        assertTrue(models[ModelProvider.OLLAMA].availableModels.isEmpty())
 
         // Anthropic
         assertEquals("", models[ModelProvider.ANTHROPIC].utilityModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].visionModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].imageModel)
         assertEquals(45L, models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds)
-        assertEquals(listOf("claude-opus-4-6", "claude-sonnet-4-6"), models[ModelProvider.ANTHROPIC].availableModels)
 
         // Gemini
         assertEquals("", models[ModelProvider.GEMINI].utilityModel)
         assertEquals("gemini-embedding-001", models[ModelProvider.GEMINI].embeddingModel)
         assertEquals("gemini-1.5-pro", models[ModelProvider.GEMINI].visionModel)
         assertEquals("gemini-2.0-flash-exp", models[ModelProvider.GEMINI].imageModel)
-        assertTrue(models[ModelProvider.GEMINI].availableModels.isEmpty())
 
         // OpenAI
         assertEquals("", models[ModelProvider.OPENAI].utilityModel)
         assertEquals("text-embedding-3-small", models[ModelProvider.OPENAI].embeddingModel)
         assertEquals("gpt-4o", models[ModelProvider.OPENAI].visionModel)
         assertEquals("dall-e-3", models[ModelProvider.OPENAI].imageModel)
-        assertTrue(models[ModelProvider.OPENAI].availableModels.isEmpty())
 
         // XAI
         assertEquals("", models[ModelProvider.XAI].utilityModel)
         assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].visionModel)
         assertEquals("grok-2-vision-latest", models[ModelProvider.XAI].imageModel)
-        assertTrue(models[ModelProvider.XAI].availableModels.isEmpty())
-
-        // Docker
-        assertTrue(models[ModelProvider.DOCKER].availableModels.isEmpty())
-
-        // LocalAI
-        assertTrue(models[ModelProvider.LOCALAI].availableModels.isEmpty())
-
-        // LMStudio
-        assertTrue(models[ModelProvider.LMSTUDIO].availableModels.isEmpty())
     }
 
     @Test
@@ -177,7 +163,7 @@ class AppConfigTest {
     }
 
     @Test
-    fun `updateChatField should handle all fields including nested sampling`() {
+    fun `updateChatField should handle all fields including samplingTemperature`() {
         var config = ChatConfig()
 
         // Test top-level fields
@@ -190,19 +176,15 @@ class AppConfigTest {
         config = updateChatFieldHelper(config, "enableAsyncSummarization", false)
         assertFalse(config.enableAsyncSummarization)
 
-        // Test nested sampling fields
-        config = updateChatFieldHelper(config, "sampling.temperature", 0.7)
-        assertEquals(0.7, config.sampling.temperature, 0.001)
-
-        config = updateChatFieldHelper(config, "sampling.enabled", false)
-        assertFalse(config.sampling.enabled)
+        // Test flat samplingTemperature field
+        config = updateChatFieldHelper(config, "samplingTemperature", 0.7)
+        assertEquals(0.7, config.samplingTemperature, 0.001)
 
         // Verify all fields are correct after multiple updates
         assertEquals(10000, config.maxTokens)
         assertEquals(0.8, config.summarizationThreshold, 0.001)
         assertFalse(config.enableAsyncSummarization)
-        assertEquals(0.7, config.sampling.temperature, 0.001)
-        assertFalse(config.sampling.enabled)
+        assertEquals(0.7, config.samplingTemperature, 0.001)
     }
 
     @Test

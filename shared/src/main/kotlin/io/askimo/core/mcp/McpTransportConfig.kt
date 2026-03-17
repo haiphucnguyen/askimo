@@ -29,6 +29,7 @@ data class StdioMcpTransportConfig(
     override val description: String? = null,
     val command: List<String>,
     val env: Map<String, String> = emptyMap(),
+    val workingDirectory: String? = null,
 ) : McpTransportConfig()
 
 /**

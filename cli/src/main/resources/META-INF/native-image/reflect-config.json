@@ -1074,6 +1074,12 @@
     "queryAllDeclaredConstructors": true
   },
   {
+    "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicThinking",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
+  },
+  {
     "name": "dev.langchain4j.model.anthropic.internal.api.AnthropicTool",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -1405,7 +1411,12 @@
     "name": "dev.langchain4j.model.googleai.GeminiThinkingConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "includeThoughts", "parameterTypes": [] },
+      { "name": "thinkingBudget", "parameterTypes": [] },
+      { "name": "thinkingLevel", "parameterTypes": [] }
+    ]
   },
   {
     "name": "dev.langchain4j.model.googleai.GeminiType",
@@ -2861,7 +2872,7 @@
         "parameterTypes": []
       },
       {
-        "name": "updateChatField should handle all fields including nested sampling",
+        "name": "updateChatField should handle all fields including samplingTemperature",
         "parameterTypes": []
       },
       {
@@ -2923,7 +2934,7 @@
           "double",
           "boolean",
           "long",
-          "io.askimo.core.config.SamplingConfig",
+          "double",
           "java.lang.String"
         ]
       },
@@ -2934,7 +2945,7 @@
           "double",
           "boolean",
           "long",
-          "io.askimo.core.config.SamplingConfig",
+          "double",
           "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
@@ -2943,14 +2954,10 @@
       { "name": "getDefaultResponseAILocale", "parameterTypes": [] },
       { "name": "getEnableAsyncSummarization", "parameterTypes": [] },
       { "name": "getMaxTokens", "parameterTypes": [] },
-      { "name": "getSampling", "parameterTypes": [] },
+      { "name": "getSamplingTemperature", "parameterTypes": [] },
       { "name": "getSummarizationThreshold", "parameterTypes": [] },
       { "name": "getSummarizationTimeoutSeconds", "parameterTypes": [] }
     ]
-  },
-  {
-    "name": "io.askimo.core.config.CommaSeparatedListDeserializer",
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "io.askimo.core.config.CommaSeparatedSetDeserializer",
@@ -3157,7 +3164,6 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "java.util.List",
           "java.lang.String",
           "long",
           "java.lang.String",
@@ -3168,7 +3174,6 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "java.util.List",
           "java.lang.String",
           "long",
           "java.lang.String",
@@ -3178,7 +3183,6 @@
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
-      { "name": "getAvailableModels", "parameterTypes": [] },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
       { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
@@ -3283,26 +3287,6 @@
       },
       { "name": "getAttempts", "parameterTypes": [] },
       { "name": "getBaseDelayMs", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.config.SamplingConfig",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": ["double", "boolean"] },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "double",
-          "boolean",
-          "int",
-          "kotlin.jvm.internal.DefaultConstructorMarker"
-        ]
-      },
-      { "name": "getEnabled", "parameterTypes": [] },
-      { "name": "getTemperature", "parameterTypes": [] }
     ]
   },
   {
@@ -4466,7 +4450,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$ZXV4wdpS",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$UIrwYLFA",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -4593,7 +4577,10 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
-      { "name": "availableModelsReturnsKnownModels", "parameterTypes": [] },
+      {
+        "name": "availableModelsReturnsModelsWithApiKey",
+        "parameterTypes": []
+      },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
       { "name": "defaultSettingsTest", "parameterTypes": [] },
       { "name": "setUp", "parameterTypes": [] }
@@ -4615,7 +4602,7 @@
     "methods": [
       { "name": "<init>", "parameterTypes": [] },
       {
-        "name": "availableModelsReturnsEmptyListWithoutApiKey",
+        "name": "availableModelsReturnsModelsWithApiKey",
         "parameterTypes": []
       },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
@@ -4686,6 +4673,10 @@
         "name": "availableModelsReturnsEmptyListWithoutApiKey",
         "parameterTypes": []
       },
+      {
+        "name": "availableModelsReturnsModelsWithApiKey",
+        "parameterTypes": []
+      },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
       { "name": "canCreateChatServiceAndStream", "parameterTypes": [] },
       { "name": "defaultSettingsTest", "parameterTypes": [] },
@@ -4721,6 +4712,10 @@
       { "name": "<init>", "parameterTypes": [] },
       {
         "name": "availableModelsReturnsEmptyListWithoutApiKey",
+        "parameterTypes": []
+      },
+      {
+        "name": "availableModelsReturnsModelsWithApiKey",
         "parameterTypes": []
       },
       { "name": "canCallCountEntriesTool", "parameterTypes": [] },
@@ -6828,7 +6823,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$DtaqfO1m",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$dJUbBhDw",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

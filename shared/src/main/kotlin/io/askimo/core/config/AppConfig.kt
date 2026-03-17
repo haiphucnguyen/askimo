@@ -207,12 +207,6 @@ data class DeveloperConfig(
     val active: Boolean = false,
 )
 
-// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
-data class SamplingConfig(
-    val temperature: Double = 0.7,
-    val enabled: Boolean = true,
-)
-
 enum class ProxyType {
     NONE,
     HTTP,
@@ -261,7 +255,7 @@ data class ChatConfig(
     @field:JsonAlias("summarizationThreshold") val summarizationThreshold: Double = 0.75,
     @field:JsonAlias("enableAsyncSummarization") val enableAsyncSummarization: Boolean = true,
     @field:JsonAlias("summarizationTimeoutSeconds") val summarizationTimeoutSeconds: Long = 60,
-    val sampling: SamplingConfig = SamplingConfig(),
+    val samplingTemperature: Double = 1.0,
     @field:JsonAlias("defaultResponseAILocale") val defaultResponseAILocale: String? = null,
 )
 
@@ -285,9 +279,6 @@ data class RagConfig(
 
 // TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
 data class ProviderModelConfig(
-    @field:JsonDeserialize(using = CommaSeparatedListDeserializer::class)
-    @field:JsonAlias("availableModels")
-    val availableModels: List<String> = emptyList(),
     @field:JsonAlias("utilityModel") val utilityModel: String = "",
     @field:JsonAlias("utilityModelTimeoutSeconds") val utilityModelTimeoutSeconds: Long = 45,
     @field:JsonAlias("embeddingModel") val embeddingModel: String = "",
@@ -458,9 +449,7 @@ object AppConfig {
           summarization_timeout_seconds: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_TIMEOUT:60}
           enable_async_summarization:    ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
           default_response_ai_locale:    ${'$'}{ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE:}
-          sampling:
-            temperature: ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
-            enabled:     ${'$'}{ASKIMO_CHAT_SAMPLING_ENABLED:true}
+          sampling_temperature:          ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
 
         rag:
           vector_search_max_results:      ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
@@ -471,63 +460,54 @@ object AppConfig {
 
         models:
           anthropic:
-            available_models: ${'$'}{ASKIMO_ANTHROPIC_MODELS:claude-opus-4-6,claude-sonnet-4-6}
             utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_ANTHROPIC_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-sonnet-4-6}
             image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-sonnet-4-6}
           gemini:
-            available_models: ${'$'}{ASKIMO_GEMINI_MODELS:}
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
             image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:
-            available_models: ${'$'}{ASKIMO_OPENAI_MODELS:}
             utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
             image_model: ${'$'}{ASKIMO_OPENAI_IMAGE_MODEL:dall-e-3}
           ollama:
-            available_models: ${'$'}{ASKIMO_OLLAMA_MODELS:}
             utility_model: ${'$'}{ASKIMO_OLLAMA_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:}
           docker:
-            available_models: ${'$'}{ASKIMO_DOCKER_MODELS:}
             utility_model: ${'$'}{ASKIMO_DOCKER_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:}
           localai:
-            available_models: ${'$'}{ASKIMO_LOCALAI_MODELS:}
             utility_model: ${'$'}{ASKIMO_LOCALAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:}
           lmstudio:
-            available_models: ${'$'}{ASKIMO_LMSTUDIO_MODELS:}
             utility_model: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
-            available_models: ${'$'}{ASKIMO_XAI_MODELS:}
             utility_model: ${'$'}{ASKIMO_XAI_UTILITY_MODEL:}
             utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_XAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
             image_model: ${'$'}{ASKIMO_XAI_IMAGE_MODEL:grok-2-vision-latest}
           openai_compatible:
-            available_models:
             utility_model:
             utility_model_timeout_seconds: 45
             embedding_model:
@@ -594,7 +574,6 @@ object AppConfig {
      */
     private fun migrateCamelToSnake(yaml: String): String {
         val replacements = mapOf(
-            "availableModels:" to "available_models:",
             "utilityModel:" to "utility_model:",
             "utilityModelTimeoutSeconds:" to "utility_model_timeout_seconds:",
             "embeddingModel:" to "embedding_model:",
@@ -913,10 +892,7 @@ object AppConfig {
                 summarizationTimeoutSeconds = envLong("ASKIMO_CHAT_SUMMARIZATION_TIMEOUT", 60L),
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
                 defaultResponseAILocale = System.getenv("ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE")?.takeIf { it.isNotBlank() },
-                sampling = SamplingConfig(
-                    temperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
-                    enabled = System.getenv("ASKIMO_CHAT_SAMPLING_ENABLED")?.toBoolean() ?: true,
-                ),
+                samplingTemperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
             )
 
         val rag =
@@ -930,8 +906,7 @@ object AppConfig {
 
         val models = ModelsConfig(
             anthropic = ProviderModelConfig(
-                availableModels = envList("ASKIMO_ANTHROPIC_MODELS", "claude-opus-4-6,claude-sonnet-4-6").toList(),
-                utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", "claude-sonnet-4-6"),
+                utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", ""),
                 utilityModelTimeoutSeconds = envLong("ASKIMO_ANTHROPIC_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_ANTHROPIC_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_ANTHROPIC_VISION_MODEL", "claude-sonnet-4-6"),
@@ -1110,8 +1085,7 @@ object AppConfig {
         "maxTokens" -> config.copy(maxTokens = value as Int)
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
-        "sampling.temperature" -> config.copy(sampling = config.sampling.copy(temperature = (value as Number).toDouble()))
-        "sampling.enabled" -> config.copy(sampling = config.sampling.copy(enabled = value as Boolean))
+        "samplingTemperature" -> config.copy(samplingTemperature = (value as Number).toDouble())
         "defaultResponseAILocale" -> {
             val newLocale = if (value is String && value.isBlank()) null else value as? String
             EventBus.post(

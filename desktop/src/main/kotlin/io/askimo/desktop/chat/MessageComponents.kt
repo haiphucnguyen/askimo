@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,10 +86,7 @@ fun messageList(
     isThinking: Boolean = false,
     thinkingElapsedSeconds: Int = 0,
     spinnerFrame: String = "",
-    hasMoreMessages: Boolean = false,
     isLoadingPrevious: Boolean = false,
-    onLoadPrevious: () -> Unit = {},
-    prependGeneration: Int = 0,
     searchQuery: String = "",
     currentSearchResultIndex: Int = 0,
     onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
@@ -309,62 +307,50 @@ fun messageBubble(
                     }
 
                     Box {
-                        Card(
-                            modifier = Modifier
-                                .then(
-                                    if (message.isUser) {
-                                        Modifier.widthIn(max = maxUserBubbleWidth)
+                        if (message.isUser) {
+                            Card(
+                                modifier = Modifier
+                                    .widthIn(max = maxUserBubbleWidth)
+                                    .then(
+                                        if (isClickable) {
+                                            Modifier
+                                                .clickable {
+                                                    onMessageClick.invoke(message.id!!, message.timestamp!!)
+                                                }
+                                                .pointerHoverIcon(PointerIcon.Hand)
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isOutdatedMessage) {
+                                        ComponentColors.userMessageBackground().copy(alpha = 0.5f)
                                     } else {
-                                        Modifier.fillMaxWidth()
+                                        ComponentColors.userMessageBackground()
                                     },
-                                )
-                                .then(
-                                    if (isClickable) {
-                                        Modifier
-                                            .clickable {
-                                                onMessageClick.invoke(message.id!!, message.timestamp!!)
-                                            }
-                                            .pointerHoverIcon(PointerIcon.Hand)
+                                    contentColor = if (isOutdatedMessage) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                     } else {
-                                        Modifier
+                                        ComponentColors.userMessageContentColor()
                                     },
                                 ),
-                            colors = CardDefaults.cardColors(
-                                containerColor = when {
-                                    isOutdatedMessage && message.isUser -> ComponentColors.userMessageBackground().copy(alpha = 0.5f)
-                                    isOutdatedMessage && !message.isUser -> Color.Transparent
-                                    message.isUser -> ComponentColors.userMessageBackground()
-                                    else -> Color.Transparent
-                                },
-                                contentColor = if (isOutdatedMessage) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                } else {
-                                    ComponentColors.userMessageContentColor()
-                                },
-                            ),
-                            elevation = CardDefaults.cardElevation(
-                                defaultElevation = if (message.isUser) 2.dp else 0.dp,
-                            ),
-                        ) {
-                            Column {
-                                // Show file attachments if any
-                                if (message.attachments.isNotEmpty()) {
-                                    Column(
-                                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        message.attachments.forEach { attachment ->
-                                            fileAttachmentChip(
-                                                attachment = attachment,
-                                                onDownload = onDownloadAttachment,
-                                            )
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            ) {
+                                Column {
+                                    if (message.attachments.isNotEmpty()) {
+                                        Column(
+                                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            message.attachments.forEach { attachment ->
+                                                fileAttachmentChip(
+                                                    attachment = attachment,
+                                                    onDownload = onDownloadAttachment,
+                                                )
+                                            }
                                         }
                                     }
-                                }
 
-                                // Show message content
-                                if (message.isUser) {
-                                    // User messages: plain text with selection enabled and optional highlighting
                                     SelectionContainer {
                                         if (searchQuery.isNotBlank()) {
                                             Text(
@@ -386,47 +372,95 @@ fun messageBubble(
                                             )
                                         }
                                     }
-                                } else {
-                                    SelectionContainer {
-                                        if (searchQuery.isNotBlank()) {
+
+                                    if (isOutdatedMessage) {
+                                        Text(
+                                            text = stringResource("outdated.label"),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontStyle = FontStyle.Italic,
+                                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            val aiContentColor = if (isOutdatedMessage) {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+                            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides aiContentColor) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .then(
+                                            if (isClickable) {
+                                                Modifier
+                                                    .clickable {
+                                                        onMessageClick.invoke(message.id!!, message.timestamp!!)
+                                                    }
+                                                    .pointerHoverIcon(PointerIcon.Hand)
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
+                                ) {
+                                    Column {
+                                        if (message.attachments.isNotEmpty()) {
+                                            Column(
+                                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            ) {
+                                                message.attachments.forEach { attachment ->
+                                                    fileAttachmentChip(
+                                                        attachment = attachment,
+                                                        onDownload = onDownloadAttachment,
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        SelectionContainer {
+                                            if (searchQuery.isNotBlank()) {
+                                                Text(
+                                                    text = highlightSearchText(
+                                                        text = message.content,
+                                                        query = searchQuery,
+                                                        highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                                                        isActiveResult = isActiveSearchResult,
+                                                        activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                                                    ),
+                                                    modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                )
+                                            } else {
+                                                markdownText(
+                                                    markdown = message.content,
+                                                    modifier = Modifier.padding(
+                                                        start = 12.dp,
+                                                        end = 48.dp,
+                                                        top = 12.dp,
+                                                        bottom = 12.dp,
+                                                    ),
+                                                    viewportTopY = viewportTopY,
+                                                    onRunRequest = { cmd, lang ->
+                                                        pendingRunRequest = Pair(cmd, lang)
+                                                    },
+                                                )
+                                            }
+                                        }
+
+                                        if (isOutdatedMessage) {
                                             Text(
-                                                text = highlightSearchText(
-                                                    text = message.content,
-                                                    query = searchQuery,
-                                                    highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                                                    isActiveResult = isActiveSearchResult,
-                                                    activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
-                                                ),
-                                                modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        } else {
-                                            markdownText(
-                                                markdown = message.content,
-                                                modifier = Modifier.padding(
-                                                    start = 12.dp,
-                                                    end = 48.dp,
-                                                    top = 12.dp,
-                                                    bottom = 12.dp,
-                                                ),
-                                                viewportTopY = viewportTopY,
-                                                onRunRequest = { cmd, lang ->
-                                                    pendingRunRequest = Pair(cmd, lang)
-                                                },
+                                                text = stringResource("outdated.label"),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                fontStyle = FontStyle.Italic,
+                                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
                                             )
                                         }
                                     }
-                                }
-
-                                // Show "outdated" label for outdated messages
-                                if (isOutdatedMessage) {
-                                    Text(
-                                        text = stringResource("outdated.label"),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        fontStyle = FontStyle.Italic,
-                                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
-                                    )
                                 }
                             }
                         }

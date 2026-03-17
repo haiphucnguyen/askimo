@@ -29,6 +29,9 @@ import kotlin.test.assertTrue
 @AskimoTestHome
 class XAiModelFactoryTest {
 
+    private val apiKey = System.getenv("X_API_KEY")
+        ?: throw IllegalStateException("X_API_KEY environment variable is required")
+
     @BeforeEach
     fun setUp() {
         AppContext.reset()
@@ -36,9 +39,6 @@ class XAiModelFactoryTest {
     }
 
     private fun createChatService(): ChatClient {
-        val apiKey = System.getenv("X_API_KEY")
-            ?: throw IllegalStateException("X_API_KEY environment variable is required")
-
         val settings = XAiSettings(apiKey = apiKey, defaultModel = "grok-4")
 
         return XAiModelFactory().create(
@@ -104,6 +104,15 @@ class XAiModelFactoryTest {
             toolWasCalled,
             "Expected response to contain file/directory count information indicating tool was called, but got: '$output'",
         )
+    }
+
+    @Test
+    @DisplayName("XAiModelFactory returns available models when API key provided")
+    fun availableModelsReturnsModelsWithApiKey() {
+        val settings = XAiSettings(apiKey = apiKey, defaultModel = "grok-4")
+        val models = XAiModelFactory().availableModels(settings)
+
+        assertTrue(models.isNotEmpty(), "Expected non-empty list of models when API key is provided")
     }
 
     @Test

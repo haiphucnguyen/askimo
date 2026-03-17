@@ -1056,9 +1056,7 @@ fun chatView(
                                     isThinking = false,
                                     thinkingElapsedSeconds = 0,
                                     spinnerFrame = spinnerFrame.toString(),
-                                    hasMoreMessages = false,
                                     isLoadingPrevious = false,
-                                    onLoadPrevious = {},
                                     searchQuery = searchQuery,
                                     currentSearchResultIndex = currentSearchResultIndex,
                                     onMessageClick = onJumpToMessage,
@@ -1092,10 +1090,7 @@ fun chatView(
                                     isThinking = isThinking,
                                     thinkingElapsedSeconds = thinkingElapsedSeconds,
                                     spinnerFrame = spinnerFrame.toString(),
-                                    hasMoreMessages = hasMoreMessages,
                                     isLoadingPrevious = isLoadingPrevious,
-                                    onLoadPrevious = actions::loadPrevious,
-                                    prependGeneration = prependGeneration,
                                     onEditMessage = { message ->
                                         if (message.isUser) {
                                             editingMessage = message

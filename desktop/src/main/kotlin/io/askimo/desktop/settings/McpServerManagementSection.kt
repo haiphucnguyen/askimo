@@ -54,7 +54,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.askimo.core.mcp.GLOBAL_MCP_SCOPE_ID
 import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpServerDefinition
@@ -71,7 +70,6 @@ import io.askimo.desktop.common.theme.Spacing
 import io.askimo.desktop.common.theme.ThemePreferences
 import io.askimo.desktop.common.ui.clickableCard
 import io.askimo.desktop.common.ui.themedTooltip
-import io.askimo.desktop.project.addMcpIntegrationDialog
 import io.askimo.desktop.project.mcpToolsDialog
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.get
@@ -383,12 +381,11 @@ fun mcpServerTemplatesSection() {
         )
     }
 
-    // Add Global MCP Instance Dialog — reuses addMcpIntegrationDialog with GLOBAL_MCP_SCOPE_ID
+    // Add Global MCP Instance Dialog — uses simplified one-step creation
     if (showAddGlobalDialog) {
-        addMcpIntegrationDialog(
-            projectId = GLOBAL_MCP_SCOPE_ID,
+        addGlobalMcpInstanceDialog(
             onDismiss = { showAddGlobalDialog = false },
-            onSave = { serverId, name, parameters, toolCategories, toolStrategies ->
+            onSave = { serverId, name, parameters ->
                 scope.launch {
                     globalMcpService.createInstance(
                         serverId = serverId,

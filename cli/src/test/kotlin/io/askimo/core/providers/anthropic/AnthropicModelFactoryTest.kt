@@ -30,6 +30,9 @@ import kotlin.test.assertTrue
 @AskimoTestHome
 class AnthropicModelFactoryTest {
 
+    private val apiKey = System.getenv("ANTHROPIC_API_KEY")
+        ?: throw IllegalStateException("ANTHROPIC_API_KEY environment variable is required")
+
     @BeforeEach
     fun setUp() {
         AppContext.reset()
@@ -44,9 +47,6 @@ class AnthropicModelFactoryTest {
     @Test
     @DisplayName("AnthropicModelFactory can stream responses from Anthropic API")
     fun canCreateChatServiceAndStream() {
-        val apiKey = System.getenv("ANTHROPIC_API_KEY")
-            ?: throw IllegalStateException("ANTHROPIC_API_KEY environment variable is required")
-
         val settings = AnthropicSettings(apiKey = apiKey, defaultModel = "claude-sonnet-4-6")
 
         val chatClient: ChatClient =
@@ -64,13 +64,12 @@ class AnthropicModelFactoryTest {
     }
 
     @Test
-    @DisplayName("AnthropicModelFactory returns available models")
-    fun availableModelsReturnsKnownModels() {
-        val settings = AnthropicSettings(apiKey = "")
+    @DisplayName("AnthropicModelFactory returns available models when API key provided")
+    fun availableModelsReturnsModelsWithApiKey() {
+        val settings = AnthropicSettings(apiKey = apiKey, defaultModel = "claude-sonnet-4-6")
         val models = AnthropicModelFactory().availableModels(settings)
 
-        assertTrue(models.isNotEmpty(), "Expected available models list to not be empty")
-        assertTrue(models.contains("claude-sonnet-4-6"), "Expected claude-sonnet-4-6 to be in available models")
+        assertTrue(models.isNotEmpty(), "Expected non-empty list of models when API key is provided")
     }
 
     @Test

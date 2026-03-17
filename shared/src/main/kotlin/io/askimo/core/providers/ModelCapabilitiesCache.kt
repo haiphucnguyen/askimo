@@ -213,6 +213,31 @@ object ModelCapabilitiesCache {
     }
 
     /**
+     * Check if a model supports thinking (extended reasoning).
+     * Returns false if not yet tested (null).
+     *
+     * @param provider The model provider
+     * @param model The model name/identifier
+     * @return true if tested and supports thinking, false if tested and doesn't support OR not yet tested
+     */
+    fun supportsThinking(provider: ModelProvider, model: String): Boolean {
+        val modelKey = modelKey(provider, model)
+        return get(modelKey).supportsThinking ?: false // null means not tested yet, return false
+    }
+
+    /**
+     * Check if thinking support has been tested for a model.
+     *
+     * @param provider The model provider
+     * @param model The model name/identifier
+     * @return true if tested (value is true or false), false if not yet tested (null)
+     */
+    fun hasTestedThinkingSupport(provider: ModelProvider, model: String): Boolean {
+        val modelKey = modelKey(provider, model)
+        return get(modelKey).supportsThinking != null
+    }
+
+    /**
      * Update the cache with tool support information.
      * Typically called after:
      * - Successfully using tools with a model (supported = true)
@@ -250,6 +275,26 @@ object ModelCapabilitiesCache {
         val modelKey = modelKey(provider, model)
         update(modelKey) { it.copy(supportsSampling = supported) }
         log.debug("Updated sampling support for $modelKey: $supported")
+    }
+
+    /**
+     * Update the cache with thinking support information.
+     * Typically called after:
+     * - Successfully using thinking with a model (supported = true)
+     * - Getting API error about unsupported thinking (supported = false)
+     *
+     * @param provider The model provider
+     * @param model The model name/identifier
+     * @param supported Whether the model supports thinking
+     */
+    fun setThinkingSupport(provider: ModelProvider, model: String, supported: Boolean) {
+        if (model.isBlank()) {
+            log.warn("Cannot set thinking support for empty model name (provider: ${provider.providerKey()})")
+            return
+        }
+        val modelKey = modelKey(provider, model)
+        update(modelKey) { it.copy(supportsThinking = supported) }
+        log.debug("Updated thinking support for $modelKey: $supported")
     }
 
     /**
@@ -333,6 +378,7 @@ data class ModelCapabilities(
     val supportsVision: Boolean? = null, // null = not tested yet
     val supportsStreaming: Boolean = true, // Non-nullable - always known
     val supportsSampling: Boolean = true, // Non-nullable - always known
+    val supportsThinking: Boolean? = null, // null = not tested yet
     // For future extensibility
     val customAttributes: Map<String, String> = emptyMap(),
 )
