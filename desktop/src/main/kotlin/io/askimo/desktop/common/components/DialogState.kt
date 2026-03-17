@@ -55,14 +55,14 @@ class DialogState {
     }
 
     /**
-     * Sets an error message from an exception.
-     * Uses the exception's message or falls back to the provided fallback message.
+     * Sets an error message from a throwable.
+     * Uses the throwable's message or falls back to the provided fallback message.
      *
-     * @param exception The exception that occurred
-     * @param fallbackMessage Message to show if exception.message is null
+     * @param throwable The throwable that occurred
+     * @param fallbackMessage Message to show if throwable.message is null
      */
-    fun setError(exception: Exception, fallbackMessage: String = "An error occurred") {
-        errorMessage = exception.message ?: fallbackMessage
+    fun setError(throwable: Throwable, fallbackMessage: String = "An error occurred") {
+        errorMessage = throwable.message ?: fallbackMessage
     }
 }
 

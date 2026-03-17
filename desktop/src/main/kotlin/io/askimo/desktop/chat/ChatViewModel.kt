@@ -481,6 +481,23 @@ class ChatViewModel(
                             isLoading = false
                             isThinking = false
                             stopThinkingTimer()
+                            // Save the failed partial response so it gets a real id and retry remains available
+                            val partial = currentResponse.ifBlank { "" }
+                            val failedMessage = withContext(Dispatchers.IO) {
+                                chatSessionService.saveAiResponse(
+                                    sessionId = sessionId,
+                                    response = partial,
+                                    isFailed = true,
+                                )
+                            }
+                            messages = messages.toMutableList().apply {
+                                val tempIndex = indexOfLast { !it.isUser && it.id == null }
+                                if (tempIndex >= 0) {
+                                    this[tempIndex] = failedMessage.toDTO()
+                                } else {
+                                    add(failedMessage.toDTO())
+                                }
+                            }
                         }
                     }
                 }
@@ -564,9 +581,26 @@ class ChatViewModel(
             } catch (e: Exception) {
                 if (currentSessionId.value == sessionId) {
                     errorMessage = ErrorHandler.getUserFriendlyError(e, "sending message")
-                    // Only stop thinking timer on error
                     isThinking = false
                     stopThinkingTimer()
+                    // Save the failed partial response so it gets a real id and retry becomes available
+                    val partial = currentResponse.ifBlank { "" }
+                    val failedMessage = withContext(Dispatchers.IO) {
+                        chatSessionService.saveAiResponse(
+                            sessionId = sessionId,
+                            response = partial,
+                            isFailed = true,
+                        )
+                    }
+                    // Replace the temporary id=null streaming message with the saved failed one
+                    messages = messages.toMutableList().apply {
+                        val tempIndex = indexOfLast { !it.isUser && it.id == null }
+                        if (tempIndex >= 0) {
+                            this[tempIndex] = failedMessage.toDTO()
+                        } else {
+                            add(failedMessage.toDTO())
+                        }
+                    }
                 } else {
                     EventBus.emit(SendMessageErrorEvent(e))
                 }

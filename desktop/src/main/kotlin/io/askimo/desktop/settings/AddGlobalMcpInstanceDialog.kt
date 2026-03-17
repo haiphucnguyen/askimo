@@ -235,25 +235,16 @@ fun addGlobalMcpInstanceDialog(
     }
 
     // Test connection method - can be called independently or as part of save
-    suspend fun testConnection(): Pair<Boolean, String?> {
+    suspend fun testConnection(): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
-                // Use existing serverId if editing, otherwise generate new one
                 val serverId = existingInstance?.serverId ?: "global-${UUID.randomUUID()}"
-
-                // Build server definition
                 val serverDef = buildServerDefinition(serverId)
-
-                // Protect secrets before saving
                 val (protectedDef, _) = ServerDefinitionSecretManager.protectSecrets(serverDef)
-
-                // Save server definition temporarily (or update if editing)
                 McpServersConfig.add(protectedDef)
 
                 try {
-                    // Test connection
                     val mcpClientFactory = get<McpClientFactory>(McpClientFactory::class.java)
-
                     val now = LocalDateTime.now()
                     val instance = McpInstance(
                         id = serverId,
@@ -277,18 +268,17 @@ fun addGlobalMcpInstanceDialog(
                             availableTools = tools
                         },
                         onFailure = { e ->
-                            return@withContext false to e.message
+                            return@withContext Result.failure(e)
                         },
                     )
-                    return@withContext true to serverId
+                    Result.success(serverId)
                 } finally {
-                    // Clean up temporary server definition only if not editing
                     if (existingInstance == null) {
                         McpServersConfig.remove(serverId)
                     }
                 }
             } catch (e: Exception) {
-                return@withContext false to null
+                Result.failure(e)
             }
         }
     }
@@ -637,11 +627,14 @@ fun addGlobalMcpInstanceDialog(
                             isTesting = true
                             scope.launch {
                                 try {
-                                    val (success, _) = testConnection()
-                                    testSuccess = success
-                                    if (!success) {
-                                        dialogState.setError("Failed to connect to MCP server. Check your configuration.")
-                                    }
+                                    testConnection()
+                                        .onSuccess {
+                                            testSuccess = true
+                                        }
+                                        .onFailure { e ->
+                                            testSuccess = false
+                                            dialogState.setError(e, "Failed to connect to MCP server. Check your configuration.")
+                                        }
                                 } catch (e: Exception) {
                                     testSuccess = false
                                     dialogState.setError(e, "Connection test failed")
@@ -660,20 +653,19 @@ fun addGlobalMcpInstanceDialog(
                             isTesting = true
                             scope.launch {
                                 try {
-                                    // Always test connection first, then save on success
-                                    val (success, serverId) = testConnection()
-                                    testSuccess = success
-
-                                    if (success && serverId != null) {
-                                        // Connection successful, save permanently with protected secrets
-                                        val serverDef = buildServerDefinition(serverId)
-                                        val (protectedDef, _) = ServerDefinitionSecretManager.protectSecrets(serverDef)
-                                        McpServersConfig.add(protectedDef)
-                                        val parameters = emptyMap<String, String>()
-                                        onSave(serverId, instanceName, parameters)
-                                    } else {
-                                        dialogState.setError("Failed to connect to MCP server. Check your configuration.")
-                                    }
+                                    testConnection()
+                                        .onSuccess { serverId ->
+                                            testSuccess = true
+                                            // Connection successful, save permanently with protected secrets
+                                            val serverDef = buildServerDefinition(serverId)
+                                            val (protectedDef, _) = ServerDefinitionSecretManager.protectSecrets(serverDef)
+                                            McpServersConfig.add(protectedDef)
+                                            onSave(serverId, instanceName, emptyMap())
+                                        }
+                                        .onFailure { e ->
+                                            testSuccess = false
+                                            dialogState.setError(e, "Failed to connect to MCP server. Check your configuration.")
+                                        }
                                 } catch (e: Exception) {
                                     testSuccess = false
                                     dialogState.setError(e, "Failed to save MCP instance")

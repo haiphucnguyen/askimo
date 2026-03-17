@@ -460,7 +460,7 @@ fun mcpServerTemplatesSection() {
                         deletingGlobalInstance = null
                     },
                 ) {
-                    Text(stringResource("mcp.servers.delete"))
+                    Text(stringResource("action.delete"))
                 }
             },
             dismissButton = {

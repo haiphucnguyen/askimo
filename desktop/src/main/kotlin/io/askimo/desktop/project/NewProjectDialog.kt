@@ -46,7 +46,9 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
 import io.askimo.core.logging.logger
+import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.rememberDialogState
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -82,9 +84,11 @@ fun newProjectDialog(
     var countdown by remember { mutableStateOf(5) }
 
     val scope = rememberCoroutineScope()
+    val dialogState = rememberDialogState()
 
     // Retrieve string resources in composable scope
     val errorEmptyName = stringResource("project.new.dialog.error.empty.name")
+    val errorCreateFailed = stringResource("project.new.dialog.error.create.failed")
     val browseFolderTitle = stringResource("project.new.dialog.folder.browse")
     val browseFileTitle = stringResource("project.new.dialog.file.browse")
 
@@ -194,7 +198,7 @@ fun newProjectDialog(
                 )
             } catch (e: Exception) {
                 log.error("Failed to create project", e)
-                onDismiss()
+                dialogState.setError(e, errorCreateFailed.format(e.message ?: "Unknown error"))
             }
         }
     }
@@ -348,6 +352,9 @@ fun newProjectDialog(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // Inline error message for project creation failures
+                    inlineErrorMessage(errorMessage = dialogState.errorMessage)
 
                     // Action buttons
                     Row(

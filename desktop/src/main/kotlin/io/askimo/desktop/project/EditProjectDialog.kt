@@ -54,7 +54,9 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectIndexRemovalEvent
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
+import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.rememberDialogState
 import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
@@ -76,12 +78,12 @@ fun editProjectDialog(
 
     var project by remember { mutableStateOf<Project?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var loadError by remember { mutableStateOf<String?>(null) }
+    val dialogState = rememberDialogState()
 
     // Load project from database
     LaunchedEffect(projectId) {
         isLoading = true
-        loadError = null
+        dialogState.clearError()
         try {
             val loadedProject = withContext(Dispatchers.IO) {
                 projectRepository.getProject(projectId)
@@ -89,10 +91,10 @@ fun editProjectDialog(
             if (loadedProject != null) {
                 project = loadedProject
             } else {
-                loadError = "Project not found"
+                dialogState.setError("Project not found")
             }
         } catch (e: Exception) {
-            loadError = e.message ?: "Failed to load project"
+            dialogState.setError(e, "Failed to load project")
         } finally {
             isLoading = false
         }
@@ -118,7 +120,7 @@ fun editProjectDialog(
                         CircularProgressIndicator()
                     }
                 }
-                loadError != null -> {
+                dialogState.errorMessage != null -> {
                     // Error state
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -129,10 +131,7 @@ fun editProjectDialog(
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.error,
                         )
-                        Text(
-                            text = loadError!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        inlineErrorMessage(errorMessage = dialogState.errorMessage)
                         primaryButton(
                             onClick = onDismiss,
                             modifier = Modifier.align(Alignment.End),
