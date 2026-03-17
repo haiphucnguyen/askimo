@@ -117,6 +117,11 @@ fun mcpTabContent(project: Project?) {
                         selectedTool = instance.id to toolName
                     },
                     onClick = {
+                        // Don't allow expanding disabled instances
+                        if (!instance.enabled) {
+                            return@mcpInstanceItem
+                        }
+
                         if (selectedInstanceId == instance.id) {
                             // Collapse
                             selectedInstanceId = null

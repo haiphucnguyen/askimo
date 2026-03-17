@@ -7,8 +7,11 @@ package io.askimo.core.mcp
 import dev.langchain4j.mcp.client.DefaultMcpClient
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolVectorIndex
+import io.askimo.core.logging.logger
 import io.askimo.core.mcp.config.GlobalMcpInstancesConfig
 import io.askimo.core.mcp.config.McpServersConfig
+
+private val log = logger<GlobalMcpInstanceService>()
 
 /**
  * Global MCP instances are available in Universal Chat (not tied to a specific project).
@@ -56,7 +59,30 @@ class GlobalMcpInstanceService(
         enabled = enabled,
     )
 
-    fun deleteInstance(instanceId: String): Result<Unit> = delegate.deleteInstance(GLOBAL_MCP_SCOPE_ID, instanceId)
+    fun deleteInstance(instanceId: String): Result<Unit> {
+        return try {
+            // Get the instance before deletion to retrieve serverId
+            val instance = delegate.getInstance(GLOBAL_MCP_SCOPE_ID, instanceId)
+                ?: return Result.failure(IllegalArgumentException("Instance not found: $instanceId"))
+
+            // Delete the instance (from mcp-instances.yml)
+            val result = delegate.deleteInstance(GLOBAL_MCP_SCOPE_ID, instanceId)
+
+            if (result.isSuccess) {
+                // Also remove the associated server definition with "global" tag from mcp-servers.yml
+                val serverDef = McpServersConfig.get(instance.serverId)
+                if (serverDef != null && serverDef.tags.contains("global")) {
+                    McpServersConfig.remove(instance.serverId)
+                    log.debug("Removed global server definition '${instance.serverId}' for instance '${instance.name}'")
+                }
+            }
+
+            result
+        } catch (e: Exception) {
+            log.warn("Failed to delete global MCP instance: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 
     /**
      * Fetch global tools (cached) like project tools.

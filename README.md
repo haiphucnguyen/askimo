@@ -108,11 +108,11 @@ Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM6
 
 **💬 AI Chat with RAG:** Ask questions about your files, documents, and code using any AI model
 
-[![Askimo Desktop Chat Demo](public/desktop-demo.gif)](https://askimo.chat/app/)
+[![Askimo Desktop Chat Demo](public/desktop-demo.gif)]
 
 **🐍 Run Scripts in a Safe Sandbox:** Ask AI to write and execute Python or Bash scripts directly inside the app, safely and instantly
 
-[![Askimo Run Script Demo](public/askimo_run_script.gif)](https://askimo.chat/app/)
+[![Askimo Run Script Demo](public/askimo_run_script.gif)]
 
 ### 🎯 What You Get
 

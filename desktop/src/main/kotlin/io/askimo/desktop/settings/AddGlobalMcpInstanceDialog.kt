@@ -44,6 +44,7 @@ import io.askimo.core.mcp.HttpConfig
 import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpServerDefinition
+import io.askimo.core.mcp.ServerDefinitionSecretManager
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.config.McpServersConfig
@@ -62,34 +63,64 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 /**
- * Simplified one-step dialog for creating global MCP instances directly.
+ * Simplified one-step dialog for creating/editing global MCP instances directly.
  * No template selection - user enters configuration directly.
  */
 @Composable
 fun addGlobalMcpInstanceDialog(
+    existingInstance: McpInstance? = null,
     onDismiss: () -> Unit,
     onSave: (serverId: String, name: String, parameters: Map<String, String>) -> Unit,
 ) {
     val dialogState = rememberDialogState()
     val scope = rememberCoroutineScope()
 
+    // Get server definition if editing
+    val existingServerDef = remember(existingInstance) {
+        existingInstance?.let { McpServersConfig.get(it.serverId) }
+    }
+
     // Basic fields
-    var instanceName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var instanceName by remember { mutableStateOf(existingInstance?.name ?: "") }
+    var description by remember { mutableStateOf(existingServerDef?.description ?: "") }
 
     // Transport type: 0 = STDIO, 1 = HTTP
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember {
+        mutableStateOf(
+            if (existingServerDef?.transportType == TransportType.HTTP) 1 else 0,
+        )
+    }
 
     // STDIO fields
-    var command by remember { mutableStateOf("") }
-    var args by remember { mutableStateOf("") }
-    var workingDir by remember { mutableStateOf("") }
-    var envVars by remember { mutableStateOf("") }
+    var command by remember {
+        mutableStateOf(
+            existingServerDef?.stdioConfig?.commandTemplate?.firstOrNull() ?: "",
+        )
+    }
+    var args by remember {
+        mutableStateOf(
+            existingServerDef?.stdioConfig?.commandTemplate?.drop(1)?.joinToString(" ") ?: "",
+        )
+    }
+    var workingDir by remember {
+        mutableStateOf(existingServerDef?.stdioConfig?.workingDirectory ?: "")
+    }
+    var envVars by remember {
+        mutableStateOf(
+            existingServerDef?.stdioConfig?.envTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" } ?: "",
+        )
+    }
 
     // HTTP fields
-    var url by remember { mutableStateOf("") }
-    var headers by remember { mutableStateOf("") }
-    var timeoutMs by remember { mutableStateOf("60000") }
+    var url by remember { mutableStateOf(existingServerDef?.httpConfig?.urlTemplate ?: "") }
+    var headers by remember {
+        mutableStateOf(
+            existingServerDef?.httpConfig?.headersTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" } ?: "",
+        )
+    }
+    var timeoutMs by remember {
+        mutableStateOf(existingServerDef?.httpConfig?.timeoutMs?.toString() ?: "60000")
+    }
 
     // Connection test state
     var isTesting by remember { mutableStateOf(false) }
@@ -207,14 +238,17 @@ fun addGlobalMcpInstanceDialog(
     suspend fun testConnection(): Pair<Boolean, String?> {
         return withContext(Dispatchers.IO) {
             try {
-                // Generate unique server ID
-                val serverId = "global-${UUID.randomUUID()}"
+                // Use existing serverId if editing, otherwise generate new one
+                val serverId = existingInstance?.serverId ?: "global-${UUID.randomUUID()}"
 
                 // Build server definition
                 val serverDef = buildServerDefinition(serverId)
 
-                // Save server definition temporarily
-                McpServersConfig.add(serverDef)
+                // Protect secrets before saving
+                val (protectedDef, _) = ServerDefinitionSecretManager.protectSecrets(serverDef)
+
+                // Save server definition temporarily (or update if editing)
+                McpServersConfig.add(protectedDef)
 
                 try {
                     // Test connection
@@ -245,8 +279,10 @@ fun addGlobalMcpInstanceDialog(
                         return@withContext false to null
                     }
                 } finally {
-                    // Clean up temporary server definition
-                    McpServersConfig.remove(serverId)
+                    // Clean up temporary server definition only if not editing
+                    if (existingInstance == null) {
+                        McpServersConfig.remove(serverId)
+                    }
                 }
             } catch (e: Exception) {
                 return@withContext false to null
@@ -278,13 +314,25 @@ fun addGlobalMcpInstanceDialog(
                     ) {
                         // Title
                         Text(
-                            text = stringResource("mcp.global.instance.add.dialog.title"),
+                            text = stringResource(
+                                if (existingInstance != null) {
+                                    "mcp.global.instance.edit.dialog.title"
+                                } else {
+                                    "mcp.global.instance.add.dialog.title"
+                                },
+                            ),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = stringResource("mcp.global.instance.add.dialog.description"),
+                            text = stringResource(
+                                if (existingInstance != null) {
+                                    "mcp.global.instance.edit.dialog.description"
+                                } else {
+                                    "mcp.global.instance.add.dialog.description"
+                                },
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -614,9 +662,10 @@ fun addGlobalMcpInstanceDialog(
                                     testSuccess = success
 
                                     if (success && serverId != null) {
-                                        // Connection successful, save permanently
+                                        // Connection successful, save permanently with protected secrets
                                         val serverDef = buildServerDefinition(serverId)
-                                        McpServersConfig.add(serverDef)
+                                        val (protectedDef, _) = ServerDefinitionSecretManager.protectSecrets(serverDef)
+                                        McpServersConfig.add(protectedDef)
                                         val parameters = emptyMap<String, String>()
                                         onSave(serverId, instanceName, parameters)
                                     } else {
@@ -631,7 +680,7 @@ fun addGlobalMcpInstanceDialog(
                             }
                         },
                     ) {
-                        Text(stringResource("dialog.save"))
+                        Text(stringResource("action.save"))
                     }
                 }
             }

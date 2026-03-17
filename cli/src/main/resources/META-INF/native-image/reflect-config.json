@@ -3671,6 +3671,41 @@
     ]
   },
   {
+    "name": "io.askimo.core.mcp.GlobalMcpInstanceServiceTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "createInstance successfully creates both server definition and instance",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance does not remove server definitions without global tag",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance handles non-existent instance gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance removes both instance and associated server definition",
+        "parameterTypes": []
+      },
+      {
+        "name": "getInstances returns all global instances",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateInstance modifies instance properties",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.mcp.HttpConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3921,6 +3956,84 @@
   },
   {
     "name": "io.askimo.core.mcp.ParameterType$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.ServerDefinitionSecretManagerTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "cleanup", "parameterTypes": [] },
+      {
+        "name": "cleanupSecrets handles non-existent server gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "cleanupSecrets removes all secrets for a server",
+        "parameterTypes": []
+      },
+      {
+        "name": "isSecretReference correctly identifies secret references",
+        "parameterTypes": []
+      },
+      {
+        "name": "protect and resolve round-trip maintains original values",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets detects and protects HTTP header secrets",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets detects and protects STDIO env var secrets",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets handles HTTP server with no secrets",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets handles STDIO server with no secrets",
+        "parameterTypes": []
+      },
+      { "name": "protectSecrets handles empty env vars", "parameterTypes": [] },
+      { "name": "protectSecrets handles empty headers", "parameterTypes": [] },
+      {
+        "name": "protectSecrets handles empty secret values",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets handles various secret keyword patterns",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets is case-insensitive for secret detection",
+        "parameterTypes": []
+      },
+      {
+        "name": "protectSecrets preserves existing secret references",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveSecrets handles missing secrets gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveSecrets replaces references with actual values for HTTP",
+        "parameterTypes": []
+      },
+      {
+        "name": "resolveSecrets replaces references with actual values for STDIO",
+        "parameterTypes": []
+      },
+      {
+        "name": "secret key format matches expected namespace pattern",
+        "parameterTypes": []
+      }
+    ]
   },
   {
     "name": "io.askimo.core.mcp.StdioConfig",
@@ -4300,6 +4413,27 @@
     ]
   },
   {
+    "name": "io.askimo.core.mcp.config.GlobalMcpInstancesConfig"
+  },
+  {
+    "name": "io.askimo.core.mcp.config.GlobalMcpInstancesConfig$InstancesWrapper",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["java.util.List"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getInstances", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.mcp.config.InstancesWrapper",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -4328,7 +4462,23 @@
     ]
   },
   {
-    "name": "io.askimo.core.mcp.config.ToolConfigData"
+    "name": "io.askimo.core.mcp.config.ToolConfigData",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "java.lang.String",
+          "java.lang.String",
+          "int",
+          "boolean",
+          "java.time.LocalDateTime"
+        ]
+      }
+    ]
   },
   {
     "name": "io.askimo.core.mcp.config.ToolsConfigWrapper",
@@ -4337,6 +4487,14 @@
     "queryAllDeclaredConstructors": true,
     "methods": [
       { "name": "<init>", "parameterTypes": ["java.util.List"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.util.List",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
       { "name": "getTools", "parameterTypes": [] }
     ]
   },
@@ -4450,7 +4608,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$UIrwYLFA",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$9MnoMmTz",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5907,6 +6065,9 @@
     "name": "java.sql.Timestamp"
   },
   {
+    "name": "java.time.LocalDateTime"
+  },
+  {
     "name": "java.util.AbstractCollection",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
@@ -6823,7 +6984,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$dJUbBhDw",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$IGApxVfY",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

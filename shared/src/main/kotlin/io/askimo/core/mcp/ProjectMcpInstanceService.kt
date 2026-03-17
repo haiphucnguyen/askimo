@@ -263,7 +263,7 @@ class ProjectMcpInstanceService(
 
             if (userConfig != null && !userConfig.autoInferred) {
                 // Use user's custom classification
-                log.debug("Using user-customized config for tool '{}': {}, {}", toolName, userConfig.category, userConfig.strategy)
+                log.trace("Using user-customized config for tool '{}': {}, {}", toolName, userConfig.category, userConfig.strategy)
                 ToolConfig(
                     specification = toolSpec,
                     category = ToolCategory.valueOf(userConfig.category),
@@ -275,7 +275,7 @@ class ProjectMcpInstanceService(
                 // Auto-infer classification
                 val inferredCategory = inferToolCategory(toolSpec)
                 val inferredStrategy = inferToolStrategy(toolSpec)
-                log.debug("Auto-inferred tool '{}': {}, {}", toolName, inferredCategory, inferredStrategy)
+                log.trace("Auto-inferred tool '{}': {}, {}", toolName, inferredCategory, inferredStrategy)
 
                 if (userConfig == null) {
                     newlyInferredConfigs.add(

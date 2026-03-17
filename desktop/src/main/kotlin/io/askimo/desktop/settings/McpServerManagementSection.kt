@@ -78,7 +78,7 @@ import java.net.URI
 
 @Composable
 fun mcpServerTemplatesSection() {
-    var servers by remember { mutableStateOf(McpServersConfig.getAll()) }
+    var servers by remember { mutableStateOf(McpServersConfig.getAll().filter { !it.tags.contains("global") }) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
     var deletingServer by remember { mutableStateOf<McpServerDefinition?>(null) }
@@ -88,6 +88,7 @@ fun mcpServerTemplatesSection() {
     val globalMcpService = remember { get<GlobalMcpInstanceService>(GlobalMcpInstanceService::class.java) }
     var globalInstances by remember { mutableStateOf(globalMcpService.getInstances()) }
     var showAddGlobalDialog by remember { mutableStateOf(false) }
+    var editingGlobalInstance by remember { mutableStateOf<McpInstance?>(null) }
     var deletingGlobalInstance by remember { mutableStateOf<McpInstance?>(null) }
     var showAddDropdown by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -108,7 +109,6 @@ fun mcpServerTemplatesSection() {
                     .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
-                // ── Server Templates Section ─────────────────────────────────
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -334,6 +334,7 @@ fun mcpServerTemplatesSection() {
                                                 globalInstances = globalMcpService.getInstances()
                                             }
                                         },
+                                        onEdit = { editingGlobalInstance = instance },
                                         onDelete = { deletingGlobalInstance = instance },
                                     )
                                 }
@@ -374,7 +375,7 @@ fun mcpServerTemplatesSection() {
             },
             onSave = { server ->
                 McpServersConfig.add(server)
-                servers = McpServersConfig.getAll()
+                servers = McpServersConfig.getAll().filter { !it.tags.contains("global") }
                 showAddDialog = false
                 editingServer = null
             },
@@ -399,6 +400,25 @@ fun mcpServerTemplatesSection() {
         )
     }
 
+    // Edit Global MCP Instance Dialog
+    editingGlobalInstance?.let { instance ->
+        addGlobalMcpInstanceDialog(
+            existingInstance = instance,
+            onDismiss = { editingGlobalInstance = null },
+            onSave = { serverId, name, parameters ->
+                scope.launch {
+                    globalMcpService.updateInstance(
+                        instanceId = instance.id,
+                        name = name,
+                        parameterValues = parameters,
+                    )
+                    globalInstances = globalMcpService.getInstances()
+                }
+                editingGlobalInstance = null
+            },
+        )
+    }
+
     // Delete Template Confirmation
     deletingServer?.let { server ->
         ComponentColors.themedAlertDialog(
@@ -409,7 +429,7 @@ fun mcpServerTemplatesSection() {
                 dangerButton(
                     onClick = {
                         McpServersConfig.remove(server.id)
-                        servers = McpServersConfig.getAll()
+                        servers = McpServersConfig.getAll().filter { !it.tags.contains("global") }
                         deletingServer = null
                     },
                 ) {
@@ -461,7 +481,7 @@ fun mcpServerTemplatesSection() {
                 dangerButton(
                     onClick = {
                         McpServersConfig.resetToDefaults()
-                        servers = McpServersConfig.getAll()
+                        servers = McpServersConfig.getAll().filter { !it.tags.contains("global") }
                         showResetConfirm = false
                     },
                 ) {
@@ -481,6 +501,7 @@ fun mcpServerTemplatesSection() {
 private fun globalMcpInstanceCard(
     instance: McpInstance,
     onToggleEnabled: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val serverDef = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
@@ -567,6 +588,22 @@ private fun globalMcpInstanceCard(
                         Icon(
                             imageVector = Icons.Default.Build,
                             contentDescription = stringResource("mcp.integrations.view.tools.tooltip"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+
+                themedTooltip(text = stringResource("mcp.global.instance.edit.tooltip")) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource("mcp.global.instance.edit.tooltip"),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp),
                         )
