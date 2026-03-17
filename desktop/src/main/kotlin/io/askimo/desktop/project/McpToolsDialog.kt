@@ -56,6 +56,7 @@ import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.desktop.common.components.inlineErrorMessage
 import io.askimo.desktop.common.components.primaryButton
+import io.askimo.desktop.common.components.rememberDialogState
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
@@ -72,7 +73,7 @@ fun mcpToolsDialog(
     val serverDefinition = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
     var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val dialogState = rememberDialogState()
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredTools = remember(tools, searchQuery) {
@@ -89,7 +90,7 @@ fun mcpToolsDialog(
 
     LaunchedEffect(instance.id) {
         isLoading = true
-        errorMessage = null
+        dialogState.clearError()
         try {
             val result = withContext(Dispatchers.IO) {
                 mcpClientFactory.listTools(instance)
@@ -100,14 +101,17 @@ fun mcpToolsDialog(
                     val isTimeout = e is TimeoutException ||
                         e.cause is TimeoutException ||
                         e.message?.contains("TimeoutException", ignoreCase = true) == true
-                    errorMessage = if (isTimeout) {
-                        "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
-                    } else {
-                        e.message ?: "Failed to load tools"
-                    }
+                    dialogState.setError(
+                        if (isTimeout) {
+                            "Connection timeout: Unable to connect to MCP server. Please check if the server is running and accessible."
+                        } else {
+                            e.message ?: "Failed to load tools"
+                        },
+                    )
                 },
             )
         } catch (e: Exception) {
+            dialogState.setError(e, "Failed to load tools")
         } finally {
             isLoading = false
         }
@@ -295,8 +299,8 @@ fun mcpToolsDialog(
                             }
                         }
 
-                        errorMessage != null -> {
-                            inlineErrorMessage(errorMessage = errorMessage)
+                        dialogState.errorMessage != null -> {
+                            inlineErrorMessage(errorMessage = dialogState.errorMessage)
                         }
 
                         tools.isNullOrEmpty() -> {
