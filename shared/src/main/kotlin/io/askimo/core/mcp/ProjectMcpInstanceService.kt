@@ -9,6 +9,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.client.DefaultMcpClient
 import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolSource
@@ -393,6 +395,14 @@ class ProjectMcpInstanceService(
             log.debug("Built and cached ToolVectorIndex for project {} ({} tools)", projectId, tools.size)
         } catch (e: Exception) {
             log.warn("Could not build ToolVectorIndex for project {} (embedding model unavailable?): {}", projectId, e.message)
+            EventBus.emit(
+                AppErrorEvent(
+                    title = "MCP Tool Index Unavailable",
+                    message = "Could not build the tool search index for project $projectId. " +
+                        "MCP tool detection may be less accurate. Check your embedding model configuration.",
+                    cause = e,
+                ),
+            )
         }
     }
 

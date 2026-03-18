@@ -1512,6 +1512,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         message = errorDialogState.message,
                         linkText = errorDialogState.linkText,
                         linkUrl = errorDialogState.linkUrl,
+                        details = errorDialogState.details,
                         onDismiss = {
                             errorDialogState = ErrorDialogState()
                         },

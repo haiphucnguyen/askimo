@@ -105,12 +105,12 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         }.onCompleteResponse {
                             done.countDown()
                         }.onToolExecuted { tool ->
-                            if (tool.hasFailed()) {
-                                throw ToolExecutionException(
-                                    toolName = tool.request().name() ?: "unknown",
-                                    errorDetails = tool.result(),
-                                )
-                            }
+//                            if (tool.hasFailed()) {
+//                                throw ToolExecutionException(
+//                                    toolName = tool.request().name() ?: "unknown",
+//                                    errorDetails = tool.result(),
+//                                )
+//                            }
                         }.onError { e ->
                             errorOccurred = true
                             capturedError = e
