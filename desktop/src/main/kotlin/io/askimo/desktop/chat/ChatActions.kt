@@ -13,6 +13,7 @@ interface ChatActions {
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         editingMessage: ChatMessageDTO? = null,
+        disabledServerIds: Set<String> = emptySet(),
     ): String?
     fun cancelResponse()
     fun loadPrevious()

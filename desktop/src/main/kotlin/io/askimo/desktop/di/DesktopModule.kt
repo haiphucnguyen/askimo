@@ -11,7 +11,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.ProjectMcpInstanceService
-import io.askimo.core.providers.ToolProviderImpl
+import io.askimo.core.tools.ToolProviderImpl
 import io.askimo.desktop.common.monitoring.SystemResourceMonitor
 import io.askimo.desktop.project.ProjectViewModel
 import io.askimo.desktop.project.ProjectsViewModel

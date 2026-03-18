@@ -226,8 +226,8 @@ fun main() {
         val isMaximized = ThemePreferences.isWindowMaximized()
 
         val windowState = rememberWindowState(
-            width = 1920.dp,
-            height = 1024.dp,
+            width = if (savedWidth > 0) savedWidth.dp else 1920.dp,
+            height = if (savedHeight > 0) savedHeight.dp else 1080.dp,
             position = if (savedX >= 0 && savedY >= 0) {
                 WindowPosition(savedX.dp, savedY.dp)
             } else {
@@ -1683,12 +1683,13 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            onStartChat = { projId, mode, message, attachments ->
+                            onStartChat = { projId, mode, message, attachments, disabledServerIds ->
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
                                     mode = mode,
                                     message = message,
                                     attachments = attachments,
+                                    disabledServerIds = disabledServerIds,
                                     onComplete = { onNavigateToChat() },
                                 )
                             },

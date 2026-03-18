@@ -221,7 +221,7 @@ class LocalFoldersIndexingCoordinator(
             }
 
             val elapsedTime = System.currentTimeMillis() - startTime
-            log.trace("Indexed {} ({} chunks) in {}ms", filePath.pathString, segments.size, elapsedTime)
+            log.debug("Indexed {} ({} chunks) in {}ms", filePath.pathString, segments.size, elapsedTime)
 
             updateProgressAtomic()
             return true

@@ -40,3 +40,31 @@ fun inlineErrorMessage(
         }
     }
 }
+
+/**
+ * Displays an inline success message with consistent styling.
+ * Used in dialogs and forms to confirm a successful operation.
+ *
+ * @param message The success message to display. If null, nothing is rendered.
+ * @param modifier The modifier to be applied to the container
+ */
+@Composable
+fun inlineSuccessMessage(
+    message: String?,
+    modifier: Modifier = Modifier,
+) {
+    if (message != null) {
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            shape = MaterialTheme.shapes.small,
+        ) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(Spacing.medium),
+            )
+        }
+    }
+}

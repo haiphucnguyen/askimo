@@ -82,7 +82,6 @@ import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.ProjectMcpInstanceService
-import io.askimo.core.providers.ChatContext
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
 import io.askimo.desktop.common.i18n.stringResource
@@ -127,7 +126,7 @@ fun chatInputField(
     onInputTextChange: (TextFieldValue) -> Unit,
     attachments: List<FileAttachmentDTO>,
     onAttachmentsChange: (List<FileAttachmentDTO>) -> Unit,
-    onSendMessage: (CreationMode) -> Unit,
+    onSendMessage: (CreationMode, Set<String>) -> Unit,
     isLoading: Boolean = false,
     isThinking: Boolean = false,
     onStopResponse: () -> Unit = {},
@@ -145,28 +144,8 @@ fun chatInputField(
     var creationMode by remember(sessionId) { mutableStateOf<CreationMode>(CreationMode.Chat) }
 
     // Session-scoped set of server IDs disabled by the user via the tools popup.
-    // Seeded from ChatContext so selections survive navigating away and back.
-    // Built-in tools are disabled by default — users must explicitly opt in.
-    var disabledServerIds by remember(sessionId) {
-        mutableStateOf(
-            if (sessionId != null) {
-                // If the session already has persisted state, use it.
-                // Otherwise default to built-in tools being disabled.
-                val persisted = ChatContext.getDisabledServers(sessionId)
-                if (ChatContext.hasSessionState(sessionId)) persisted else setOf(ToolRegistry.BUILTIN_SERVER_ID)
-            } else {
-                setOf(ToolRegistry.BUILTIN_SERVER_ID)
-            },
-        )
-    }
-
-    // Persist the initial default immediately so hasSessionState() returns true on
-    // subsequent recomposes (e.g. navigating away and back to this session).
-    LaunchedEffect(sessionId) {
-        if (sessionId != null && !ChatContext.hasSessionState(sessionId)) {
-            ChatContext.setDisabledServers(sessionId, disabledServerIds)
-        }
-    }
+    // Defaults to built-in tools disabled. Passed directly to sendMessage at send time.
+    var disabledServerIds by remember(sessionId) { mutableStateOf(setOf(ToolRegistry.BUILTIN_SERVER_ID)) }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
@@ -439,7 +418,7 @@ fun chatInputField(
                                         }
                                         AppShortcut.SEND_MESSAGE -> {
                                             if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                                onSendMessage(creationMode)
+                                                onSendMessage(creationMode, disabledServerIds)
                                             }
                                             true
                                         }
@@ -532,7 +511,7 @@ fun chatInputField(
                                 },
                             ) {
                                 IconButton(
-                                    onClick = { onSendMessage(creationMode) },
+                                    onClick = { onSendMessage(creationMode, disabledServerIds) },
                                     enabled = inputText.text.isNotBlank(),
                                     colors = ComponentColors.primaryIconButtonColors(),
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -622,10 +601,6 @@ fun chatInputField(
                         disabledServerIds = disabledServerIds,
                         onDisabledServerIdsChange = { updated ->
                             disabledServerIds = updated
-                            // Persist immediately so the selection survives session navigation
-                            if (sessionId != null) {
-                                ChatContext.setDisabledServers(sessionId, updated)
-                            }
                         },
                     )
 
@@ -1044,36 +1019,55 @@ private fun mcpServerItem(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(min = 200.dp, max = 350.dp)
+                    .widthIn(min = 350.dp, max = 450.dp)
                     .heightIn(max = 400.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                server.tools.forEach { tool ->
+                server.tools.forEachIndexed { index, tool ->
                     val toolName = tool.specification.name()
                     val toolDescription = tool.specification.description() ?: stringResource("chat.tools.tool.no.description")
+                    val rowBackground = if (index % 2 == 0) {
+                        MaterialTheme.colorScheme.surface
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    }
 
-                    DropdownMenuItem(
-                        text = {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                            ) {
-                                Text(
-                                    text = toolName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = toolDescription,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        },
-                        onClick = { /* Tools are read-only for now */ },
-                        colors = ComponentColors.menuItemColors(),
-                    )
+                    Box(modifier = Modifier.background(rowBackground)) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    modifier = Modifier.padding(vertical = 6.dp),
+                                ) {
+                                    Text(
+                                        text = "${index + 1}.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.width(20.dp),
+                                    )
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                                    ) {
+                                        Text(
+                                            text = toolName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            text = toolDescription,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = { /* Tools are read-only for now */ },
+                            colors = ComponentColors.menuItemColors(),
+                        )
+                    }
                 }
             }
         }

@@ -33,7 +33,6 @@ object AiServiceBuilder {
      * Builds a ChatClient with common configuration applied.
      *
      * @param sessionId Optional session ID for the chat
-     * @param model The model name being used
      * @param provider The model provider (OpenAI, Ollama, etc.)
      * @param chatModel The streaming chat model instance
      * @param secondaryChatModel The chat model used for query compression in RAG

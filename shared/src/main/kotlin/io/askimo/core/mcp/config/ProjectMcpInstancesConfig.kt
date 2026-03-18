@@ -4,15 +4,10 @@
  */
 package io.askimo.core.mcp.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpInstanceData
-import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.security.SecureKeyManager
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Files
@@ -23,12 +18,24 @@ import kotlin.io.path.exists
 private object ProjectMcpInstancesConfigObject
 private val log = logger<ProjectMcpInstancesConfigObject>()
 
+/**
+ * Persistent configuration store for MCP instances scoped to a project.
+ *
+ * Each project's instances are serialised as YAML and stored at:
+ * `<AskimoHome>/projects/<projectId>/mcp-instances.yml`
+ *
+ * Secrets (parameters whose type is [io.askimo.core.mcp.ParameterType.SECRET]) are
+ * **not** written to the YAML file. Instead they are stored separately via
+ * [SecureKeyManager] and referenced by a deterministic key produced by
+ * [McpInstanceData.secretKeyId]. Secret cleanup is handled automatically by
+ * [remove] and [deleteAll] before the corresponding YAML entries are removed.
+ *
+ *
+ * @see McpInstancesConfig
+ * @see McpInstanceData
+ * @see SecureKeyManager
+ */
 object ProjectMcpInstancesConfig : McpInstancesConfig {
-
-    private val mapper: ObjectMapper =
-        ObjectMapper(YAMLFactory())
-            .registerModule(KotlinModule.Builder().build())
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
     private const val CONFIG_FILE_NAME = "mcp-instances.yml"
 
@@ -37,9 +44,6 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
         .resolve(projectId)
         .resolve(CONFIG_FILE_NAME)
 
-    /**
-     * Load all MCP instances for a project
-     */
     override fun load(projectId: String): List<McpInstance> {
         val path = getConfigPath(projectId)
 
@@ -49,7 +53,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
 
         return try {
             val content = Files.readString(path)
-            val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+            val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
             wrapper.instances.map { it.toDomain() }
         } catch (e: Exception) {
             log.displayError("Failed to load MCP instances for project $projectId", e)
@@ -57,12 +61,6 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
         }
     }
 
-    /**
-     * Save all MCP instances for a project.
-     * Looks up each instance's [McpServerDefinition] so [SecretDetector] can use
-     * the authoritative [ParameterType.SECRET] flag instead of relying solely on
-     * naming conventions.
-     */
     override fun save(projectId: String, instances: List<McpInstance>) {
         val path = getConfigPath(projectId)
 
@@ -73,7 +71,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
                 McpInstanceData.from(instance, definition)
             }
             val wrapper = InstancesWrapper(data)
-            val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
+            val yaml = mcpObjectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
             Files.writeString(path, yaml)
             log.debug("Saved ${instances.size} MCP instances for project $projectId")
         } catch (e: Exception) {
@@ -81,9 +79,6 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
         }
     }
 
-    /**
-     * Add or update a single instance
-     */
     override fun add(instance: McpInstance) {
         val projectId = instance.projectId ?: return
         val instances = load(projectId).toMutableList()
@@ -92,16 +87,13 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
         save(projectId, instances)
     }
 
-    /**
-     * Remove a specific instance and clean up its secrets from [SecureKeyManager].
-     */
     override fun remove(projectId: String, instanceId: String) {
         // Load the raw data (not domain) so we can read secretParameterKeys before deletion
         val path = getConfigPath(projectId)
         if (path.exists()) {
             try {
                 val content = Files.readString(path)
-                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances
                     .find { it.id == instanceId }
                     ?.secretParameterKeys
@@ -117,20 +109,35 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
     }
 
     /**
-     * Get a specific instance
+     * Returns the [McpInstance] with [instanceId] for [projectId], or `null` if no
+     * such instance exists or the configuration file cannot be read.
+     *
+     * @param projectId  The project to search within.
+     * @param instanceId The unique identifier of the instance to retrieve.
+     * @return The matching [McpInstance], or `null` if not found.
      */
     override fun get(projectId: String, instanceId: String): McpInstance? = load(projectId).find { it.id == instanceId }
 
     /**
-     * Update an existing instance
+     * Updates an existing instance by delegating to [add], which performs an
+     * upsert — replacing the existing entry with the same [McpInstance.id] if found,
+     * or appending it if not.
+     *
+     * @param instance The instance containing updated values to persist.
      */
     override fun update(instance: McpInstance) {
         add(instance)
     }
 
     /**
-     * Delete all instances for a project (when project is deleted).
-     * Also removes all associated secrets from [SecureKeyManager].
+     * Deletes all MCP instances for [projectId] and erases every associated secret
+     * from [SecureKeyManager], then removes the YAML configuration file from disk.
+     *
+     * This is intended to be called when a project itself is deleted. After this
+     * method returns, [load] will return an empty list for [projectId] (the file no
+     * longer exists).
+     *
+     * @param projectId The project whose entire MCP configuration should be removed.
      */
     override fun deleteAll(projectId: String) {
         val path = getConfigPath(projectId)
@@ -138,7 +145,7 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
             try {
                 // Clean up secrets before deleting the file
                 val content = Files.readString(path)
-                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances.forEach { instance ->
                     instance.secretParameterKeys.forEach { key ->
                         SecureKeyManager.removeSecretKey(McpInstanceData.secretKeyId(instance.id, key))
@@ -152,10 +159,3 @@ object ProjectMcpInstancesConfig : McpInstancesConfig {
         }
     }
 }
-
-/**
- * Wrapper for YAML serialization
- */
-private data class InstancesWrapper(
-    val instances: List<McpInstanceData>,
-)

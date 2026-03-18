@@ -382,7 +382,7 @@ private fun mermaidSetupInstructions(
             imageVector = Icons.Default.Settings,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(16.dp))

@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,13 +56,19 @@ import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.SecretDetector
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.desktop.common.components.inlineErrorMessage
+import io.askimo.desktop.common.components.inlineSuccessMessage
 import io.askimo.desktop.common.components.primaryButton
 import io.askimo.desktop.common.components.rememberDialogState
+import io.askimo.desktop.common.components.secondaryButton
 import io.askimo.desktop.common.i18n.stringResource
 import io.askimo.desktop.common.theme.ComponentColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
+import java.awt.FileDialog
+import java.awt.Frame
+import java.io.File
 import java.util.concurrent.TimeoutException
 
 @Composable
@@ -69,11 +76,13 @@ fun mcpToolsDialog(
     instance: McpInstance,
     onDismiss: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
     val mcpClientFactory = get<McpClientFactory>(McpClientFactory::class.java)
     val serverDefinition = remember(instance.serverId) { McpServersConfig.get(instance.serverId) }
     var tools by remember { mutableStateOf<List<ToolConfig>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     val dialogState = rememberDialogState()
+    var exportMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) } // true=success, false=error
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredTools = remember(tools, searchQuery) {
@@ -372,6 +381,15 @@ fun mcpToolsDialog(
                             }
                         }
                     }
+
+                    // Export feedback — shown below tools, never replaces them
+                    exportMessage?.let { (isSuccess, msg) ->
+                        if (isSuccess) {
+                            inlineSuccessMessage(message = msg)
+                        } else {
+                            inlineErrorMessage(errorMessage = msg)
+                        }
+                    }
                 }
 
                 VerticalScrollbar(
@@ -387,11 +405,97 @@ fun mcpToolsDialog(
             }
         },
         confirmButton = {
-            primaryButton(onClick = onDismiss) {
-                Text(stringResource("dialog.close"))
+            val exportSuccessMsg = stringResource("mcp.tools.dialog.export.success")
+            val exportFailedMsg = stringResource("mcp.tools.dialog.export.failed")
+            val exportDialogTitle = stringResource("mcp.tools.dialog.export")
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Export button — only enabled when tools are loaded
+                if (!tools.isNullOrEmpty()) {
+                    secondaryButton(
+                        onClick = {
+                            scope.launch {
+                                exportToolsToJson(
+                                    tools = tools!!,
+                                    instanceName = instance.name,
+                                    dialogTitle = exportDialogTitle,
+                                ).fold(
+                                    onSuccess = { path ->
+                                        exportMessage = true to exportSuccessMsg.replace("{0}", path)
+                                    },
+                                    onFailure = { e ->
+                                        exportMessage = false to exportFailedMsg.replace("{0}", e.message ?: "Unknown error")
+                                    },
+                                )
+                            }
+                        },
+                    ) {
+                        Text(stringResource("mcp.tools.dialog.export"))
+                    }
+                }
+                primaryButton(onClick = onDismiss) {
+                    Text(stringResource("dialog.close"))
+                }
             }
         },
     )
+}
+
+/**
+ * Opens a [FileDialog] save prompt and writes the given [tools] as a JSON array.
+ * Each entry contains: name, description, category, strategy.
+ *
+ * @return [Result] with the absolute path of the saved file on success.
+ */
+private suspend fun exportToolsToJson(
+    tools: List<ToolConfig>,
+    instanceName: String,
+    dialogTitle: String,
+): Result<String> = withContext(Dispatchers.IO) {
+    runCatching {
+        val fileDialog = FileDialog(null as Frame?, dialogTitle, FileDialog.SAVE).apply {
+            file = "${instanceName.replace(" ", "_")}_tools.json"
+        }
+        fileDialog.isVisible = true
+
+        val fileName = fileDialog.file ?: return@runCatching Result.failure<String>(
+            IllegalStateException("Export cancelled"),
+        ).getOrThrow()
+        val directory = fileDialog.directory ?: return@runCatching Result.failure<String>(
+            IllegalStateException("Export cancelled"),
+        ).getOrThrow()
+
+        val targetFile = File(directory, fileName)
+
+        val json = buildString {
+            appendLine("[")
+            tools.forEachIndexed { index, tool ->
+                appendLine("  {")
+                appendLine("    \"name\": ${tool.specification.name().toJsonString()},")
+                appendLine("    \"description\": ${tool.specification.description().toJsonString()},")
+                appendLine("    \"category\": ${tool.category.name.toJsonString()},")
+                append("    \"strategy\": ${tool.strategy}")
+                appendLine()
+                append("  }")
+                if (index < tools.lastIndex) appendLine(",") else appendLine()
+            }
+            append("]")
+        }
+
+        targetFile.writeText(json, Charsets.UTF_8)
+        targetFile.absolutePath
+    }
+}
+
+private fun String?.toJsonString(): String {
+    if (this == null) return "null"
+    val escaped = this
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    return "\"$escaped\""
 }
 
 @Composable

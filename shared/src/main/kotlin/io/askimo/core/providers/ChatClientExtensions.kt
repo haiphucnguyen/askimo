@@ -6,6 +6,7 @@ package io.askimo.core.providers
 
 import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.context.AppContext
+import io.askimo.core.context.ChatContext
 import io.askimo.core.exception.ToolExecutionException
 import io.askimo.core.intent.DetectAiResponseIntentCommand
 import io.askimo.core.intent.FollowUpSuggestion
@@ -63,14 +64,17 @@ private fun Throwable.isUnsupportedSamplingError(): Boolean {
 fun ChatClient.sendStreamingMessageWithCallback(
     projectId: String? = null,
     userMessage: UserMessage,
+    disabledServerIds: Set<String> = emptySet(),
     onToken: (String) -> Unit = {},
     onFollowUpSuggestion: ((FollowUpSuggestion) -> Unit)? = null,
 ): String {
     val log = logger<ChatClient>()
 
     try {
-        // Set project ID in ThreadLocal for ToolProvider to access
+        // Set both projectId and disabledServers in ThreadLocal on this thread —
+        // the same thread LangChain4j uses to call ToolProviderImpl.provideTools().
         ChatContext.setProjectId(projectId)
+        ChatContext.setDisabledServers(disabledServerIds)
 
         // Get provider and model from AppContext
         val appContext = AppContext.getInstance()

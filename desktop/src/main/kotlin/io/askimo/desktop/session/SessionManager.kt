@@ -17,7 +17,6 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
-import io.askimo.core.providers.ChatContext
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.vision.ImageProcessor
 import io.askimo.desktop.chat.ChatViewModel
@@ -164,6 +163,7 @@ class SessionManager(
         sessionId: String,
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
+        disabledServerIds: Set<String> = emptySet(),
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -219,15 +219,12 @@ class SessionManager(
         streamingScope.launch(thread.job) {
             try {
                 if (mode is CreationMode.Chat) {
-                    // Copy session-scoped disabled servers into this IO thread's ThreadLocal
-                    // so ToolProviderImpl can read them synchronously during the request.
-                    ChatContext.applyDisabledServersForThread(sessionId)
-
                     val fullResponse = chatSessionService
                         .getOrCreateClientForSession(sessionId)
                         .sendStreamingMessageWithCallback(
                             projectId = projectId,
                             userMessage = promptWithContext,
+                            disabledServerIds = disabledServerIds,
                             onToken = { token ->
                                 streamingScope.launch {
                                     thread.appendChunk(token)
@@ -419,6 +416,7 @@ class SessionManager(
         mode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
+        disabledServerIds: Set<String> = emptySet(),
         onComplete: () -> Unit,
     ) {
         scope.launch {
@@ -444,7 +442,7 @@ class SessionManager(
 
                 // Now send the message - ViewModel is ready
                 val viewModel = getOrCreateChatViewModel(newSession.id)
-                viewModel.sendMessage(projectId, mode, message, attachments)
+                viewModel.sendMessage(projectId, mode, message, attachments, disabledServerIds)
             } catch (e: Exception) {
                 log.error("Failed to create project session and send message", e)
             }

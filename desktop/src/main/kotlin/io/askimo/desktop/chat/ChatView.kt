@@ -1136,9 +1136,9 @@ fun chatView(
                     onInputTextChange = { inputText = it },
                     attachments = attachments,
                     onAttachmentsChange = { attachments = it },
-                    onSendMessage = { mode ->
+                    onSendMessage = { mode, disabledServerIds ->
                         if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                            actions.sendOrEditMessage(mode, inputText.text, attachments, editingMessage)
+                            actions.sendOrEditMessage(mode, inputText.text, attachments, editingMessage, disabledServerIds)
                             inputText = TextFieldValue("")
                             attachments = emptyList()
                             editingMessage = null
