@@ -69,8 +69,8 @@ class AskimoTestHomeExtension :
     }
 
     override fun beforeEach(context: ExtensionContext) {
-        val annotation = context.requiredTestClass.getAnnotation(AskimoTestHome::class.java)
-        val profileName = annotation.profileName
+        val annotation = findAnnotation(context.requiredTestClass)
+        val profileName = annotation?.profileName ?: "personal"
 
         // Try to find @TempDir field, otherwise create our own temp directory
         val tempDir = findTempDirField(context)?.let { field ->
@@ -133,6 +133,16 @@ class AskimoTestHomeExtension :
         if (tempDir != null && !hasTempDirField(context)) {
             tempDir.toFile().deleteRecursively()
         }
+    }
+
+    private fun findAnnotation(clazz: Class<*>): AskimoTestHome? {
+        var c: Class<*>? = clazz
+        while (c != null) {
+            val ann = c.getAnnotation(AskimoTestHome::class.java)
+            if (ann != null) return ann
+            c = c.enclosingClass
+        }
+        return null
     }
 
     private fun findTempDirField(context: ExtensionContext): Field? = context.requiredTestClass.declaredFields

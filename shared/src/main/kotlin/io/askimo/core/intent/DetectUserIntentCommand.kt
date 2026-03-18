@@ -57,19 +57,26 @@ object DetectUserIntentCommand {
         // ── Layer 2: vector similarity ────────────────────────────────────
         val keywordToolNames = keywordTools.map { it.specification.name() }.toSet()
         val vectorMatches = toolVectorIndex?.search(userMessage) ?: emptyList()
-        // Only keep vector hits that the keyword layer didn't already find
         val vectorOnlyTools = vectorMatches
-            .filter { (tool, _) -> tool.specification.name() !in keywordToolNames }
+            .filter { (tool, _) ->
+                tool.specification.name() !in keywordToolNames &&
+                    (tool.strategy and ToolStrategy.INTENT_BASED) != 0
+            }
             .map { (tool, _) -> tool }
 
         val allMatched = (keywordTools + vectorOnlyTools)
             .distinctBy { it.specification.name() }
 
         // ── Confidence ────────────────────────────────────────────────────
+        val topVectorScore = vectorMatches
+            .filter { (tool, _) -> tool.specification.name() !in keywordToolNames }
+            .maxOfOrNull { (_, score) -> score } ?: 0.0
+
         val confidence = when {
+            keywordTools.isNotEmpty() && vectorOnlyTools.isNotEmpty() -> 90 // both layers agree
             keywordTools.isNotEmpty() -> 85
-            vectorMatches.any { (_, score) -> score >= 0.80 } -> 70
-            vectorOnlyTools.isNotEmpty() -> 55
+            topVectorScore >= 0.80 -> 70 // strong semantic signal
+            vectorOnlyTools.isNotEmpty() -> 55 // weak-to-moderate semantic signal
             else -> 0
         }
 

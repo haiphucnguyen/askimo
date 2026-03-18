@@ -64,14 +64,35 @@ object ExecutableResolver {
         }
 
         // Common installation directories
+        val home = System.getProperty("user.home")
+
+        // Collect nvm bin paths (sorted descending so newer versions are preferred)
+        val nvmBinPaths = File("$home/.nvm/versions/node")
+            .takeIf { it.isDirectory }
+            ?.listFiles()
+            ?.sortedByDescending { it.name }
+            ?.map { "${it.absolutePath}/bin" }
+            ?: emptyList()
+
+        // Also include entries from the current PATH environment variable
+        val envPathEntries = (System.getenv("PATH") ?: "")
+            .split(File.pathSeparator)
+            .filter { it.isNotBlank() }
+
         val commonPaths = listOf(
             "/usr/local/bin",
             "/opt/homebrew/bin", // macOS Homebrew on Apple Silicon
             "/usr/bin",
             "/bin",
             "/opt/local/bin", // macOS MacPorts
-            System.getProperty("user.home") + "/.local/bin", // User local installations
-        )
+            "$home/.local/bin", // User local installations
+            // npm global bin directories
+            "$home/.npm-global/bin", // npm prefix -g override
+            "$home/.npm/bin",
+            "/usr/local/lib/node_modules/.bin",
+            "/opt/homebrew/lib/node_modules/.bin", // Homebrew npm on Apple Silicon
+            "/usr/local/share/npm/bin",
+        ) + nvmBinPaths + envPathEntries
 
         val allPaths = if (isWindows()) {
             windowsBasePaths.flatMap { basePath ->
@@ -129,12 +150,17 @@ object ExecutableResolver {
 
     /**
      * Attempts to resolve an executable path using the system shell.
+     * Uses the user's login shell (-l) so .zshrc / .bash_profile are loaded,
+     * which ensures nvm and custom PATH entries (e.g. npm global bin) are available.
      */
     private fun resolveViaShell(executableName: String): String? = try {
         val command = if (isWindows()) {
             listOf("cmd.exe", "/c", "where", executableName)
         } else {
-            listOf("/bin/sh", "-c", "which $executableName")
+            // Use the user's login shell (-l) so .zshrc / .bash_profile are loaded,
+            // which ensures nvm and custom PATH entries (e.g. npm global bin) are available.
+            val loginShell = System.getenv("SHELL") ?: "/bin/sh"
+            listOf(loginShell, "-l", "-c", "which $executableName")
         }
 
         val process = ProcessBuilder(command)

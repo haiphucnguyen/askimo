@@ -67,7 +67,7 @@ object KeyMapManager {
         PREVIOUS_SEARCH_RESULT("shortcut.previous.search.result", Key.G, requiresPrimaryModifier = true, requiresShift = true),
 
         // Input shortcuts
-        ATTACH_FILE("shortcut.attach.file", Key.A, requiresPrimaryModifier = true),
+        ATTACH_FILE("shortcut.attach.file", Key.A, requiresPrimaryModifier = true, requiresShift = true),
         SEND_MESSAGE("shortcut.send.message", Key.Enter),
         NEW_LINE("shortcut.new.line", Key.Enter, requiresShift = true),
         ;

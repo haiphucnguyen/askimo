@@ -104,7 +104,7 @@ import kotlin.let
 @Composable
 fun projectView(
     project: Project,
-    onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>) -> Unit,
+    onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>, disabledServerIds: Set<String>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (sessionId: String, projectId: String) -> Unit,
     onRenameSession: (String, String) -> Unit,
@@ -311,9 +311,9 @@ fun projectView(
                         onInputTextChange = { inputText = it },
                         attachments = attachments,
                         onAttachmentsChange = { attachments = it },
-                        onSendMessage = { mode ->
+                        onSendMessage = { mode, disabledServerIds ->
                             if (inputText.text.isNotBlank()) {
-                                onStartChat(currentProject.id, mode, inputText.text, attachments)
+                                onStartChat(currentProject.id, mode, inputText.text, attachments, disabledServerIds)
                                 inputText = TextFieldValue("")
                                 attachments = emptyList()
                             }

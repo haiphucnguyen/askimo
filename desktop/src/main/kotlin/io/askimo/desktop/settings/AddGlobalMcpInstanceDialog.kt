@@ -284,7 +284,7 @@ fun addGlobalMcpInstanceDialog(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { /* modal: do not dismiss on outside click */ },
     ) {
         Surface(
             modifier = Modifier

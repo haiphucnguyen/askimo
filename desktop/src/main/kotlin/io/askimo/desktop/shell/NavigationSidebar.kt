@@ -506,24 +506,11 @@ private fun collapsedNavigationSidebar(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (avatarImage != null) {
-                                Image(
-                                    bitmap = avatarImage,
-                                    contentDescription = stringResource("user.profile.avatar"),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentScale = ContentScale.Crop,
-                                )
-                            } else {
-                                val initials = userProfile?.name?.split(" ")
-                                    ?.mapNotNull { it.firstOrNull()?.uppercase() }
-                                    ?.take(2)
-                                    ?.joinToString("") ?: "?"
-                                Text(
-                                    text = initials,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
+                            userAvatar(
+                                profile = userProfile,
+                                avatarImage = avatarImage,
+                                textStyle = MaterialTheme.typography.labelSmall,
+                            )
                         }
                     },
                     label = null,
@@ -1021,6 +1008,32 @@ private fun sessionItemWithMenu(
 }
 
 @Composable
+private fun userAvatar(
+    profile: UserProfile?,
+    avatarImage: androidx.compose.ui.graphics.ImageBitmap?,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleMedium,
+) {
+    if (avatarImage != null) {
+        Image(
+            bitmap = avatarImage,
+            contentDescription = stringResource("user.profile.avatar"),
+            modifier = Modifier.fillMaxWidth(),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        val initials = profile?.name?.split(" ")
+            ?.mapNotNull { it.firstOrNull()?.uppercase() }
+            ?.take(2)
+            ?.joinToString("") ?: "?"
+        Text(
+            text = initials,
+            style = textStyle,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
+@Composable
 private fun loadAvatarImage(profile: UserProfile?) = remember(profile?.preferences?.get("avatarPath")) {
     profile?.preferences?.get("avatarPath")?.let { path ->
         try {
@@ -1077,25 +1090,10 @@ private fun userProfileSection(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                if (avatarImage != null) {
-                    Image(
-                        bitmap = avatarImage,
-                        contentDescription = stringResource("user.profile.avatar"),
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    val initials = profile?.name?.split(" ")
-                        ?.mapNotNull { it.firstOrNull()?.uppercase() }
-                        ?.take(2)
-                        ?.joinToString("") ?: "?"
-
-                    Text(
-                        text = initials,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
+                userAvatar(
+                    profile = profile,
+                    avatarImage = avatarImage,
+                )
             }
 
             // User Info

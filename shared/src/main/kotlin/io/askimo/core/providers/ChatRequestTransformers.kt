@@ -54,7 +54,7 @@ object ChatRequestTransformers {
         val modelKey = ModelCapabilitiesCache.modelKey(provider, settings.defaultModel)
         val contextSize = ModelCapabilitiesCache.get(modelKey).contextSize
 
-        log.debug("Processing chat request for $modelKey with context size: $contextSize tokens")
+        log.trace("Processing chat request for $modelKey with context size: $contextSize tokens")
 
         // First, add custom system messages and remove duplicates
         val requestWithCustomMessages = buildRequestWithCustomMessages(sessionId, chatRequest, memoryId)

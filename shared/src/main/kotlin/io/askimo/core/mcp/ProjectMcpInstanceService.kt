@@ -9,6 +9,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.client.DefaultMcpClient
 import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolSource
@@ -20,6 +22,10 @@ import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.mcp.config.ProjectMcpInstancesConfig
 import io.askimo.core.mcp.config.ProjectMcpToolsConfig
 import io.askimo.core.mcp.config.ToolConfigData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
@@ -186,8 +192,6 @@ class ProjectMcpInstanceService(
                 ?: return Result.failure(IllegalArgumentException("Instance not found: $instanceId"))
 
             instancesConfig.remove(projectId, instanceId)
-            // Also delete all tools associated with this instance
-            ProjectMcpToolsConfig.deleteByInstance(projectId, instanceId)
 
             // Invalidate tools cache since instances changed
             invalidateProjectToolsCache(projectId)
@@ -358,7 +362,9 @@ class ProjectMcpInstanceService(
         projectToolsCache.put(projectId, allTools)
         log.debug("Cached {} tools for project {}", allTools.size, projectId)
 
-        buildAndCacheVectorIndex(projectId, allTools)
+        coroutineScope {
+            launch(Dispatchers.IO) { buildAndCacheVectorIndex(projectId, allTools) }
+        }
 
         allTools
     }
@@ -378,15 +384,25 @@ class ProjectMcpInstanceService(
      * Silently skips indexing if the embedding model is unavailable so that the rest
      * of the tool pipeline still works without vector search.
      */
-    private fun buildAndCacheVectorIndex(projectId: String, tools: List<ToolConfig>) {
+    private suspend fun buildAndCacheVectorIndex(projectId: String, tools: List<ToolConfig>) {
         if (tools.isEmpty()) return
         try {
             val embeddingModel = AppContext.getInstance().getEmbeddingModel()
-            val index = ToolVectorIndex(embeddingModel).also { it.index(tools) }
+            val index = withContext(Dispatchers.IO) {
+                ToolVectorIndex(embeddingModel).also { it.index(tools) }
+            }
             toolVectorIndexCache.put(projectId, index)
             log.debug("Built and cached ToolVectorIndex for project {} ({} tools)", projectId, tools.size)
         } catch (e: Exception) {
             log.warn("Could not build ToolVectorIndex for project {} (embedding model unavailable?): {}", projectId, e.message)
+            EventBus.emit(
+                AppErrorEvent(
+                    title = "MCP Tool Index Unavailable",
+                    message = "Could not build the tool search index for project $projectId. " +
+                        "MCP tool detection may be less accurate. Check your embedding model configuration.",
+                    cause = e,
+                ),
+            )
         }
     }
 

@@ -19,9 +19,9 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.NoopProviderSettings
 import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.providers.ToolProviderImpl
 import io.askimo.core.security.SecureSessionManager
 import io.askimo.core.telemetry.TelemetryCollector
+import io.askimo.core.tools.ToolProviderImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -367,6 +367,7 @@ class ChatViewModel(
         message: String,
         attachments: List<FileAttachmentDTO>,
         editingMessage: ChatMessageDTO?,
+        disabledServerIds: Set<String>,
     ): String? {
         if (message.isBlank() || isLoading) return currentSessionId.value
 
@@ -377,10 +378,10 @@ class ChatViewModel(
 
             scope.launch {
                 editMessage(originalMessageId, message, attachments)
-                sendMessage(projectId = project?.id, mode, message, attachments)
+                sendMessage(projectId = project?.id, mode, message, attachments, disabledServerIds)
             }
         } else {
-            sendMessage(projectId = project?.id, mode, message, attachments)
+            sendMessage(projectId = project?.id, mode, message, attachments, disabledServerIds)
         }
 
         return currentSessionId
@@ -519,7 +520,7 @@ class ChatViewModel(
      * @param message The user's message
      * @param attachments Optional list of file attachments
      */
-    fun sendMessage(projectId: String?, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO> = emptyList()) {
+    fun sendMessage(projectId: String?, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO> = emptyList(), disabledServerIds: Set<String> = emptySet()) {
         if (message.isBlank() || isLoading) return
 
         // Session ID must be set by this point (from resumeSession)
@@ -563,6 +564,7 @@ class ChatViewModel(
                     sessionId = sessionId,
                     userMessage = userMessage,
                     willSaveUserMessage = true,
+                    disabledServerIds = disabledServerIds,
                 )
 
                 if (threadId == null) {

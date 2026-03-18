@@ -4,10 +4,6 @@
  */
 package io.askimo.core.mcp.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.GLOBAL_MCP_SCOPE_ID
@@ -34,11 +30,6 @@ private val log = logger<GlobalMcpInstancesConfigObject>()
  */
 object GlobalMcpInstancesConfig : McpInstancesConfig {
 
-    private val mapper: ObjectMapper =
-        ObjectMapper(YAMLFactory())
-            .registerModule(KotlinModule.Builder().build())
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-
     private const val CONFIG_FILE_NAME = "mcp-instances.yml"
 
     private fun getConfigPath(): Path = AskimoHome.base().resolve(CONFIG_FILE_NAME)
@@ -50,7 +41,7 @@ object GlobalMcpInstancesConfig : McpInstancesConfig {
 
         return try {
             val content = Files.readString(path)
-            val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+            val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
             wrapper.instances.map { it.toDomain() }
                 .map { it.copy(projectId = GLOBAL_MCP_SCOPE_ID) }
         } catch (e: Exception) {
@@ -73,7 +64,7 @@ object GlobalMcpInstancesConfig : McpInstancesConfig {
             }
 
             val wrapper = InstancesWrapper(data)
-            val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
+            val yaml = mcpObjectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
             Files.writeString(path, yaml)
             log.debug("Saved ${instances.size} global MCP instances")
         } catch (e: Exception) {
@@ -98,7 +89,7 @@ object GlobalMcpInstancesConfig : McpInstancesConfig {
         if (path.exists()) {
             try {
                 val content = Files.readString(path)
-                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances
                     .find { it.id == instanceId }
                     ?.secretParameterKeys
@@ -118,7 +109,7 @@ object GlobalMcpInstancesConfig : McpInstancesConfig {
         if (path.exists()) {
             try {
                 val content = Files.readString(path)
-                val wrapper = mapper.readValue(content, InstancesWrapper::class.java)
+                val wrapper = mcpObjectMapper.readValue(content, InstancesWrapper::class.java)
                 wrapper.instances.forEach { instance ->
                     instance.secretParameterKeys.forEach { key ->
                         SecureKeyManager.removeSecretKey(McpInstanceData.secretKeyId(instance.id, key))
@@ -137,8 +128,4 @@ object GlobalMcpInstancesConfig : McpInstancesConfig {
     fun save(instances: List<McpInstance>) = save(GLOBAL_MCP_SCOPE_ID, instances)
     fun get(instanceId: String): McpInstance? = get(GLOBAL_MCP_SCOPE_ID, instanceId)
     fun remove(instanceId: String) = remove(GLOBAL_MCP_SCOPE_ID, instanceId)
-
-    private data class InstancesWrapper(
-        val instances: List<McpInstanceData>,
-    )
 }

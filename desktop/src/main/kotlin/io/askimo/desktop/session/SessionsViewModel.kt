@@ -119,13 +119,27 @@ class SessionsViewModel(
                 }
         }
 
-        // Listen for session title updates
+        // Listen for session title updates - update in-place instead of full reload
         scope.launch {
             EventBus.internalEvents
                 .filterIsInstance<SessionTitleUpdatedEvent>()
                 .collect { event ->
-                    log.debug("Session ${event.sessionId} title updated to: ${event.newTitle}, refreshing sidebar")
-                    loadRecentSessions()
+                    log.debug("Session ${event.sessionId} title updated to: ${event.newTitle}, updating in-place")
+                    val updated = recentSessions.map { session ->
+                        if (session.id == event.sessionId) session.copy(title = event.newTitle) else session
+                    }
+                    if (updated != recentSessions) {
+                        recentSessions = updated
+                    }
+                    // Also update paged list if visible
+                    pagedSessions?.let { paged ->
+                        val updatedItems = paged.items.map { session ->
+                            if (session.id == event.sessionId) session.copy(title = event.newTitle) else session
+                        }
+                        if (updatedItems != paged.items) {
+                            pagedSessions = paged.copy(items = updatedItems)
+                        }
+                    }
                 }
         }
 

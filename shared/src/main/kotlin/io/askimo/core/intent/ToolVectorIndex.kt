@@ -59,38 +59,48 @@ class ToolVectorIndex(
         store = buildStore()
         toolsByName.clear()
 
-        var indexed = 0
-        var skipped = 0
+        val (withDesc, withoutDesc) = tools.partition { !it.specification.description().isNullOrBlank() }
 
-        tools.forEach { tool ->
-            val description = tool.specification.description()
-            if (description.isNullOrBlank()) {
-                log.debug(
-                    "Skipping tool '{}' from vector index — no description to embed",
-                    tool.specification.name(),
-                )
-                skipped++
-                return@forEach
-            }
+        withoutDesc.forEach { tool ->
+            log.debug(
+                "Skipping tool '{}' from vector index — no description to embed",
+                tool.specification.name(),
+            )
+        }
 
-            try {
-                // Build the text that will be embedded.
+        if (withDesc.isEmpty()) {
+            log.debug(
+                "ToolVectorIndex built: 0 indexed, {} skipped (no description or error)",
+                withoutDesc.size,
+            )
+            return
+        }
+
+        val segments = withDesc.map { tool ->
+            TextSegment.from(
                 // Description is the primary signal; humanised name and category
                 // are appended as lightweight context.
-                val indexText = buildIndexText(tool, description)
-                val segment = TextSegment.from(
-                    indexText,
-                    // Name stored only as a reverse-lookup key, NOT embedded
-                    Metadata.from(KEY_TOOL_NAME, tool.specification.name()),
-                )
-                val embedding = embeddingModel.embed(segment).content()
+                buildIndexText(tool, tool.specification.description()!!),
+                // Name stored only as a reverse-lookup key, NOT embedded
+                Metadata.from(KEY_TOOL_NAME, tool.specification.name()),
+            )
+        }
+
+        var indexed = 0
+        val skipped = withoutDesc.size
+
+        try {
+            // Single batched API call instead of N sequential calls — O(1) round-trips
+            val embeddings = embeddingModel.embedAll(segments).content()
+
+            embeddings.zip(segments).zip(withDesc).forEach { (pair, tool) ->
+                val (embedding, segment) = pair
                 store.add(embedding, segment)
                 toolsByName[tool.specification.name()] = tool
                 indexed++
-            } catch (e: Exception) {
-                log.warn("Failed to index tool '{}': {}", tool.specification.name(), e.message)
-                skipped++
             }
+        } catch (e: Exception) {
+            log.warn("Batch embedding failed for {} tools: {}", withDesc.size, e.message)
         }
 
         log.debug(

@@ -14,6 +14,9 @@
         "pattern": "\\QMETA-INF/services/com.fasterxml.jackson.databind.Module\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.http.client.HttpClientBuilderFactory\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.anthropic.internal.client.AnthropicClientBuilderFactory\\E"
       },
       {
@@ -21,6 +24,9 @@
       },
       {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiChatModelBuilderFactory\\E"
+      },
+      {
+        "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiEmbeddingModelBuilderFactory\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/dev.langchain4j.model.openai.spi.OpenAiStreamingChatModelBuilderFactory\\E"

@@ -4,10 +4,6 @@
  */
 package io.askimo.core.mcp.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
@@ -38,11 +34,6 @@ object McpServersConfig {
 
     @Volatile
     private var cached: List<McpServerDefinition>? = null
-
-    private val mapper: ObjectMapper =
-        ObjectMapper(YAMLFactory())
-            .registerModule(KotlinModule.Builder().build())
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
     private const val MCP_CONFIG_FILE = "mcp-servers.yml"
 
@@ -98,7 +89,7 @@ object McpServersConfig {
      * Update an existing MCP server definition
      */
     fun update(definition: McpServerDefinition) {
-        add(definition) // Add method handles updates
+        add(definition)
     }
 
     /**
@@ -109,16 +100,6 @@ object McpServersConfig {
             val defaults = getBuiltInDefaults()
             cached = defaults
             persist(defaults)
-        }
-    }
-
-    /**
-     * Reload from disk
-     */
-    fun reload() {
-        synchronized(this) {
-            cached = null
-            loadOrCreateDefaults()
         }
     }
 
@@ -208,10 +189,10 @@ object McpServersConfig {
         synchronized(this) {
             val path = resolveConfigPath()
 
-            return if (path != null && path.exists()) {
+            return if (path.exists()) {
                 try {
                     val content = Files.readString(path)
-                    val wrapper: McpServersWrapper = mapper.readValue(content)
+                    val wrapper: McpServersWrapper = mcpObjectMapper.readValue(content)
                     cached = wrapper.servers
                     log.debug("Loaded {} MCP server definitions from {}", wrapper.servers.size, path)
                     wrapper.servers
@@ -224,11 +205,9 @@ object McpServersConfig {
             } else {
                 // First run: create config with defaults
                 val defaults = getBuiltInDefaults()
-                if (path != null) {
-                    path.parent?.createDirectories()
-                    persist(defaults)
-                    log.debug("Created default MCP servers config at {}", path)
-                }
+                path.parent?.createDirectories()
+                persist(defaults)
+                log.debug("Created default MCP servers config at {}", path)
                 cached = defaults
                 defaults
             }
@@ -236,12 +215,12 @@ object McpServersConfig {
     }
 
     private fun persist(definitions: List<McpServerDefinition>) {
-        val path = resolveConfigPath() ?: return
+        val path = resolveConfigPath()
 
         try {
             path.parent?.createDirectories()
             val wrapper = McpServersWrapper(definitions)
-            val yaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
+            val yaml = mcpObjectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(wrapper)
             Files.writeString(path, yaml)
             log.debug("Persisted {} MCP server definitions to {}", definitions.size, path)
         } catch (e: Exception) {
@@ -249,41 +228,12 @@ object McpServersConfig {
         }
     }
 
-    private fun resolveConfigPath(): Path? = try {
-        AskimoHome.base().resolve(MCP_CONFIG_FILE)
-    } catch (e: Exception) {
-        log.displayError("Failed to resolve MCP servers config path", e)
-        null
-    }
+    private fun resolveConfigPath(): Path = AskimoHome.base().resolve(MCP_CONFIG_FILE)
 
     /**
      * Built-in default MCP server definitions
      */
     private fun getBuiltInDefaults(): List<McpServerDefinition> = listOf(
-        McpServerDefinition(
-            id = "mongodb-mcp-server",
-            name = "MongoDB MCP Server",
-            description = "Connect to MongoDB databases using the official MCP server",
-            transportType = TransportType.STDIO,
-            stdioConfig = StdioConfig(
-                commandTemplate = listOf(
-                    "docker",
-                    "run",
-                    "--rm",
-                    "-e",
-                    "MDB_MCP_READ_ONLY=true",
-                    "-e",
-                    "MDB_MCP_CONNECTION_STRING",
-                    "-i",
-                    "mongodb/mongodb-mcp-server:latest",
-                ),
-                envTemplate = mapOf(
-                    "MDB_MCP_CONNECTION_STRING" to "{{mongoConnectionStr}}",
-                ),
-            ),
-            tags = listOf("database", "mongodb", "nosql", "official"),
-        ),
-
         // Filesystem MCP Server
         McpServerDefinition(
             id = "filesystem-mcp-server",

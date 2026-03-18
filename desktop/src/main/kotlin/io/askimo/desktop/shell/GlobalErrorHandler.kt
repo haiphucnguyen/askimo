@@ -25,6 +25,7 @@ data class ErrorDialogState(
     val message: String = "",
     val linkText: String? = null,
     val linkUrl: String? = null,
+    val details: String? = null,
 )
 
 /**
@@ -128,6 +129,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                             show = true,
                             title = event.title,
                             message = event.message,
+                            details = event.cause?.message,
                         ),
                     )
                 }

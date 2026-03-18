@@ -6,6 +6,7 @@ package io.askimo.core.mcp.config
 
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.McpServerDefinition
+import io.askimo.core.mcp.TemplateResolver
 import io.askimo.core.mcp.TransportType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -153,7 +154,7 @@ object McpRuntimeValidator {
             return
         }
 
-        val resolver = io.askimo.core.mcp.TemplateResolver(parameters)
+        val resolver = TemplateResolver(parameters)
         val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
 
         if (resolvedUrl.isBlank()) {
@@ -252,7 +253,7 @@ object McpRuntimeValidator {
 
             SpawnResult(success = true)
         } catch (e: Exception) {
-            log.debug("Failed to spawn MCP server process: ${e.message}")
+            log.debug("Failed to spawn MCP server process: ${e.message}", e)
             SpawnResult(
                 success = false,
                 error = "Failed to start server: ${e.message}",
