@@ -5,6 +5,7 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.model.googleai.GeneratedImageHelper
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ChatContext
 import io.askimo.core.exception.ToolExecutionException
@@ -102,7 +103,20 @@ fun ChatClient.sendStreamingMessageWithCallback(
                         .onPartialResponse { chunk ->
                             sb.append(chunk)
                             onToken(chunk)
-                        }.onCompleteResponse {
+                        }.onCompleteResponse { response ->
+                            val aiMessage = response.aiMessage()
+                            if (GeneratedImageHelper.hasGeneratedImages(aiMessage)) {
+                                val generatedImages = GeneratedImageHelper.getGeneratedImages(aiMessage)
+                                generatedImages?.forEach { image ->
+                                    if (image != null) {
+                                        val base64Data = image.base64Data()
+                                        val mimeType = image.mimeType() ?: "image/png"
+                                        val markdownImage = "\n![Generated Image](data:$mimeType;base64,$base64Data)\n"
+                                        sb.append(markdownImage)
+                                        onToken(markdownImage)
+                                    }
+                                }
+                            }
                             done.countDown()
                         }.onToolExecuted { tool ->
 //                            if (tool.hasFailed()) {
