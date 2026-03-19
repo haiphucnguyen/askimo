@@ -171,7 +171,9 @@ class TokenAwareSummarizingMemory(
             )
         }
 
-        addAll(messages)
+        // Strip base64 image data before sending to the AI so images are never
+        // re-uploaded on every subsequent request (cost + latency).
+        addAll(messages.map { it.stripImages() })
     }
 
     override fun clear() {
@@ -264,10 +266,12 @@ class TokenAwareSummarizingMemory(
     }
 
     /**
-     * Estimates total token count of all messages in memory (thread-safe)
+     * Estimates total token count of all messages in memory (thread-safe).
+     * Base64 image data is stripped before counting so images don't inflate the estimate.
      */
     private fun estimateTotalTokens(): Int = synchronized(messages) {
         messages
+            .map { it.stripImages() }
             .filter { it.getTextContent().isNotBlank() }
             .sumOf { message ->
                 tokenEstimator(message)
@@ -415,10 +419,11 @@ class TokenAwareSummarizingMemory(
     /**
      * Build conversation text from messages for AI summarization.
      * Only includes User and AI messages, excluding system messages as they are instructions.
+     * Base64 image data is stripped and replaced with placeholders.
      */
     private fun buildConversationText(messages: List<ChatMessage>): String = buildString {
         messages.filterNot { it.type() == ChatMessageType.SYSTEM }.forEach { message ->
-            appendLine("${message.type()}: ${message.getTextContent()}")
+            appendLine("${message.type()}: ${MemoryMessage.stripBase64Images(message.getTextContent())}")
             appendLine()
         }
     }

@@ -61,10 +61,36 @@ data class MemoryMessage(
 
     companion object {
         /**
-         * Create a MemoryMessage from a LangChain4j ChatMessage
+         * Regex that matches a Markdown image whose src is a base64 data URL.
+         * Captures the alt text so we can replace the whole tag with a short placeholder.
+         *
+         * Pattern: ![alt](data:image/...;base64,<data>)
+         */
+        private val BASE64_IMAGE_REGEX =
+            Regex("""!\[([^]]*?)]\(data:image/[^;]+;base64,[A-Za-z0-9+/=\r\n]+\)""")
+
+        /**
+         * Remove all inline base64 images from [text], replacing each with a short
+         * human-readable placeholder.  Any surrounding blank lines are collapsed to
+         * a single blank line so the rest of the message still reads naturally.
+         */
+        fun stripBase64Images(text: String): String {
+            val stripped = BASE64_IMAGE_REGEX.replace(text) { match ->
+                val alt = match.groupValues[1].trim()
+                if (alt.isNotEmpty()) "[Image: $alt]" else "[Image]"
+            }
+            // Collapse runs of blank lines left behind by the removal
+            return stripped.replace(Regex("\n{3,}"), "\n\n").trim()
+        }
+
+        /**
+         * Create a MemoryMessage from a LangChain4j ChatMessage.
+         * Base64 image data is stripped and replaced with a short placeholder so
+         * images are never persisted to the database or re-sent on every API call.
          */
         fun from(chatMessage: ChatMessage): MemoryMessage {
-            val content = chatMessage.getTextContent()
+            val rawContent = chatMessage.getTextContent()
+            val content = stripBase64Images(rawContent)
             val type = when (chatMessage) {
                 is UserMessage -> MessageRole.USER.value
                 is AiMessage -> MessageRole.ASSISTANT.value
@@ -90,6 +116,21 @@ fun ChatMessage.getTextContent(): String = when (this) {
     is SystemMessage -> this.text() ?: ""
     is ToolExecutionResultMessage -> this.text() ?: ""
     else -> ""
+}
+
+/**
+ * Returns a copy of this [ChatMessage] with all inline base64 images stripped.
+ * The message type is preserved; only the text content is sanitised.
+ */
+fun ChatMessage.stripImages(): ChatMessage {
+    val stripped = MemoryMessage.stripBase64Images(getTextContent())
+    return when (this) {
+        is UserMessage -> UserMessage.from(stripped)
+        is AiMessage -> AiMessage.from(stripped)
+        is SystemMessage -> SystemMessage.from(stripped)
+        is ToolExecutionResultMessage -> ToolExecutionResultMessage.builder().text(stripped).build()
+        else -> UserMessage.from(stripped)
+    }
 }
 
 /**
