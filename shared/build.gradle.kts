@@ -2,10 +2,29 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     `java-test-fixtures`
+    `maven-publish`
 }
 
 group = rootProject.group
 version = rootProject.version
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/haiphucnguyen/askimo")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
 
 dependencies {
     api(libs.bundles.langchain4j)

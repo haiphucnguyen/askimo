@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2025 Hai Nguyen
+ * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.desktop.settings
+package io.askimo.ui.settings
 
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
@@ -51,6 +51,7 @@ import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
 import io.askimo.ui.common.ui.themedTooltip
+import java.util.Locale
 
 @Composable
 fun generalSettingsSection() {
@@ -197,7 +198,7 @@ private fun languageSelectionCard() {
 }
 
 @Composable
-private fun preferredAIResponseLanguageField(availableLanguages: Map<java.util.Locale, String>) {
+private fun preferredAIResponseLanguageField(availableLanguages: Map<Locale, String>) {
     var aiLanguageDropdownExpanded by remember { mutableStateOf(false) }
     val currentAILocale = AppConfig.chat.defaultResponseAILocale
 
@@ -393,9 +394,11 @@ private fun fontSettingsCard() {
                                                     "monospace", "courier", "courier new", "consolas", "monaco", "menlo",
                                                     "dejavu sans mono", "lucida console",
                                                     -> FontFamily.Monospace
+
                                                     "serif", "times", "times new roman", "georgia", "palatino",
                                                     "garamond", "baskerville", "book antiqua",
                                                     -> FontFamily.Serif
+
                                                     "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
                                                     else -> FontFamily.SansSerif
                                                 }

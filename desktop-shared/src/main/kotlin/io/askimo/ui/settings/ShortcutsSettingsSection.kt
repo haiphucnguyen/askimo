@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2025 Hai Nguyen
+ * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.desktop.settings
+package io.askimo.ui.settings
 
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar

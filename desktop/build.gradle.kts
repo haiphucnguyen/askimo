@@ -31,6 +31,14 @@ if (envFile.exists()) {
 
 // Helper function to get value from either environment variable or .env file
 fun getEnvOrProperty(key: String): String? = System.getenv(key) ?: envVars[key] ?: System.getProperty(key)
+
+abstract class ExecHelper
+    @Inject
+    constructor(
+        val execOps: org.gradle.process.ExecOperations,
+    )
+val execOps = objects.newInstance<ExecHelper>().execOps
+
 group = rootProject.group
 version = rootProject.version
 
@@ -191,7 +199,7 @@ afterEvaluate {
                         // Check if JAR has signature files
                         val hasSignatures =
                             ByteArrayOutputStream().use { output ->
-                                project.exec {
+                                execOps.exec {
                                     commandLine("jar", "tf", jarFile.absolutePath)
                                     standardOutput = output
                                     isIgnoreExitValue = true
@@ -217,7 +225,7 @@ afterEvaluate {
                         try {
                             // Extract JAR contents using verbose mode to track all files
                             val extractOutput = ByteArrayOutputStream()
-                            project.exec {
+                            execOps.exec {
                                 commandLine("jar", "xf", jarFile.absolutePath)
                                 workingDir = tempDir
                                 standardOutput = extractOutput
@@ -258,7 +266,7 @@ afterEvaluate {
                             fileListFile.writeText(allFiles.joinToString("\n"))
 
                             try {
-                                project.exec {
+                                execOps.exec {
                                     if (manifestFile.exists()) {
                                         // Create JAR with manifest and all files from list
                                         commandLine(
@@ -282,7 +290,7 @@ afterEvaluate {
                             // Verify the repacked JAR
                             val repackedFileCount =
                                 ByteArrayOutputStream().use { output ->
-                                    project.exec {
+                                    execOps.exec {
                                         commandLine("jar", "tf", jarFile.absolutePath)
                                         standardOutput = output
                                         isIgnoreExitValue = true
@@ -343,7 +351,8 @@ tasks.register("checkI18nKeys") {
     description = "Check for missing i18n keys across language files"
 
     doLast {
-        val i18nDir = file("src/main/resources/i18n")
+        // i18n files now live in desktop-shared so both desktop and askimo-app share the same base
+        val i18nDir = file("../desktop-shared/src/main/resources/i18n")
         val baseFile = i18nDir.resolve("messages.properties")
 
         if (!baseFile.exists()) {
@@ -427,8 +436,10 @@ tasks.register("detectUnusedLocalizations") {
     description = "Detect unused localization keys in properties files. Use -Pdelete=true to remove them."
 
     doLast {
-        val i18nDir = file("src/main/resources/i18n")
+        // i18n files now live in desktop-shared so both desktop and askimo-app share the same base
+        val i18nDir = file("../desktop-shared/src/main/resources/i18n")
         val desktopSrcDir = file("src/main/kotlin")
+        val desktopSharedSrcDir = file("../desktop-shared/src/main/kotlin")
         val sharedSrcDir = file("../shared/src/main/kotlin")
         val reportFile = file("${layout.buildDirectory.get()}/reports/unused-localizations.txt")
 
@@ -543,6 +554,7 @@ tasks.register("detectUnusedLocalizations") {
 
         // Scan both modules
         scanDirectory(desktopSrcDir, "desktop")
+        scanDirectory(desktopSharedSrcDir, "desktop-shared")
         scanDirectory(sharedSrcDir, "shared")
 
         println("✅ Found ${usedKeys.size} used keys across both modules")
@@ -751,7 +763,7 @@ fun signDylibsInsideJar(
     // We use "darwin" as an additional hint so we don't skip JARs with extension-less helpers.
     val jarContents =
         ByteArrayOutputStream().use { output ->
-            project.exec {
+            execOps.exec {
                 commandLine("jar", "tf", jarFile.absolutePath)
                 standardOutput = output
                 isIgnoreExitValue = true
@@ -775,7 +787,7 @@ fun signDylibsInsideJar(
     try {
         // Extract JAR
         logger.lifecycle("     Extracting JAR...")
-        project.exec {
+        execOps.exec {
             workingDir = extractDir
             commandLine("jar", "xf", jarFile.absolutePath)
         }
@@ -795,7 +807,7 @@ fun signDylibsInsideJar(
                 logger.lifecycle("       Signing: ${nativeBinary.relativeTo(extractDir)}")
                 // Make sure the binary is executable before signing
                 nativeBinary.setExecutable(true, false)
-                project.exec {
+                execOps.exec {
                     commandLine(
                         "codesign",
                         "--force",
@@ -828,14 +840,14 @@ fun signDylibsInsideJar(
                 .toList()
 
         if (manifestFile.exists()) {
-            project.exec {
+            execOps.exec {
                 workingDir = extractDir
                 commandLine(
                     listOf("jar", "cfm", tmpJar.absolutePath, "META-INF/MANIFEST.MF") + allRelativeFiles,
                 )
             }
         } else {
-            project.exec {
+            execOps.exec {
                 workingDir = extractDir
                 commandLine(listOf("jar", "cf", tmpJar.absolutePath) + allRelativeFiles)
             }
@@ -884,7 +896,7 @@ tasks.register("signMacApp") {
         }
 
         // Use rsync to preserve permissions and attributes
-        project.exec {
+        execOps.exec {
             commandLine("rsync", "-a", "--delete", "${appBundle.absolutePath}/", "${appToSign.absolutePath}/")
         }
 
@@ -901,7 +913,7 @@ tasks.register("signMacApp") {
         val mainExeName =
             ByteArrayOutputStream()
                 .use { output ->
-                    project.exec {
+                    execOps.exec {
                         commandLine("defaults", "read", infoPlist.absolutePath.removeSuffix(".plist"), "CFBundleExecutable")
                         standardOutput = output
                         isIgnoreExitValue = true
@@ -924,7 +936,7 @@ tasks.register("signMacApp") {
                 .walk()
                 .filter { it.extension == "dylib" || it.name == "jspawnhelper" }
                 .forEach { file ->
-                    project.exec {
+                    execOps.exec {
                         commandLine(
                             "codesign",
                             "--force",
@@ -949,7 +961,7 @@ tasks.register("signMacApp") {
                 .walk()
                 .filter { it.extension == "dylib" && it.isFile }
                 .forEach { dylibFile ->
-                    project.exec {
+                    execOps.exec {
                         commandLine(
                             "codesign",
                             "--force",
@@ -984,7 +996,7 @@ tasks.register("signMacApp") {
         // 4) Sign main executable
         if (mainExe.exists()) {
             logger.lifecycle("🔧 Signing main executable: ${mainExe.absolutePath}")
-            project.exec {
+            execOps.exec {
                 commandLine(
                     "codesign",
                     "--force",
@@ -1004,7 +1016,7 @@ tasks.register("signMacApp") {
 
         // 5) Sign app bundle (deep)
         logger.lifecycle("🔧 Signing app bundle (deep): ${appToSign.absolutePath}")
-        project.exec {
+        execOps.exec {
             commandLine(
                 "codesign",
                 "--force",
@@ -1022,7 +1034,7 @@ tasks.register("signMacApp") {
 
         // Verify signature
         logger.lifecycle("🔎 Verifying signature...")
-        project.exec {
+        execOps.exec {
             commandLine("codesign", "--verify", "--deep", "--strict", "--verbose=2", appToSign.absolutePath)
         }
 
@@ -1075,7 +1087,7 @@ tasks.register("notarizeApp") {
         appZip.delete()
 
         logger.lifecycle("📦 Creating ZIP for notarization...")
-        project.exec {
+        execOps.exec {
             workingDir = notarizedDir
             commandLine("ditto", "-c", "-k", "--keepParent", appToSign.name, appZip.name)
         }
@@ -1083,7 +1095,7 @@ tasks.register("notarizeApp") {
         // Calculate SHA256 before submission
         val sha256Before =
             ByteArrayOutputStream().use { output ->
-                project.exec {
+                execOps.exec {
                     commandLine("shasum", "-a", "256", appZip.absolutePath)
                     standardOutput = output
                 }
@@ -1095,7 +1107,7 @@ tasks.register("notarizeApp") {
         // Submit for notarization
         val notarizationOutput =
             ByteArrayOutputStream().use { output ->
-                project.exec {
+                execOps.exec {
                     commandLine(
                         "xcrun",
                         "notarytool",
@@ -1128,7 +1140,7 @@ tasks.register("notarizeApp") {
                 logger.lifecycle("📋 Fetching notarization log for submission $submissionId...")
                 val logOutput =
                     ByteArrayOutputStream().use { output ->
-                        project.exec {
+                        execOps.exec {
                             commandLine(
                                 "xcrun",
                                 "notarytool",
@@ -1155,7 +1167,7 @@ tasks.register("notarizeApp") {
         val staplerOutput = ByteArrayOutputStream()
         val staplerError = ByteArrayOutputStream()
         val stapleResult =
-            project.exec {
+            execOps.exec {
                 commandLine("xcrun", "stapler", "staple", "-v", appToSign.absolutePath)
                 isIgnoreExitValue = true
                 standardOutput = staplerOutput
@@ -1206,12 +1218,12 @@ tasks.register("createSignedDmg") {
 
         logger.lifecycle("📦 Preparing DMG contents...")
         // Use rsync to preserve permissions
-        project.exec {
+        execOps.exec {
             commandLine("rsync", "-a", "${appToSign.absolutePath}/", "${File(dmgStaging, appToSign.name).absolutePath}/")
         }
 
         // Create Applications symlink
-        project.exec {
+        execOps.exec {
             workingDir = dmgStaging
             commandLine("ln", "-s", "/Applications", "Applications")
         }
@@ -1219,7 +1231,7 @@ tasks.register("createSignedDmg") {
         // Create temporary read-write DMG
         val tempDmg = File(notarizedDir, "Askimo-temp.dmg").apply { delete() }
         logger.lifecycle("📀 Creating temporary DMG...")
-        project.exec {
+        execOps.exec {
             commandLine(
                 "hdiutil",
                 "create",
@@ -1237,7 +1249,7 @@ tasks.register("createSignedDmg") {
         // Mount the DMG
         logger.lifecycle("💿 Mounting DMG for customization...")
         val mountOutput = ByteArrayOutputStream()
-        project.exec {
+        execOps.exec {
             commandLine("hdiutil", "attach", "-readwrite", "-noverify", tempDmg.absolutePath)
             standardOutput = mountOutput
         }
@@ -1294,7 +1306,7 @@ tasks.register("createSignedDmg") {
                 """.trimIndent()
 
             logger.lifecycle("🎨 Applying window settings...")
-            project.exec {
+            execOps.exec {
                 commandLine("osascript", "-e", backgroundScript)
                 isIgnoreExitValue = true
             }
@@ -1305,7 +1317,7 @@ tasks.register("createSignedDmg") {
 
             // Sync to ensure all changes are written
             logger.lifecycle("💾 Syncing filesystem...")
-            project.exec {
+            execOps.exec {
                 commandLine("sync")
                 isIgnoreExitValue = true
             }
@@ -1313,7 +1325,7 @@ tasks.register("createSignedDmg") {
 
             // Force Finder to close all windows for the volume
             logger.lifecycle("🔒 Closing Finder windows...")
-            project.exec {
+            execOps.exec {
                 commandLine("osascript", "-e", "tell application \"Finder\" to close every window")
                 isIgnoreExitValue = true
             }
@@ -1333,7 +1345,7 @@ tasks.register("createSignedDmg") {
                         Thread.sleep(2000)
                     }
 
-                    project.exec {
+                    execOps.exec {
                         commandLine("hdiutil", "detach", mountPath, "-force")
                         isIgnoreExitValue = false
                     }
@@ -1343,7 +1355,7 @@ tasks.register("createSignedDmg") {
                     if (attempts < maxAttempts) {
                         logger.lifecycle("⚠️  Unmount failed, will retry...")
                         // Kill any processes that might be using the volume
-                        project.exec {
+                        execOps.exec {
                             commandLine("lsof", "+D", mountPath)
                             isIgnoreExitValue = true
                             standardOutput = System.out
@@ -1358,7 +1370,7 @@ tasks.register("createSignedDmg") {
         // Convert to compressed, read-only DMG
         val signedDmg = File(notarizedDir, "Askimo-signed.dmg").apply { delete() }
         logger.lifecycle("📀 Creating final compressed DMG...")
-        project.exec {
+        execOps.exec {
             commandLine(
                 "hdiutil",
                 "convert",
@@ -1376,7 +1388,7 @@ tasks.register("createSignedDmg") {
 
         // Sign DMG
         logger.lifecycle("🔧 Signing DMG...")
-        project.exec {
+        execOps.exec {
             commandLine(
                 "codesign",
                 "--force",
@@ -1389,7 +1401,7 @@ tasks.register("createSignedDmg") {
 
         // Verify DMG signature
         logger.lifecycle("🔎 Verifying DMG signature...")
-        project.exec {
+        execOps.exec {
             commandLine("codesign", "--verify", "--verbose=2", signedDmg.absolutePath)
         }
 
@@ -1439,7 +1451,7 @@ tasks.register("customNotarizeDmg") {
         // Calculate SHA256 before submission
         val sha256Before =
             ByteArrayOutputStream().use { output ->
-                project.exec {
+                execOps.exec {
                     commandLine("shasum", "-a", "256", signedDmg.absolutePath)
                     standardOutput = output
                 }
@@ -1452,7 +1464,7 @@ tasks.register("customNotarizeDmg") {
         // Submit for notarization
         val notarizationOutput =
             ByteArrayOutputStream().use { output ->
-                project.exec {
+                execOps.exec {
                     commandLine(
                         "xcrun",
                         "notarytool",
@@ -1485,7 +1497,7 @@ tasks.register("customNotarizeDmg") {
                 logger.lifecycle("📋 Fetching notarization log for submission $submissionId...")
                 val logOutput =
                     ByteArrayOutputStream().use { output ->
-                        project.exec {
+                        execOps.exec {
                             commandLine(
                                 "xcrun",
                                 "notarytool",
@@ -1506,7 +1518,7 @@ tasks.register("customNotarizeDmg") {
         // Verify bytes didn't change
         val sha256After =
             ByteArrayOutputStream().use { output ->
-                project.exec {
+                execOps.exec {
                     commandLine("shasum", "-a", "256", signedDmg.absolutePath)
                     standardOutput = output
                 }
@@ -1526,7 +1538,7 @@ tasks.register("customNotarizeDmg") {
         val staplerOutput = ByteArrayOutputStream()
         val staplerError = ByteArrayOutputStream()
         val stapleResult =
-            project.exec {
+            execOps.exec {
                 commandLine("xcrun", "stapler", "staple", "-v", signedDmg.absolutePath)
                 isIgnoreExitValue = true
                 standardOutput = staplerOutput
@@ -1557,13 +1569,13 @@ tasks.register("customNotarizeDmg") {
                     print('✅ Ticket attached successfully')
                     """.trimIndent()
 
-                project.exec {
+                execOps.exec {
                     commandLine("python3", "-c", pythonScript)
                 }
 
                 // Verify ticket is attached
                 val xattrOutput = ByteArrayOutputStream()
-                project.exec {
+                execOps.exec {
                     commandLine("xattr", "-l", signedDmg.absolutePath)
                     standardOutput = xattrOutput
                 }
