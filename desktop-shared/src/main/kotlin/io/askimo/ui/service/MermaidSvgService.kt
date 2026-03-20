@@ -27,70 +27,56 @@ class MermaidCliNotAvailableException(message: String) : Exception(message)
 class MermaidSvgService {
     private val log = logger<MermaidSvgService>()
 
-    companion object {
-        private val log = logger<MermaidSvgService>()
+    @Volatile
+    private var cachedAvailability: Boolean? = null
 
-        // Cache the availability check result to avoid multiple checks
-        @Volatile
-        private var cachedAvailability: Boolean? = null
+    /**
+     * Checks if Mermaid CLI is available on the system.
+     * This result is cached after the first check to avoid multiple expensive checks.
+     *
+     * @return true if mermaid-cli is installed and accessible
+     */
+    fun isMermaidCliAvailable(): Boolean {
+        cachedAvailability?.let { return it }
 
-        // Lock for synchronizing the availability check
-        private val availabilityLock = Any()
+        val result = try {
+            log.debug("Checking if Mermaid CLI is available...")
 
-        /**
-         * Checks if Mermaid CLI is available on the system.
-         * This result is cached after the first check to avoid multiple expensive checks.
-         *
-         * @return true if mermaid-cli is installed and accessible
-         */
-        fun isMermaidCliAvailable(): Boolean {
-            cachedAvailability?.let { return it }
+            val nodeCheck = ProcessBuilderExt("node", "--version")
+                .redirectErrorStream(true)
+                .start()
 
-            return synchronized(availabilityLock) {
-                cachedAvailability?.let { return@synchronized it }
+            val nodeAvailable = nodeCheck.waitFor(5, TimeUnit.SECONDS) && nodeCheck.exitValue() == 0
 
-                val result = try {
-                    log.debug("Checking if Mermaid CLI is available...")
+            if (!nodeAvailable) {
+                log.debug("Node.js not found - Mermaid CLI unavailable")
+                false
+            } else {
+                log.debug("Node.js found, checking mmdc (Mermaid CLI)...")
 
-                    val nodeCheck = ProcessBuilderExt("node", "--version")
-                        .redirectErrorStream(true)
-                        .start()
+                val process = ProcessBuilderExt("mmdc", "--version")
+                    .redirectErrorStream(true)
+                    .start()
 
-                    val nodeAvailable = nodeCheck.waitFor(5, TimeUnit.SECONDS) && nodeCheck.exitValue() == 0
-
-                    if (!nodeAvailable) {
-                        log.debug("Node.js not found - Mermaid CLI unavailable")
-                        cachedAvailability = false
-                        return@synchronized false
-                    }
-
-                    log.debug("Node.js found, checking mmdc (Mermaid CLI)...")
-
-                    val process = ProcessBuilderExt("mmdc", "--version")
-                        .redirectErrorStream(true)
-                        .start()
-
-                    // Read output in a separate thread to avoid blocking
-                    val outputBuilder = StringBuilder()
-                    val outputReader = Thread {
-                        process.inputStream.bufferedReader().use { reader ->
-                            reader.lineSequence().forEach { line ->
-                                outputBuilder.append(line).append("\n")
-                            }
+                // Read output in a separate thread to avoid blocking
+                val outputBuilder = StringBuilder()
+                val outputReader = Thread {
+                    process.inputStream.bufferedReader().use { reader ->
+                        reader.lineSequence().forEach { line ->
+                            outputBuilder.append(line).append("\n")
                         }
                     }
-                    outputReader.start()
+                }
+                outputReader.start()
 
-                    val completed = process.waitFor(10, TimeUnit.SECONDS)
-                    outputReader.join(1000)
+                val completed = process.waitFor(10, TimeUnit.SECONDS)
+                outputReader.join(1000)
 
-                    if (!completed) {
-                        log.warn("Mermaid CLI check timed out")
-                        process.destroyForcibly()
-                        cachedAvailability = false
-                        return@synchronized false
-                    }
-
+                if (!completed) {
+                    log.warn("Mermaid CLI check timed out")
+                    process.destroyForcibly()
+                    false
+                } else {
                     val exitCode = process.exitValue()
                     val output = outputBuilder.toString().trim()
                     val available = exitCode == 0
@@ -101,23 +87,16 @@ class MermaidSvgService {
                         log.warn("Mermaid CLI (mmdc) check failed with exit code: {}. Output: {}", exitCode, output)
                     }
                     available
-                } catch (e: Exception) {
-                    log.debug("Mermaid CLI not available: {}", e.message)
-                    false
                 }
-
-                cachedAvailability = result
-                result
             }
+        } catch (e: Exception) {
+            log.debug("Mermaid CLI not available: {}", e.message)
+            false
         }
-    }
 
-    /**
-     * Checks if Mermaid CLI is available on the system.
-     *
-     * @return true if mermaid-cli is installed and accessible
-     */
-    fun isMermaidCliAvailable(): Boolean = isMermaidCliAvailable()
+        cachedAvailability = result
+        return result
+    }
 
     /**
      * Converts a Mermaid diagram to PNG using local Mermaid CLI.
