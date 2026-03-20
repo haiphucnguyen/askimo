@@ -23,7 +23,7 @@ import io.askimo.core.providers.ProviderRegistry
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.providers.ProviderTestResult
 import io.askimo.core.providers.SettingField
-import io.askimo.desktop.util.ErrorHandler
+import io.askimo.ui.util.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -32,8 +32,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.SettingField
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

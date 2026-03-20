@@ -34,27 +34,14 @@ fun getEnvOrProperty(key: String): String? = System.getenv(key) ?: envVars[key] 
 group = rootProject.group
 version = rootProject.version
 
-repositories {
-    mavenCentral()
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
-    google()
-}
-
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
     implementation(project(":shared"))
-    implementation(libs.bundles.commonmark)
-    implementation(libs.commonmark.ext.autolink)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
-    implementation(libs.jlatexmath)
-    implementation(libs.konform)
+    implementation(project(":desktop-shared"))
 
-    // Terminal support
-    implementation(libs.bundles.jediterm)
+    implementation(libs.konform)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.koin.test)

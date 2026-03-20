@@ -73,16 +73,16 @@ import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.desktop.View
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.LocalFontScale
-import io.askimo.desktop.common.ui.themedTooltip
-import io.askimo.desktop.project.ProjectsViewModel
-import io.askimo.desktop.project.deleteProjectDialog
-import io.askimo.desktop.project.newProjectDialog
-import io.askimo.desktop.session.SessionActionMenu
-import io.askimo.desktop.session.SessionsViewModel
-import io.askimo.desktop.util.Platform
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.LocalFontScale
+import io.askimo.ui.common.ui.themedTooltip
+import io.askimo.ui.project.ProjectsViewModel
+import io.askimo.ui.project.deleteProjectDialog
+import io.askimo.ui.project.newProjectDialog
+import io.askimo.ui.session.SessionActionMenu
+import io.askimo.ui.session.SessionsViewModel
+import io.askimo.ui.util.Platform
 import org.jetbrains.skia.Image
 import java.io.File
 import org.jetbrains.skia.Image as SkiaImage

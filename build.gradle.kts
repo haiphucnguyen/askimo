@@ -72,6 +72,3 @@ subprojects {
     }
 }
 
-repositories {
-    mavenCentral()
-}

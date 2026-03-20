@@ -79,12 +79,12 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.monitoring.SystemResourceMonitor
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.ui.clickableCard
-import io.askimo.desktop.common.ui.themedTooltip
 import io.askimo.desktop.settings.groupModelsByFamily
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.monitoring.SystemResourceMonitor
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.ui.clickableCard
+import io.askimo.ui.common.ui.themedTooltip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

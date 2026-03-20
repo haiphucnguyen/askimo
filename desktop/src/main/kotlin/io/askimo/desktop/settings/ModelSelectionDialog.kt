@@ -28,11 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.components.secondaryButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
 
 @Composable
 fun modelSelectionDialog(

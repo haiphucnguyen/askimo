@@ -30,11 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.keymap.KeyMapManager
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
-import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.keymap.KeyMapManager
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
+import io.askimo.ui.common.theme.ThemePreferences
 
 @Composable
 fun shortcutsSettingsSection() {

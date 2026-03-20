@@ -13,10 +13,6 @@ plugins {
 group = rootProject.group
 version = rootProject.version
 
-repositories {
-    mavenCentral()
-}
-
 // Function to load environment variables from .env file
 fun loadEnvFile(): Map<String, String> {
     val envFile = File(rootProject.projectDir, ".env")

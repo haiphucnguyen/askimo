@@ -45,13 +45,13 @@ import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.getFirstError
 import io.askimo.core.mcp.mcpServerDefinitionValidator
-import io.askimo.desktop.common.components.inlineErrorMessage
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.components.rememberDialogState
-import io.askimo.desktop.common.components.secondaryButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
+import io.askimo.ui.common.components.inlineErrorMessage
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.rememberDialogState
+import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
 
 private val log = currentFileLogger()
 

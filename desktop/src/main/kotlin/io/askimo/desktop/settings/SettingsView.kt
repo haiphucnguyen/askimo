@@ -51,9 +51,9 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.ThemePreferences
 import org.jetbrains.skia.Image
 import java.awt.Cursor
 
