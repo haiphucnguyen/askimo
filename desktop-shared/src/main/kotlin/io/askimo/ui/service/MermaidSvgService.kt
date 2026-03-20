@@ -117,7 +117,7 @@ class MermaidSvgService {
      *
      * @return true if mermaid-cli is installed and accessible
      */
-    fun isMermaidCliAvailable(): Boolean = Companion.isMermaidCliAvailable()
+    fun isMermaidCliAvailable(): Boolean = isMermaidCliAvailable()
 
     /**
      * Converts a Mermaid diagram to PNG using local Mermaid CLI.

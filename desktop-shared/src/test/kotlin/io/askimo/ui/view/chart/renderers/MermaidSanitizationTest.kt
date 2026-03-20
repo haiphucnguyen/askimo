@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2025 Hai Nguyen
+ * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.desktop.view.chart.renderers
+package io.askimo.ui.view.chart.renderers
 
-import io.askimo.desktop.common.ui.sanitizeMermaidDiagram
+import io.askimo.ui.common.ui.sanitizeMermaidDiagram
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

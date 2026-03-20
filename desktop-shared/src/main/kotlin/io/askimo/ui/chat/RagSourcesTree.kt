@@ -68,7 +68,7 @@ import java.net.URI
 @Composable
 fun ragSourcesTree(
     sources: List<KnowledgeSourceConfig>,
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
     onRemove: (KnowledgeSourceConfig) -> Unit = {},
 ) {
     // Selection state
@@ -162,7 +162,7 @@ private fun treeNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
 ) {
     when (node) {
         is FolderTreeNode -> folderNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
@@ -182,7 +182,7 @@ private fun folderNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
@@ -199,7 +199,7 @@ private fun folderNodeItem(
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        Color.Companion.Transparent
+        Color.Transparent
     }
 
     Column(modifier = modifier) {
@@ -212,34 +212,34 @@ private fun folderNodeItem(
                 ) {
                     Text(
                         text = node.fullPath,
-                        modifier = Modifier.Companion.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 3,
-                        overflow = TextOverflow.Companion.Ellipsis,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             },
         ) {
             Box {
                 Row(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxWidth()
                         .background(backgroundColor, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                         .onClick(
-                            matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Primary),
+                            matcher = PointerMatcher.mouse(PointerButton.Primary),
                             onClick = {
                                 isExpanded = !isExpanded
                                 onNodeSelected(node)
                             },
                         )
                         .onClick(
-                            matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Secondary),
+                            matcher = PointerMatcher.mouse(PointerButton.Secondary),
                             onClick = { showContextMenu = true },
                         )
                         .padding(start = (level * 16).dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
-                        .pointerHoverIcon(PointerIcon.Companion.Hand),
+                        .pointerHoverIcon(PointerIcon.Hand),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.Companion.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Expand/collapse arrow
                     Icon(
@@ -254,7 +254,7 @@ private fun folderNodeItem(
                             stringResource("rag.tree.expand")
                         },
                         tint = ComponentColors.secondaryIconColor(),
-                        modifier = Modifier.Companion.size(16.dp),
+                        modifier = Modifier.size(16.dp),
                     )
 
                     // Folder icon
@@ -266,7 +266,7 @@ private fun folderNodeItem(
                         },
                         contentDescription = null,
                         tint = ComponentColors.secondaryIconColor(),
-                        modifier = Modifier.Companion.size(18.dp),
+                        modifier = Modifier.size(18.dp),
                     )
 
                     // Folder name
@@ -275,8 +275,8 @@ private fun folderNodeItem(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Companion.Ellipsis,
-                        modifier = Modifier.Companion.weight(1f),
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
                 }
 
@@ -348,14 +348,14 @@ private fun fileNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val isSelected = selectedNode == node
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        Color.Companion.Transparent
+        Color.Transparent
     }
 
     TooltipArea(
@@ -366,10 +366,10 @@ private fun fileNodeItem(
             ) {
                 Text(
                     text = node.fullPath,
-                    modifier = Modifier.Companion.padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 3,
-                    overflow = TextOverflow.Companion.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         },
@@ -380,27 +380,27 @@ private fun fileNodeItem(
                     .fillMaxWidth()
                     .background(backgroundColor, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                     .onClick(
-                        matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Primary),
+                        matcher = PointerMatcher.mouse(PointerButton.Primary),
                         onClick = { onNodeSelected(node) },
                         onDoubleClick = {
                             openInFileBrowser(node.path)
                         },
                     )
                     .onClick(
-                        matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Secondary),
+                        matcher = PointerMatcher.mouse(PointerButton.Secondary),
                         onClick = { showContextMenu = true },
                     )
                     .padding(start = (level * 16 + 16).dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
-                    .pointerHoverIcon(PointerIcon.Companion.Hand),
+                    .pointerHoverIcon(PointerIcon.Hand),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Companion.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // File icon
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                     contentDescription = null,
                     tint = ComponentColors.secondaryIconColor(),
-                    modifier = Modifier.Companion.size(18.dp),
+                    modifier = Modifier.size(18.dp),
                 )
 
                 // File name
@@ -409,8 +409,8 @@ private fun fileNodeItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Companion.Ellipsis,
-                    modifier = Modifier.Companion.weight(1f),
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
@@ -476,14 +476,14 @@ private fun urlNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val isSelected = selectedNode == node
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
-        Color.Companion.Transparent
+        Color.Transparent
     }
 
     TooltipArea(
@@ -494,10 +494,10 @@ private fun urlNodeItem(
             ) {
                 Text(
                     text = node.fullPath,
-                    modifier = Modifier.Companion.padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 3,
-                    overflow = TextOverflow.Companion.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         },
@@ -508,27 +508,27 @@ private fun urlNodeItem(
                     .fillMaxWidth()
                     .background(backgroundColor, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                     .onClick(
-                        matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Primary),
+                        matcher = PointerMatcher.mouse(PointerButton.Primary),
                         onClick = { onNodeSelected(node) },
                         onDoubleClick = {
                             openInBrowser(node.url)
                         },
                     )
                     .onClick(
-                        matcher = PointerMatcher.Companion.mouse(PointerButton.Companion.Secondary),
+                        matcher = PointerMatcher.mouse(PointerButton.Secondary),
                         onClick = { showContextMenu = true },
                     )
                     .padding(start = (level * 16).dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
-                    .pointerHoverIcon(PointerIcon.Companion.Hand),
+                    .pointerHoverIcon(PointerIcon.Hand),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Companion.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // URL icon
                 Icon(
                     imageVector = Icons.Default.Language,
                     contentDescription = null,
                     tint = ComponentColors.secondaryIconColor(),
-                    modifier = Modifier.Companion.size(18.dp),
+                    modifier = Modifier.size(18.dp),
                 )
 
                 // URL text
@@ -537,8 +537,8 @@ private fun urlNodeItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Companion.Ellipsis,
-                    modifier = Modifier.Companion.weight(1f),
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
             }
 

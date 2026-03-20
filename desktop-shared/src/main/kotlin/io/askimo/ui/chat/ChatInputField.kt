@@ -138,7 +138,7 @@ fun chatInputField(
     onCancelEdit: () -> Unit = {},
     sessionId: String? = null,
     placeholder: String = stringResource("chat.input.placeholder"),
-    modifier: Modifier = Modifier.Companion,
+    modifier: Modifier = Modifier,
 ) {
     val inputFocusRequester = remember { FocusRequester() }
 
@@ -272,21 +272,21 @@ fun chatInputField(
         // Edit mode banner
         if (editingMessage != null) {
             Card(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
                 colors = ComponentColors.bannerCardColors(),
             ) {
                 Row(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Companion.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Companion.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             Icons.Default.Edit,
@@ -304,14 +304,14 @@ fun chatInputField(
                     }
                     IconButton(
                         onClick = onCancelEdit,
-                        modifier = Modifier.Companion
+                        modifier = Modifier
                             .size(32.dp)
-                            .pointerHoverIcon(PointerIcon.Companion.Hand),
+                            .pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = stringResource("message.cancel.edit"),
-                            modifier = Modifier.Companion.size(20.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -321,7 +321,7 @@ fun chatInputField(
         // File attachments display
         if (attachments.isNotEmpty()) {
             Column(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -339,7 +339,7 @@ fun chatInputField(
 
         // Wrap in BoxWithConstraints to get max available height
         BoxWithConstraints(
-            modifier = Modifier.Companion.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             val maxAvailableHeight = maxHeight
             val maxTextFieldHeight = (maxAvailableHeight * 0.5f).coerceAtLeast(defaultTextFieldHeight)
@@ -354,15 +354,15 @@ fun chatInputField(
             Column {
                 // Main input row with text field and send button
                 Row(
-                    modifier = Modifier.Companion.fillMaxWidth(),
-                    verticalAlignment = Alignment.Companion.Top,
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
                 ) {
                     Column(
-                        modifier = Modifier.Companion.weight(1f),
+                        modifier = Modifier.weight(1f),
                     ) {
                         // Resize handle
                         Box(
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
@@ -377,11 +377,11 @@ fun chatInputField(
                                         manuallyResized = true
                                     }
                                 },
-                            contentAlignment = Alignment.Companion.Center,
+                            contentAlignment = Alignment.Center,
                         ) {
                             // Visual indicator
                             Box(
-                                modifier = Modifier.Companion
+                                modifier = Modifier
                                     .width(40.dp)
                                     .height(4.dp)
                                     .background(
@@ -395,7 +395,7 @@ fun chatInputField(
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = onInputTextChange,
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .height(textFieldHeight)
                                 .focusRequester(inputFocusRequester)
@@ -445,11 +445,11 @@ fun chatInputField(
                         // Status badge bar - height is 0 when no status
                         if (statusBarHeight > 0.dp) {
                             Row(
-                                modifier = Modifier.Companion
+                                modifier = Modifier
                                     .fillMaxWidth()
                                     .height(statusBarHeight)
                                     .padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
-                                verticalAlignment = Alignment.Companion.CenterVertically,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 // Image creation mode badge
                                 if (creationMode is CreationMode.Image) {
@@ -459,14 +459,14 @@ fun chatInputField(
                                         tonalElevation = 2.dp,
                                     ) {
                                         Row(
-                                            modifier = Modifier.Companion.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.Companion.CenterVertically,
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Image,
                                                 contentDescription = null,
-                                                modifier = Modifier.Companion.size(18.dp),
+                                                modifier = Modifier.size(18.dp),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                             Text(
@@ -477,10 +477,10 @@ fun chatInputField(
                                             Icon(
                                                 imageVector = Icons.Default.Close,
                                                 contentDescription = stringResource("chat.create.image.mode.cancel"),
-                                                modifier = Modifier.Companion
+                                                modifier = Modifier
                                                     .size(16.dp)
                                                     .clickable { creationMode = CreationMode.Chat }
-                                                    .pointerHoverIcon(PointerIcon.Companion.Hand),
+                                                    .pointerHoverIcon(PointerIcon.Hand),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                         }
@@ -490,17 +490,17 @@ fun chatInputField(
                         }
                     }
 
-                    Spacer(modifier = Modifier.Companion.width(8.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Send/Stop button
                     Box(
                         modifier = Modifier.height(textFieldHeight),
-                        contentAlignment = Alignment.Companion.Center,
+                        contentAlignment = Alignment.Center,
                     ) {
                         if (isLoading || isThinking) {
                             IconButton(
                                 onClick = onStopResponse,
-                                modifier = Modifier.Companion.pointerHoverIcon(PointerIcon.Companion.Hand),
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Icon(
                                     Icons.Default.Stop,
@@ -520,7 +520,7 @@ fun chatInputField(
                                     onClick = { onSendMessage(creationMode, disabledServerIds) },
                                     enabled = inputText.text.isNotBlank(),
                                     colors = ComponentColors.primaryIconButtonColors(),
-                                    modifier = Modifier.Companion.pointerHoverIcon(PointerIcon.Companion.Hand),
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 ) {
                                     Icon(
                                         if (editingMessage != null) Icons.Default.Edit else Icons.AutoMirrored.Filled.Send,
@@ -539,11 +539,11 @@ fun chatInputField(
 
                 // Bottom control toolbar (no divider, seamless integration)
                 Row(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.Companion.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Attach file button
                     themedTooltip(
@@ -552,15 +552,15 @@ fun chatInputField(
                         IconButton(
                             onClick = openFileDialog,
                             enabled = !isLoading,
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .size(36.dp)
-                                .pointerHoverIcon(PointerIcon.Companion.Hand),
+                                .pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             Icon(
                                 Icons.Default.AttachFile,
                                 contentDescription = stringResource("chat.attach.file.menu"),
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.Companion.size(20.dp),
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
@@ -583,9 +583,9 @@ fun chatInputField(
                             } else {
                                 IconButtonDefaults.iconButtonColors()
                             },
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .size(36.dp)
-                                .pointerHoverIcon(PointerIcon.Companion.Hand),
+                                .pointerHoverIcon(PointerIcon.Hand),
                         ) {
                             Icon(
                                 Icons.Default.Image,
@@ -595,7 +595,7 @@ fun chatInputField(
                                 } else {
                                     MaterialTheme.colorScheme.onSurface
                                 },
-                                modifier = Modifier.Companion.size(20.dp),
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
@@ -611,7 +611,7 @@ fun chatInputField(
                     )
 
                     // Spacer to push any future right-aligned controls
-                    Spacer(modifier = Modifier.Companion.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
 
                     // Future controls can be added here (e.g., character count, settings)
                 }
@@ -763,9 +763,9 @@ private fun toolsIndicatorButton(
             IconButton(
                 onClick = { showToolsPopup = true },
                 enabled = !isLoading,
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .size(36.dp)
-                    .pointerHoverIcon(PointerIcon.Companion.Hand),
+                    .pointerHoverIcon(PointerIcon.Hand),
             ) {
                 BadgedBox(
                     badge = {
@@ -798,7 +798,7 @@ private fun toolsIndicatorButton(
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         },
-                        modifier = Modifier.Companion.size(20.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -807,10 +807,10 @@ private fun toolsIndicatorButton(
         if (showToolsPopup) {
             Popup(
                 onDismissRequest = { showToolsPopup = false },
-                alignment = Alignment.Companion.BottomStart,
+                alignment = Alignment.BottomStart,
             ) {
                 Surface(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .widthIn(min = 300.dp, max = 420.dp)
                         .heightIn(max = 400.dp),
                     shape = MaterialTheme.shapes.medium,
@@ -819,19 +819,19 @@ private fun toolsIndicatorButton(
                     tonalElevation = 2.dp,
                 ) {
                     Column(
-                        modifier = Modifier.Companion.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         // Header
                         Row(
-                            modifier = Modifier.Companion.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Companion.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = stringResource("chat.tools.popup.title"),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Companion.Bold,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
 
@@ -841,14 +841,14 @@ private fun toolsIndicatorButton(
                         when {
                             isLoadingServers -> {
                                 Row(
-                                    modifier = Modifier.Companion.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
                                 ) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.Companion.size(24.dp),
+                                        modifier = Modifier.size(24.dp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Spacer(modifier = Modifier.Companion.width(8.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(stringResource("chat.tools.popup.loading"))
                                 }
                             }
@@ -868,7 +868,7 @@ private fun toolsIndicatorButton(
                             else -> {
                                 // List MCP servers
                                 Column(
-                                    modifier = Modifier.Companion
+                                    modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 300.dp)
                                         .verticalScroll(rememberScrollState()),
@@ -933,11 +933,11 @@ private fun mcpServerItem(
 
     Box {
         Card(
-            modifier = Modifier.Companion.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             colors = ComponentColors.surfaceVariantCardColors(),
         ) {
             Row(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .fillMaxWidth()
                     .clickable(
                         enabled = server.tools.isNotEmpty(),
@@ -946,18 +946,18 @@ private fun mcpServerItem(
                         onClick = { showToolsSubmenu = true },
                     )
                     .pointerHoverIcon(
-                        if (server.tools.isNotEmpty()) PointerIcon.Companion.Hand else PointerIcon.Companion.Default,
+                        if (server.tools.isNotEmpty()) PointerIcon.Hand else PointerIcon.Default,
                     )
                     .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Companion.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
                     checked = isEnabled,
                     onCheckedChange = { onToggle() },
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .size(36.dp)
-                        .pointerHoverIcon(PointerIcon.Companion.Hand)
+                        .pointerHoverIcon(PointerIcon.Hand)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -966,15 +966,15 @@ private fun mcpServerItem(
                 )
 
                 // Server info
-                Column(modifier = Modifier.Companion.weight(1f)) {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Companion.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = server.name,
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Companion.Medium,
+                            fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                         )
                         if (server.tools.isNotEmpty()) {
@@ -1016,7 +1016,7 @@ private fun mcpServerItem(
                         Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
-                        modifier = Modifier.Companion.size(20.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -1032,7 +1032,7 @@ private fun mcpServerItem(
             offset = DpOffset(x = 200.dp, y = (-48).dp),
         ) {
             Column(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .widthIn(min = 350.dp, max = 450.dp)
                     .heightIn(max = 400.dp)
                     .verticalScroll(rememberScrollState()),
@@ -1047,19 +1047,19 @@ private fun mcpServerItem(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     }
 
-                    Box(modifier = Modifier.Companion.background(rowBackground)) {
+                    Box(modifier = Modifier.background(rowBackground)) {
                         DropdownMenuItem(
                             text = {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.Companion.Top,
-                                    modifier = Modifier.Companion.padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.Top,
+                                    modifier = Modifier.padding(vertical = 6.dp),
                                 ) {
                                     Text(
                                         text = "${index + 1}.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.Companion.width(20.dp),
+                                        modifier = Modifier.width(20.dp),
                                     )
                                     Column(
                                         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -1074,7 +1074,7 @@ private fun mcpServerItem(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
-                                            overflow = TextOverflow.Companion.Ellipsis,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
                                 }
@@ -1095,25 +1095,25 @@ private fun fileAttachmentItem(
     onRemove: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.Companion.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         colors = ComponentColors.surfaceVariantCardColors(),
     ) {
         Row(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
-            verticalAlignment = Alignment.Companion.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
-                verticalAlignment = Alignment.Companion.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.Companion.weight(1f),
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,
                     contentDescription = null,
-                    modifier = Modifier.Companion.size(16.dp),
+                    modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Column {
@@ -1131,14 +1131,14 @@ private fun fileAttachmentItem(
             }
             IconButton(
                 onClick = onRemove,
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .size(24.dp)
-                    .pointerHoverIcon(PointerIcon.Companion.Hand),
+                    .pointerHoverIcon(PointerIcon.Hand),
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource("chat.attachment.remove"),
-                    modifier = Modifier.Companion.size(16.dp),
+                    modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }

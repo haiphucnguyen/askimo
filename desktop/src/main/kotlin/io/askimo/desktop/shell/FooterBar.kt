@@ -144,7 +144,7 @@ private fun providerButton(
         text = stringResource("system.ai.provider.tooltip", currentProvider.name),
     ) {
         Card(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .clickableCard { onConfigureProvider() }
                 .widthIn(min = 100.dp),
             colors = CardDefaults.cardColors(

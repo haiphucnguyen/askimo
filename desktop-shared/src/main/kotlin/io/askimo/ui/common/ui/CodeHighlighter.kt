@@ -120,7 +120,7 @@ object CodeHighlighter {
             lang in listOf("json") -> highlightJSON(code, theme)
             lang in listOf("xml", "html") -> highlightXML(code, theme)
             else -> buildAnnotatedString {
-                withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                     append(code)
                 }
             }
@@ -142,7 +142,7 @@ object CodeHighlighter {
             // Check for multi-line comment start/end
             if (line.trim().startsWith("/*")) inMultiLineComment = true
             if (inMultiLineComment) {
-                withStyle(SpanStyle(color = theme.comment, fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(color = theme.comment, fontFamily = FontFamily.Monospace)) {
                     append(line)
                 }
                 if (line.trim().endsWith("*/")) inMultiLineComment = false
@@ -161,7 +161,7 @@ object CodeHighlighter {
 
             // Process comment
             if (comment != null) {
-                withStyle(SpanStyle(color = theme.comment, fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(color = theme.comment, fontFamily = FontFamily.Monospace)) {
                     append(comment)
                 }
             }
@@ -186,7 +186,7 @@ object CodeHighlighter {
                 Triple(
                     match.range,
                     "string",
-                    SpanStyle(color = theme.string, fontFamily = FontFamily.Companion.Monospace),
+                    SpanStyle(color = theme.string, fontFamily = FontFamily.Monospace),
                 ),
             )
         }
@@ -197,7 +197,7 @@ object CodeHighlighter {
                 Triple(
                     match.range,
                     "number",
-                    SpanStyle(color = theme.number, fontFamily = FontFamily.Companion.Monospace),
+                    SpanStyle(color = theme.number, fontFamily = FontFamily.Monospace),
                 ),
             )
         }
@@ -212,8 +212,8 @@ object CodeHighlighter {
                         "keyword",
                         SpanStyle(
                             color = theme.keyword,
-                            fontWeight = FontWeight.Companion.Bold,
-                            fontFamily = FontFamily.Companion.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
                         ),
                     ),
                 )
@@ -223,7 +223,7 @@ object CodeHighlighter {
                         Triple(
                             match.range,
                             "function",
-                            SpanStyle(color = theme.function, fontFamily = FontFamily.Companion.Monospace),
+                            SpanStyle(color = theme.function, fontFamily = FontFamily.Monospace),
                         ),
                     )
             }
@@ -246,7 +246,7 @@ object CodeHighlighter {
         nonOverlapping.forEach { (range, _, style) ->
             // Append text before token
             if (currentIndex < range.first) {
-                withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                     append(line.substring(currentIndex, range.first))
                 }
             }
@@ -259,7 +259,7 @@ object CodeHighlighter {
 
         // Append remaining text
         if (currentIndex < line.length) {
-            withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+            withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                 append(line.substring(currentIndex))
             }
         }
@@ -273,19 +273,19 @@ object CodeHighlighter {
         val tokens = mutableListOf<Pair<IntRange, SpanStyle>>()
 
         stringPattern.findAll(code).forEach { match ->
-            tokens.add(match.range to SpanStyle(color = theme.string, fontFamily = FontFamily.Companion.Monospace))
+            tokens.add(match.range to SpanStyle(color = theme.string, fontFamily = FontFamily.Monospace))
         }
         boolNullPattern.findAll(code).forEach { match ->
             tokens.add(
                 match.range to SpanStyle(
                     color = theme.keyword,
-                    fontWeight = FontWeight.Companion.Bold,
-                    fontFamily = FontFamily.Companion.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
                 ),
             )
         }
         numberPattern.findAll(code).forEach { match ->
-            tokens.add(match.range to SpanStyle(color = theme.number, fontFamily = FontFamily.Companion.Monospace))
+            tokens.add(match.range to SpanStyle(color = theme.number, fontFamily = FontFamily.Monospace))
         }
 
         val sorted = tokens.sortedBy { it.first.first }
@@ -302,7 +302,7 @@ object CodeHighlighter {
         var currentIndex = 0
         nonOverlapping.forEach { (range, style) ->
             if (currentIndex < range.first) {
-                withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                     append(code.substring(currentIndex, range.first))
                 }
             }
@@ -313,7 +313,7 @@ object CodeHighlighter {
         }
 
         if (currentIndex < code.length) {
-            withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+            withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                 append(code.substring(currentIndex))
             }
         }
@@ -328,22 +328,22 @@ object CodeHighlighter {
         val tokens = mutableListOf<Pair<IntRange, SpanStyle>>()
 
         commentPattern.findAll(code).forEach { match ->
-            tokens.add(match.range to SpanStyle(color = theme.comment, fontFamily = FontFamily.Companion.Monospace))
+            tokens.add(match.range to SpanStyle(color = theme.comment, fontFamily = FontFamily.Monospace))
         }
         tagPattern.findAll(code).forEach { match ->
             tokens.add(
                 match.range to SpanStyle(
                     color = theme.keyword,
-                    fontWeight = FontWeight.Companion.Bold,
-                    fontFamily = FontFamily.Companion.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
                 ),
             )
         }
         attrPattern.findAll(code).forEach { match ->
-            tokens.add(match.range to SpanStyle(color = theme.function, fontFamily = FontFamily.Companion.Monospace))
+            tokens.add(match.range to SpanStyle(color = theme.function, fontFamily = FontFamily.Monospace))
         }
         stringPattern.findAll(code).forEach { match ->
-            tokens.add(match.range to SpanStyle(color = theme.string, fontFamily = FontFamily.Companion.Monospace))
+            tokens.add(match.range to SpanStyle(color = theme.string, fontFamily = FontFamily.Monospace))
         }
 
         val sorted = tokens.sortedBy { it.first.first }
@@ -360,7 +360,7 @@ object CodeHighlighter {
         var currentIndex = 0
         nonOverlapping.forEach { (range, style) ->
             if (currentIndex < range.first) {
-                withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+                withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                     append(code.substring(currentIndex, range.first))
                 }
             }
@@ -371,7 +371,7 @@ object CodeHighlighter {
         }
 
         if (currentIndex < code.length) {
-            withStyle(SpanStyle(fontFamily = FontFamily.Companion.Monospace)) {
+            withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                 append(code.substring(currentIndex))
             }
         }
