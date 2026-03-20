@@ -7,10 +7,6 @@ plugins {
 group = rootProject.group
 version = rootProject.version
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     api(libs.bundles.langchain4j)
 

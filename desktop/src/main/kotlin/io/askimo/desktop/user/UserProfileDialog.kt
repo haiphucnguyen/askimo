@@ -52,10 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.AskimoHome
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.components.secondaryButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File

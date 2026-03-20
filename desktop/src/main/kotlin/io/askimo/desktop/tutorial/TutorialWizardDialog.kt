@@ -45,12 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import io.askimo.desktop.common.components.linkButton
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.components.secondaryButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
+import io.askimo.ui.common.components.linkButton
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
 
 /**
  * Tutorial wizard dialog that guides users through key features.

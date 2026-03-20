@@ -81,60 +81,61 @@ import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
 import io.askimo.core.util.PersonalAskimoHome
 import io.askimo.core.util.ProcessBuilderExt
-import io.askimo.desktop.chat.ChatViewModel
-import io.askimo.desktop.chat.chatView
-import io.askimo.desktop.common.components.dangerButton
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.components.secondaryButton
-import io.askimo.desktop.common.dialog.errorDialog
-import io.askimo.desktop.common.dialog.updateCheckDialog
-import io.askimo.desktop.common.i18n.provideLocalization
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.keymap.KeyMapManager
-import io.askimo.desktop.common.keymap.KeyMapManager.AppShortcut
-import io.askimo.desktop.common.preferences.ApplicationPreferences
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.LocalFontScale
-import io.askimo.desktop.common.theme.ThemeMode
-import io.askimo.desktop.common.theme.ThemePreferences
-import io.askimo.desktop.common.theme.createCustomTypography
-import io.askimo.desktop.common.theme.getDarkColorScheme
-import io.askimo.desktop.common.theme.getLightColorScheme
-import io.askimo.desktop.common.ui.util.CustomUriHandler
 import io.askimo.desktop.di.allDesktopModules
-import io.askimo.desktop.project.ProjectsViewModel
-import io.askimo.desktop.project.editProjectDialog
-import io.askimo.desktop.project.newProjectDialog
-import io.askimo.desktop.project.projectView
-import io.askimo.desktop.project.projectsView
-import io.askimo.desktop.session.SessionManager
-import io.askimo.desktop.session.SessionsViewModel
-import io.askimo.desktop.session.command.DeleteSessionFromProjectCommand
-import io.askimo.desktop.session.exportSessionDialog
-import io.askimo.desktop.session.renameSessionDialog
-import io.askimo.desktop.session.sessionMemoryDialog
-import io.askimo.desktop.session.sessionsView
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.settings.aboutDialog
 import io.askimo.desktop.settings.fileViewerDialog
 import io.askimo.desktop.settings.providerSelectionDialog
 import io.askimo.desktop.settings.settingsViewWithSidebar
-import io.askimo.desktop.shell.ErrorDialogState
-import io.askimo.desktop.shell.NativeMenuBar
-import io.askimo.desktop.shell.UpdateViewModel
-import io.askimo.desktop.shell.eventLogPanel
-import io.askimo.desktop.shell.eventLogWindow
 import io.askimo.desktop.shell.footerBar
-import io.askimo.desktop.shell.globalErrorHandler
-import io.askimo.desktop.shell.globalSearchDialog
 import io.askimo.desktop.shell.navigationSidebar
-import io.askimo.desktop.shell.starPromptDialog
-import io.askimo.desktop.terminal.PendingTerminalCommand
-import io.askimo.desktop.terminal.terminalPanel
 import io.askimo.desktop.tutorial.languageSelectionDialog
 import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
 import io.askimo.desktop.user.welcomeProfileDialog
+import io.askimo.ui.chat.ChatViewModel
+import io.askimo.ui.chat.chatView
+import io.askimo.ui.common.components.dangerButton
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.dialog.errorDialog
+import io.askimo.ui.common.dialog.updateCheckDialog
+import io.askimo.ui.common.i18n.provideLocalization
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.keymap.KeyMapManager
+import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
+import io.askimo.ui.common.preferences.ApplicationPreferences
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.LocalFontScale
+import io.askimo.ui.common.theme.ThemeMode
+import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.theme.createCustomTypography
+import io.askimo.ui.common.theme.getDarkColorScheme
+import io.askimo.ui.common.theme.getLightColorScheme
+import io.askimo.ui.common.ui.util.CustomUriHandler
+import io.askimo.ui.project.ProjectsViewModel
+import io.askimo.ui.project.editProjectDialog
+import io.askimo.ui.project.newProjectDialog
+import io.askimo.ui.project.projectView
+import io.askimo.ui.project.projectsView
+import io.askimo.ui.session.SessionManager
+import io.askimo.ui.session.SessionsViewModel
+import io.askimo.ui.session.command.DeleteSessionFromProjectCommand
+import io.askimo.ui.session.exportSessionDialog
+import io.askimo.ui.session.renameSessionDialog
+import io.askimo.ui.session.sessionMemoryDialog
+import io.askimo.ui.session.sessionsView
+import io.askimo.ui.shell.ErrorDialogState
+import io.askimo.ui.shell.EventLogDockPosition
+import io.askimo.ui.shell.NativeMenuBar
+import io.askimo.ui.shell.UpdateViewModel
+import io.askimo.ui.shell.eventLogPanel
+import io.askimo.ui.shell.eventLogWindow
+import io.askimo.ui.shell.globalErrorHandler
+import io.askimo.ui.shell.globalSearchDialog
+import io.askimo.ui.shell.starPromptDialog
+import io.askimo.ui.terminal.PendingTerminalCommand
+import io.askimo.ui.terminal.terminalPanel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
@@ -262,15 +263,6 @@ fun main() {
             app(frameWindowScope = this@Window, windowState = windowState)
         }
     }
-}
-
-/**
- * Position where the Event Log panel can be docked
- */
-enum class EventLogDockPosition {
-    BOTTOM,
-    LEFT,
-    RIGHT,
 }
 
 /**

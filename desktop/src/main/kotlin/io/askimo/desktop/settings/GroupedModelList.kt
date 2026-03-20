@@ -26,8 +26,8 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.ui.clickableCard
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.ui.clickableCard
 
 /**
  * Groups a list of model names by their family.

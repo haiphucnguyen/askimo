@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <b><a href="https://askimo.chat">askimo.chat</a></b> · Local-first AI agent platform — chat, search, run, automate.
+  <b><a href="https://askimo.chat">askimo.chat</a></b> · Local-first AI agent platform: chat, search, run, automate.
 </p>
 
 <p align="center">
@@ -58,88 +58,64 @@
 
 ---
 
-## 🚀 What is Askimo?
+## What is Askimo?
 
-**Askimo is a local-first AI agent platform** — a desktop app and CLI that connects any AI model to your files, tools, and workflows.
+Askimo is a local-first AI desktop app and CLI. It connects AI models to your local files, tools, and workflows without routing data through a cloud service.
 
-Go beyond chatting: Askimo can search your documents and code with smart RAG, execute Python, Bash, and JavaScript scripts it writes itself, call external tools and services via MCP, analyze images, and remember every conversation — all without your data leaving your machine.
-
-Think of it as a personal AI workbench: use Claude for code reviews, GPT-4o for document analysis, a free local Ollama model for quick tasks, and let all of them share the same knowledge base. Switch between models in a single click, even mid-conversation.
+It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), persistent chat sessions backed by SQLite, document and code search via hybrid RAG (BM25 + vector), MCP tool integration, and a script runner that executes Python, Bash, and JavaScript inline. All state lives on disk.
 
 ---
 
-## Why Choose Askimo?
+## Features
 
-✅ **Multi-model in one place** — Switch between ChatGPT, Claude, Gemini, Grok, Ollama & more, even mid-session  
-✅ **Smart document search (RAG)** — Index local folders, files, and web URLs; an AI classifier decides when retrieval is actually needed, cutting unnecessary searches by ~67%  
-✅ **Run code the AI writes** — Execute Python, Bash, and JavaScript directly from chat with one click; Python auto-installs its own dependencies  
-✅ **Vision & image support** — Attach screenshots, diagrams, or photos; multimodal models analyze them right in the conversation  
-✅ **Extend with MCP tools** — Connect any MCP-compatible server (filesystems, databases, Git, custom APIs) via stdio or HTTP at the global or per-project level  
-✅ **Automate with Recipes** — YAML-based prompt templates with variables, file I/O, and post-actions for CLI automation  
-✅ **Local-first & private** — Conversations, indexes, and telemetry live entirely on your machine  
-✅ **Usage & cost tracking** — Built-in local telemetry: tokens used, estimated cost, and RAG performance per provider  
-✅ **Free & open source** — AGPLv3, forever
+- **Multi-provider** - Configure and switch between cloud and local AI providers per session. Supported: OpenAI, Anthropic, Google Gemini, xAI Grok, Ollama, LM Studio, LocalAI, Docker AI, and any OpenAI-compatible endpoint
+- **Persistent sessions** - Conversations are stored in a local SQLite database and restored on restart
+- **RAG** - Index local folders, files, and web URLs. Uses hybrid BM25 + vector retrieval with an AI-based classifier that skips retrieval when the query does not need it
+- **Script runner** - Execute Python, Bash, and JavaScript directly from chat. Python scripts run in an auto-managed virtualenv with automatic dependency installation
+- **Vision** - Attach images to conversations; works with any multimodal model
+- **MCP tool integration** - Connect MCP-compatible servers via stdio or HTTP, scoped globally or per project
+- **Recipe automation (CLI)** - Define prompt templates in YAML with variables, file I/O, and post-actions. Run with `askimo -r <recipe> [args]`
+- **Local telemetry** - Tracks token usage, estimated cost, and RAG performance per provider. Nothing is uploaded
+- **i18n** - UI available in English, Chinese (Simplified and Traditional), Japanese, Korean, French, Spanish, German, Portuguese, and Vietnamese
 
 ---
 
 ## Supported Providers
 
-**Cloud:** OpenAI · Claude · Gemini · Grok (xAI)  
+**Cloud:** OpenAI · Anthropic Claude · Google Gemini · xAI Grok  
 **Local:** Ollama · LM Studio · LocalAI · Docker AI
 
-*Works with any OpenAI-compatible endpoint.*
-
-## 🚀 Quick Start
-
-**[Download Askimo for your operating system →](https://askimo.chat/download/)**
-
-Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM64 & x64).
-
-**After installation:** Open Askimo, add your API keys (or connect to Ollama for local models), and start chatting. [**Setup guide →**](https://askimo.chat/docs/desktop/ai-providers/)
-
-### System Requirements
-
-- **Memory**: 50-300 MB for Askimo itself (AI models require additional memory)
-- **Operating System**: 
-  - macOS 11.0 (Big Sur) or later
-  - Windows 10 or later
-  - Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+, or compatible)
-- **Disk Space**: 250 MB for application
+Works with any OpenAI-compatible endpoint via custom base URL.
 
 ---
 
-### 🎬 See It in Action
+## Quick Start
 
-**💬 AI Chat with RAG:** Ask questions about your files, documents, and code using any AI model
+**[Download for macOS, Windows, or Linux →](https://askimo.chat/download/)**
+
+After installation, open Askimo, configure a provider (API key for cloud models, or point it at a running Ollama instance), and start a session. [Setup guide →](https://askimo.chat/docs/desktop/ai-providers/)
+
+### System Requirements
+
+- **Memory**: 50-300 MB (AI models require additional memory depending on the provider)
+- **OS**: macOS 11+, Windows 10+, Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+)
+- **Disk**: 250 MB for the application
+
+---
+
+## Screenshots and Demos
+
+**RAG:**
 
 [![Askimo RAG Demo](public/askimo_rag_1280.gif)](public/askimo_rag_1920.gif)
 
-**🐍 One-Click Code Execution:** Ask AI to write a Python, Bash, or JavaScript script — a ▶ Run button appears inline. Python auto-installs missing packages. No copy-paste, no manual setup.
+**Script runner:**
 
 [![Askimo Run Script Demo](public/askimo_run_script_1280.gif)](public/askimo_run_script_1920.gif)
 
-**🔌 MCP Tools in Action:** Connect any MCP-compatible server and let the AI call real tools — query databases, read files, call APIs, and automate workflows directly from chat.
+**MCP tools:**
 
 [![Askimo MCP Demo](public/askimo_mcp_1280.gif)](public/askimo_mcp_1920.gif)
-
-### 🎯 What You Get
-
-- 🖥️ **Never Lose Your Conversations** — Your chats stay open even after closing the app or restarting your computer. No more "lost tab" frustration
-- 🔄 **Use the Best AI for Each Task** — Need help with code? Use Claude. General questions? Try ChatGPT. Writing a quick email? Use a free local model. Switch instantly between different AIs
-- 🔒 **Complete Privacy** — Everything stays on your computer. Your conversations, your data, your control. Nothing is sent to the cloud unless you choose to ask an AI
-- 🧠 **Smart Document Search (RAG)** — Point Askimo to local folders, individual files, or web URLs and ask questions about your actual content. A hybrid BM25 + vector search engine retrieves the most relevant context, and an AI classifier skips retrieval entirely when it isn't needed — keeping responses fast and accurate
-- ⚙️ **Run Code the AI Writes** — Ask AI to write a Python, Bash, or JavaScript script, then run it with one click. Python scripts automatically create a managed virtualenv and install any missing packages. No setup required
-- 🔌 **MCP Tool Integrations** — Connect any MCP-compatible server (filesystem, databases, Git, custom APIs) via stdio or HTTP — at the global level or scoped to a specific project
-- 📋 **Recipe Automation (CLI)** — Save prompt templates as YAML recipes with input variables, file I/O, and post-actions. Run them in one command: `askimo -r myrecipe arg1 arg2`
-- ⭐ **Stay Organized** — Star your favorite conversations, search through everything you've ever asked, and keep work separate from personal chats
-- 📊 **Beautiful Formatting** — See code with syntax highlighting, tables, diagrams, and properly formatted text. Copy and paste ready to use
-- 🎯 **Save Your Favorite Prompts** — Create reusable templates for things you ask often. One click to use your "proofreader" or "code reviewer" assistant
-- ⚡ **Work Fast** — Keyboard shortcuts for everything. Create new chats, switch AIs, and search without touching your mouse
-- 📈 **Local Usage & Cost Telemetry** — Track tokens used, estimated cost, RAG hit rate, and response times per provider. All data stays on your machine — nothing is uploaded
-- 💾 **Export Everything** — Download your conversations as documents. Share insights or keep backups however you want
-
-
-**Screenshots:**
 
 <p align="center">
   <img src="public/desktop_ai_provider_switcher.png" alt="Provider Switching" width="45%">
@@ -149,11 +125,10 @@ Installers available for macOS (Apple Silicon & Intel), Windows, and Linux (ARM6
 
 ---
 
-## ⚡ Command Line Tool (Optional)
+## CLI (Optional)
 
-**For advanced users:** Askimo also works from the command line, perfect for automating repetitive tasks.
+Askimo also ships as a native CLI binary built with GraalVM. Useful for scripting, automation, and headless environments.
 
-**Installation:**
 ```bash
 # macOS/Linux
 curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.sh | bash
@@ -162,95 +137,68 @@ curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/inst
 iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex
 ```
 
-[**Learn more about the command line tool →**](https://askimo.chat/cli/)
+[CLI documentation →](https://askimo.chat/cli/)
 
 ---
 
-## 🛠️ Developer Setup
-
-Want to build and run Askimo from source? Here's how to get started:
+## Building from Source
 
 ### Prerequisites
 
-- **JDK 21** or later
-- **Git** for cloning the repository
+- JDK 21+
+- Git
 
-### Clone & Build
+### Build
 
 ```bash
-# Clone the repository
 git clone https://github.com/haiphucnguyen/askimo.git
 cd askimo
 
-# Run the desktop application
+# Run the desktop app
 ./gradlew :desktop:run
 
 # Build native installers
 ./gradlew :desktop:package
+
+# Build CLI native binary (requires GraalVM)
+./gradlew :cli:nativeImage
 ```
 
 ### Project Structure
 
-- **`desktop/`** - Desktop application (Kotlin + Compose Multiplatform)
-- **`cli/`** - Command-line interface (JLine3 REPL + GraalVM native image)
-- **`shared/`** - Core business logic: LLM providers, RAG, MCP, memory, tools
+- **`desktop/`** - Compose Multiplatform desktop application
+- **`desktop-shared/`** - Shared UI components usable across products
+- **`cli/`** - JLine3 REPL and GraalVM native image
+- **`shared/`** - Core logic: providers, RAG, MCP, memory, tools, database
 
-### Contributing
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, code style, and DCO requirements.
 
-Ready to contribute? Check out our [**Contributing Guide**](./CONTRIBUTING.md) for detailed development guidelines, code standards, and how to submit pull requests.
-
-> **📚 Note:** For detailed information on customizing Askimo, building from source, and development workflows, follow the [**Development Getting Started Guide**](https://askimo.chat/docs/development/getting-started/).
-
----
-
-## 🌐 Available in Your Language
-
-Askimo speaks your language! The entire app interface is available in:
-
-🇺🇸 English • 🇨🇳 Chinese (Simplified & Traditional) • 🇯🇵 Japanese • 🇰🇷 Korean • 🇫🇷 French • 🇪🇸 Spanish • 🇩🇪 German • 🇧🇷 Portuguese • 🇻🇳 Vietnamese
-
-More languages coming soon. Want to help translate? [Let us know!](https://github.com/haiphucnguyen/askimo/discussions)
+> For full developer documentation, see the [Development Getting Started Guide](https://askimo.chat/docs/development/getting-started/).
 
 ---
 
-## 🤝 Need Help or Want to Contribute?
+## Localization
 
-### Get Help
+UI is available in: English, Chinese (Simplified and Traditional), Japanese, Korean, French, Spanish, German, Portuguese, Vietnamese.
 
-- 📖 **[User Guide](https://askimo.chat/docs/)** - Step-by-step instructions and tips
-- 💬 **[Community Forum](https://github.com/haiphucnguyen/askimo/discussions)** - Ask questions, share your experience, get help from other users
-- 🐛 **[Report a Problem](https://github.com/haiphucnguyen/askimo/issues)** - Something not working? Let us know
-- 📧 **Email Us** - Need private help? Contact support@askimo.chat
-
-### Ways to Contribute
-
-We'd love your help making Askimo better! Here are some easy ways to get involved:
-
-- ⭐ **Star the repo** - A quick click at the top helps others discover Askimo
-- 🐛 **Report bugs** - Found something broken? [Tell us about it](https://github.com/haiphucnguyen/askimo/issues/new?template=bug_report.md)
-- 💡 **Share ideas** - Have a suggestion? [We want to hear it](https://github.com/haiphucnguyen/askimo/issues/new?template=feature_request.md)
-- 🌍 **Help translate** - Know another language? Help make Askimo available to more people
-- 💻 **Contribute code** - Comfortable with coding? Check our [Contributing Guide](./CONTRIBUTING.md)
-- 📝 **Improve documentation** - Spot a typo or confusing explanation? Fix it!
-
-No contribution is too small - we appreciate all help! 🙌
+Want to add a language? [Open a discussion](https://github.com/haiphucnguyen/askimo/discussions).
 
 ---
 
-## ❤️ Enjoying Askimo?
+## Getting Help
 
-If you find Askimo helpful, here are a few simple ways to show support:
-
-* **Star the repo** - A quick ⭐️ at the top helps a lot and keeps the project growing.
-
-* **Contribute** - Spot a bug or want to improve something? Pull requests are always welcome.
-
-* **Share feedback** - Got ideas or suggestions? Feel free to open an issue or start a discussion.
-
-Thanks for being part of the journey! 🙌
+- [Documentation](https://askimo.chat/docs/)
+- [GitHub Discussions](https://github.com/haiphucnguyen/askimo/discussions)
+- [Issue Tracker](https://github.com/haiphucnguyen/askimo/issues)
 
 ---
 
-## 📄 License
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+---
+
+## License
 
 AGPLv3. See [LICENSE](./LICENSE).

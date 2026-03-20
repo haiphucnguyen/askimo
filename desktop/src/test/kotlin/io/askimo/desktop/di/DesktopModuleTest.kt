@@ -9,11 +9,10 @@ import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
-import io.askimo.desktop.common.monitoring.SystemResourceMonitor
-import io.askimo.desktop.session.SessionManager
-import io.askimo.desktop.session.SessionsViewModel
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.test.extensions.AskimoTestHome
+import io.askimo.ui.session.SessionManager
+import io.askimo.ui.session.SessionsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.jupiter.api.AfterEach
@@ -61,7 +60,6 @@ class DesktopModuleTest : KoinTest {
 
         // Verify services can be retrieved
         assertNotNull(koin.get<AppContext>())
-        assertNotNull(koin.get<SystemResourceMonitor>())
         assertNotNull(koin.get<SessionManager>())
         assertNotNull(koin.get<ChatSessionService>())
         assertNotNull(koin.get<ChatSessionExporterService>())

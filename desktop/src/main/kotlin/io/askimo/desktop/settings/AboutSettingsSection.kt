@@ -39,11 +39,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
-import io.askimo.desktop.common.components.linkButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
-import io.askimo.desktop.common.theme.ThemePreferences
+import io.askimo.ui.common.components.linkButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
+import io.askimo.ui.common.theme.ThemePreferences
 import java.awt.Desktop
 import java.net.URI
 import java.time.Year

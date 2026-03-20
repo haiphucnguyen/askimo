@@ -43,14 +43,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.FontSettings
-import io.askimo.desktop.common.theme.FontSize
-import io.askimo.desktop.common.theme.Spacing
-import io.askimo.desktop.common.theme.ThemePreferences
-import io.askimo.desktop.common.ui.clickableCard
-import io.askimo.desktop.common.ui.themedTooltip
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.FontSettings
+import io.askimo.ui.common.theme.FontSize
+import io.askimo.ui.common.theme.Spacing
+import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.clickableCard
+import io.askimo.ui.common.ui.themedTooltip
 
 @Composable
 fun generalSettingsSection() {

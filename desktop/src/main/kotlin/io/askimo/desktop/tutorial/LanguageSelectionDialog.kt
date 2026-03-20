@@ -33,11 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.i18n.LocalizationManager
-import io.askimo.desktop.common.components.primaryButton
-import io.askimo.desktop.common.i18n.stringResource
-import io.askimo.desktop.common.theme.ComponentColors
-import io.askimo.desktop.common.theme.Spacing
-import io.askimo.desktop.common.ui.clickableCard
+import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.Spacing
+import io.askimo.ui.common.ui.clickableCard
 import java.util.Locale
 
 /**
