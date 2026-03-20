@@ -80,7 +80,6 @@ import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
 import io.askimo.core.util.PersonalAskimoHome
-import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.desktop.di.allDesktopModules
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.settings.aboutDialog
@@ -110,6 +109,7 @@ import io.askimo.ui.common.theme.LocalFontScale
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.theme.createCustomTypography
+import io.askimo.ui.common.theme.detectMacOSDarkMode
 import io.askimo.ui.common.theme.getDarkColorScheme
 import io.askimo.ui.common.theme.getLightColorScheme
 import io.askimo.ui.common.ui.util.CustomUriHandler
@@ -158,36 +158,6 @@ import java.util.Locale
 import java.util.UUID
 import javax.swing.JFileChooser
 import kotlin.system.exitProcess
-
-/**
- * Detects if macOS is in dark mode by querying system defaults.
- * This is more reliable than AWT properties which often return null.
- */
-fun detectMacOSDarkMode(): Boolean {
-    return try {
-        val osName = System.getProperty("os.name")
-        if (!osName.contains("Mac", ignoreCase = true)) {
-            return false
-        }
-
-        val process =
-            ProcessBuilderExt(
-                "defaults",
-                "read",
-                "-g",
-                "AppleInterfaceStyle",
-            ).start()
-
-        val result = process.inputStream.bufferedReader().readText().trim()
-        val exitCode = process.waitFor()
-
-        // If the command succeeds and returns "Dark", we're in dark mode
-        // If the command fails (exit code != 0), the key doesn't exist, meaning light mode
-        exitCode == 0 && result.equals("Dark", ignoreCase = true)
-    } catch (_: Exception) {
-        false
-    }
-}
 
 private val log = currentFileLogger()
 

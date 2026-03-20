@@ -179,55 +179,59 @@ object LocalizationManager {
     /**
      * Load properties file for the current locale with UTF-8 encoding.
      * Supports both language_country (ja_JP) and language-only (ja) formats.
+     *
+     * Loading order (later layers override earlier ones):
+     *   1. Base English default  → i18n/messages.properties             (from desktop-shared JAR)
+     *   2. Locale translation    → i18n/messages_{locale}.properties     (from desktop-shared JAR)
+     *   3. App override (EN)     → i18n/messages_override.properties     (from the app's own resources)
+     *   4. App override (locale) → i18n/messages_override_{locale}.properties (from the app's own resources)
+     *
+     * Only keys present in the override files need to be listed — everything else falls back to the base.
      */
     private fun getProperties(): Properties {
         val language = currentLocale.language
         val country = currentLocale.country
 
         // Use language_country format if country is present, otherwise just language
-        val localeKey = if (country.isNotEmpty()) {
-            "${language}_$country"
-        } else {
-            language
-        }
+        val localeKey = if (country.isNotEmpty()) "${language}_$country" else language
 
         return loadedBundles.getOrPut(localeKey) {
             val properties = Properties()
 
-            // Try to load locale-specific file first (e.g., messages_ja_JP.properties)
-            val localizedPath = if (localeKey.isNotEmpty() && localeKey != "en") {
-                "i18n/messages_$localeKey.properties"
-            } else {
-                null
+            // Layer 1: base English strings (always loaded first as fallback)
+            loadInto(properties, "i18n/messages.properties")
+
+            // Layer 2: locale-specific translation (overlaid on top of English)
+            if (localeKey.isNotEmpty() && localeKey != "en") {
+                loadInto(properties, "i18n/messages_$localeKey.properties")
             }
 
-            // Load localized file if it exists
-            if (localizedPath != null) {
-                try {
-                    this::class.java.classLoader.getResourceAsStream(localizedPath)?.use { stream ->
-                        stream.reader(Charsets.UTF_8).use { reader ->
-                            properties.load(reader)
-                        }
-                    }
-                } catch (e: Exception) {
-                    println("ERROR: Failed to load $localizedPath: ${e.message}")
-                }
-            }
+            // Layer 3: app-specific English overrides (premium / white-label differences)
+            loadInto(properties, "i18n/messages_override.properties")
 
-            // If no translations found, load default (English)
-            if (properties.isEmpty) {
-                try {
-                    this::class.java.classLoader.getResourceAsStream("i18n/messages.properties")?.use { stream ->
-                        stream.reader(Charsets.UTF_8).use { reader ->
-                            properties.load(reader)
-                        }
-                    }
-                } catch (e: Exception) {
-                    // Return empty properties if even default fails
-                }
+            // Layer 4: app-specific locale overrides
+            if (localeKey.isNotEmpty() && localeKey != "en") {
+                loadInto(properties, "i18n/messages_override_$localeKey.properties")
             }
 
             properties
+        }
+    }
+
+    /**
+     * Load a properties file from the classpath into an existing Properties object.
+     * Missing files are silently ignored — this is intentional so that apps that don't
+     * ship override files don't need any special configuration.
+     */
+    private fun loadInto(properties: Properties, path: String) {
+        try {
+            this::class.java.classLoader.getResourceAsStream(path)?.use { stream ->
+                stream.reader(Charsets.UTF_8).use { reader ->
+                    properties.load(reader)
+                }
+            }
+        } catch (e: Exception) {
+            // Silently ignore missing files — not all layers are required
         }
     }
 }

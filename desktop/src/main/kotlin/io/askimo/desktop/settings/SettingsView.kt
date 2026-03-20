@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.ComponentColors
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.settings.generalSettingsSection
+import io.askimo.ui.settings.shortcutsSettingsSection
 import org.jetbrains.skia.Image
 import java.awt.Cursor
 

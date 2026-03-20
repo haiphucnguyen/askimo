@@ -204,20 +204,24 @@ graalvmNative {
 }
 
 // Remove macOS quarantine before compilation to prevent GraalVM component blocking
+fun runXattr(vararg args: String) {
+    try {
+        ProcessBuilder("xattr", *args)
+            .inheritIO()
+            .start()
+            .waitFor()
+    } catch (_: Exception) {
+        // Ignore errors — xattr may not exist or attribute may not be set
+    }
+}
+
 tasks.named("nativeCompile") {
     doFirst {
         if (System.getProperty("os.name").contains("Mac", ignoreCase = true)) {
             val nativeDir = file("build/native")
             if (nativeDir.exists()) {
-                try {
-                    exec {
-                        commandLine("xattr", "-dr", "com.apple.quarantine", nativeDir.absolutePath)
-                        isIgnoreExitValue = true
-                    }
-                    println("🔓 Pre-cleared quarantine from build/native directory")
-                } catch (e: Exception) {
-                    // Ignore errors
-                }
+                runXattr("-dr", "com.apple.quarantine", nativeDir.absolutePath)
+                println("🔓 Pre-cleared quarantine from build/native directory")
             }
         }
     }
@@ -227,24 +231,12 @@ tasks.named("nativeCompile") {
             val nativeDir = file("build/native")
             val binary = file("build/native/nativeCompile/askimo")
 
-            try {
-                // Remove quarantine from entire native build directory
-                exec {
-                    commandLine("xattr", "-dr", "com.apple.quarantine", nativeDir.absolutePath)
-                    isIgnoreExitValue = true
-                }
-                println("✅ Removed quarantine from all native build artifacts")
+            runXattr("-dr", "com.apple.quarantine", nativeDir.absolutePath)
+            println("✅ Removed quarantine from all native build artifacts")
 
-                // Also specifically remove from the binary
-                if (binary.exists()) {
-                    exec {
-                        commandLine("xattr", "-d", "com.apple.quarantine", binary.absolutePath)
-                        isIgnoreExitValue = true
-                    }
-                    println("✅ Removed quarantine from binary: ${binary.name}")
-                }
-            } catch (e: Exception) {
-                println("⚠️  Could not remove quarantine attribute (this is normal if it doesn't exist)")
+            if (binary.exists()) {
+                runXattr("-d", "com.apple.quarantine", binary.absolutePath)
+                println("✅ Removed quarantine from binary: ${binary.name}")
             }
         }
     }
