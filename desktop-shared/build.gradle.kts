@@ -5,6 +5,9 @@ plugins {
     `maven-publish`
 }
 
+group = rootProject.group
+version = rootProject.version
+
 publishing {
     publications {
         create<MavenPublication>("maven") {

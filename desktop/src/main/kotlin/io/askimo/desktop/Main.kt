@@ -48,7 +48,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
@@ -997,8 +996,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     if (showTerminalPanel) {
                         terminalPanel(
                             onClose = { showTerminalPanel = false },
-                            size = terminalPanelSize,
-                            onSizeChange = { newSize -> terminalPanelSize = newSize },
+                            panelHeight = terminalPanelSize,
+                            onHeightChange = { newSize -> terminalPanelSize = newSize },
                             pendingCommand = pendingTerminalCommand,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -1700,24 +1699,4 @@ fun mainContent(
             }
         }
     }
-}
-
-/**
- * Terminal panel with resizable height
- */
-@Composable
-private fun terminalPanel(
-    onClose: () -> Unit,
-    size: Dp,
-    onSizeChange: (Dp) -> Unit,
-    pendingCommand: PendingTerminalCommand?,
-    modifier: Modifier = Modifier,
-) {
-    terminalPanel(
-        onClose = onClose,
-        panelHeight = size,
-        onHeightChange = onSizeChange,
-        pendingCommand = pendingCommand,
-        modifier = modifier.fillMaxWidth(),
-    )
 }
