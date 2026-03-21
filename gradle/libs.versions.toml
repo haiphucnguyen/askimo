@@ -33,96 +33,95 @@ jediterm = "3.61"
 
 [libraries]
 # JLine
-jline = { group = "org.jline", name = "jline", version.ref = "jline" }
-jline-terminal-jansi = { group = "org.jline", name = "jline-terminal-jansi", version.ref = "jline" }
+jline = { module = "org.jline:jline", version.ref = "jline" }
+jline-terminal-jansi = { module = "org.jline:jline-terminal-jansi", version.ref = "jline" }
 
 # GraalVM Native Image (SVM)
-graalvm-nativeimage-svm = { group = "org.graalvm.nativeimage", name = "svm", version.ref = "graalvmSvm" }
+graalvm-nativeimage-svm = { module = "org.graalvm.nativeimage:svm", version.ref = "graalvmSvm" }
 
 # LangChain4j
-langchain4j = { group = "dev.langchain4j", name = "langchain4j", version.ref = "langchain4j" }
-langchain4j-open-ai = { group = "dev.langchain4j", name = "langchain4j-open-ai", version.ref = "langchain4j" }
-langchain4j-google-ai-gemini = { group = "dev.langchain4j", name = "langchain4j-google-ai-gemini", version.ref = "langchain4j" }
-langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
-langchain4j-http-client = { group = "dev.langchain4j", name = "langchain4j-http-client-jdk", version.ref = "langchain4j" }
-langchain4j-jvector = { group = "dev.langchain4j", name = "langchain4j-community-jvector", version.ref = "langchain4j-extra" }
-langchain4j-agentic = { group = "dev.langchain4j", name = "langchain4j-agentic", version.ref = "langchain4j-extra" }
-langchain4j-mcp = { group = "dev.langchain4j", name = "langchain4j-mcp", version.ref = "langchain4j-extra" }
-langchain4j-mcp-docker = { group = "dev.langchain4j", name = "langchain4j-mcp-docker", version.ref = "langchain4j-extra" }
+langchain4j = { module = "dev.langchain4j:langchain4j", version.ref = "langchain4j" }
+langchain4j-open-ai = { module = "dev.langchain4j:langchain4j-open-ai", version.ref = "langchain4j" }
+langchain4j-google-ai-gemini = { module = "dev.langchain4j:langchain4j-google-ai-gemini", version.ref = "langchain4j" }
+langchain4j-anthropic = { module = "dev.langchain4j:langchain4j-anthropic", version.ref = "langchain4j" }
+langchain4j-http-client = { module = "dev.langchain4j:langchain4j-http-client-jdk", version.ref = "langchain4j" }
+langchain4j-jvector = { module = "dev.langchain4j:langchain4j-community-jvector", version.ref = "langchain4j-extra" }
+langchain4j-agentic = { module = "dev.langchain4j:langchain4j-agentic", version.ref = "langchain4j-extra" }
+langchain4j-mcp = { module = "dev.langchain4j:langchain4j-mcp", version.ref = "langchain4j-extra" }
+langchain4j-mcp-docker = { module = "dev.langchain4j:langchain4j-mcp-docker", version.ref = "langchain4j-extra" }
 
 # Markdown
-commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
-commonmark-ext-gfm-tables = { group = "org.commonmark", name = "commonmark-ext-gfm-tables", version.ref = "commonmark" }
-commonmark-ext-autolink = { group = "org.commonmark", name = "commonmark-ext-autolink", version.ref = "commonmark" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
 
 # LaTeX Rendering
-jlatexmath = { group = "org.scilab.forge", name = "jlatexmath", version.ref = "jlatexmath" }
+jlatexmath = { module = "org.scilab.forge:jlatexmath", version.ref = "jlatexmath" }
 
 # Terminal (JediTerm & PTY4J)
-pty4j = { group = "org.jetbrains.pty4j", name = "pty4j", version.ref = "pty4j" }
-jediterm-ui = { group = "org.jetbrains.jediterm", name = "jediterm-ui", version.ref = "jediterm" }
-jediterm-core = { group = "org.jetbrains.jediterm", name = "jediterm-core", version.ref = "jediterm" }
+pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
+jediterm-ui = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "jediterm" }
+jediterm-core = { module = "org.jetbrains.jediterm:jediterm-core", version.ref = "jediterm" }
 
 # Image Loading (Coil)
-coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
-coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 
 # Jackson
-jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
-jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
-jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jackson" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 
 # Kotlinx Serialization
-kotlinx-serialization-json-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-json-jvm = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm", version.ref = "kotlinxSerializationJson" }
+
 # Kotlinx Coroutines
-kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
 # Caffeine Cache
-caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 
 # HTML Parser
-jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 # Logging
-slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
-logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 # Apache Tika (File type detection and content extraction)
-tika-core = { group = "org.apache.tika", name = "tika-core", version.ref = "tika" }
-tika-parser-pdf = { group = "org.apache.tika", name = "tika-parser-pdf-module", version.ref = "tika" }
-tika-parser-microsoft = { group = "org.apache.tika", name = "tika-parser-microsoft-module", version.ref = "tika" }
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+tika-parser-pdf = { module = "org.apache.tika:tika-parser-pdf-module", version.ref = "tika" }
+tika-parser-microsoft = { module = "org.apache.tika:tika-parser-microsoft-module", version.ref = "tika" }
 
 # Apache Lucene
-lucene-core = { group = "org.apache.lucene", name = "lucene-core", version.ref = "lucene" }
-lucene-queryparser = { group = "org.apache.lucene", name = "lucene-queryparser", version.ref = "lucene" }
-lucene-backward-codecs = { group = "org.apache.lucene", name = "lucene-backward-codecs", version.ref = "lucene" }
+lucene-core = { module = "org.apache.lucene:lucene-core", version.ref = "lucene" }
+lucene-queryparser = { module = "org.apache.lucene:lucene-queryparser", version.ref = "lucene" }
+lucene-backward-codecs = { module = "org.apache.lucene:lucene-backward-codecs", version.ref = "lucene" }
 
-# Database and MCP SDK
-sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
-hikaricp = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikaricp" }
+# Database
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 
 # Exposed ORM
-exposed-core = { group = "org.jetbrains.exposed", name = "exposed-core", version.ref = "exposed" }
-exposed-jdbc = { group = "org.jetbrains.exposed", name = "exposed-jdbc", version.ref = "exposed" }
-exposed-java-time = { group = "org.jetbrains.exposed", name = "exposed-java-time", version.ref = "exposed" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time", version.ref = "exposed" }
 
 # Koin DI
-koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
-koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
-koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", version.ref = "koin" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+koin-test-junit5 = { module = "io.insert-koin:koin-test-junit5", version.ref = "koin" }
 
 # Konform Validation
-konform = { group = "io.konform", name = "konform", version.ref = "konform" }
+konform = { module = "io.konform:konform", version.ref = "konform" }
 
 # Testing
-junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitBom" }
-junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
-
-# Ollama Testcontainers
-testcontainers-ollama = { group = "org.testcontainers", name = "ollama", version.ref = "testcontainers" }
-testcontainers-junit-jupiter = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }
-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
-kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junitBom" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+testcontainers-ollama = { module = "org.testcontainers:ollama", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
 [bundles]
 langchain4j = [

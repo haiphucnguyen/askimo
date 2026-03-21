@@ -25,50 +25,34 @@ import io.askimo.core.providers.xai.XAiModelFactory
 
 /**
  * Central registry for managing chat model factories across different AI providers.
- *
- * This singleton object maintains a registry of model factories for different providers
- * (like OpenAI, Ollama) and provides methods to:
- * - Register new model factories
- * - Retrieve factories for specific providers
- * - Get available models for a provider
- * - Create chat model instances with appropriate configuration
- *
- * The registry is initialized with default factories for known providers.
+ * Mutable to allow downstream apps (e.g. Askimo Pro) to register additional factories
+ * via [register] without modifying this shared module.
  */
 object ProviderRegistry {
-    /**
-     * Internal registry mapping model providers to their respective factory implementations.
-     */
-    private val factories: Map<ModelProvider, ChatModelFactory<*>> =
-        mapOf(
-            OPENAI to OpenAiModelFactory(),
-            XAI to XAiModelFactory(),
-            GEMINI to GeminiModelFactory(),
-            OLLAMA to OllamaModelFactory(),
-            DOCKER to DockerAiModelFactory(),
-            ANTHROPIC to AnthropicModelFactory(),
-            LOCALAI to LocalAiModelFactory(),
-            LMSTUDIO to LmStudioModelFactory(),
-            OPENAI_COMPATIBLE to OpenAiCompatibleModelFactory(),
-        )
+
+    private val factories: MutableMap<ModelProvider, ChatModelFactory<*>> = mutableMapOf(
+        OPENAI to OpenAiModelFactory(),
+        XAI to XAiModelFactory(),
+        GEMINI to GeminiModelFactory(),
+        OLLAMA to OllamaModelFactory(),
+        DOCKER to DockerAiModelFactory(),
+        ANTHROPIC to AnthropicModelFactory(),
+        LOCALAI to LocalAiModelFactory(),
+        LMSTUDIO to LmStudioModelFactory(),
+        OPENAI_COMPATIBLE to OpenAiCompatibleModelFactory(),
+    )
 
     /**
-     * Retrieves the chat model factory for the specified provider.
-     *
-     * @param provider The model provider to get the factory for
-     * @return The chat model factory for the provider, or null if no factory is registered
+     * Registers a custom factory for the given provider.
+     * Intended for downstream apps that extend the shared provider set.
      */
+    fun register(provider: ModelProvider, factory: ChatModelFactory<*>) {
+        factories[provider] = factory
+    }
+
+    /** Returns the factory for [provider], or null if none is registered. */
     fun getFactory(provider: ModelProvider): ChatModelFactory<*>? = factories[provider]
 
-    /**
-     * Returns the set of model providers for which a factory is currently registered.
-     *
-     * This reflects the providers available at runtime, including those registered during
-     * initialization and any added later via [register]. The returned set is a live view
-     * backed by the internal registry; it will reflect subsequent registrations or removals.
-     * If you need a stable snapshot, make a defensive copy using `toSet()`.
-     *
-     * @return set of [ModelProvider]s that this registry can build models for
-     */
+    /** Returns the set of providers that currently have a registered factory. */
     fun getSupportedProviders(): Set<ModelProvider> = factories.keys
 }
