@@ -25,6 +25,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.LOCALAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -40,14 +41,10 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
 
     override fun getProvider(): ModelProvider = LOCALAI
 
-    override fun availableModels(settings: LocalAiSettings): List<String> {
+    override fun availableModels(settings: LocalAiSettings): List<ModelDTO> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
-
-        return fetchModels(
-            apiKey = "not-needed",
-            url = "$baseUrl/models",
-            providerName = LOCALAI,
-        )
+        return fetchModels(apiKey = "not-needed", url = "$baseUrl/models", providerName = LOCALAI)
+            .map { ModelDTO.of(LOCALAI, it) }
     }
 
     override fun defaultSettings(): LocalAiSettings = LocalAiSettings()

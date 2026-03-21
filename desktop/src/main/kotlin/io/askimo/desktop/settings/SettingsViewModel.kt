@@ -17,6 +17,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalModelValidator
 import io.askimo.core.providers.ModelAvailabilityResult
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderConfigField
 import io.askimo.core.providers.ProviderRegistry
@@ -61,7 +62,7 @@ class SettingsViewModel(
     var showModelDialog by mutableStateOf(false)
         private set
 
-    var availableModels by mutableStateOf<List<String>>(emptyList())
+    var availableModels by mutableStateOf<List<ModelDTO>>(emptyList())
         private set
 
     var isLoadingModels by mutableStateOf(false)
@@ -395,7 +396,7 @@ class SettingsViewModel(
 
                     // Pre-select the previously selected model if it exists in the available models
                     val previousModel = appContext.params.getModel(provider)
-                    pendingModelForNewProvider = if (previousModel.isNotBlank() && models.contains(previousModel)) {
+                    pendingModelForNewProvider = if (previousModel.isNotBlank() && models.any { it.modelId == previousModel }) {
                         previousModel
                     } else {
                         null

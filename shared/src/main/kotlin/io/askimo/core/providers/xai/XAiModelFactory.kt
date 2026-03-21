@@ -21,6 +21,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.XAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -35,15 +36,11 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
 
     override fun getProvider(): ModelProvider = XAI
 
-    override fun availableModels(settings: XAiSettings): List<String> {
+    override fun availableModels(settings: XAiSettings): List<ModelDTO> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
         val url = "${settings.baseUrl.trimEnd('/')}/models"
-
-        return fetchModels(
-            apiKey = apiKey,
-            url = url,
-            providerName = XAI,
-        )
+        return fetchModels(apiKey = apiKey, url = url, providerName = XAI)
+            .map { ModelDTO.of(XAI, it) }
     }
 
     override fun defaultSettings(): XAiSettings = XAiSettings()

@@ -24,6 +24,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
@@ -37,14 +38,10 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
 
     override fun getProvider(): ModelProvider = ModelProvider.OLLAMA
 
-    override fun availableModels(settings: OllamaSettings): List<String> {
+    override fun availableModels(settings: OllamaSettings): List<ModelDTO> {
         val baseUrl = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyList()
-
-        return fetchModels(
-            apiKey = "not-needed",
-            url = "$baseUrl/models",
-            providerName = ModelProvider.OLLAMA,
-        )
+        return fetchModels(apiKey = "not-needed", url = "$baseUrl/models", providerName = ModelProvider.OLLAMA)
+            .map { ModelDTO.of(ModelProvider.OLLAMA, it) }
     }
 
     override fun defaultSettings(): OllamaSettings = OllamaSettings()

@@ -25,6 +25,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
@@ -50,11 +51,11 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         ),
     )
 
-    override fun availableModels(settings: LmStudioSettings): List<String> = fetchModels(
+    override fun availableModels(settings: LmStudioSettings): List<ModelDTO> = fetchModels(
         apiKey = "lm-studio",
         url = "${settings.baseUrl}/v1/models",
         providerName = ModelProvider.LMSTUDIO,
-    )
+    ).map { ModelDTO.of(ModelProvider.LMSTUDIO, it) }
 
     override fun defaultSettings(): LmStudioSettings = LmStudioSettings()
 

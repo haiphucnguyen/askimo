@@ -459,7 +459,7 @@ private fun specialModelSelectionDialog(
 ) {
     var selectedModel by remember(currentValue) { mutableStateOf(currentValue.takeIf { it.isNotBlank() }) }
     var searchQuery by remember { mutableStateOf("") }
-    var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var availableModels by remember { mutableStateOf<List<io.askimo.core.providers.ModelDTO>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var errorHelp by remember { mutableStateOf<String?>(null) }
@@ -505,7 +505,10 @@ private fun specialModelSelectionDialog(
         if (searchQuery.isBlank()) {
             availableModels
         } else {
-            availableModels.filter { it.contains(searchQuery, ignoreCase = true) }
+            availableModels.filter {
+                it.displayName.contains(searchQuery, ignoreCase = true) ||
+                    it.modelId.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
@@ -666,7 +669,7 @@ private fun specialModelSelectionDialog(
                                 // Display grouped models using shared component
                                 groupedModelListAsCards(
                                     models = filteredModels,
-                                    selectedModel = selectedModel,
+                                    selectedModelId = selectedModel,
                                     onModelClick = { model ->
                                         selectedModel = model
                                     },

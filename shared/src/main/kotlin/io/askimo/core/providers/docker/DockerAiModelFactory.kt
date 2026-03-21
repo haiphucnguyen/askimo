@@ -26,6 +26,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
@@ -39,7 +40,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
     override fun getProvider(): ModelProvider = ModelProvider.DOCKER
 
-    override fun availableModels(settings: DockerAiSettings): List<String> = try {
+    override fun availableModels(settings: DockerAiSettings): List<ModelDTO> = try {
         val process =
             ProcessBuilderExt("docker", "model", "ls", "--openai")
                 .redirectErrorStream(true)
@@ -48,20 +49,14 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         val output = process.inputStream.bufferedReader().readText()
         process.waitFor()
 
-        // Parse JSON response from Docker AI
-        // Expected format: { "object": "list", "data": [{ "id": "ai/gpt-oss:latest", ... }] }
         val modelIds = mutableListOf<String>()
-
-        // Simple JSON parsing to extract "id" fields from "data" array
         val idPattern = """"id"\s*:\s*"([^"]+)"""".toRegex()
         idPattern.findAll(output).forEach { matchResult ->
             val modelId = matchResult.groupValues[1]
-            if (modelId.isNotBlank()) {
-                modelIds.add(modelId)
-            }
+            if (modelId.isNotBlank()) modelIds.add(modelId)
         }
 
-        modelIds.distinct()
+        modelIds.distinct().map { ModelDTO.of(ModelProvider.DOCKER, it) }
     } catch (e: Exception) {
         log.displayError("⚠️ Failed to fetch models from Docker AI: ${e.message}", e)
         emptyList()
