@@ -50,7 +50,10 @@ fun modelSelectionDialog(
         if (searchQuery.isBlank()) {
             viewModel.availableModels
         } else {
-            viewModel.availableModels.filter { it.contains(searchQuery, ignoreCase = true) }
+            viewModel.availableModels.filter {
+                it.displayName.contains(searchQuery, ignoreCase = true) ||
+                    it.modelId.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
@@ -211,7 +214,7 @@ fun modelSelectionDialog(
                                 // Display grouped models using shared component
                                 groupedModelListAsCards(
                                     models = filteredModels,
-                                    selectedModel = selectedModel,
+                                    selectedModelId = selectedModel,
                                     onModelClick = { model ->
                                         selectedModel = model
                                     },

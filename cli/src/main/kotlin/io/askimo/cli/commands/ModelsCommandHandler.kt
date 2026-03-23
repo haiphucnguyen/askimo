@@ -46,7 +46,7 @@ class ModelsCommandHandler(
             log.display("\n💡 ${factory.getNoModelsHelpText()}")
         } else {
             log.display("Available models for provider '${provider.name.lowercase()}':")
-            models.forEach { log.display("- $it") }
+            models.forEach { log.display("- ${it.displayName}") }
             log.display("\n💡 Use `:set-param model <modelName>` to choose one of these models.")
         }
     }

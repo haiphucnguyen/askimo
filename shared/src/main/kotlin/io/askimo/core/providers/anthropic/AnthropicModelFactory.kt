@@ -24,6 +24,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelCapabilitiesCache
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.telemetry.TelemetryChatModelListener
@@ -46,14 +47,11 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
 
     override fun getProvider(): ModelProvider = ModelProvider.ANTHROPIC
 
-    override fun availableModels(settings: AnthropicSettings): List<String> {
+    override fun availableModels(settings: AnthropicSettings): List<ModelDTO> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
         val url = "${settings.baseUrl.trimEnd('/')}/models"
-
-        return fetchAnthropicModels(
-            apiKey = apiKey,
-            url = url,
-        )
+        return fetchAnthropicModels(apiKey = apiKey, url = url)
+            .map { ModelDTO.of(ModelProvider.ANTHROPIC, it) }
     }
 
     override fun defaultSettings(): AnthropicSettings = AnthropicSettings()

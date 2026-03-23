@@ -76,10 +76,10 @@ import io.askimo.core.event.user.IndexingInProgressEvent
 import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
-import io.askimo.desktop.settings.groupModelsByFamily
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.monitoring.SystemResourceMonitor
 import io.askimo.ui.common.theme.ComponentColors
@@ -179,7 +179,7 @@ private fun modelDropdown(
     onModelSelected: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var availableModels by remember { mutableStateOf<List<ModelDTO>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val appContext = remember { get<AppContext>(AppContext::class.java) }
@@ -320,7 +320,8 @@ private fun modelDropdown(
 
                     // Filter models based on search
                     val filteredModels = availableModels.filter {
-                        it.contains(searchQuery, ignoreCase = true)
+                        it.displayName.contains(searchQuery, ignoreCase = true) ||
+                            it.modelId.contains(searchQuery, ignoreCase = true)
                     }
 
                     // Scrollable list with fixed dimensions to avoid intrinsic measurement issues
@@ -345,11 +346,11 @@ private fun modelDropdown(
                                 state = listState,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                val groupedModels = groupModelsByFamily(filteredModels)
+                                val groupedModels = filteredModels.groupBy { it.provider }
                                 val showHeaders = groupedModels.size > 1
-                                groupedModels.forEach { (category, categoryModels) ->
-                                    if (showHeaders && categoryModels.isNotEmpty()) {
-                                        item(key = "header_$category") {
+                                groupedModels.forEach { (provider, providerModels) ->
+                                    if (showHeaders && providerModels.isNotEmpty()) {
+                                        item(key = "header_$provider") {
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -357,7 +358,7 @@ private fun modelDropdown(
                                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                             ) {
                                                 Text(
-                                                    text = category.uppercase(),
+                                                    text = provider.name,
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     fontWeight = FontWeight.SemiBold,
@@ -365,20 +366,20 @@ private fun modelDropdown(
                                             }
                                         }
                                     }
-                                    items(categoryModels, key = { it }) { model ->
+                                    items(providerModels, key = { it.modelId }) { dto ->
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    text = model,
+                                                    text = dto.displayName,
                                                     style = MaterialTheme.typography.bodyMedium,
                                                 )
                                             },
                                             onClick = {
-                                                onModelSelected(model)
+                                                onModelSelected(dto.modelId)
                                                 expanded = false
                                                 searchQuery = ""
                                             },
-                                            leadingIcon = if (model == currentModel) {
+                                            leadingIcon = if (dto.modelId == currentModel) {
                                                 {
                                                     Icon(
                                                         Icons.Default.Check,

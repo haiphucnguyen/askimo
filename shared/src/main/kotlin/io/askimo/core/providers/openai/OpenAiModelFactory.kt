@@ -23,6 +23,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.OPENAI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -37,14 +38,10 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
 
     override fun getProvider(): ModelProvider = OPENAI
 
-    override fun availableModels(settings: OpenAiSettings): List<String> {
+    override fun availableModels(settings: OpenAiSettings): List<ModelDTO> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
-
-        return fetchModels(
-            apiKey = apiKey,
-            url = "https://api.openai.com/v1/models",
-            providerName = OPENAI,
-        )
+        return fetchModels(apiKey = apiKey, url = "https://api.openai.com/v1/models", providerName = OPENAI)
+            .map { ModelDTO.of(OPENAI, it) }
     }
 
     override fun defaultSettings(): OpenAiSettings = OpenAiSettings()

@@ -19,12 +19,15 @@ import io.askimo.core.context.ExecutionMode
  */
 interface ChatModelFactory<T : ProviderSettings> {
     /**
-     * Returns a list of available model names for this provider.
+     * Returns a list of available models for this provider.
+     *
+     * Each entry carries the [ModelProvider], the [ModelDTO.modelId] sent in API requests,
+     * and a human-readable [ModelDTO.displayName] for the UI.
      *
      * @param settings Provider-specific settings that may be needed to retrieve available models
-     * @return List of model identifiers that can be used with this provider
+     * @return List of [ModelDTO] entries that can be selected by the user
      */
-    fun availableModels(settings: T): List<String>
+    fun availableModels(settings: T): List<ModelDTO>
 
     /**
      * Returns the provider type for this factory.

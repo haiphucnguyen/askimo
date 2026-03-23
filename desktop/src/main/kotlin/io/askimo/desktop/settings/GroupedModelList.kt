@@ -26,67 +26,49 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.askimo.core.providers.ModelDTO
+import io.askimo.core.providers.ModelProvider
 import io.askimo.ui.common.theme.ComponentColors
 import io.askimo.ui.common.ui.clickableCard
 
 /**
- * Groups a list of model names by their family.
- * Examples:
- * - "gpt-4-turbo" -> "gpt-4"
- * - "claude-3-opus" -> "claude-3"
- * - "gemini-pro" -> "gemini-pro"
+ * Groups a list of [ModelDTO]s by their [ModelProvider].
+ * Single-provider lists produce one group so no headers are shown by default.
  */
-fun groupModelsByFamily(models: List<String>): Map<String, List<String>> = models.groupBy { model ->
-    val parts = model.split('-', '.')
-    when {
-        parts.size >= 2 -> "${parts[0]}-${parts[1]}"
-        parts.size == 1 -> parts[0]
-        else -> "Other"
-    }
-}.toSortedMap()
+fun groupModelsByProvider(models: List<ModelDTO>): Map<ModelProvider, List<ModelDTO>> = models.groupBy { it.provider }
+    .entries
+    .sortedBy { it.key.name }
+    .associate { it.key to it.value }
 
-/**
- * Displays a grouped list of models with category headers.
- * Used in model selection dialogs and dropdowns.
- *
- * @param models The list of model names to display
- * @param selectedModel The currently selected model (if any)
- * @param onModelClick Callback when a model is clicked
- * @param showHeaders Whether to show category headers (default: true if multiple groups)
- */
 @Composable
 fun groupedModelListAsCards(
-    models: List<String>,
-    selectedModel: String?,
+    models: List<ModelDTO>,
+    selectedModelId: String?,
     onModelClick: (String) -> Unit,
     showHeaders: Boolean? = null,
 ) {
-    val groupedModels = remember(models) { groupModelsByFamily(models) }
+    val groupedModels = remember(models) { groupModelsByProvider(models) }
     val shouldShowHeaders = showHeaders ?: (groupedModels.size > 1)
 
-    groupedModels.forEach { (category, categoryModels) ->
-        // Category header
-        if (shouldShowHeaders && categoryModels.isNotEmpty()) {
+    groupedModels.forEach { (provider, providerModels) ->
+        if (shouldShowHeaders && providerModels.isNotEmpty()) {
             Text(
-                text = category.uppercase(),
+                text = provider.name,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(
-                    horizontal = 0.dp,
-                    vertical = 8.dp,
-                ),
+                modifier = Modifier.padding(horizontal = 0.dp, vertical = 8.dp),
             )
         }
 
-        // Models in this category
-        categoryModels.forEach { model ->
+        providerModels.forEach { dto ->
+            val isSelected = dto.modelId == selectedModelId
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .clickableCard { onModelClick(model) },
-                colors = if (model == selectedModel) {
+                    .clickableCard { onModelClick(dto.modelId) },
+                colors = if (isSelected) {
                     ComponentColors.primaryCardColors()
                 } else {
                     ComponentColors.surfaceVariantCardColors()
@@ -100,10 +82,10 @@ fun groupedModelListAsCards(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = model,
+                        text = dto.displayName,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    if (model == selectedModel) {
+                    if (isSelected) {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = "Selected model",
@@ -116,39 +98,26 @@ fun groupedModelListAsCards(
     }
 }
 
-/**
- * Displays a grouped list of models as dropdown menu items.
- * Used in the footer bar model dropdown.
- *
- * @param models The list of model names to display
- * @param selectedModel The currently selected model (if any)
- * @param onModelClick Callback when a model is clicked
- * @param showHeaders Whether to show category headers (default: true if multiple groups)
- */
 @Composable
 fun groupedModelListAsMenuItems(
-    models: List<String>,
-    selectedModel: String?,
+    models: List<ModelDTO>,
+    selectedModelId: String?,
     onModelClick: (String) -> Unit,
     showHeaders: Boolean? = null,
 ) {
-    val groupedModels = remember(models) { groupModelsByFamily(models) }
+    val groupedModels = remember(models) { groupModelsByProvider(models) }
     val shouldShowHeaders = showHeaders ?: (groupedModels.size > 1)
 
-    groupedModels.forEach { (category, categoryModels) ->
-        // Category header
-        if (shouldShowHeaders && categoryModels.isNotEmpty()) {
+    groupedModels.forEach { (provider, providerModels) ->
+        if (shouldShowHeaders && providerModels.isNotEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 8.dp,
-                    ),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = category.uppercase(),
+                    text = provider.name,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
@@ -156,17 +125,16 @@ fun groupedModelListAsMenuItems(
             }
         }
 
-        // Models in this category
-        categoryModels.forEach { model ->
+        providerModels.forEach { dto ->
             DropdownMenuItem(
                 text = {
                     Text(
-                        text = model,
+                        text = dto.displayName,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 },
-                onClick = { onModelClick(model) },
-                leadingIcon = if (model == selectedModel) {
+                onClick = { onModelClick(dto.modelId) },
+                leadingIcon = if (dto.modelId == selectedModelId) {
                     {
                         Icon(
                             Icons.Default.Check,

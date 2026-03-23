@@ -70,6 +70,13 @@ enum class ModelProvider {
     OPENAI_COMPATIBLE,
 
     /**
+     * Represents the Askimo Pro managed provider.
+     * The API key is managed server-side; the desktop app authenticates via JWT.
+     */
+    @SerialName("ASKIMO_PRO")
+    ASKIMO_PRO,
+
+    /**
      * Represents an unidentified or unsupported model provider.
      */
     @SerialName("UNKNOWN")
@@ -89,6 +96,7 @@ enum class ModelProvider {
         LOCALAI -> "localai"
         LMSTUDIO -> "lmstudio"
         OPENAI_COMPATIBLE -> "openai-compatible"
+        ASKIMO_PRO -> "askimo-pro"
         UNKNOWN -> "unknown"
     }
 }

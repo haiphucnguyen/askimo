@@ -307,6 +307,7 @@ data class ModelsConfig(
         ModelProvider.LOCALAI -> localai
         ModelProvider.LMSTUDIO -> lmstudio
         ModelProvider.OPENAI_COMPATIBLE -> openai_compatible
+        ModelProvider.ASKIMO_PRO -> openai_compatible
         ModelProvider.UNKNOWN -> ProviderModelConfig()
     }
 
@@ -320,6 +321,7 @@ data class ModelsConfig(
         ModelProvider.LOCALAI -> copy(localai = updated)
         ModelProvider.LMSTUDIO -> copy(lmstudio = updated)
         ModelProvider.OPENAI_COMPATIBLE -> copy(openai_compatible = updated)
+        ModelProvider.ASKIMO_PRO -> this
         ModelProvider.UNKNOWN -> this
     }
 }

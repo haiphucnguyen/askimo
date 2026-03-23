@@ -23,6 +23,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.telemetry.TelemetryChatModelListener
@@ -43,11 +44,11 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
         ),
     )
 
-    override fun availableModels(settings: OpenAiCompatibleSettings): List<String> = fetchModels(
+    override fun availableModels(settings: OpenAiCompatibleSettings): List<ModelDTO> = fetchModels(
         apiKey = settings.apiKey.ifBlank { "not-needed" },
         url = "${settings.baseUrl.removeSuffix("/")}/models",
         providerName = ModelProvider.OPENAI_COMPATIBLE,
-    )
+    ).map { ModelDTO.of(ModelProvider.OPENAI_COMPATIBLE, it) }
 
     override fun defaultSettings(): OpenAiCompatibleSettings = OpenAiCompatibleSettings()
 

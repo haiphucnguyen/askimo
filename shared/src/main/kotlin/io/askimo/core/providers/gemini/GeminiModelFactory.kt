@@ -28,6 +28,7 @@ import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelCapabilitiesCache
+import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ModelProvider.GEMINI
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
@@ -44,17 +45,11 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     override fun getProvider(): ModelProvider = GEMINI
 
-    override fun availableModels(settings: GeminiSettings): List<String> {
+    override fun availableModels(settings: GeminiSettings): List<ModelDTO> {
         val apiKey = settings.apiKey.takeIf { it.isNotBlank() } ?: return emptyList()
-
-        val baseUrl = settings.baseUrl
-        val url = "${baseUrl.trimEnd('/')}/models"
-
-        return fetchModels(
-            apiKey = apiKey,
-            url = url,
-            providerName = GEMINI,
-        ).map { it.removePrefix("models/") }
+        val url = "${settings.baseUrl.trimEnd('/')}/models"
+        return fetchModels(apiKey = apiKey, url = url, providerName = GEMINI)
+            .map { ModelDTO.of(GEMINI, it.removePrefix("models/")) }
     }
 
     override fun defaultSettings(): GeminiSettings = GeminiSettings()
