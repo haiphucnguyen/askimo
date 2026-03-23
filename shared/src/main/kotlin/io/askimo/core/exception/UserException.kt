@@ -115,3 +115,15 @@ class ToolExecutionException(
         "details" to (errorDetails ?: ""),
     )
 }
+
+/**
+ * Insufficient API credits/balance.
+ */
+class InsufficientCreditsException(
+    cause: Throwable? = null,
+) : UserException("Insufficient API credits", cause) {
+
+    override fun getMessageKey() = "error.insufficient_credits"
+
+    override fun getMessageArgs() = emptyMap<String, String>()
+}

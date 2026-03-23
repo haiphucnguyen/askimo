@@ -154,6 +154,13 @@ object ExceptionMapper {
                 combinedMessage.contains("timed out", ignoreCase = true) ->
                 TimeoutException(timeoutSeconds = 30, cause = rootCause)
 
+            // Insufficient credits
+            combinedMessage.contains("credit balance is too low", ignoreCase = true) ||
+                combinedMessage.contains("insufficient_funds", ignoreCase = true) ||
+                combinedMessage.contains("billing", ignoreCase = true) ||
+                combinedMessage.contains("upgrade or purchase credits", ignoreCase = true) ->
+                InsufficientCreditsException(cause = rootCause)
+
             // Invalid request
             combinedMessage.contains("400", ignoreCase = true) ||
                 combinedMessage.contains("bad request", ignoreCase = true) ||

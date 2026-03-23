@@ -27,6 +27,32 @@ object FileTypeSupport {
         "php", "swift", "scala", "r", "sql", "html", "css",
         "scss", "sass", "less", "vue", "svelte", "gradle",
         "groovy", "lua", "pl", "pm",
+        // Config & build files
+        "toml", "lock",
+        // Terraform
+        "tf", "tfvars",
+        // Data formats
+        "jsonc", "json5", "graphql", "gql", "proto",
+        // WebAssembly
+        "wat",
+        // Emerging languages
+        "zig", "v",
+        // Go modules
+        "mod", "sum",
+        // Nix & Dhall
+        "nix", "dhall",
+    )
+
+    /**
+     * Config files without extensions (treated as code files).
+     */
+    val CONFIG_EXTENSIONS = setOf(
+        "dockerfile",
+        "makefile",
+        "gemfile",
+        "rakefile",
+        "procfile",
+        "vagrantfile",
     )
 
     /**

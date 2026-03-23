@@ -3,7 +3,6 @@
  * Copyright (c) 2025 Hai Nguyen
  */
 package io.askimo.ui.shell
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import io.askimo.core.event.EventBus
@@ -12,6 +11,7 @@ import io.askimo.core.event.error.IndexingErrorEvent
 import io.askimo.core.event.error.IndexingErrorType
 import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.event.error.SendMessageErrorEvent
+import io.askimo.core.exception.ExceptionMapper
 import io.askimo.core.i18n.LocalizationManager
 
 /**
@@ -112,12 +112,16 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                     )
                 }
                 is SendMessageErrorEvent -> {
+                    val mapped = ExceptionMapper.map(event.throwable)
+                    val localizedMsg = LocalizationManager.getString(
+                        mapped.getMessageKey(),
+                        *mapped.getMessageArgs().values.toTypedArray(),
+                    )
                     onStateChange(
                         ErrorDialogState(
                             show = true,
                             title = LocalizationManager.getString("error.send_message.title"),
-                            message = event.throwable.message
-                                ?: LocalizationManager.getString("error.send_message.message"),
+                            message = localizedMsg,
                         ),
                     )
                 }
