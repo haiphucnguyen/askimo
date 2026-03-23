@@ -23,6 +23,27 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Read project version
+        id: version
+        run: echo "version=$(grep '^projectVersion=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Delete existing package versions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGES=("io.askimo.shared" "io.askimo.desktop-shared")
+          for PACKAGE in "${PACKAGES[@]}"; do
+            echo "Looking for existing versions of $PACKAGE@$VERSION..."
+            VERSION_IDS=$(gh api \
+              "/user/packages/maven/$PACKAGE/versions" \
+              --jq ".[] | select(.name == \"$VERSION\") | .id" 2>/dev/null || true)
+            for ID in $VERSION_IDS; do
+              echo "Deleting version $ID of $PACKAGE..."
+              gh api --method DELETE "/user/packages/maven/$PACKAGE/versions/$ID" || true
+            done
+          done
+
       - name: Publish shared and desktop-shared to GitHub Packages
         run: ./gradlew :shared:publish :desktop-shared:publish
         env:
