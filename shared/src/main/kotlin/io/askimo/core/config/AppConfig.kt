@@ -687,6 +687,7 @@ object AppConfig {
         "io.askimo.core.providers.docker.DockerAiSettings" to "docker",
         "io.askimo.core.providers.localai.LocalAiSettings" to "localai",
         "io.askimo.core.providers.lmstudio.LmStudioSettings" to "lmstudio",
+        "io.askimo.app.team.AskimoProSettings" to "openai_compatible",
     )
 
     /** Builds an indented YAML `context:` block from the parsed JSON session root. */
@@ -1004,13 +1005,22 @@ object AppConfig {
     fun saveContext(params: AppContextParams) {
         synchronized(this) {
             val sanitized = secureSessionManager.saveSecureSession(params)
+            // ASKIMO_PRO settings contain a transient accessToken and use a type id
+            // not registered in shared's @JsonSubTypes — strip before persisting.
+            val persistable = sanitized.copy(
+                providerSettings = sanitized.providerSettings.filterKeys {
+                    it.name != ModelProvider.ASKIMO_PRO.name
+                }.toMutableMap(),
+            )
             val current = cached ?: loadOnce()
             cached = current.copy(context = sanitized)
 
             val configPath = resolveOrCreateConfigPath()
             if (configPath != null && configPath.exists()) {
                 try {
-                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(cached)
+                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(
+                        current.copy(context = persistable),
+                    )
                     Files.writeString(configPath, updatedYaml)
                     log.info("Saved context to $configPath")
                 } catch (e: Exception) {

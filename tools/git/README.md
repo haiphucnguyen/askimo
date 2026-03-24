@@ -49,3 +49,14 @@ To remove the hook:
 rm .git/hooks/pre-commit
 ```
 
+## CI Safety Net (GitHub Actions)
+
+Even if the local hook is not installed, every push and pull request runs
+`spotlessCheck` via GitHub Actions (`.github/workflows/ci.yml`).
+
+- **PRs with formatting violations are blocked** — the `Format Check` job must
+  pass before `Build & Test` runs.
+- Fix locally by running `./gradlew spotlessApply`, then push again.
+- The local pre-commit hook is the recommended way to avoid the round-trip, but
+  the CI check ensures no unformatted code ever reaches `main`.
+
