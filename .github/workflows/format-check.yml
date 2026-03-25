@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -25,4 +30,4 @@ jobs:
           cache-read-only: true
 
       - name: Check formatting
-        run: ./gradlew --no-daemon spotlessCheck
+        run: ./gradlew --no-daemon spotlessCheck -PspotlessRatchetFrom=origin/${{ github.base_ref }}

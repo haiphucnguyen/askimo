@@ -11,8 +11,10 @@ version = property("projectVersion") as String
 
 extensions.extraProperties["spotlessSetLicenseHeaderYearsFromGitHistory"] = true
 
+val ratchetRef = providers.gradleProperty("spotlessRatchetFrom").orElse("origin/main").get()
+
 spotless {
-    ratchetFrom("origin/main")
+    ratchetFrom(ratchetRef)
     format("json") {
         target("**/*.json")
         targetExclude("**/build/**")
