@@ -122,7 +122,7 @@ object ThemePreferences {
         }
 
         // Apply saved log level on startup
-        LoggingService.updateLogLevel(level)
+        LoggingService.updateLogLevel(LogLevel.DEBUG)
 
         return level
     }

@@ -187,7 +187,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
 
     override fun createEmbeddingModel(settings: GeminiSettings): EmbeddingModel = GoogleAiEmbeddingModel.builder()
         .apiKey(safeApiKey(settings.apiKey))
-        .modelName(AppConfig.models[ModelProvider.GEMINI].embeddingModel)
+        .modelName(AppConfig.models[GEMINI].embeddingModel)
         .build()
 
     override fun getEmbeddingTokenLimit(settings: GeminiSettings): Int {

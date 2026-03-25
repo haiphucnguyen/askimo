@@ -25,7 +25,7 @@ import io.askimo.core.providers.xai.XAiSettings
  * (like OpenAI, Ollama, etc.). Each implementation contains the specific
  * parameters required by its respective provider.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", defaultImpl = OpenAiCompatibleSettings::class)
 @JsonSubTypes(
     JsonSubTypes.Type(value = OpenAiSettings::class, name = "openai"),
     JsonSubTypes.Type(value = AnthropicSettings::class, name = "anthropic"),
