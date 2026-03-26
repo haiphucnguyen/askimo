@@ -37,7 +37,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 
 @Composable
 fun errorDialog(
@@ -51,7 +51,7 @@ fun errorDialog(
     val linkColor = MaterialTheme.colorScheme.onSurface
     var showDetails by remember { mutableStateOf(false) }
 
-    _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(
@@ -143,11 +143,11 @@ fun errorDialog(
             }
         },
         confirmButton = {
-            _root_ide_package_.io.askimo.ui.common.components.primaryButton(
+            primaryButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(_root_ide_package_.io.askimo.ui.common.i18n.stringResource("action.ok"))
+                Text(stringResource("action.ok"))
             }
         },
     )

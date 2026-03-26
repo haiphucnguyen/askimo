@@ -51,7 +51,7 @@ import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +87,7 @@ fun aiProviderSettingsSection(viewModel: SettingsViewModel) {
                 // Chat Configuration Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -237,7 +237,7 @@ private fun providerModelConfigCard(provider: ModelProvider) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -512,7 +512,7 @@ private fun specialModelSelectionDialog(
         }
     }
 
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -529,7 +529,7 @@ private fun specialModelSelectionDialog(
                 if (currentValue.isNotBlank()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -575,7 +575,7 @@ private fun specialModelSelectionDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             errorHelp?.let { helpText ->
-                                Card(colors = ComponentColors.surfaceVariantCardColors()) {
+                                Card(colors = AppComponents.surfaceVariantCardColors()) {
                                     Text(
                                         text = helpText,
                                         style = MaterialTheme.typography.bodySmall,
@@ -601,7 +601,7 @@ private fun specialModelSelectionDialog(
                         if (selectedModel != null && selectedModel != currentValue) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ComponentColors.primaryCardColors(),
+                                colors = AppComponents.primaryCardColors(),
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -639,7 +639,7 @@ private fun specialModelSelectionDialog(
                             placeholder = { Text(stringResource("settings.model.search.placeholder")) },
                             label = { Text(stringResource("settings.model.search")) },
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Filtered models list

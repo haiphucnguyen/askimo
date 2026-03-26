@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
 
 @Composable
@@ -260,7 +260,7 @@ private fun sessionCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Row(
             modifier = Modifier
@@ -318,7 +318,7 @@ private fun sessionCard(
                     )
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {

@@ -48,7 +48,7 @@ import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -124,7 +124,7 @@ fun manageDirectivesDialog(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = ComponentColors.sidebarSurfaceColor(),
+                                    containerColor = AppComponents.sidebarSurfaceColor(),
                                 ),
                             ) {
                                 Column(
@@ -193,7 +193,7 @@ fun manageDirectivesDialog(
                                                 placeholder = { Text(stringResource("directive.edit.name.placeholder")) },
                                                 singleLine = true,
                                                 isError = editError != null && editName.isBlank(),
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
                                             OutlinedTextField(
                                                 value = editContent,
@@ -209,7 +209,7 @@ fun manageDirectivesDialog(
                                                 maxLines = 10,
                                                 isError = editError != null,
                                                 supportingText = editError?.let { { Text(it) } },
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
 
                                             // Action buttons for edit mode

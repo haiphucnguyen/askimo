@@ -48,14 +48,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -84,7 +82,7 @@ import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.tools.chart.MermaidChartData
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -143,7 +141,7 @@ fun markdownText(
     val document = parser.parse(markdown)
 
     Column(modifier = modifier) {
-        _root_ide_package_.io.askimo.ui.common.ui.renderNode(document, viewportTopY, onRunRequest)
+        renderNode(document, viewportTopY, onRunRequest)
     }
 }
 
@@ -153,33 +151,33 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((
     while (child != null) {
         when (child) {
             is Paragraph -> {
-                val videoUrl = _root_ide_package_.io.askimo.ui.common.ui.extractVideoUrl(child)
+                val videoUrl = extractVideoUrl(child)
                 if (videoUrl != null) {
-                    _root_ide_package_.io.askimo.ui.common.ui.renderVideo(videoUrl)
+                    renderVideo(videoUrl)
                 } else {
-                    _root_ide_package_.io.askimo.ui.common.ui.renderParagraph(child)
+                    renderParagraph(child)
                 }
             }
-            is Heading -> _root_ide_package_.io.askimo.ui.common.ui.renderHeading(child)
-            is BulletList -> _root_ide_package_.io.askimo.ui.common.ui.renderBulletList(child)
-            is OrderedList -> _root_ide_package_.io.askimo.ui.common.ui.renderOrderedList(child)
-            is FencedCodeBlock -> _root_ide_package_.io.askimo.ui.common.ui.renderCodeBlock(
+            is Heading -> renderHeading(child)
+            is BulletList -> renderBulletList(child)
+            is OrderedList -> renderOrderedList(child)
+            is FencedCodeBlock -> renderCodeBlock(
                 child,
                 viewportTopY,
                 onRunRequest,
             )
-            is BlockQuote -> _root_ide_package_.io.askimo.ui.common.ui.renderBlockQuote(
+            is BlockQuote -> renderBlockQuote(
                 child,
                 viewportTopY,
                 onRunRequest,
             )
-            is TableBlock -> _root_ide_package_.io.askimo.ui.common.ui.renderTable(child)
+            is TableBlock -> renderTable(child)
             is Image -> {
                 val destination = child.destination
-                if (_root_ide_package_.io.askimo.ui.common.ui.isVideoUrl(destination)) {
-                    _root_ide_package_.io.askimo.ui.common.ui.renderVideo(destination)
+                if (isVideoUrl(destination)) {
+                    renderVideo(destination)
                 } else {
-                    _root_ide_package_.io.askimo.ui.common.ui.renderImage(child)
+                    renderImage(child)
                 }
             }
             else -> renderNode(child, viewportTopY, onRunRequest)
@@ -195,10 +193,10 @@ private fun renderParagraph(paragraph: Paragraph) {
     if (firstChild is Image && firstChild.next == null) {
         // Paragraph contains only an image - render as block image
         val destination = firstChild.destination
-        if (_root_ide_package_.io.askimo.ui.common.ui.isVideoUrl(destination)) {
-            _root_ide_package_.io.askimo.ui.common.ui.renderVideo(destination)
+        if (isVideoUrl(destination)) {
+            renderVideo(destination)
         } else {
-            _root_ide_package_.io.askimo.ui.common.ui.renderImage(firstChild)
+            renderImage(firstChild)
         }
         return
     }
@@ -207,7 +205,7 @@ private fun renderParagraph(paragraph: Paragraph) {
     val linkColor = MaterialTheme.colorScheme.tertiary
 
     // Extract raw text to check for LaTeX
-    val rawText = _root_ide_package_.io.askimo.ui.common.ui.extractTextContent(paragraph)
+    val rawText = extractTextContent(paragraph)
 
     // Check if this paragraph contains LaTeX formulas with \[ \] or [ ]
     val latexMatches = mutableListOf<Triple<Int, Int, String>>() // (start, end, content)
@@ -235,7 +233,7 @@ private fun renderParagraph(paragraph: Paragraph) {
                     if (content.isNotBlank() && isMathContent) {
                         val endIndex = if (hasEndBackslash) j + 2 else j + 1
                         // Fix markdown-mangled LaTeX content
-                        val fixedContent = _root_ide_package_.io.askimo.ui.common.ui.fixMarkdownMangledLatex(content)
+                        val fixedContent = fixMarkdownMangledLatex(content)
                         latexMatches.add(Triple(start, endIndex, fixedContent))
                         i = endIndex
                         break
@@ -276,7 +274,7 @@ private fun renderParagraph(paragraph: Paragraph) {
                         if (!overlaps) {
                             // Fix markdown-mangled LaTeX content
                             val fixedContent =
-                                _root_ide_package_.io.askimo.ui.common.ui.fixMarkdownMangledLatex(content)
+                                fixMarkdownMangledLatex(content)
                             latexMatches.add(Triple(start, j + 2, fixedContent))
                             foundEnd = true
                         }
@@ -319,7 +317,7 @@ private fun renderParagraph(paragraph: Paragraph) {
                 }
 
                 // Render LaTeX formula as image
-                _root_ide_package_.io.askimo.ui.common.ui.latexFormula(
+                latexFormula(
                     latex = latexContent.trim(),
                     fontSize = 32f,
                 )
@@ -365,7 +363,7 @@ private fun renderParagraph(paragraph: Paragraph) {
                         }
 
                         // Render LaTeX formula
-                        _root_ide_package_.io.askimo.ui.common.ui.latexFormula(
+                        latexFormula(
                             latex = match.groupValues[1].trim(),
                             fontSize = 28f,
                         )
@@ -390,7 +388,7 @@ private fun renderParagraph(paragraph: Paragraph) {
 
         // No LaTeX at all, render normally with full markdown support
         val annotatedText =
-            _root_ide_package_.io.askimo.ui.common.ui.buildInlineContent(paragraph, inlineCodeBg, linkColor)
+            buildInlineContent(paragraph, inlineCodeBg, linkColor)
         Text(
             text = annotatedText,
             style = MaterialTheme.typography.bodyMedium,
@@ -455,7 +453,7 @@ private fun renderHeading(heading: Heading) {
     }
 
     Text(
-        text = _root_ide_package_.io.askimo.ui.common.ui.buildInlineContent(heading, inlineCodeBg, linkColor),
+        text = buildInlineContent(heading, inlineCodeBg, linkColor),
         style = style,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
@@ -472,7 +470,7 @@ private fun renderBulletList(list: BulletList) {
         var item = list.firstChild
         while (item != null) {
             if (item is ListItem) {
-                _root_ide_package_.io.askimo.ui.common.ui.renderListItem(item, "• ", inlineCodeBg)
+                renderListItem(item, "• ", inlineCodeBg)
             }
             item = item.next
         }
@@ -489,7 +487,7 @@ private fun renderOrderedList(list: OrderedList) {
         var index = list.markerStartNumber
         while (item != null) {
             if (item is ListItem) {
-                _root_ide_package_.io.askimo.ui.common.ui.renderListItem(item, "$index. ", inlineCodeBg)
+                renderListItem(item, "$index. ", inlineCodeBg)
                 index++
             }
             item = item.next
@@ -525,7 +523,7 @@ private fun renderListItem(
                 append(marker)
                 inlineContent.forEach { node ->
                     append(
-                        _root_ide_package_.io.askimo.ui.common.ui.buildInlineContentForNode(
+                        buildInlineContentForNode(
                             node,
                             inlineCodeBg,
                             linkColor,
@@ -543,8 +541,8 @@ private fun renderListItem(
         // Render nested lists
         nestedBlocks.forEach { block ->
             when (block) {
-                is BulletList -> _root_ide_package_.io.askimo.ui.common.ui.renderBulletList(block)
-                is OrderedList -> _root_ide_package_.io.askimo.ui.common.ui.renderOrderedList(block)
+                is BulletList -> renderBulletList(block)
+                is OrderedList -> renderOrderedList(block)
             }
         }
     }
@@ -561,7 +559,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
 
     // Check if this "code block" is actually just prose text
     // (AI sometimes wraps regular text in code fences by mistake)
-    if (language == null && _root_ide_package_.io.askimo.ui.common.ui.isProbablyProse(code)) {
+    if (language == null && isProbablyProse(code)) {
         // Render as a regular paragraph instead
         Text(
             text = code.trim(),
@@ -575,7 +573,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
 
     // Try to parse as chart data before rendering
     val chartData = remember(code, language) {
-        _root_ide_package_.io.askimo.ui.common.ui.parseChartData(code, language)
+        parseChartData(code, language)
     }
 
     // If we successfully parsed chart data, render it as a chart
@@ -596,7 +594,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
-            _root_ide_package_.io.askimo.ui.common.ui.mermaidChart(
+            mermaidChart(
                 data = chartData,
                 modifier = Modifier.padding(16.dp),
             )
@@ -605,18 +603,17 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     }
 
     // Render as regular code block
-    val backgroundColor = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.codeBlockBackground()
-    val isDark = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.isCodeBlockDark()
+    val backgroundColor = AppComponents.codeBlockBackground()
+    val isDark = AppComponents.isCodeBlockDark()
     val clipboardManager = LocalClipboardManager.current
     val density = LocalDensity.current
     var isHovered by remember { mutableStateOf(false) }
     var showCopyFeedback by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    var codeBlockBounds by remember { mutableStateOf<Rect?>(null) }
     var codeBlockPositionInRoot by remember { mutableStateOf<Offset?>(null) }
 
-    val theme = if (isDark) _root_ide_package_.io.askimo.ui.common.ui.CodeHighlighter.darkTheme() else _root_ide_package_.io.askimo.ui.common.ui.CodeHighlighter.lightTheme()
-    val highlightedCode = _root_ide_package_.io.askimo.ui.common.ui.CodeHighlighter.highlight(
+    val theme = if (isDark) CodeHighlighter.darkTheme() else CodeHighlighter.lightTheme()
+    val highlightedCode = CodeHighlighter.highlight(
         code = code,
         language = language,
         theme = theme,
@@ -647,7 +644,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             .padding(vertical = 4.dp)
             .border(
                 width = 1.dp,
-                color = ComponentColors.codeBlockBorderColor(),
+                color = AppComponents.codeBlockBorderColor(),
                 shape = codeBlockShape,
             )
             .clip(codeBlockShape)
@@ -657,7 +654,6 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             .onPointerEvent(PointerEventType.Exit) { isHovered = false }
             .onGloballyPositioned { coordinates ->
                 if (coordinates.isAttached) {
-                    codeBlockBounds = coordinates.boundsInWindow()
                     codeBlockPositionInRoot = coordinates.positionInRoot()
                 }
             },
@@ -668,15 +664,15 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             if (it.lastOrNull()?.isEmpty() == true) it.dropLast(1) else it
         }
         val lineCount = lines.size
-        val lineNumberColor = ComponentColors.codeBlockContentColor().copy(alpha = 0.4f)
+        val lineNumberColor = AppComponents.codeBlockContentColor().copy(alpha = 0.4f)
         val lineNumberWidth = when {
             lineCount >= 1000 -> 52.dp
             lineCount >= 100 -> 42.dp
             else -> 32.dp
         }
         // Gutter background: slightly darker/lighter than the code area depending on theme
-        val gutterBackground = ComponentColors.codeBlockBackground().let { base ->
-            if (ComponentColors.isCodeBlockDark()) {
+        val gutterBackground = AppComponents.codeBlockBackground().let { base ->
+            if (AppComponents.isCodeBlockDark()) {
                 base.copy(
                     red = (base.red * 0.80f).coerceIn(0f, 1f),
                     green = (base.green * 0.80f).coerceIn(0f, 1f),
@@ -730,7 +726,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                         text = highlightedCode,
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace,
-                        color = ComponentColors.codeBlockContentColor(),
+                        color = AppComponents.codeBlockContentColor(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp, bottom = 20.dp, start = 12.dp, end = 12.dp)

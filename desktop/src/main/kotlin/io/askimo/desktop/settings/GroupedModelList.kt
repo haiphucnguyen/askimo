@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.clickableCard
 
 /**
@@ -69,9 +69,9 @@ fun groupedModelListAsCards(
                     .padding(bottom = 8.dp)
                     .clickableCard { onModelClick(dto.modelId) },
                 colors = if (isSelected) {
-                    ComponentColors.primaryCardColors()
+                    AppComponents.primaryCardColors()
                 } else {
-                    ComponentColors.surfaceVariantCardColors()
+                    AppComponents.surfaceVariantCardColors()
                 },
             ) {
                 Row(

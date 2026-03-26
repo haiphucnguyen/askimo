@@ -66,7 +66,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
 
 @Composable
@@ -285,7 +285,7 @@ private fun projectCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -355,7 +355,7 @@ private fun projectCard(
                         )
                     }
 
-                    ComponentColors.themedDropdownMenu(
+                    AppComponents.dropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                     ) {

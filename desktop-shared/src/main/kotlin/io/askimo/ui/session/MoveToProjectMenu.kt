@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.Project
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 
 /**
  * Reusable component for "Move to Project" menu with popup submenu.
@@ -91,7 +91,7 @@ fun moveToProjectMenuItem(
             Box(
                 modifier = Modifier.offset(x = itemWidth, y = (-8).dp),
             ) {
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = showSubmenu,
                     onDismissRequest = { showSubmenu = false },
                 ) {

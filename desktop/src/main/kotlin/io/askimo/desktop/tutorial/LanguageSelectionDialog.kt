@@ -35,7 +35,7 @@ import androidx.compose.ui.window.Dialog
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.ui.clickableCard
 import java.util.Locale
@@ -83,7 +83,7 @@ fun languageSelectionDialog(
                 // Language Selection Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -126,7 +126,7 @@ fun languageSelectionDialog(
                                 }
                             }
 
-                            ComponentColors.themedDropdownMenu(
+                            AppComponents.dropdownMenu(
                                 expanded = languageDropdownExpanded,
                                 onDismissRequest = { languageDropdownExpanded = false },
                             ) {

@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.config.AppConfig
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.FontSettings
 import io.askimo.ui.common.theme.FontSize
 import io.askimo.ui.common.theme.Spacing
@@ -115,7 +115,7 @@ private fun languageSelectionCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -157,7 +157,7 @@ private fun languageSelectionCard() {
                     }
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = languageDropdownExpanded,
                     onDismissRequest = { languageDropdownExpanded = false },
                 ) {
@@ -263,7 +263,7 @@ private fun preferredAIResponseLanguageField(availableLanguages: Map<Locale, Str
                 }
             }
 
-            ComponentColors.themedDropdownMenu(
+            AppComponents.dropdownMenu(
                 expanded = aiLanguageDropdownExpanded,
                 onDismissRequest = { aiLanguageDropdownExpanded = false },
             ) {
@@ -332,7 +332,7 @@ private fun fontSettingsCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -376,7 +376,7 @@ private fun fontSettingsCard() {
                         }
                     }
 
-                    ComponentColors.themedDropdownMenu(
+                    AppComponents.dropdownMenu(
                         expanded = fontDropdownExpanded,
                         onDismissRequest = { fontDropdownExpanded = false },
                         modifier = Modifier.fillMaxWidth(0.5f),
@@ -467,7 +467,7 @@ private fun fontSettingsCard() {
                         }
                     }
 
-                    ComponentColors.themedDropdownMenu(
+                    AppComponents.dropdownMenu(
                         expanded = fontSizeDropdownExpanded,
                         onDismissRequest = { fontSizeDropdownExpanded = false },
                     ) {
@@ -509,7 +509,7 @@ private fun fontSettingsCard() {
 private fun samplingSettingsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier

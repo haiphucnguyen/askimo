@@ -5,40 +5,9 @@
 package io.askimo.ui.common.theme
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
-
-/**
- * Standardized spacing system following Material Design 3 guidelines.
- * Use these constants throughout the application for consistent spacing.
- *
- * Guidelines:
- * - extraSmall (4.dp): Tight spacing within small components (e.g., label + description pairs)
- * - small (8.dp): Standard spacing between related items within a component
- * - medium (12.dp): Spacing between component groups within a card
- * - large (16.dp): Spacing between cards/panels and padding inside cards
- * - extraLarge (24.dp): Major section spacing
- */
-object Spacing {
-    /** 4.dp - Tight spacing for closely related elements (label + description) */
-    val extraSmall = 4.dp
-
-    /** 8.dp - Standard spacing between related items within a component */
-    val small = 8.dp
-
-    /** 12.dp - Spacing between component groups within a card */
-    val medium = 12.dp
-
-    /** 16.dp - Card/panel padding and spacing between cards */
-    val large = 16.dp
-
-    /** 24.dp - Major section spacing */
-    val extraLarge = 24.dp
-}
 
 // Light Theme Colors
 private val md_theme_light_primary = Color(0xFF006C4C)
@@ -103,74 +72,74 @@ private val md_theme_dark_outlineVariant = Color(0xFF565E59)
 private val md_theme_dark_scrim = Color(0xFF000000)
 
 val LightColorScheme = lightColorScheme(
-    primary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_primary,
-    onPrimary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onPrimary,
-    primaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_primaryContainer,
-    onPrimaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onPrimaryContainer,
-    secondary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_secondary,
-    onSecondary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onSecondary,
-    secondaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_secondaryContainer,
-    onSecondaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onSecondaryContainer,
-    tertiary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_tertiary,
-    onTertiary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onTertiary,
-    tertiaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_tertiaryContainer,
-    onTertiaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onTertiaryContainer,
-    error = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_error,
-    errorContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_errorContainer,
-    onError = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onError,
-    onErrorContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onErrorContainer,
-    background = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_background,
-    onBackground = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onBackground,
-    surface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_surface,
-    onSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onSurface,
-    surfaceVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_surfaceVariant,
-    onSurfaceVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_onSurfaceVariant,
-    outline = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_outline,
-    inverseOnSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_inverseOnSurface,
-    inverseSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_inverseSurface,
-    inversePrimary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_inversePrimary,
-    surfaceTint = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_surfaceTint,
-    outlineVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_outlineVariant,
-    scrim = _root_ide_package_.io.askimo.ui.common.theme.md_theme_light_scrim,
+    primary = md_theme_light_primary,
+    onPrimary = md_theme_light_onPrimary,
+    primaryContainer = md_theme_light_primaryContainer,
+    onPrimaryContainer = md_theme_light_onPrimaryContainer,
+    secondary = md_theme_light_secondary,
+    onSecondary = md_theme_light_onSecondary,
+    secondaryContainer = md_theme_light_secondaryContainer,
+    onSecondaryContainer = md_theme_light_onSecondaryContainer,
+    tertiary = md_theme_light_tertiary,
+    onTertiary = md_theme_light_onTertiary,
+    tertiaryContainer = md_theme_light_tertiaryContainer,
+    onTertiaryContainer = md_theme_light_onTertiaryContainer,
+    error = md_theme_light_error,
+    errorContainer = md_theme_light_errorContainer,
+    onError = md_theme_light_onError,
+    onErrorContainer = md_theme_light_onErrorContainer,
+    background = md_theme_light_background,
+    onBackground = md_theme_light_onBackground,
+    surface = md_theme_light_surface,
+    onSurface = md_theme_light_onSurface,
+    surfaceVariant = md_theme_light_surfaceVariant,
+    onSurfaceVariant = md_theme_light_onSurfaceVariant,
+    outline = md_theme_light_outline,
+    inverseOnSurface = md_theme_light_inverseOnSurface,
+    inverseSurface = md_theme_light_inverseSurface,
+    inversePrimary = md_theme_light_inversePrimary,
+    surfaceTint = md_theme_light_surfaceTint,
+    outlineVariant = md_theme_light_outlineVariant,
+    scrim = md_theme_light_scrim,
 )
 
 val DarkColorScheme = darkColorScheme(
-    primary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_primary,
-    onPrimary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onPrimary,
-    primaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_primaryContainer,
-    onPrimaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onPrimaryContainer,
-    secondary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_secondary,
-    onSecondary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onSecondary,
-    secondaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_secondaryContainer,
-    onSecondaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onSecondaryContainer,
-    tertiary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_tertiary,
-    onTertiary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onTertiary,
-    tertiaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_tertiaryContainer,
-    onTertiaryContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onTertiaryContainer,
-    error = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_error,
-    errorContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_errorContainer,
-    onError = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onError,
-    onErrorContainer = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onErrorContainer,
-    background = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_background,
-    onBackground = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onBackground,
-    surface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_surface,
-    onSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onSurface,
-    surfaceVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_surfaceVariant,
-    onSurfaceVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_onSurfaceVariant,
-    outline = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_outline,
-    inverseOnSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_inverseOnSurface,
-    inverseSurface = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_inverseSurface,
-    inversePrimary = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_inversePrimary,
-    surfaceTint = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_surfaceTint,
-    outlineVariant = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_outlineVariant,
-    scrim = _root_ide_package_.io.askimo.ui.common.theme.md_theme_dark_scrim,
+    primary = md_theme_dark_primary,
+    onPrimary = md_theme_dark_onPrimary,
+    primaryContainer = md_theme_dark_primaryContainer,
+    onPrimaryContainer = md_theme_dark_onPrimaryContainer,
+    secondary = md_theme_dark_secondary,
+    onSecondary = md_theme_dark_onSecondary,
+    secondaryContainer = md_theme_dark_secondaryContainer,
+    onSecondaryContainer = md_theme_dark_onSecondaryContainer,
+    tertiary = md_theme_dark_tertiary,
+    onTertiary = md_theme_dark_onTertiary,
+    tertiaryContainer = md_theme_dark_tertiaryContainer,
+    onTertiaryContainer = md_theme_dark_onTertiaryContainer,
+    error = md_theme_dark_error,
+    errorContainer = md_theme_dark_errorContainer,
+    onError = md_theme_dark_onError,
+    onErrorContainer = md_theme_dark_onErrorContainer,
+    background = md_theme_dark_background,
+    onBackground = md_theme_dark_onBackground,
+    surface = md_theme_dark_surface,
+    onSurface = md_theme_dark_onSurface,
+    surfaceVariant = md_theme_dark_surfaceVariant,
+    onSurfaceVariant = md_theme_dark_onSurfaceVariant,
+    outline = md_theme_dark_outline,
+    inverseOnSurface = md_theme_dark_inverseOnSurface,
+    inverseSurface = md_theme_dark_inverseSurface,
+    inversePrimary = md_theme_dark_inversePrimary,
+    surfaceTint = md_theme_dark_surfaceTint,
+    outlineVariant = md_theme_dark_outlineVariant,
+    scrim = md_theme_dark_scrim,
 )
 
 /**
  * Creates a light color scheme with the specified accent color
  */
-fun getLightColorScheme(accentColor: io.askimo.ui.common.theme.AccentColor): ColorScheme {
-    val baseScheme = _root_ide_package_.io.askimo.ui.common.theme.LightColorScheme
+fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
+    val baseScheme = LightColorScheme
     return baseScheme.copy(
         // Keep primary as accent color for backgrounds/highlights
         primary = accentColor.lightColor,
@@ -196,8 +165,8 @@ fun getLightColorScheme(accentColor: io.askimo.ui.common.theme.AccentColor): Col
 /**
  * Creates a dark color scheme with the specified accent color
  */
-fun getDarkColorScheme(accentColor: io.askimo.ui.common.theme.AccentColor): ColorScheme {
-    val baseScheme = _root_ide_package_.io.askimo.ui.common.theme.DarkColorScheme
+fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
+    val baseScheme = DarkColorScheme
     return baseScheme.copy(
         // Keep primary as accent color for backgrounds/highlights
         primary = accentColor.darkColor,
@@ -217,104 +186,5 @@ fun getDarkColorScheme(accentColor: io.askimo.ui.common.theme.AccentColor): Colo
         onSurface = Color.White,
         onBackground = Color.White,
         onSurfaceVariant = Color(0xFFE0E0E0), // Slightly darker white for secondary text
-    )
-}
-
-/**
- * Maps font family names to predefined FontFamily types
- * This provides basic font customization without requiring font file loading
- */
-private fun loadFontFamily(fontName: String): FontFamily = when (fontName.lowercase()) {
-    // Monospace fonts
-    "monospace", "courier", "courier new", "consolas", "monaco", "menlo",
-    "dejavu sans mono", "lucida console",
-    -> FontFamily.Monospace
-
-    // Serif fonts
-    "serif", "times", "times new roman", "georgia", "palatino",
-    "garamond", "baskerville", "book antiqua",
-    -> FontFamily.Serif
-
-    // Cursive fonts
-    "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
-
-    // Default to SansSerif for all other fonts (Arial, Helvetica, Roboto, etc.)
-    else -> FontFamily.SansSerif
-}
-
-/**
- * Creates a custom Typography based on font settings
- */
-fun createCustomTypography(fontSettings: io.askimo.ui.common.theme.FontSettings): Typography {
-    val fontFamily = if (fontSettings.fontFamily == _root_ide_package_.io.askimo.ui.common.theme.FontSettings.SYSTEM_DEFAULT) {
-        FontFamily.Default
-    } else {
-        _root_ide_package_.io.askimo.ui.common.theme.loadFontFamily(fontSettings.fontFamily)
-    }
-
-    val scale = fontSettings.fontSize.scale
-    val baseTypography = Typography()
-
-    return Typography(
-        displayLarge = baseTypography.displayLarge.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.displayLarge.fontSize * scale,
-        ),
-        displayMedium = baseTypography.displayMedium.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.displayMedium.fontSize * scale,
-        ),
-        displaySmall = baseTypography.displaySmall.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.displaySmall.fontSize * scale,
-        ),
-        headlineLarge = baseTypography.headlineLarge.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.headlineLarge.fontSize * scale,
-        ),
-        headlineMedium = baseTypography.headlineMedium.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.headlineMedium.fontSize * scale,
-        ),
-        headlineSmall = baseTypography.headlineSmall.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.headlineSmall.fontSize * scale,
-        ),
-        titleLarge = baseTypography.titleLarge.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.titleLarge.fontSize * scale,
-        ),
-        titleMedium = baseTypography.titleMedium.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.titleMedium.fontSize * scale,
-        ),
-        titleSmall = baseTypography.titleSmall.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.titleSmall.fontSize * scale,
-        ),
-        bodyLarge = baseTypography.bodyLarge.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.bodyLarge.fontSize * scale,
-        ),
-        bodyMedium = baseTypography.bodyMedium.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.bodyMedium.fontSize * scale,
-        ),
-        bodySmall = baseTypography.bodySmall.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.bodySmall.fontSize * scale,
-        ),
-        labelLarge = baseTypography.labelLarge.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.labelLarge.fontSize * scale,
-        ),
-        labelMedium = baseTypography.labelMedium.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.labelMedium.fontSize * scale,
-        ),
-        labelSmall = baseTypography.labelSmall.copy(
-            fontFamily = fontFamily,
-            fontSize = baseTypography.labelSmall.fontSize * scale,
-        ),
     )
 }

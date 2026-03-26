@@ -70,7 +70,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -202,7 +202,7 @@ fun addMcpIntegrationDialog(
                             }
                         }
 
-                        ComponentColors.themedDropdownMenu(
+                        AppComponents.dropdownMenu(
                             expanded = showServerDropdown,
                             onDismissRequest = { showServerDropdown = false },
                         ) {
@@ -260,7 +260,7 @@ fun addMcpIntegrationDialog(
                                 placeholder = { Text(stringResource("mcp.integrations.instance.name.placeholder")) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                colors = ComponentColors.outlinedTextFieldColors(),
+                                colors = AppComponents.outlinedTextFieldColors(),
                             )
 
                             // Variables from templates
@@ -341,7 +341,7 @@ fun addMcpIntegrationDialog(
                                             } else {
                                                 null
                                             },
-                                            colors = ComponentColors.outlinedTextFieldColors(),
+                                            colors = AppComponents.outlinedTextFieldColors(),
                                         )
 
                                         Spacer(modifier = Modifier.height(Spacing.small))
@@ -378,7 +378,7 @@ fun addMcpIntegrationDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 2,
                                 maxLines = 5,
-                                colors = ComponentColors.outlinedTextFieldColors(),
+                                colors = AppComponents.outlinedTextFieldColors(),
                             )
 
                             // Tools Section
@@ -841,7 +841,7 @@ private fun parameterField(
                         )
                     }
                 },
-                colors = ComponentColors.outlinedTextFieldColors(),
+                colors = AppComponents.outlinedTextFieldColors(),
             )
         }
 
@@ -865,7 +865,7 @@ private fun parameterField(
                 supportingText = { parameter.description?.let { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = ComponentColors.outlinedTextFieldColors(),
+                colors = AppComponents.outlinedTextFieldColors(),
             )
         }
     }
@@ -924,7 +924,7 @@ private fun toolConfigurationRow(
                     )
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = showCategoryDropdown,
                     onDismissRequest = { showCategoryDropdown = false },
                 ) {
@@ -976,7 +976,7 @@ private fun toolConfigurationRow(
                     )
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = showStrategyDropdown,
                     onDismissRequest = { showStrategyDropdown = false },
                 ) {

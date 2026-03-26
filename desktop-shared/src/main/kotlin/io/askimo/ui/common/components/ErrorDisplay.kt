@@ -35,7 +35,7 @@ fun inlineErrorMessage(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(_root_ide_package_.io.askimo.ui.common.theme.Spacing.medium),
+                modifier = Modifier.padding(Spacing.medium),
             )
         }
     }
@@ -63,7 +63,7 @@ fun inlineSuccessMessage(
                 text = message,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(_root_ide_package_.io.askimo.ui.common.theme.Spacing.medium),
+                modifier = Modifier.padding(Spacing.medium),
             )
         }
     }

@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 
 @Composable
@@ -57,7 +57,7 @@ fun modelSelectionDialog(
         }
     }
 
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -74,7 +74,7 @@ fun modelSelectionDialog(
                 if (viewModel.model.isNotBlank()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -120,7 +120,7 @@ fun modelSelectionDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             viewModel.modelErrorHelp?.let { helpText ->
-                                Card(colors = ComponentColors.surfaceVariantCardColors()) {
+                                Card(colors = AppComponents.surfaceVariantCardColors()) {
                                     Text(
                                         text = helpText,
                                         style = MaterialTheme.typography.bodySmall,
@@ -146,7 +146,7 @@ fun modelSelectionDialog(
                         if (selectedModel != null && selectedModel != viewModel.model) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ComponentColors.primaryCardColors(),
+                                colors = AppComponents.primaryCardColors(),
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -184,7 +184,7 @@ fun modelSelectionDialog(
                             placeholder = { Text(stringResource("settings.model.search.placeholder")) },
                             label = { Text(stringResource("settings.model.search")) },
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Filtered models list

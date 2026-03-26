@@ -45,7 +45,7 @@ fun latexFormula(
     val textColor = LocalContentColor.current
 
     val formulaImage = remember(latex, fontSize, textColor) {
-        _root_ide_package_.io.askimo.ui.common.ui.renderLatexToImage(latex, fontSize, textColor)
+        renderLatexToImage(latex, fontSize, textColor)
     }
 
     if (formulaImage != null) {
@@ -78,7 +78,7 @@ private fun renderLatexToImage(
     latex: String,
     fontSize: Float,
     textColor: Color,
-): ImageBitmap? = synchronized(_root_ide_package_.io.askimo.ui.common.ui.renderLock) {
+): ImageBitmap? = synchronized(renderLock) {
     try {
         val red = (textColor.red * 255).toInt().coerceIn(0, 255)
         val green = (textColor.green * 255).toInt().coerceIn(0, 255)
@@ -97,14 +97,14 @@ private fun renderLatexToImage(
             setColorMethod.isAccessible = true
             setColorMethod.invoke(formula, awtColor)
         } catch (e: Exception) {
-            _root_ide_package_.io.askimo.ui.common.ui.log.warn("Could not use setColor method: ${e.message}")
+            log.warn("Could not use setColor method: ${e.message}")
         }
 
         val icon = formula.createTeXIcon(TeXConstants.STYLE_DISPLAY, fontSize)
 
         // Ensure icon has valid dimensions
         if (icon.iconWidth <= 0 || icon.iconHeight <= 0) {
-            _root_ide_package_.io.askimo.ui.common.ui.log.error("Invalid icon dimensions: ${icon.iconWidth}x${icon.iconHeight} for latex: $normalizedLatex")
+            log.error("Invalid icon dimensions: ${icon.iconWidth}x${icon.iconHeight} for latex: $normalizedLatex")
             return@synchronized null
         }
 
@@ -150,20 +150,20 @@ private fun renderLatexToImage(
         val writeSuccess = ImageIO.write(bufferedImage, "PNG", outputStream)
 
         if (!writeSuccess) {
-            _root_ide_package_.io.askimo.ui.common.ui.log.error("Failed to write PNG for latex: $normalizedLatex")
+            log.error("Failed to write PNG for latex: $normalizedLatex")
             return@synchronized null
         }
 
         val bytes = outputStream.toByteArray()
 
         if (bytes.isEmpty()) {
-            _root_ide_package_.io.askimo.ui.common.ui.log.error("Empty PNG bytes for latex: $normalizedLatex")
+            log.error("Empty PNG bytes for latex: $normalizedLatex")
             return@synchronized null
         }
 
         Image.makeFromEncoded(bytes).toComposeImageBitmap()
     } catch (e: Exception) {
-        _root_ide_package_.io.askimo.ui.common.ui.log.error("Failed to render LaTeX: $latex - ${e.message}", e)
+        log.error("Failed to render LaTeX: $latex - ${e.message}", e)
         null
     }
 }

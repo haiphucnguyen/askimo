@@ -49,7 +49,7 @@ import io.askimo.ui.common.components.dangerButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AccentColor
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
@@ -183,9 +183,9 @@ private fun themeOption(
             .fillMaxWidth()
             .clickableCard(onClick = onClick),
         colors = if (selected) {
-            ComponentColors.primaryCardColors()
+            AppComponents.primaryCardColors()
         } else {
-            ComponentColors.surfaceVariantCardColors()
+            AppComponents.surfaceVariantCardColors()
         },
     ) {
         Row(
@@ -287,7 +287,7 @@ private fun avatarSetting(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.surfaceVariantCardColors(),
+        colors = AppComponents.surfaceVariantCardColors(),
     ) {
         Row(
             modifier = Modifier
@@ -390,9 +390,9 @@ private fun accentColorOption(
             .fillMaxWidth()
             .clickableCard(onClick = onClick),
         colors = if (selected) {
-            ComponentColors.primaryCardColors()
+            AppComponents.primaryCardColors()
         } else {
-            ComponentColors.surfaceVariantCardColors()
+            AppComponents.surfaceVariantCardColors()
         },
     ) {
         Row(

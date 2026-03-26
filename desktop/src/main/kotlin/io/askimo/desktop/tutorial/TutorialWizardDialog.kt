@@ -49,7 +49,7 @@ import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 
 /**
@@ -307,7 +307,7 @@ private fun tutorialStepNextSteps() {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = ComponentColors.bannerCardColors(),
+            colors = AppComponents.bannerCardColors(),
         ) {
             Column(
                 modifier = Modifier
@@ -345,7 +345,7 @@ private fun tutorialFeatureCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -378,7 +378,7 @@ private fun tutorialLinkItem(
         modifier = Modifier
             .fillMaxWidth()
             .pointerHoverIcon(PointerIcon.Hand),
-        colors = ComponentColors.primaryTextButtonColors(),
+        colors = AppComponents.primaryTextButtonColors(),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

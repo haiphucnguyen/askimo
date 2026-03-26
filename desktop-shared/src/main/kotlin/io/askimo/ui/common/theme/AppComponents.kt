@@ -7,13 +7,11 @@ package io.askimo.ui.common.theme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -35,13 +33,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
-object ComponentColors {
+object AppComponents {
 
-    /**
-     * Navigation drawer item colors that use custom theme colors
-     * - Unselected: transparent background, normal text/icon colors
-     * - Selected: primaryContainer background (accent color), onPrimaryContainer text/icon
-     */
+    // ── Navigation ───────────────────────────────────────────────────────────
+
     @Composable
     fun navigationDrawerItemColors(): NavigationDrawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -54,11 +49,6 @@ object ComponentColors {
         unselectedBadgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    /**
-     * Navigation rail item colors that use custom theme colors
-     * - Unselected: normal icon color
-     * - Selected: primaryContainer indicator (accent color), onPrimaryContainer icon
-     */
     @Composable
     fun navigationRailItemColors(): NavigationRailItemColors = NavigationRailItemDefaults.colors(
         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -66,92 +56,47 @@ object ComponentColors {
         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
     )
 
-    /**
-     * Primary card colors (for important info cards like Provider/Model header, selected options)
-     * - Container: primaryContainer (accent color)
-     * - Content: onPrimaryContainer
-     */
+    // ── Cards ─────────────────────────────────────────────────────────────────
+
     @Composable
     fun primaryCardColors(): CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     )
 
-    /**
-     * Banner card colors (for section headers like Chat Configuration, Font Settings)
-     * - Container: secondaryContainer (subtle accent-related color)
-     * - Content: onSecondaryContainer
-     */
     @Composable
     fun bannerCardColors(): CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     )
 
-    /**
-     * Secondary card colors (for search indicators, file attachments in input)
-     * - Container: secondaryContainer
-     * - Content: onSecondaryContainer
-     */
     @Composable
     fun secondaryCardColors(): CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     )
 
-    /**
-     * Surface variant card colors (for general cards like About page)
-     * - Container: surfaceVariant
-     * - Content: onSurfaceVariant
-     */
     @Composable
     fun surfaceVariantCardColors(): CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    /**
-     * Primary icon button colors
-     * - Content: primary color (accent)
-     * - Disabled: onSurface with alpha
-     */
+    // ── Buttons & Icons ───────────────────────────────────────────────────────
+
     @Composable
     fun primaryIconButtonColors(): IconButtonColors = IconButtonDefaults.iconButtonColors(
         contentColor = MaterialTheme.colorScheme.primary,
         disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
     )
 
-    /**
-     * Text button colors for primary actions
-     * - Content: primary color (accent)
-     */
     @Composable
     fun primaryTextButtonColors(): ButtonColors = ButtonDefaults.textButtonColors(
         contentColor = MaterialTheme.colorScheme.primary,
     )
 
-    /**
-     * Subtle button colors with lighter background
-     * - Container: secondaryContainer (lighter than primaryContainer)
-     * - Content: onSecondaryContainer
-     * - More subtle appearance than default buttons
-     */
-    @Composable
-    fun subtleButtonColors(): ButtonColors = ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    )
+    // ── Inputs ────────────────────────────────────────────────────────────────
 
-    /**
-     * Provides themed colors for outlined text fields with good contrast.
-     * - Focused border: onSurface (matches text color for consistency)
-     * - Unfocused border: outlineVariant (subtle)
-     * - Focused label: onSurface (matches text color)
-     * - Unfocused label: onSurfaceVariant (muted)
-     * - Cursor: onSurface (matches text color)
-     * - Text: onSurface (default, good contrast)
-     * - Placeholder: onSurfaceVariant (muted)
-     */
     @Composable
     fun outlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.onSurface,
@@ -161,24 +106,24 @@ object ComponentColors {
         cursorColor = MaterialTheme.colorScheme.onSurface,
     )
 
-    /**
-     * Sidebar surface color with subtle accent tint
-     * - Applies a noticeable tint of the accent color to the surface
-     * - Makes sidebar visually distinct from main content
-     * - Adapts to light/dark mode (8% tint for light, 12% for dark)
-     * - Ties into custom theme colors
-     */
+    @Composable
+    fun menuItemColors(): MenuItemColors = MenuDefaults.itemColors(
+        textColor = MaterialTheme.colorScheme.onSurface,
+        leadingIconColor = MaterialTheme.colorScheme.onSurface,
+        trailingIconColor = MaterialTheme.colorScheme.onSurface,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    )
+
+    // ── Surface Colors ────────────────────────────────────────────────────────
+
     @Composable
     fun sidebarSurfaceColor(): Color {
         val surfaceColor = MaterialTheme.colorScheme.surface
         val primaryColor = MaterialTheme.colorScheme.primary
-
-        // Determine if we're in light or dark mode
         val isLight = surfaceColor.luminance() > 0.5
-
-        // Apply noticeable tint (8% for light mode, 12% for dark mode)
         val tintAmount = if (isLight) 0.08f else 0.12f
-
         return Color(
             red = surfaceColor.red + (primaryColor.red - surfaceColor.red) * tintAmount,
             green = surfaceColor.green + (primaryColor.green - surfaceColor.green) * tintAmount,
@@ -187,14 +132,9 @@ object ComponentColors {
         )
     }
 
-    /**
-     * Background color for user message bubbles.
-     * Computed as a neutral darkened/lightened step from the surface color so it is
-     * always accent-neutral. surfaceContainerHigh inherits surfaceTint (the
-     * accent colour) and looks tinted (e.g. purple/grey) in light mode.
-     * - Light theme: surface darkened by 8% — subtle grey, no accent tint.
-     * - Dark theme:  surface lightened by 10% — slightly lighter dark surface.
-     */
+    @Composable
+    fun sidebarHeaderColor(): Color = MaterialTheme.colorScheme.secondaryContainer
+
     @Composable
     fun userMessageBackground(): Color {
         val surface = MaterialTheme.colorScheme.surface
@@ -216,20 +156,9 @@ object ComponentColors {
         }
     }
 
-    /**
-     * Content (text/icon) color for user message bubbles.
-     */
     @Composable
     fun userMessageContentColor(): Color = MaterialTheme.colorScheme.onSurface
 
-    /**
-     * Background color for code blocks in AI responses.
-     * Computed directly from surface to stay accent-neutral.
-     * surfaceContainerHighest/Low inherit surfaceTint (the accent colour)
-     * and appear tinted in themed modes.
-     * - Light theme: surface darkened by 15% — clear contrast, no accent tint.
-     * - Dark theme:  surface darkened by 15% — deeper dark, keeps dark syntax colors readable.
-     */
     @Composable
     fun codeBlockBackground(): Color {
         val surface = MaterialTheme.colorScheme.surface
@@ -251,100 +180,36 @@ object ComponentColors {
         }
     }
 
-    /**
-     * Text/content color for code blocks (used as the fallback/unstyled token color).
-     * Paired with codeBlockBackground() to ensure readable contrast.
-     */
     @Composable
     fun codeBlockContentColor(): Color = MaterialTheme.colorScheme.onSurface
 
-    /**
-     * Border color for code blocks.
-     */
     @Composable
     fun codeBlockBorderColor(): Color = MaterialTheme.colorScheme.outlineVariant
 
-    /**
-     * Returns true when the code block background is dark, so the caller can
-     * pick the correct syntax highlight theme (dark vs light).
-     */
     @Composable
     fun isCodeBlockDark(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5
 
-    /**
-     * Sidebar header color - uses secondaryContainer for a subtle accent
-     * - Lighter than primaryContainer (used by buttons)
-     * - Makes header visually distinct but not overwhelming
-     * - Consistent with Material3 design system
-     */
-    @Composable
-    fun sidebarHeaderColor(): Color = MaterialTheme.colorScheme.secondaryContainer
+    // ── Icon & Text Tints ─────────────────────────────────────────────────────
 
-    /**
-     * Icon tint for secondary/muted icons
-     * - Used for icons that need less emphasis than primary content
-     * - Examples: collapsed sidebar icons, secondary actions, metadata icons
-     * - Provides good contrast while being visually subdued
-     */
     @Composable
     fun secondaryIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
-    /**
-     * Icon tint for disabled or very subtle icons
-     * - Used for disabled state or very low emphasis elements
-     * - Examples: placeholder icons, disabled actions
-     * - Follows Material Design 3 guidelines (38% alpha)
-     */
     @Composable
     fun disabledIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
 
-    /**
-     * Icon tint for tertiary/muted icons with very low emphasis
-     * - Used for background icons or decorative elements
-     * - Examples: empty state icons, watermarks
-     * - More subdued than secondaryIconColor
-     */
     @Composable
     fun tertiaryIconColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
-    /**
-     * Text color for secondary text
-     * - Used for supporting text that needs less emphasis
-     * - Examples: descriptions, metadata, helper text
-     * - Better readability than tertiary text
-     */
     @Composable
     fun secondaryTextColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
-    /**
-     * Text color for tertiary text with minimal emphasis
-     * - Used for very subtle text elements
-     * - Examples: "(Coming soon)" labels, footnotes, timestamps
-     * - More subdued than secondary text
-     */
     @Composable
     fun tertiaryTextColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
-    /**
-     * Themed DropdownMenu that uses correct theme colors.
-     *
-     * DropdownMenu in Material3 uses surfaceContainer by default, which doesn't follow
-     * custom theme colors. This wrapper overrides the color scheme to use the proper
-     * surface color from the theme.
-     *
-     * Usage:
-     * ```kotlin
-     * ComponentColors.themedDropdownMenu(
-     *     expanded = expanded,
-     *     onDismissRequest = { expanded = false }
-     * ) {
-     *     DropdownMenuItem(...)
-     *     DropdownMenuItem(...)
-     * }
-     * ```
-     */
+    // ── Themed Composable Wrappers ────────────────────────────────────────────
+
     @Composable
-    fun themedDropdownMenu(
+    fun dropdownMenu(
         expanded: Boolean,
         onDismissRequest: () -> Unit,
         modifier: Modifier = Modifier,
@@ -356,57 +221,22 @@ object ComponentColors {
                 surfaceContainer = MaterialTheme.colorScheme.surface,
             ),
         ) {
-            DropdownMenu(
+            androidx.compose.material3.DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
                 offset = offset,
-                modifier = modifier
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(4.dp),
-                    ),
+                modifier = modifier.border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(4.dp),
+                ),
                 content = content,
             )
         }
     }
 
-    /**
-     * Menu item colors that disable the hover/focus background effect.
-     * This prevents the rectangular border/background from appearing when hovering
-     * over menu items that already have their own background styling.
-     *
-     * Use this for DropdownMenuItem components to avoid hover artifacts.
-     */
     @Composable
-    fun menuItemColors(): MenuItemColors = MenuDefaults.itemColors(
-        textColor = MaterialTheme.colorScheme.onSurface,
-        leadingIconColor = MaterialTheme.colorScheme.onSurface,
-        trailingIconColor = MaterialTheme.colorScheme.onSurface,
-        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-    )
-
-    /**
-     * Themed AlertDialog that uses correct theme colors.
-     *
-     * AlertDialog in Material3 uses surfaceContainerHigh by default, which doesn't follow
-     * custom theme colors. This wrapper overrides the color scheme to use the proper
-     * surface color from the theme, ensuring dialogs match the application's theme.
-     *
-     * Usage:
-     * ```kotlin
-     * ComponentColors.themedAlertDialog(
-     *     onDismissRequest = { showDialog = false },
-     *     title = { Text("Title") },
-     *     text = { Text("Content") },
-     *     confirmButton = { Button(...) { Text("OK") } }
-     * )
-     * ```
-     */
-    @Composable
-    fun themedAlertDialog(
+    fun alertDialog(
         onDismissRequest: () -> Unit,
         confirmButton: @Composable () -> Unit,
         modifier: Modifier = Modifier,
@@ -427,7 +257,7 @@ object ComponentColors {
                 surfaceContainerHigh = MaterialTheme.colorScheme.surface,
             ),
         ) {
-            AlertDialog(
+            androidx.compose.material3.AlertDialog(
                 onDismissRequest = onDismissRequest,
                 confirmButton = confirmButton,
                 modifier = modifier,

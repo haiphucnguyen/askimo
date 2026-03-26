@@ -53,7 +53,7 @@ import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -253,7 +253,7 @@ private fun folderNodeItem(
                         } else {
                             stringResource("rag.tree.expand")
                         },
-                        tint = ComponentColors.secondaryIconColor(),
+                        tint = AppComponents.secondaryIconColor(),
                         modifier = Modifier.size(16.dp),
                     )
 
@@ -265,7 +265,7 @@ private fun folderNodeItem(
                             Icons.Default.Folder
                         },
                         contentDescription = null,
-                        tint = ComponentColors.secondaryIconColor(),
+                        tint = AppComponents.secondaryIconColor(),
                         modifier = Modifier.size(18.dp),
                     )
 
@@ -399,7 +399,7 @@ private fun fileNodeItem(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                     contentDescription = null,
-                    tint = ComponentColors.secondaryIconColor(),
+                    tint = AppComponents.secondaryIconColor(),
                     modifier = Modifier.size(18.dp),
                 )
 
@@ -527,7 +527,7 @@ private fun urlNodeItem(
                 Icon(
                     imageVector = Icons.Default.Language,
                     contentDescription = null,
-                    tint = ComponentColors.secondaryIconColor(),
+                    tint = AppComponents.secondaryIconColor(),
                     modifier = Modifier.size(18.dp),
                 )
 
