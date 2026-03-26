@@ -11,15 +11,18 @@ import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.jdbc.deleteAll
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -81,9 +84,9 @@ class ChatSessionRepository internal constructor(
         ChatSessionsTable
             .selectAll()
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(limit)
             .map { it.toChatSession() }
@@ -141,9 +144,9 @@ class ChatSessionRepository internal constructor(
             }
         }
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(pageSize)
             .offset(offset)
@@ -169,7 +172,7 @@ class ChatSessionRepository internal constructor(
         ChatSessionsTable
             .selectAll()
             .where { ChatSessionsTable.projectId eq projectId }
-            .orderBy(ChatSessionsTable.updatedAt to SortOrder.DESC)
+            .orderBy(ChatSessionsTable.updatedAt, SortOrder.DESC)
             .map { it.toChatSession() }
     }
 
@@ -314,8 +317,8 @@ class ChatSessionRepository internal constructor(
             .selectAll()
             .where { ChatSessionsTable.isStarred eq 1 }
             .orderBy(
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .map { it.toChatSession() }
     }
@@ -332,9 +335,9 @@ class ChatSessionRepository internal constructor(
             .selectAll()
             .where { ChatSessionsTable.projectId.isNull() }
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(limit)
             .map { it.toChatSession() }

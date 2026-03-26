@@ -13,15 +13,16 @@ import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -78,7 +79,7 @@ class ProjectRepository internal constructor(
     fun getAllProjects(): List<Project> = transaction(database) {
         ProjectsTable
             .selectAll()
-            .orderBy(ProjectsTable.updatedAt to SortOrder.DESC)
+            .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
             .map { it.toProject() }
     }
 
@@ -104,7 +105,7 @@ class ProjectRepository internal constructor(
         ProjectsTable
             .selectAll()
             .where { ProjectsTable.name eq name }
-            .orderBy(ProjectsTable.createdAt to SortOrder.DESC)
+            .orderBy(ProjectsTable.createdAt, SortOrder.DESC)
             .map { it.toProject() }
             .firstOrNull()
     }
@@ -179,7 +180,7 @@ class ProjectRepository internal constructor(
 
         val pageProjects = ProjectsTable
             .selectAll()
-            .orderBy(ProjectsTable.updatedAt to SortOrder.DESC)
+            .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
             .limit(pageSize)
             .offset(offset)
             .map { it.toProject() }

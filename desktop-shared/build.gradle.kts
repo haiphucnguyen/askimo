@@ -30,7 +30,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
-    implementation(project(":shared"))
+    api(project(":shared"))
     implementation(libs.konform)
     implementation(libs.bundles.commonmark)
     implementation(libs.commonmark.ext.autolink)
