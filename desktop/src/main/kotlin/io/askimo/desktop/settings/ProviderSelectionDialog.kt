@@ -50,7 +50,7 @@ import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.ui.clickableCard
 import java.awt.Desktop
@@ -62,7 +62,7 @@ fun providerSelectionDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -119,7 +119,7 @@ fun providerSelectionDialog(
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 viewModel.modelErrorHelp?.let { helpText ->
-                                    Card(colors = ComponentColors.surfaceVariantCardColors()) {
+                                    Card(colors = AppComponents.surfaceVariantCardColors()) {
                                         Text(
                                             text = helpText,
                                             style = MaterialTheme.typography.bodySmall,
@@ -145,7 +145,7 @@ fun providerSelectionDialog(
                             if (viewModel.pendingModelForNewProvider != null) {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = ComponentColors.surfaceVariantCardColors(),
+                                    colors = AppComponents.surfaceVariantCardColors(),
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -177,7 +177,7 @@ fun providerSelectionDialog(
                                 placeholder = { Text(stringResource("settings.model.search.placeholder")) },
                                 label = { Text(stringResource("settings.model.search")) },
                                 singleLine = true,
-                                colors = ComponentColors.outlinedTextFieldColors(),
+                                colors = AppComponents.outlinedTextFieldColors(),
                             )
 
                             // Filtered models list
@@ -224,7 +224,7 @@ fun providerSelectionDialog(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -271,7 +271,7 @@ fun providerSelectionDialog(
                                     }
                                 }
 
-                                ComponentColors.themedDropdownMenu(
+                                AppComponents.dropdownMenu(
                                     expanded = providerDropdownExpanded,
                                     onDismissRequest = { providerDropdownExpanded = false },
                                 ) {
@@ -387,7 +387,7 @@ fun providerSelectionDialog(
                                                         Icon(Icons.Default.Lock, contentDescription = "Password")
                                                     }
                                                 },
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
 
                                             // Security assurance message
@@ -437,7 +437,7 @@ fun providerSelectionDialog(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 singleLine = true,
                                                 placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
                                         }
                                     }

@@ -82,7 +82,7 @@ import io.askimo.core.providers.ProviderSettings
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.monitoring.SystemResourceMonitor
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.clickableCard
 import io.askimo.ui.common.ui.themedTooltip
 import kotlinx.coroutines.CoroutineScope
@@ -249,7 +249,7 @@ private fun modelDropdown(
             }
         }
 
-        ComponentColors.themedDropdownMenu(
+        AppComponents.dropdownMenu(
             expanded = expanded,
             onDismissRequest = {
                 expanded = false
@@ -313,7 +313,7 @@ private fun modelDropdown(
                             )
                         },
                         textStyle = MaterialTheme.typography.bodySmall,
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -437,7 +437,7 @@ fun footerBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(ComponentColors.sidebarSurfaceColor()),
+            .background(AppComponents.sidebarSurfaceColor()),
     ) {
         // Top border
         HorizontalDivider()
@@ -795,7 +795,7 @@ private fun eventItem(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.surfaceVariantCardColors(),
+        colors = AppComponents.surfaceVariantCardColors(),
     ) {
         Column(
             modifier = Modifier

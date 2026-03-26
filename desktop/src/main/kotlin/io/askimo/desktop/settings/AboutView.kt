@@ -21,7 +21,7 @@ import io.askimo.core.VersionInfo
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import java.awt.Desktop
 import java.net.URI
@@ -31,7 +31,7 @@ import java.time.Year
 fun aboutDialog(
     onDismiss: () -> Unit,
 ) {
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -49,7 +49,7 @@ fun aboutDialog(
                 // Version Info
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.large),
@@ -90,7 +90,7 @@ fun aboutDialog(
                 // Description
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.large),
@@ -112,7 +112,7 @@ fun aboutDialog(
                 // License
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.large),

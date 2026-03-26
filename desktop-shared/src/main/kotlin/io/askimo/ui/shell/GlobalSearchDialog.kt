@@ -71,7 +71,7 @@ import io.askimo.core.search.SortBy
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -268,7 +268,7 @@ fun globalSearchDialog(
                             }
                         },
                     singleLine = true,
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                 )
 
                 // Filters Row
@@ -292,7 +292,7 @@ fun globalSearchDialog(
                                 .fillMaxWidth()
                                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                                 .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                         ExposedDropdownMenu(
                             expanded = dateFilterExpanded,
@@ -327,7 +327,7 @@ fun globalSearchDialog(
                                 .fillMaxWidth()
                                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                                 .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                         ExposedDropdownMenu(
                             expanded = sortByExpanded,

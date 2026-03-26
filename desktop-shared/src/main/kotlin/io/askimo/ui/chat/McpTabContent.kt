@@ -56,7 +56,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
@@ -232,7 +232,7 @@ private fun mcpInstanceItem(
                 } else {
                     stringResource("rag.tree.expand")
                 },
-                tint = ComponentColors.secondaryIconColor(),
+                tint = AppComponents.secondaryIconColor(),
                 modifier = Modifier.size(20.dp),
             )
 
@@ -243,7 +243,7 @@ private fun mcpInstanceItem(
                 tint = if (instance.enabled) {
                     MaterialTheme.colorScheme.onSurface
                 } else {
-                    ComponentColors.secondaryIconColor()
+                    AppComponents.secondaryIconColor()
                 },
                 modifier = Modifier.size(20.dp),
             )
@@ -265,7 +265,7 @@ private fun mcpInstanceItem(
                     Text(
                         text = stringResource("mcp.instance.disabled"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = ComponentColors.secondaryTextColor(),
+                        color = AppComponents.secondaryTextColor(),
                     )
                 }
             }
@@ -309,7 +309,7 @@ private fun mcpInstanceItem(
                             Text(
                                 text = stringResource("mcp.tools.loading"),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ComponentColors.secondaryTextColor(),
+                                color = AppComponents.secondaryTextColor(),
                             )
                         }
                     }
@@ -336,7 +336,7 @@ private fun mcpInstanceItem(
                         Text(
                             text = stringResource("mcp.tools.none"),
                             style = MaterialTheme.typography.bodySmall,
-                            color = ComponentColors.secondaryTextColor(),
+                            color = AppComponents.secondaryTextColor(),
                             modifier = Modifier.padding(8.dp),
                         )
                     }
@@ -422,14 +422,14 @@ private fun toolItem(
                                         Text(
                                             text = "• $paramName",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = ComponentColors.secondaryTextColor(),
+                                            color = AppComponents.secondaryTextColor(),
                                         )
                                     }
                                     if (properties.size > 5) {
                                         Text(
                                             text = "... and ${properties.size - 5} more",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = ComponentColors.tertiaryTextColor(),
+                                            color = AppComponents.tertiaryTextColor(),
                                             fontStyle = FontStyle.Italic,
                                         )
                                     }
@@ -502,7 +502,7 @@ private fun mcpEmptyState() {
                 imageVector = Icons.Default.Extension,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = ComponentColors.tertiaryIconColor(),
+                tint = AppComponents.tertiaryIconColor(),
             )
 
             Text(
@@ -515,7 +515,7 @@ private fun mcpEmptyState() {
             Text(
                 text = stringResource("mcp.description"),
                 style = MaterialTheme.typography.bodySmall,
-                color = ComponentColors.secondaryTextColor(),
+                color = AppComponents.secondaryTextColor(),
                 textAlign = TextAlign.Center,
             )
         }
@@ -539,7 +539,7 @@ private fun mcpNoInstancesState() {
                 imageVector = Icons.Default.ExtensionOff,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = ComponentColors.tertiaryIconColor(),
+                tint = AppComponents.tertiaryIconColor(),
             )
 
             Text(
@@ -552,7 +552,7 @@ private fun mcpNoInstancesState() {
             Text(
                 text = stringResource("mcp.no.instances.description"),
                 style = MaterialTheme.typography.bodySmall,
-                color = ComponentColors.secondaryTextColor(),
+                color = AppComponents.secondaryTextColor(),
                 textAlign = TextAlign.Center,
             )
         }

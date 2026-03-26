@@ -50,7 +50,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 
 private val log = currentFileLogger()
@@ -147,7 +147,7 @@ fun mcpServerTemplateDialog(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !isEditMode,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                         OutlinedTextField(
                             value = name,
@@ -156,7 +156,7 @@ fun mcpServerTemplateDialog(
                             placeholder = { Text(stringResource("mcp.template.field.name.placeholder")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                         OutlinedTextField(
                             value = description,
@@ -166,7 +166,7 @@ fun mcpServerTemplateDialog(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 3,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
@@ -234,7 +234,7 @@ fun mcpServerTemplateDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 2,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                                 OutlinedTextField(
                                     value = envTemplate,
@@ -249,7 +249,7 @@ fun mcpServerTemplateDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 2,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                             }
                         }
@@ -270,7 +270,7 @@ fun mcpServerTemplateDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                                 OutlinedTextField(
                                     value = headersTemplate,
@@ -285,7 +285,7 @@ fun mcpServerTemplateDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 2,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -300,7 +300,7 @@ fun mcpServerTemplateDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                             }
                         }
@@ -319,7 +319,7 @@ fun mcpServerTemplateDialog(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                     } // end scrollable Column
 

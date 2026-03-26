@@ -33,20 +33,19 @@ object ThemePreferences {
     private const val WINDOW_X_KEY = "window_x"
     private const val WINDOW_Y_KEY = "window_y"
     private const val WINDOW_IS_MAXIMIZED_KEY = "window_is_maximized"
-    private const val USER_AVATAR_PATH_KEY = "user_avatar_path"
     private const val AI_AVATAR_PATH_KEY = "ai_avatar_path"
     private const val MAIN_SIDEBAR_WIDTH_FRACTION_KEY = "main_sidebar_width_fraction"
     private const val SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY = "settings_sidebar_width_fraction"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
-    val themeMode: StateFlow<io.askimo.ui.common.theme.ThemeMode> = _themeMode.asStateFlow()
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     private val _accentColor = MutableStateFlow(loadAccentColor())
-    val accentColor: StateFlow<io.askimo.ui.common.theme.AccentColor> = _accentColor.asStateFlow()
+    val accentColor: StateFlow<AccentColor> = _accentColor.asStateFlow()
 
     private val _fontSettings = MutableStateFlow(loadFontSettings())
-    val fontSettings: StateFlow<io.askimo.ui.common.theme.FontSettings> = _fontSettings.asStateFlow()
+    val fontSettings: StateFlow<FontSettings> = _fontSettings.asStateFlow()
 
     private val _locale = MutableStateFlow(loadLocale())
     val locale: StateFlow<Locale> = _locale.asStateFlow()
@@ -54,33 +53,33 @@ object ThemePreferences {
     private val _logLevel = MutableStateFlow(loadLogLevel())
     val logLevel: StateFlow<LogLevel> = _logLevel.asStateFlow()
 
-    private fun loadThemeMode(): io.askimo.ui.common.theme.ThemeMode {
-        val themeName = prefs.get(THEME_MODE_KEY, _root_ide_package_.io.askimo.ui.common.theme.ThemeMode.SYSTEM.name)
+    private fun loadThemeMode(): ThemeMode {
+        val themeName = prefs.get(THEME_MODE_KEY, ThemeMode.SYSTEM.name)
         return try {
-            _root_ide_package_.io.askimo.ui.common.theme.ThemeMode.valueOf(themeName)
-        } catch (e: IllegalArgumentException) {
-            _root_ide_package_.io.askimo.ui.common.theme.ThemeMode.SYSTEM
+            ThemeMode.valueOf(themeName)
+        } catch (_: IllegalArgumentException) {
+            ThemeMode.SYSTEM
         }
     }
 
-    private fun loadAccentColor(): io.askimo.ui.common.theme.AccentColor {
-        val colorName = prefs.get(ACCENT_COLOR_KEY, _root_ide_package_.io.askimo.ui.common.theme.AccentColor.MODERN_GRAY.name)
+    private fun loadAccentColor(): AccentColor {
+        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.MODERN_GRAY.name)
         return try {
-            _root_ide_package_.io.askimo.ui.common.theme.AccentColor.valueOf(colorName)
-        } catch (e: IllegalArgumentException) {
-            _root_ide_package_.io.askimo.ui.common.theme.AccentColor.MODERN_GRAY
+            AccentColor.valueOf(colorName)
+        } catch (_: IllegalArgumentException) {
+            AccentColor.MODERN_GRAY
         }
     }
 
-    private fun loadFontSettings(): io.askimo.ui.common.theme.FontSettings {
-        val fontFamily = prefs.get(FONT_FAMILY_KEY, _root_ide_package_.io.askimo.ui.common.theme.FontSettings.SYSTEM_DEFAULT)
-        val fontSizeName = prefs.get(FONT_SIZE_KEY, _root_ide_package_.io.askimo.ui.common.theme.FontSize.MEDIUM.name)
+    private fun loadFontSettings(): FontSettings {
+        val fontFamily = prefs.get(FONT_FAMILY_KEY, FontSettings.SYSTEM_DEFAULT)
+        val fontSizeName = prefs.get(FONT_SIZE_KEY, FontSize.MEDIUM.name)
         val fontSize = try {
-            _root_ide_package_.io.askimo.ui.common.theme.FontSize.valueOf(fontSizeName)
+            FontSize.valueOf(fontSizeName)
         } catch (e: IllegalArgumentException) {
-            _root_ide_package_.io.askimo.ui.common.theme.FontSize.MEDIUM
+            FontSize.MEDIUM
         }
-        return _root_ide_package_.io.askimo.ui.common.theme.FontSettings(fontFamily, fontSize)
+        return FontSettings(fontFamily, fontSize)
     }
 
     private fun loadLocale(): Locale {
@@ -91,7 +90,7 @@ object ThemePreferences {
             // User has explicitly set a locale, use it
             return try {
                 Locale.forLanguageTag(savedLocaleTag)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Locale.ENGLISH
             }
         }
@@ -117,12 +116,12 @@ object ThemePreferences {
         val levelName = prefs.get(LOG_LEVEL_KEY, LogLevel.INFO.name)
         val level = try {
             LogLevel.valueOf(levelName)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             LogLevel.INFO
         }
 
         // Apply saved log level on startup
-        LoggingService.updateLogLevel(LogLevel.DEBUG)
+        LoggingService.updateLogLevel(level)
 
         return level
     }
@@ -160,7 +159,7 @@ object ThemePreferences {
     fun getAvailableSystemFonts(): List<String> {
         val ge = GraphicsEnvironment.getLocalGraphicsEnvironment()
         val fonts = ge.availableFontFamilyNames.toList()
-        return listOf(_root_ide_package_.io.askimo.ui.common.theme.FontSettings.SYSTEM_DEFAULT) + fonts.sorted()
+        return listOf(FontSettings.SYSTEM_DEFAULT) + fonts.sorted()
     }
 
     // Window state management
@@ -176,19 +175,10 @@ object ThemePreferences {
     fun getWindowHeight(): Int = prefs.getInt(WINDOW_HEIGHT_KEY, -1)
     fun getWindowX(): Int = prefs.getInt(WINDOW_X_KEY, -1)
     fun getWindowY(): Int = prefs.getInt(WINDOW_Y_KEY, -1)
-    fun isWindowMaximized(): Boolean = prefs.getBoolean(WINDOW_IS_MAXIMIZED_KEY, true) // Default to maximized
+    fun isWindowMaximized(): Boolean = prefs.getBoolean(WINDOW_IS_MAXIMIZED_KEY, true)
 
     // Avatar management
-    fun getUserAvatarPath(): String? = prefs.get(USER_AVATAR_PATH_KEY, null)
     fun getAIAvatarPath(): String? = prefs.get(AI_AVATAR_PATH_KEY, null)
-
-    fun setUserAvatarPath(path: String?) {
-        if (path != null) {
-            prefs.put(USER_AVATAR_PATH_KEY, path)
-        } else {
-            prefs.remove(USER_AVATAR_PATH_KEY)
-        }
-    }
 
     fun setAIAvatarPath(path: String?) {
         if (path != null) {

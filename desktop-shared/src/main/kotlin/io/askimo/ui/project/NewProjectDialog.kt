@@ -51,7 +51,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -275,7 +275,7 @@ fun newProjectDialog(
                         supportingText = nameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )
 
@@ -288,7 +288,7 @@ fun newProjectDialog(
                         minLines = 3,
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { handleCreate() }),
                     )
@@ -323,7 +323,7 @@ fun newProjectDialog(
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                             }
 
-                            ComponentColors.themedDropdownMenu(
+                            AppComponents.dropdownMenu(
                                 expanded = showAddSourceMenu,
                                 onDismissRequest = { showAddSourceMenu = false },
                             ) {

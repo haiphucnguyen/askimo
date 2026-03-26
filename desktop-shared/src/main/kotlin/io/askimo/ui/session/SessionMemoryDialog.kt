@@ -45,7 +45,7 @@ import io.askimo.core.util.JsonUtils
 import io.askimo.core.util.JsonUtils.prettyJson
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
@@ -98,7 +98,7 @@ fun sessionMemoryDialog(
                 if (isLoading) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.surfaceVariantCardColors(),
+                        colors = AppComponents.surfaceVariantCardColors(),
                     ) {
                         Text(
                             text = stringResource("developer.session.memory.loading"),
@@ -110,7 +110,7 @@ fun sessionMemoryDialog(
                 } else if (sessionMemory == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.surfaceVariantCardColors(),
+                        colors = AppComponents.surfaceVariantCardColors(),
                     ) {
                         Text(
                             text = stringResource("developer.session.memory.not.found"),
@@ -152,7 +152,7 @@ fun sessionMemoryDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 200.dp),
-                            colors = ComponentColors.surfaceVariantCardColors(),
+                            colors = AppComponents.surfaceVariantCardColors(),
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
@@ -281,7 +281,7 @@ fun sessionMemoryDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(300.dp),
-                            colors = ComponentColors.surfaceVariantCardColors(),
+                            colors = AppComponents.surfaceVariantCardColors(),
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),

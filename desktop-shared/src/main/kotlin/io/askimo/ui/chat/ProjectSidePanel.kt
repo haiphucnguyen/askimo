@@ -69,7 +69,7 @@ import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.project.addReferenceMaterialDialog
 import io.askimo.ui.project.buildKnowledgeSourceConfigs
 import io.askimo.ui.project.mergeKnowledgeSourceConfigs
@@ -121,7 +121,7 @@ fun projectSidePanel(
             .width(animatedWidth)
             .fillMaxHeight(),
         colors = CardDefaults.cardColors(
-            containerColor = ComponentColors.sidebarSurfaceColor(),
+            containerColor = AppComponents.sidebarSurfaceColor(),
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
     ) {
@@ -195,7 +195,7 @@ fun projectSidePanel(
                                     }
 
                                     // Dropdown menu
-                                    ComponentColors.themedDropdownMenu(
+                                    AppComponents.dropdownMenu(
                                         expanded = showContextMenu,
                                         onDismissRequest = { showContextMenu = false },
                                     ) {
@@ -544,7 +544,7 @@ private fun ragSourcesEmptyState(
                 imageVector = Icons.Default.FolderOpen,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = ComponentColors.tertiaryIconColor(),
+                tint = AppComponents.tertiaryIconColor(),
             )
 
             Text(
@@ -557,7 +557,7 @@ private fun ragSourcesEmptyState(
             Text(
                 text = stringResource("rag.empty.description"),
                 style = MaterialTheme.typography.bodySmall,
-                color = ComponentColors.secondaryTextColor(),
+                color = AppComponents.secondaryTextColor(),
                 textAlign = TextAlign.Center,
             )
 
@@ -582,7 +582,7 @@ private fun ragSourcesEmptyState(
             Text(
                 text = stringResource("rag.empty.coming.soon"),
                 style = MaterialTheme.typography.labelSmall,
-                color = ComponentColors.tertiaryTextColor(),
+                color = AppComponents.tertiaryTextColor(),
             )
         }
     }

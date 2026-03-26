@@ -36,7 +36,7 @@ import io.askimo.core.logging.logger
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -177,7 +177,7 @@ fun urlInputDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { handleAdd() }),
                 )

@@ -635,7 +635,7 @@ private fun applyThemeToScrollBar(panel: JComponent, bgColor: Color, fgColor: Co
             }
         }
 
-        // Calculate outline/border color (similar to ComponentColors.outlineVariant)
+        // Calculate outline/border color (similar to AppComponents.outlineVariant)
         val outlineColor = Color(
             (fgColor.red * 0.15 + bgColor.red * 0.85).toInt(),
             (fgColor.green * 0.15 + bgColor.green * 0.85).toInt(),

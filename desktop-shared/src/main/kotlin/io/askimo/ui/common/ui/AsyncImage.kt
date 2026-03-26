@@ -45,10 +45,10 @@ fun asyncImage(
                 val bytes = file.readBytes()
                 imageBitmap = Image.makeFromEncoded(bytes).toComposeImageBitmap()
             } else {
-                _root_ide_package_.io.askimo.ui.common.ui.log.error("Avatar file does not exist: $imagePath")
+                log.error("Avatar file does not exist: $imagePath")
             }
         } catch (e: Exception) {
-            _root_ide_package_.io.askimo.ui.common.ui.log.error("Failed to load avatar: ${e.message}", e)
+            log.error("Failed to load avatar: ${e.message}", e)
         }
     }
 

@@ -90,7 +90,7 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.service.AvatarService
@@ -381,7 +381,7 @@ fun chatView(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = ComponentColors.sidebarSurfaceColor(),
+                        containerColor = AppComponents.sidebarSurfaceColor(),
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
@@ -649,7 +649,7 @@ fun chatView(
                                     }
                                 }
 
-                                ComponentColors.themedDropdownMenu(
+                                AppComponents.dropdownMenu(
                                     expanded = directiveDropdownExpanded,
                                     onDismissRequest = { directiveDropdownExpanded = false },
                                     modifier = Modifier.fillMaxWidth(0.3f),
@@ -843,7 +843,7 @@ fun chatView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Row(
                         modifier = Modifier
@@ -868,7 +868,7 @@ fun chatView(
                                 .focusRequester(searchFocusRequester),
                             placeholder = { Text(stringResource("chat.search.placeholder")) },
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Result count

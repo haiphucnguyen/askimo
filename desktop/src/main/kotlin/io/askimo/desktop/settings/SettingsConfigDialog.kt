@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.SettingField
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +41,7 @@ fun settingsConfigDialog(
     viewModel: SettingsViewModel,
     onDismiss: () -> Unit,
 ) {
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -71,7 +71,7 @@ fun settingsConfigDialog(
                                 } else {
                                     VisualTransformation.None
                                 },
-                                colors = ComponentColors.outlinedTextFieldColors(),
+                                colors = AppComponents.outlinedTextFieldColors(),
                             )
                         }
                         is SettingField.EnumField -> {
@@ -90,7 +90,7 @@ fun settingsConfigDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                                 ExposedDropdownMenu(
                                     expanded = expanded,

@@ -85,7 +85,7 @@ import io.askimo.ui.chat.chatInputField
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
 import io.askimo.ui.common.ui.themedTooltip
@@ -199,7 +199,7 @@ fun projectView(
                                 }
                             }
 
-                            ComponentColors.themedDropdownMenu(
+                            AppComponents.dropdownMenu(
                                 expanded = showProjectMenu,
                                 onDismissRequest = { showProjectMenu = false },
                             ) {
@@ -474,7 +474,7 @@ private fun sessionCard(
                     )
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
@@ -545,7 +545,7 @@ private fun knowledgeSourcesPanel(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -809,7 +809,7 @@ private fun mcpIntegrationsPanel(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -1052,7 +1052,7 @@ private fun mcpIntegrationsPanel(
 
     // Show error dialog if there's an error
     errorMessage?.let { message ->
-        ComponentColors.themedAlertDialog(
+        AppComponents.alertDialog(
             onDismissRequest = { errorMessage = null },
             title = { Text(stringResource("mcp.integrations.error.title")) },
             text = { Text(message) },

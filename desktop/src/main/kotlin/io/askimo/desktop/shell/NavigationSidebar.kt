@@ -74,7 +74,7 @@ import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.desktop.View
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.LocalFontScale
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.project.ProjectsViewModel
@@ -205,13 +205,13 @@ private fun expandedNavigationSidebar(
         modifier = Modifier
             .width(animatedWidth)
             .fillMaxHeight()
-            .background(ComponentColors.sidebarSurfaceColor()),
+            .background(AppComponents.sidebarSurfaceColor()),
     ) {
         // Header with logo and collapse button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ComponentColors.sidebarHeaderColor())
+                .background(AppComponents.sidebarHeaderColor())
                 .padding((16 * fontScale).dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -276,7 +276,7 @@ private fun expandedNavigationSidebar(
                     modifier = Modifier
                         .padding(horizontal = (12 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationDrawerItemColors(),
+                    colors = AppComponents.navigationDrawerItemColors(),
                 )
             }
 
@@ -303,7 +303,7 @@ private fun expandedNavigationSidebar(
                 modifier = Modifier
                     .padding(horizontal = (12 * fontScale).dp)
                     .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationDrawerItemColors(),
+                colors = AppComponents.navigationDrawerItemColors(),
             )
             // Projects list (collapsible content)
             if (isProjectsExpanded) {
@@ -338,7 +338,7 @@ private fun expandedNavigationSidebar(
                 modifier = Modifier
                     .padding(horizontal = (12 * fontScale).dp)
                     .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationDrawerItemColors(),
+                colors = AppComponents.navigationDrawerItemColors(),
             )
 
             // Sessions list (collapsible content)
@@ -391,7 +391,7 @@ private fun collapsedNavigationSidebar(
         modifier = Modifier
             .width(animatedWidth)
             .fillMaxHeight()
-            .background(ComponentColors.sidebarSurfaceColor())
+            .background(AppComponents.sidebarSurfaceColor())
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -417,7 +417,7 @@ private fun collapsedNavigationSidebar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(ComponentColors.sidebarHeaderColor())
+                    .background(AppComponents.sidebarHeaderColor())
                     .padding(vertical = (16 * fontScale).dp)
                     .hoverable(headerInteractionSource)
                     .clickable(
@@ -464,7 +464,7 @@ private fun collapsedNavigationSidebar(
                     selected = false,
                     onClick = onNewChat,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
+                    colors = AppComponents.navigationRailItemColors(),
                 )
             }
 
@@ -478,7 +478,7 @@ private fun collapsedNavigationSidebar(
                     selected = currentView == View.SESSIONS,
                     onClick = onNavigateToSessions,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
+                    colors = AppComponents.navigationRailItemColors(),
                 )
             }
         }
@@ -519,12 +519,12 @@ private fun collapsedNavigationSidebar(
                     modifier = Modifier
                         .padding(vertical = (8 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationRailItemColors(),
+                    colors = AppComponents.navigationRailItemColors(),
                 )
             }
 
             // User menu dropdown
-            ComponentColors.themedDropdownMenu(
+            AppComponents.dropdownMenu(
                 expanded = showUserMenu,
                 onDismissRequest = { showUserMenu = false },
             ) {
@@ -591,7 +591,7 @@ private fun projectsList(
             modifier = Modifier
                 .padding(vertical = (2 * fontScale).dp)
                 .pointerHoverIcon(PointerIcon.Hand),
-            colors = ComponentColors.navigationDrawerItemColors(),
+            colors = AppComponents.navigationDrawerItemColors(),
         )
 
         if (projectsViewModel.projects.isEmpty()) {
@@ -710,14 +710,14 @@ private fun projectItemWithMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationDrawerItemColors(),
+                colors = AppComponents.navigationDrawerItemColors(),
             )
         }
 
         Box(
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
         ) {
-            ComponentColors.themedDropdownMenu(
+            AppComponents.dropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
@@ -812,7 +812,7 @@ private fun sessionsList(
                     modifier = Modifier
                         .padding(vertical = (2 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationDrawerItemColors(),
+                    colors = AppComponents.navigationDrawerItemColors(),
                 )
 
                 // Starred sessions list
@@ -882,7 +882,7 @@ private fun sessionsList(
                     modifier = Modifier
                         .padding(vertical = (2 * fontScale).dp)
                         .pointerHoverIcon(PointerIcon.Hand),
-                    colors = ComponentColors.navigationDrawerItemColors(),
+                    colors = AppComponents.navigationDrawerItemColors(),
                 )
             }
         }
@@ -929,14 +929,14 @@ private fun sessionItemWithMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pointerHoverIcon(PointerIcon.Hand),
-                colors = ComponentColors.navigationDrawerItemColors(),
+                colors = AppComponents.navigationDrawerItemColors(),
             )
         }
 
         Box(
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
         ) {
-            ComponentColors.themedDropdownMenu(
+            AppComponents.dropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
             ) {
@@ -1124,7 +1124,7 @@ private fun userProfileSection(
         }
 
         // Dropdown Menu
-        ComponentColors.themedDropdownMenu(
+        AppComponents.dropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
         ) {

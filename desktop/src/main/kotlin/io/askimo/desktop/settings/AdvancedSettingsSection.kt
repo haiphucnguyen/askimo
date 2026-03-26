@@ -57,7 +57,7 @@ import io.askimo.core.logging.currentFileLogger
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
@@ -148,7 +148,7 @@ private fun logLevelCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -198,7 +198,7 @@ private fun logLevelCard() {
                     }
                 }
 
-                ComponentColors.themedDropdownMenu(
+                AppComponents.dropdownMenu(
                     expanded = logLevelDropdownExpanded,
                     onDismissRequest = { logLevelDropdownExpanded = false },
                 ) {
@@ -247,7 +247,7 @@ private fun logViewerCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -355,7 +355,7 @@ private fun developerModeSection() {
     // Developer Mode Card
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -397,7 +397,7 @@ private fun developerModeSection() {
 private fun ragConfigurationSection() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -629,7 +629,7 @@ private fun ragIntField(
                     )
                 }
             },
-            colors = ComponentColors.outlinedTextFieldColors(),
+            colors = AppComponents.outlinedTextFieldColors(),
         )
         Text(
             text = hint,
@@ -709,7 +709,7 @@ private fun ragDoubleField(
                     )
                 }
             },
-            colors = ComponentColors.outlinedTextFieldColors(),
+            colors = AppComponents.outlinedTextFieldColors(),
         )
         Text(
             text = hint,
@@ -793,7 +793,7 @@ private fun ragOptionalIntField(
                     )
                 }
             },
-            colors = ComponentColors.outlinedTextFieldColors(),
+            colors = AppComponents.outlinedTextFieldColors(),
         )
         Text(
             text = hint,

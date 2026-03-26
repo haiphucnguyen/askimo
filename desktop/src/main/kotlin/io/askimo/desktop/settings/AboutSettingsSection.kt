@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.VersionInfo
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import java.awt.Desktop
@@ -76,7 +76,7 @@ fun aboutSettingsSection() {
                 // Application Info Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -146,7 +146,7 @@ fun aboutSettingsSection() {
                 // Description Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -170,7 +170,7 @@ fun aboutSettingsSection() {
                 // License Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -201,7 +201,7 @@ fun aboutSettingsSection() {
                 // Runtime Information Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier
@@ -234,7 +234,7 @@ fun aboutSettingsSection() {
                 // Links Section
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier

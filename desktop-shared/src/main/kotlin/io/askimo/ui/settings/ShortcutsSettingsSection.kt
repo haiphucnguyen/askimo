@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 
@@ -80,7 +80,7 @@ fun shortcutsSettingsSection() {
                 shortcutsByCategory.forEach { (category, shortcuts) ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -114,7 +114,7 @@ fun shortcutsSettingsSection() {
                                     )
 
                                     Card(
-                                        colors = ComponentColors.surfaceVariantCardColors(),
+                                        colors = AppComponents.surfaceVariantCardColors(),
                                     ) {
                                         Text(
                                             text = keyBinding,

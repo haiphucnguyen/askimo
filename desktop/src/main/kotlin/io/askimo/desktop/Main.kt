@@ -103,7 +103,7 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.LocalFontScale
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
@@ -1006,7 +1006,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Quit confirmation dialog
                 if (showQuitDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showQuitDialog = false },
                         title = { Text(stringResource("menu.quit") + "?") },
                         text = { Text(stringResource("session.delete.confirm")) },
@@ -1032,7 +1032,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Invalidate cache confirmation dialog
                 if (showInvalidateCacheDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showInvalidateCacheDialog = false },
                         title = { Text(stringResource("menu.invalidate.caches.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.message")) },
@@ -1061,7 +1061,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Cache deleted success dialog
                 if (showCacheDeletedDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showCacheDeletedDialog = false },
                         title = { Text(stringResource("menu.invalidate.caches.success.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.success.message")) },
@@ -1077,7 +1077,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Import backup confirmation dialog
                 if (showImportBackupConfirm) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = {
                             showImportBackupConfirm = false
                             pendingImportBackupPath = null
@@ -1132,7 +1132,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Provider setup required dialog
                 if (showProviderSetupDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { },
                         title = {
                             Text(

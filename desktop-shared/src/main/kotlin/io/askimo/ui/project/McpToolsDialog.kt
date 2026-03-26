@@ -61,7 +61,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -126,7 +126,7 @@ fun mcpToolsDialog(
         }
     }
 
-    ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -154,7 +154,7 @@ fun mcpToolsDialog(
                     // ── Instance info card ─────────────────────────────────
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.secondaryCardColors(),
+                        colors = AppComponents.secondaryCardColors(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -285,7 +285,7 @@ fun mcpToolsDialog(
                             placeholder = { Text(stringResource("mcp.tools.dialog.search.placeholder")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
                     }
 
