@@ -5,7 +5,7 @@
 package io.askimo.core.rag.state
 
 import io.askimo.core.db.sqliteDatetime
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /**
  * Table for storing file indexing state per project.

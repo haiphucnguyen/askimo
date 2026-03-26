@@ -95,6 +95,9 @@
         "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader\\E"
       },
       {
+        "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.km.internal.extensions.MetadataExtensions\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition\\E"
       },
       {
@@ -125,10 +128,10 @@
         "pattern": "\\QMETA-INF/services/org.apache.tika.renderer.Renderer\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.sql.DatabaseConnectionAutoRegistration\\E"
+        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.v1.core.statements.GlobalStatementInterceptor\\E"
       },
       {
-        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.sql.statements.GlobalStatementInterceptor\\E"
+        "pattern": "\\QMETA-INF/services/org.jetbrains.exposed.v1.jdbc.DatabaseConnectionAutoRegistration\\E"
       },
       {
         "pattern": "\\QMETA-INF/services/org.junit.platform.commons.support.scanning.ClasspathScanner\\E"

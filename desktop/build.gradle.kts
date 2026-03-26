@@ -42,6 +42,10 @@ val execOps = objects.newInstance<ExecHelper>().execOps
 group = rootProject.group
 version = rootProject.version
 
+// jpackage requires a clean MAJOR[.MINOR][.PATCH] version — strip any pre-release suffix
+// (e.g. "1.2.25-SNAPSHOT" → "1.2.25"). Used only for native distribution packaging.
+val distPackageVersion = project.version.toString().substringBefore("-")
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
@@ -115,7 +119,7 @@ compose.desktop {
                 TargetFormat.Deb,
             )
             packageName = "Askimo"
-            packageVersion = project.version.toString()
+            packageVersion = distPackageVersion
             description = "AI assistant with multi-LLM support and local document intelligence"
             copyright = "© ${Year.now()} $author. All rights reserved."
             vendor = "Askimo"
@@ -151,7 +155,7 @@ compose.desktop {
                 shortcut = true
 
                 // Debian package dependencies
-                debPackageVersion = project.version.toString()
+                debPackageVersion = distPackageVersion
 
                 // Let jpackage auto-detect dependencies from the bundled libraries
                 // Build on Ubuntu 22.04 to ensure compatibility with both 22.04 and 24.04

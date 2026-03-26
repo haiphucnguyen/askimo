@@ -760,8 +760,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4748,7 +4747,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$uEgIRejj",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$7AVjprUL",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6482,6 +6481,9 @@
     "name": "kotlin.Function1"
   },
   {
+    "name": "kotlin.IgnorableReturnValue"
+  },
+  {
     "name": "kotlin.Int"
   },
   {
@@ -7132,7 +7134,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$J0OGsy2C",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$m0VRnUXN",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

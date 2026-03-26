@@ -5,7 +5,7 @@
 package io.askimo.core.chat.domain
 
 import io.askimo.core.db.sqliteDatetime
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 import java.time.LocalDateTime
 
 /**
