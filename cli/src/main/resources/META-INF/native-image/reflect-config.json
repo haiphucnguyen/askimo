@@ -760,7 +760,8 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true
+    "queryAllDeclaredConstructors": true,
+    "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4747,7 +4748,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$95UhdKce",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$uEgIRejj",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5877,6 +5878,9 @@
     "allDeclaredClasses": true,
     "queryAllDeclaredMethods": true,
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "java.lang.SecurityManager"
   },
   {
     "name": "java.lang.StackWalker",
@@ -7128,9 +7132,13 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$8mnnvm1i",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$J0OGsy2C",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.opentest4j.TestAbortedException",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "org.osgi.framework.FrameworkUtil"
