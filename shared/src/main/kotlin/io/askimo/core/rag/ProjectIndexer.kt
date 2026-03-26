@@ -12,6 +12,7 @@ import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.event.internal.ProjectIndexRemovalEvent
 import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
@@ -270,10 +271,16 @@ class ProjectIndexer(
         } catch (e: Exception) {
             log.error("Failed to handle re-index request for project ${event.projectId}", e)
             EventBus.emit(
+                AppErrorEvent(
+                    title = "Failed to index knowledge source for project",
+                    message = e.message.takeIf { !it.isNullOrBlank() } ?: "Unknown error",
+                ),
+            )
+            EventBus.emit(
                 IndexingFailedEvent(
                     projectId = event.projectId,
                     projectName = event.projectId,
-                    errorMessage = e.message ?: "Unknown error",
+                    errorMessage = e.message.takeIf { !it.isNullOrBlank() } ?: "Unknown error",
                 ),
             )
         }
@@ -364,10 +371,17 @@ class ProjectIndexer(
             log.error("Failed to handle indexing request for project ${event.projectId}", e)
 
             EventBus.emit(
+                AppErrorEvent(
+                    title = "Failed to index knowledge source",
+                    message = e.message.takeIf { !it.isNullOrBlank() } ?: "Unknown error",
+                ),
+            )
+
+            EventBus.emit(
                 IndexingFailedEvent(
                     projectId = event.projectId,
                     projectName = event.projectId,
-                    errorMessage = e.message ?: "Unknown error",
+                    errorMessage = e.message.takeIf { !it.isNullOrBlank() } ?: "Unknown error",
                 ),
             )
         }

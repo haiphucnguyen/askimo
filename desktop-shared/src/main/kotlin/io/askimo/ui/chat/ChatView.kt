@@ -981,10 +981,15 @@ fun chatView(
                 }
             }
 
-            LaunchedEffect(messagesScrollState.value, messagesScrollState.maxValue) {
-                if (isThinking || messages.lastOrNull()?.isUser == false) {
+            // Only update userScrolledUp when the user is physically dragging/scrolling,
+            // not when maxValue grows underneath a stationary scroll position.
+            LaunchedEffect(messagesScrollState.value) {
+                if (messagesScrollState.isScrollInProgress) {
                     val distanceFromBottom = messagesScrollState.maxValue - messagesScrollState.value
                     userScrolledUp = distanceFromBottom > 100
+                }
+                if (messagesScrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
+                    actions.loadPrevious()
                 }
             }
 
@@ -998,12 +1003,6 @@ fun chatView(
                     savedScrollMax = -1
                 } else if (!userScrolledUp && sv < 0) {
                     messagesScrollState.scrollTo(messagesScrollState.maxValue)
-                }
-            }
-
-            LaunchedEffect(messagesScrollState.value) {
-                if (messagesScrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
-                    actions.loadPrevious()
                 }
             }
 

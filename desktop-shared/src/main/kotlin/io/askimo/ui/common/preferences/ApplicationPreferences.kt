@@ -4,7 +4,6 @@
  */
 package io.askimo.ui.common.preferences
 
-import io.askimo.core.VersionInfo
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -17,38 +16,6 @@ import java.util.prefs.Preferences
 object ApplicationPreferences {
     private val prefs = Preferences.userNodeForPackage(ApplicationPreferences::class.java)
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-
-    // ============================================================
-    // VERSION TRACKING
-    // ============================================================
-
-    private const val LAST_LAUNCHED_VERSION_KEY = "app.last_launched_version"
-
-    /**
-     * Get the last launched version of the application.
-     */
-    fun getLastLaunchedVersion(): String? = prefs.get(LAST_LAUNCHED_VERSION_KEY, null)
-
-    /**
-     * Check if this is the first time the application is launched.
-     */
-    fun isFirstInstall(): Boolean = getLastLaunchedVersion() == null
-
-    /**
-     * Check if the application was upgraded to a new version.
-     */
-    fun isUpgrade(): Boolean {
-        val lastVersion = getLastLaunchedVersion()
-        return lastVersion != null && lastVersion != VersionInfo.version
-    }
-
-    /**
-     * Record the current version as the last launched version.
-     * Should be called once during app startup.
-     */
-    fun recordAppLaunch() {
-        prefs.put(LAST_LAUNCHED_VERSION_KEY, VersionInfo.version)
-    }
 
     // ============================================================
     // TUTORIAL & ONBOARDING
@@ -156,6 +123,19 @@ object ApplicationPreferences {
     private const val DEFAULT_PROJECT_SIDE_PANEL_WIDTH = 400
     private const val PROJECT_SIDE_PANEL_EXPANDED_KEY = "ui.project_side_panel_expanded"
     private const val DEFAULT_PROJECT_SIDE_PANEL_EXPANDED = true
+    private const val DEFAULT_MODEL_KEY = "ui.default_model"
+
+    /**
+     * Get the saved default AI model ID, or null if never set (first launch).
+     */
+    fun getDefaultModel(): String? = prefs.get(DEFAULT_MODEL_KEY, null)
+
+    /**
+     * Persist the chosen default AI model ID.
+     */
+    fun setDefaultModel(modelId: String) {
+        prefs.put(DEFAULT_MODEL_KEY, modelId)
+    }
 
     /**
      * Get the project side panel width in pixels.
@@ -179,28 +159,5 @@ object ApplicationPreferences {
      */
     fun setProjectSidePanelExpanded(expanded: Boolean) {
         prefs.putBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, expanded)
-    }
-
-    /**
-     * Reset all tutorial-related preferences (for testing).
-     */
-    fun resetTutorial() {
-        prefs.remove(TUTORIAL_COMPLETED_KEY)
-        prefs.remove(LANGUAGE_SELECTED_KEY)
-    }
-
-    /**
-     * Reset all star prompt preferences (for testing).
-     */
-    fun resetStarPrompt() {
-        prefs.remove(HAS_BEEN_PROMPTED_KEY)
-        prefs.remove(FIRST_USE_DATE_KEY)
-    }
-
-    /**
-     * Reset version tracking (for testing).
-     */
-    fun resetVersion() {
-        prefs.remove(LAST_LAUNCHED_VERSION_KEY)
     }
 }
