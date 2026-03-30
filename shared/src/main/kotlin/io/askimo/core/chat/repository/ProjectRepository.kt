@@ -12,11 +12,14 @@ import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -69,6 +72,7 @@ class ProjectRepository internal constructor(
         }
 
         log.debug("Created project ${projectWithInjectedFields.id} with name '${projectWithInjectedFields.name}'")
+        EventBus.post(PushDataToServerEvent(reason = "project created"))
         return projectWithInjectedFields
     }
 
@@ -151,6 +155,7 @@ class ProjectRepository internal constructor(
 
         if (updated) {
             log.debug("Updated project $projectId")
+            EventBus.post(PushDataToServerEvent(reason = "project updated"))
         }
         updated
     }
@@ -204,6 +209,73 @@ class ProjectRepository internal constructor(
         log.debug("Deleting project $projectId")
         return transaction(database) {
             ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
+        }
+    }
+
+    /**
+     * Returns projects that have never been pushed to the sync server
+     * (`syncedAt IS NULL`) or were locally modified after the last push
+     * (`updatedAt > syncedAt`).
+     */
+    fun getUnsyncedProjects(limit: Int = 50): List<Project> = transaction(database) {
+        ProjectsTable
+            .selectAll()
+            .orderBy(ProjectsTable.updatedAt, SortOrder.ASC)
+            .mapNotNull { row ->
+                val syncedAt = row[ProjectsTable.syncedAt]
+                val updatedAt = row[ProjectsTable.updatedAt].toString()
+                if (syncedAt == null || updatedAt > syncedAt) row.toProject() else null
+            }
+            .take(limit)
+    }
+
+    /**
+     * Mark a project as successfully synced to the server.
+     */
+    fun markSynced(projectId: String): Boolean = transaction(database) {
+        ProjectsTable.update({ ProjectsTable.id eq projectId }) {
+            it[syncedAt] = LocalDateTime.now().toString()
+        } > 0
+    }
+
+    /**
+     * Upsert projects
+     */
+    fun upsertFromServer(projects: List<Project>) {
+        if (projects.isEmpty()) return
+        transaction(database) {
+            val nowStr = LocalDateTime.now().toString()
+            val existingById = ProjectsTable
+                .selectAll()
+                .where { ProjectsTable.id inList projects.map { it.id } }
+                .associate { row -> row[ProjectsTable.id] to row[ProjectsTable.updatedAt] }
+
+            for (project in projects) {
+                val storedUpdatedAt = existingById[project.id]
+                if (storedUpdatedAt == null) {
+                    ProjectsTable.insert {
+                        it[id] = project.id
+                        it[name] = project.name
+                        it[description] = project.description
+                        it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(project.knowledgeSources)
+                        it[createdAt] = project.createdAt
+                        it[updatedAt] = project.updatedAt
+                        it[syncedAt] = nowStr
+                    }
+                    log.debug("upsertFromServer: inserted project {}", project.id)
+                } else if (project.updatedAt.isAfter(storedUpdatedAt)) {
+                    ProjectsTable.update({ ProjectsTable.id eq project.id }) {
+                        it[name] = project.name
+                        it[description] = project.description
+                        it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(project.knowledgeSources)
+                        it[updatedAt] = project.updatedAt
+                        it[syncedAt] = nowStr
+                    }
+                    log.debug("upsertFromServer: updated project {} (server newer)", project.id)
+                } else {
+                    log.debug("upsertFromServer: skipped project {} (local is same age or newer)", project.id)
+                }
+            }
         }
     }
 }

@@ -18,6 +18,8 @@ data class ChatDirective(
     val name: String,
     val content: String,
     val createdAt: LocalDateTime = LocalDateTime.now(),
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
+    val deletedAt: LocalDateTime? = null,
 )
 
 const val DIRECTIVE_NAME_MAX_LENGTH = 128
@@ -32,6 +34,11 @@ object ChatDirectivesTable : Table("chat_directives") {
     val name = varchar("name", DIRECTIVE_NAME_MAX_LENGTH)
     val content = varchar("content", DIRECTIVE_CONTENT_MAX_LENGTH)
     val createdAt = sqliteDatetime("created_at")
+    val updatedAt = sqliteDatetime("updated_at")
+    val deletedAt = sqliteDatetime("deleted_at").nullable()
+
+    /** ISO-8601 timestamp of the last successful push to the sync server. NULL = never synced. */
+    val syncedAt = varchar("synced_at", 32).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

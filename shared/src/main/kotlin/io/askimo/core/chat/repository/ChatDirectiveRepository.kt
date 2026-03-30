@@ -119,8 +119,8 @@ class ChatDirectiveRepository internal constructor(
         ChatDirectivesTable
             .selectAll()
             .where { ChatDirectivesTable.id eq id }
-            .limit(1)
-            .count() > 0
+            .empty()
+            .not()
     }
 
     /**

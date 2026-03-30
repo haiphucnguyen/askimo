@@ -126,6 +126,7 @@ fun chatView(
     onDeleteSession: (String) -> Unit = {},
     onNavigateToProject: ((String) -> Unit)? = null,
     userAvatarPath: String? = null,
+    serverBaseUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
     // Unpack state for internal use
@@ -297,7 +298,7 @@ fun chatView(
 
     LaunchedEffect(userAvatarPath) {
         userAvatarPainter = withContext(Dispatchers.IO) {
-            avatarService.getUserAvatarPainter(userAvatarPath)
+            avatarService.getUserAvatarPainter(userAvatarPath, serverBaseUrl)
         }
     }
 

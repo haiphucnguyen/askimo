@@ -32,12 +32,13 @@ object ChatSessionsTable : Table("chat_sessions") {
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")
 
-    // Foreign key to projects with CASCADE delete
     val projectId = varchar("project_id", 36).nullable()
 
     val directiveId = varchar("directive_id", 36).nullable()
     val isStarred = integer("is_starred").default(0)
     val sortOrder = integer("sort_order").default(0)
+
+    val syncedAt = varchar("synced_at", 32).nullable()
 
     override val primaryKey = PrimaryKey(id)
 
