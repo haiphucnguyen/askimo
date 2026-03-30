@@ -12,6 +12,8 @@ import io.askimo.core.chat.domain.FileAttachment
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.PushDataToServerEvent
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -19,6 +21,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
@@ -29,6 +32,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.UUID
@@ -111,6 +115,7 @@ class ChatMessageRepository internal constructor(
             }
         }
 
+        EventBus.post(PushDataToServerEvent(reason = "message written"))
         return messageWithInjectedFields
     }
 
@@ -427,5 +432,85 @@ class ChatMessageRepository internal constructor(
             }
 
         return attachmentsMap.mapValues { it.value.toList() }
+    }
+
+    /**
+     *
+     * @param messages Messages received from the server pull response.
+     */
+    fun bulkUpsert(messages: List<ChatMessage>) {
+        if (messages.isEmpty()) return
+        transaction(database) {
+            for (message in messages) {
+                ChatMessagesTable.upsert {
+                    it[id] = message.id
+                    it[sessionId] = message.sessionId
+                    it[role] = message.role.value
+                    it[content] = message.content
+                    it[createdAt] = message.createdAt
+                    it[isOutdated] = if (message.isOutdated) 1 else 0
+                    it[editParentId] = message.editParentId
+                    it[isEdited] = if (message.isEdited) 1 else 0
+                    it[isFailed] = if (message.isFailed) 1 else 0
+                    it[syncedAt] = message.createdAt.toString()
+                }
+            }
+        }
+    }
+
+    /**
+     * @param messageIds IDs of the messages to mark as outdated.
+     * @return Number of rows updated.
+     */
+    fun bulkMarkOutdated(messageIds: List<String>): Int {
+        if (messageIds.isEmpty()) return 0
+        return transaction(database) {
+            ChatMessagesTable.update({ ChatMessagesTable.id inList messageIds }) {
+                it[isOutdated] = 1
+            }
+        }
+    }
+
+    /**
+     *
+     * @param messageId The message to mark as synced.
+     */
+    fun markSynced(messageId: String): Boolean = transaction(database) {
+        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
+            it[syncedAt] = LocalDateTime.now().toString()
+        } > 0
+    }
+
+    /**
+     * @param limit Maximum rows to return in one batch.
+     */
+    fun getUnsyncedMessages(limit: Int = 500): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.isOutdated eq 0) and
+                    (ChatMessagesTable.syncedAt.isNull())
+            }
+            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
+            .limit(limit)
+            .map { it.toChatMessage() }
+    }
+
+    /**
+     *
+     * @param sessionId Session to query.
+     * @param limit     Maximum rows to return in one batch.
+     */
+    fun getUnsyncedMessages(sessionId: String, limit: Int = 100): List<ChatMessage> = transaction(database) {
+        ChatMessagesTable
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    (ChatMessagesTable.isOutdated eq 0) and
+                    (ChatMessagesTable.syncedAt.isNull())
+            }
+            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
+            .limit(limit)
+            .map { it.toChatMessage() }
     }
 }

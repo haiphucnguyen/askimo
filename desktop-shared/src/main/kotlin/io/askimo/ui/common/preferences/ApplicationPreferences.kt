@@ -4,9 +4,11 @@
  */
 package io.askimo.ui.common.preferences
 
+import io.askimo.core.util.MachineId
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import java.util.prefs.Preferences
 
 /**
@@ -113,6 +115,37 @@ object ApplicationPreferences {
 
         val daysSinceFirstUse = getDaysSinceFirstUse()
         return daysSinceFirstUse >= MINIMUM_DAYS_BEFORE_PROMPT
+    }
+
+    private const val DEVICE_ID_KEY = "sync.device_id"
+    private const val LAST_SYNC_SEQ_KEY = "sync.last_seq"
+
+    /**
+     * Returns a stable device identifier used for echo suppression during sync pull.
+     */
+    fun getOrCreateDeviceId(): String {
+        val cached = prefs.get(DEVICE_ID_KEY, null)
+        if (cached != null) return cached
+
+        val id = MachineId.resolve() ?: UUID.randomUUID().toString()
+        prefs.put(DEVICE_ID_KEY, id)
+        return id
+    }
+
+    /**
+     * The highest `seq` value received from the server during the last pull.
+     * Send this as the `since` parameter on the next pull to fetch only the delta.
+     * Defaults to 0 (first pull fetches all history).
+     */
+    fun getLastSyncSeq(): Long = prefs.getLong(LAST_SYNC_SEQ_KEY, 0L)
+
+    /**
+     * Persists [seq] as the new cursor bookmark after a successful pull.
+     * Must only be called when the pull succeeded — a failed pull must not
+     * advance the cursor so the delta is retried on the next attempt.
+     */
+    fun saveLastSyncSeq(seq: Long) {
+        prefs.putLong(LAST_SYNC_SEQ_KEY, seq)
     }
 
     // ============================================================

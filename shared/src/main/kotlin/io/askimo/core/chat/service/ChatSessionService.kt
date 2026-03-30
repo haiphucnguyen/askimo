@@ -30,7 +30,9 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
+import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
+import io.askimo.core.event.internal.SessionDeletedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.MemoryMessage
@@ -344,7 +346,11 @@ class ChatSessionService(
         messageRepository.deleteMessagesBySession(sessionId)
         sessionMemoryRepository.deleteBySessionId(sessionId)
 
-        return sessionRepository.deleteSession(sessionId)
+        val deleted = sessionRepository.deleteSession(sessionId)
+        if (deleted) {
+            EventBus.post(SessionDeletedEvent(sessionId = sessionId))
+        }
+        return deleted
     }
 
     /**
@@ -383,6 +389,7 @@ class ChatSessionService(
     fun addMessage(message: ChatMessage): ChatMessage {
         val createdMessage = messageRepository.addMessage(message)
         sessionRepository.touchSession(message.sessionId)
+        EventBus.post(PushDataToServerEvent(reason = "message written"))
         return createdMessage
     }
 
