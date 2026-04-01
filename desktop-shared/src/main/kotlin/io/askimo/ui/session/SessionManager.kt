@@ -17,6 +17,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ConfigurationErrorException
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.vision.ImageProcessor
 import io.askimo.ui.chat.ChatViewModel
@@ -286,11 +287,15 @@ class SessionManager(
                 thread.markFailed()
 
                 val partialResponse = thread.getCurrentContent()
-                val failedResponse = ExceptionHandler.handleWithPartialContent(
-                    throwable = e,
-                    partialContent = partialResponse,
-                    contextId = sessionId,
-                )
+                val failedResponse = if (e is ConfigurationErrorException) {
+                    e.displayMessage
+                } else {
+                    ExceptionHandler.handleWithPartialContent(
+                        throwable = e,
+                        partialContent = partialResponse,
+                        contextId = sessionId,
+                    )
+                }
 
                 val savedMessage = chatSessionService.saveAiResponse(sessionId, failedResponse, isFailed = true)
                 thread.setSavedMessage(savedMessage)

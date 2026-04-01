@@ -19,8 +19,9 @@ fun httpGet(
     headers: Map<String, String> = emptyMap(),
     connectTimeoutMs: Long = 5_000,
     readTimeoutMs: Long = 8_000,
+    httpVersion: HttpClient.Version = HttpClient.Version.HTTP_2,
 ): Pair<Int, String> {
-    val client = ProxyUtil.configureProxy(HttpClient.newBuilder(), url)
+    val client = ProxyUtil.configureProxy(HttpClient.newBuilder().version(httpVersion), url)
         .connectTimeout(Duration.ofMillis(connectTimeoutMs))
         .build()
     val requestBuilder = HttpRequest.newBuilder()
@@ -42,8 +43,9 @@ fun httpPost(
     headers: Map<String, String> = emptyMap(),
     connectTimeoutMs: Long = 15_000,
     readTimeoutMs: Long = 600_000,
+    httpVersion: HttpClient.Version = HttpClient.Version.HTTP_2,
 ): Pair<Int, String> {
-    val client = ProxyUtil.configureProxy(HttpClient.newBuilder(), url)
+    val client = ProxyUtil.configureProxy(HttpClient.newBuilder().version(httpVersion), url)
         .connectTimeout(Duration.ofMillis(connectTimeoutMs))
         .build()
     val requestBuilder = HttpRequest.newBuilder()

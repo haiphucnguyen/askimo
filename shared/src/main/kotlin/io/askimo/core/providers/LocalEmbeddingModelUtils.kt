@@ -8,7 +8,6 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.ModelNotAvailableEvent
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.logging.display
-import io.askimo.core.logging.displayError
 
 private val log = currentFileLogger()
 
@@ -32,35 +31,19 @@ fun ensureLocalEmbeddingModelAvailable(
         }
 
         is ModelAvailabilityResult.ProviderUnreachable -> {
-            val errorMessage = """
-                ❌ ${result.error}
-
-                Please ensure ${provider.name} is running and accessible at: $baseUrl
-            """.trimIndent()
-
-            log.displayError(errorMessage)
-
             EventBus.post(
                 ModelNotAvailableEvent(
                     provider = provider,
                     modelName = modelName,
                     isEmbedding = true,
-                    reason = "${provider.name} not reachable at $baseUrl",
+                    reason = "Can not get $modelName model list from ${provider.name} at $baseUrl: ${result.error}",
                 ),
             )
 
-            error("${provider.name} not reachable at $baseUrl")
+            error("Can not get $modelName model list from ${provider.name} at $baseUrl: ${result.error}")
         }
 
         is ModelAvailabilityResult.NotAvailable -> {
-            val errorMessage = """
-                ❌ ${result.reason}
-
-                Please ensure the model is available in ${provider.name} at: $baseUrl
-            """.trimIndent()
-
-            log.displayError(errorMessage)
-
             EventBus.post(
                 ModelNotAvailableEvent(
                     provider = provider,

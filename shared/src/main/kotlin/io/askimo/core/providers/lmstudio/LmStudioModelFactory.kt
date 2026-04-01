@@ -27,6 +27,7 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
 import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.LMSTUDIO
 import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
@@ -38,7 +39,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     private val log = logger<LmStudioModelFactory>()
 
-    override fun getProvider(): ModelProvider = ModelProvider.LMSTUDIO
+    override fun getProvider(): ModelProvider = LMSTUDIO
 
     /**
      * Creates a JdkHttpClient builder configured with proxy settings.
@@ -53,9 +54,10 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun availableModels(settings: LmStudioSettings): List<ModelDTO> = fetchModels(
         apiKey = "lm-studio",
-        url = "${settings.baseUrl}/v1/models",
-        providerName = ModelProvider.LMSTUDIO,
-    ).map { ModelDTO.of(ModelProvider.LMSTUDIO, it) }
+        url = "${settings.baseUrl}/models",
+        providerName = LMSTUDIO,
+        httpVersion = HttpClient.Version.HTTP_1_1,
+    ).map { ModelDTO.of(LMSTUDIO, it) }
 
     override fun defaultSettings(): LmStudioSettings = LmStudioSettings()
 
@@ -84,13 +86,13 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
                 .logResponses(log.isTraceEnabled)
                 .timeout(Duration.ofMinutes(5))
                 .httpClientBuilder(jdkHttpClientBuilder)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.LMSTUDIO.name.lowercase())))
+                .listeners(listOf(TelemetryChatModelListener(telemetry, LMSTUDIO.name.lowercase())))
                 .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
             settings = settings,
-            provider = ModelProvider.LMSTUDIO,
+            provider = LMSTUDIO,
             chatModel = chatModel,
             secondaryChatModel = createSecondaryChatModel(settings),
             chatMemory = chatMemory,
@@ -108,7 +110,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         return OpenAiImageModel.builder()
             .apiKey("lmstudio")
             .baseUrl(settings.baseUrl)
-            .modelName(AppConfig.models[ModelProvider.LMSTUDIO].imageModel)
+            .modelName(AppConfig.models[LMSTUDIO].imageModel)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -125,8 +127,8 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         return OpenAiChatModel.builder()
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
-            .modelName(AppConfig.models[ModelProvider.LMSTUDIO].utilityModel.ifBlank { AppContext.getInstance().params.model })
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.LMSTUDIO].utilityModelTimeoutSeconds))
+            .modelName(AppConfig.models[LMSTUDIO].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .timeout(Duration.ofSeconds(AppConfig.models[LMSTUDIO].utilityModelTimeoutSeconds))
             .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }
@@ -141,7 +143,7 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
 
     override fun createEmbeddingModel(settings: LmStudioSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models[ModelProvider.LMSTUDIO].embeddingModel
+        val modelName = AppConfig.models[LMSTUDIO].embeddingModel
 
         log.display(
             """
@@ -152,14 +154,17 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             """.trimIndent(),
         )
 
-        ensureLocalEmbeddingModelAvailable(ModelProvider.LMSTUDIO, baseUrl, modelName)
+        ensureLocalEmbeddingModelAvailable(LMSTUDIO, baseUrl, modelName)
+
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
 
         return OpenAiEmbeddingModelBuilder()
             .apiKey("not-needed")
             .baseUrl(baseUrl)
             .modelName(modelName)
+            .httpClientBuilder(jdkHttpClientBuilder)
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: LmStudioSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.LMSTUDIO].embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: LmStudioSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[LMSTUDIO].embeddingModel)
 }

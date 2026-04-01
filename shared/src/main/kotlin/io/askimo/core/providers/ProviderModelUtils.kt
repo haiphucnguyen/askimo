@@ -14,6 +14,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.http.HttpClient
 
 object ProviderModelUtils {
     private val log = logger<ProviderModelUtils>()
@@ -37,8 +38,9 @@ object ProviderModelUtils {
         apiKey: String,
         url: String,
         providerName: ModelProvider,
+        httpVersion: HttpClient.Version = HttpClient.Version.HTTP_2,
     ): List<String> = try {
-        val (_, body) = httpGet(url, headers = mapOf("Authorization" to "Bearer $apiKey"))
+        val (_, body) = httpGet(url, headers = mapOf("Authorization" to "Bearer $apiKey"), httpVersion = httpVersion)
         val jsonElement = appJson.parseToJsonElement(body)
         val data = jsonElement.jsonObject["data"]?.jsonArray.orEmpty()
         data

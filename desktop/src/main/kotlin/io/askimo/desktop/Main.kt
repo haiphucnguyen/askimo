@@ -57,6 +57,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.backup.BackupManager
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -75,6 +77,7 @@ import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
@@ -128,6 +131,7 @@ import io.askimo.ui.shell.ErrorDialogState
 import io.askimo.ui.shell.EventLogDockPosition
 import io.askimo.ui.shell.NativeMenuBar
 import io.askimo.ui.shell.UpdateViewModel
+import io.askimo.ui.shell.analyticsConsentDialog
 import io.askimo.ui.shell.eventLogPanel
 import io.askimo.ui.shell.eventLogWindow
 import io.askimo.ui.shell.globalErrorHandler
@@ -155,10 +159,17 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JFileChooser
 import kotlin.system.exitProcess
 
 private val log = currentFileLogger()
+
+/** Show the analytics consent dialog after this many completed LLM responses. */
+private const val ANALYTICS_CONSENT_THRESHOLD = 5
+
+/** Tracks total LLM responses in this session; read by onCloseRequest for session-end analytics. */
+private val sessionMessageCount = AtomicInteger(0)
 
 fun main() {
     AskimoHome.register(PersonalAskimoHome)
@@ -224,6 +235,8 @@ fun main() {
         Window(
             icon = icon,
             onCloseRequest = {
+                Analytics.trackSessionEnd(sessionMessageCount.get())
+                Analytics.shutdown()
                 exitApplication()
             },
             title = "Askimo",
@@ -266,6 +279,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var pendingTerminalCommand by remember { mutableStateOf<PendingTerminalCommand?>(null) }
     var showStarPromptDialog by remember { mutableStateOf(false) }
+    var showAnalyticsConsentDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
@@ -481,6 +495,39 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         ApplicationPreferences.recordFirstUseIfNeeded()
         if (ApplicationPreferences.shouldShowStarPrompt()) {
             showStarPromptDialog = true
+        }
+    }
+
+    // Initialize business analytics and show one-time consent dialog after meaningful usage
+    LaunchedEffect(Unit) {
+        Analytics.initialize()
+        val hasRag = withContext(Dispatchers.IO) {
+            AskimoHome.projectsDir().toFile().let { it.exists() && it.listFiles()?.isNotEmpty() == true }
+        }
+        val hasMcp = withContext(Dispatchers.IO) {
+            runCatching { koin.get<GlobalMcpInstanceService>().getInstances().isNotEmpty() }.getOrDefault(false)
+        }
+        Analytics.track(
+            AnalyticsEvents.APP_STARTED,
+            mapOf(
+                "mode" to "desktop",
+                "has_rag" to hasRag.toString(),
+                "has_mcp" to hasMcp.toString(),
+            ),
+        )
+    }
+
+    // Watch LLM call count from the user-facing telemetry — show the consent dialog once
+    // after ANALYTICS_CONSENT_THRESHOLD completed responses.
+    val telemetryMetrics by appContext.telemetry.metricsFlow.collectAsState()
+    LaunchedEffect(telemetryMetrics.llmCallsByProvider) {
+        val totalCalls = telemetryMetrics.llmCallsByProvider.values.sum()
+        sessionMessageCount.set(totalCalls)
+        if (totalCalls >= ANALYTICS_CONSENT_THRESHOLD &&
+            !ApplicationPreferences.isAnalyticsConsentAsked() &&
+            !Analytics.isEnabled
+        ) {
+            showAnalyticsConsentDialog = true
         }
     }
 
@@ -1463,6 +1510,21 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                             } catch (e: Exception) {
                                 log.error("Can not open the browser", e)
                             }
+                        },
+                    )
+                }
+
+                // Analytics Consent Dialog (One-time after meaningful usage)
+                if (showAnalyticsConsentDialog) {
+                    analyticsConsentDialog(
+                        onDecline = {
+                            ApplicationPreferences.markAnalyticsConsentAsked()
+                            showAnalyticsConsentDialog = false
+                        },
+                        onAccept = {
+                            ApplicationPreferences.markAnalyticsConsentAsked()
+                            showAnalyticsConsentDialog = false
+                            Analytics.optIn()
                         },
                     )
                 }

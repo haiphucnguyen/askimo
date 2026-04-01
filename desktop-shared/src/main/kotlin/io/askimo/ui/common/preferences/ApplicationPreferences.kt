@@ -117,6 +117,22 @@ object ApplicationPreferences {
         return daysSinceFirstUse >= MINIMUM_DAYS_BEFORE_PROMPT
     }
 
+    // ============================================================
+    // ANALYTICS CONSENT
+    // ============================================================
+    private const val ANALYTICS_CONSENT_ASKED_KEY = "analytics_consent_asked"
+
+    /** True once the consent dialog has been shown (regardless of the user's answer). */
+    fun isAnalyticsConsentAsked(): Boolean = prefs.getBoolean(ANALYTICS_CONSENT_ASKED_KEY, false)
+
+    /** Mark that the consent dialog has been shown so it is never shown again. */
+    fun markAnalyticsConsentAsked() {
+        prefs.putBoolean(ANALYTICS_CONSENT_ASKED_KEY, true)
+    }
+
+    // ============================================================
+    // CONVERSATION SYNC
+    // ============================================================
     private const val DEVICE_ID_KEY = "sync.device_id"
     private const val LAST_SYNC_SEQ_KEY = "sync.last_seq"
 
