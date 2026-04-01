@@ -236,7 +236,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                     val result = sb.toString()
 
                     if (isConfigurationError) {
-                        return@retry result
+                        throw ConfigurationErrorException(result)
                     }
 
                     if (errorOccurred) {

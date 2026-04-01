@@ -74,6 +74,7 @@ object LocalModelValidator {
                 url = url,
                 connectTimeoutMs = connectTimeoutMs.toLong(),
                 readTimeoutMs = readTimeoutMs.toLong(),
+                httpVersion = java.net.http.HttpClient.Version.HTTP_1_1,
             )
 
             if (statusCode !in 200..299) {

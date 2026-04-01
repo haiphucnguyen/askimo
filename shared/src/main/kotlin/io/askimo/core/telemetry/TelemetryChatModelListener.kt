@@ -8,6 +8,8 @@ import dev.langchain4j.model.chat.listener.ChatModelErrorContext
 import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.listener.ChatModelRequestContext
 import dev.langchain4j.model.chat.listener.ChatModelResponseContext
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.logging.logger
 import java.net.URI
 import java.net.http.HttpClient
@@ -103,6 +105,14 @@ class TelemetryChatModelListener(
             durationMs = duration,
         )
 
+        Analytics.track(
+            AnalyticsEvents.PROVIDER_USED,
+            mapOf(
+                "provider" to provider,
+                "model_tier" to Analytics.modelTier(provider),
+            ),
+        )
+
         log.debug(
             "LLM response from {}:{} in {}ms, tokens={}, correlationId={}",
             provider,
@@ -131,6 +141,22 @@ class TelemetryChatModelListener(
         val model = request.modelName() ?: "unknown"
 
         telemetry.recordLLMError(provider, model, error)
+
+        // Categorise the error type without including the message (may contain PII/keys)
+        val errorType = when {
+            error.message?.contains("timeout", ignoreCase = true) == true -> "provider_timeout"
+            error.message?.contains("rate limit", ignoreCase = true) == true ||
+                error.message?.contains("429", ignoreCase = true) == true -> "rate_limit"
+            error.message?.contains("401", ignoreCase = true) == true ||
+                error.message?.contains("403", ignoreCase = true) == true -> "auth_error"
+            error.message?.contains("context length", ignoreCase = true) == true ||
+                error.message?.contains("too long", ignoreCase = true) == true -> "context_length"
+            else -> "provider_error"
+        }
+        Analytics.track(
+            AnalyticsEvents.ERROR_OCCURRED,
+            mapOf("error_type" to errorType, "provider" to provider),
+        )
 
         log.warn("LLM error from $provider:$model: ${error.message}", error)
     }

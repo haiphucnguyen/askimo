@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.askimo.core.analytics.Analytics
 import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
@@ -111,6 +112,9 @@ fun advancedSettingsSection() {
 
                 // RAG Configuration Section
                 ragConfigurationSection()
+
+                // Analytics Section
+                analyticsSection()
 
                 // Developer Mode Section
                 developerModeSection()
@@ -338,6 +342,52 @@ private fun openInFileManager(file: File) {
         }
     } catch (e: Exception) {
         log.error("Failed to open log directory: ${file.absolutePath}", e)
+    }
+}
+
+@Composable
+private fun analyticsSection() {
+    var isEnabled by remember { mutableStateOf(Analytics.isEnabled) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = AppComponents.bannerCardColors(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.large),
+            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+                ) {
+                    Text(
+                        text = stringResource("settings.analytics.title"),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Text(
+                        text = stringResource("settings.analytics.description"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    )
+                }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { checked ->
+                        isEnabled = checked
+                        if (checked) Analytics.optIn() else Analytics.optOut()
+                    },
+                )
+            }
+        }
     }
 }
 

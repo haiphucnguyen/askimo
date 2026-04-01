@@ -385,7 +385,7 @@ class DatabaseManager private constructor(
 
             // Migration: Add updated_at column if it doesn't exist (for existing databases)
             try {
-                stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))")
+                stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'")
             } catch (e: Exception) {
                 // Column already exists — safe to ignore.
             }

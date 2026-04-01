@@ -6,6 +6,8 @@ package io.askimo.cli.recipes
 
 import dev.langchain4j.data.message.UserMessage
 import io.askimo.cli.LoadingIndicator
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.context.AppContext
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.sendStreamingMessageWithCallback
@@ -114,6 +116,17 @@ class RecipeExecutor(
             }
         }
         log.debug(formatted)
+
+        val defaultRecipeNames = setOf("gitcommit", "summarize")
+        val recipeSource = if (def.name in defaultRecipeNames) "default" else "custom"
+        Analytics.track(
+            AnalyticsEvents.RECIPE_EXECUTED,
+            mapOf(
+                "recipe" to if (recipeSource == "default") def.name else "custom",
+                "recipe_source" to recipeSource,
+                "has_stdin" to (!opts.stdinContent.isNullOrBlank()).toString(),
+            ),
+        )
     }
 
     private fun resolveArgs(

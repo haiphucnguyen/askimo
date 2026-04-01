@@ -8,6 +8,8 @@ import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.context.AppContext
@@ -129,6 +131,7 @@ class ProjectIndexer(
         embeddingModel: EmbeddingModel,
         watchForChanges: Boolean,
     ) {
+        val indexingStartMs = System.currentTimeMillis()
         // Create one coordinator per knowledge source using factory
         val projectCoordinators = try {
             knowledgeSources.map { source ->
@@ -191,6 +194,20 @@ class ProjectIndexer(
 
             // Sum up total files indexed across all coordinators
             val totalFilesIndexed = projectCoordinators.sumOf { it.progress.value.processedFiles }
+
+            val indexDurationMs = System.currentTimeMillis() - indexingStartMs
+            val durationBucket = when {
+                indexDurationMs < 5_000L -> "<5s"
+                indexDurationMs < 30_000L -> "5-30s"
+                else -> ">30s"
+            }
+            Analytics.track(
+                AnalyticsEvents.RAG_INDEXED,
+                mapOf(
+                    "file_count" to totalFilesIndexed.toString(),
+                    "index_duration_bucket" to durationBucket,
+                ),
+            )
 
             EventBus.emit(
                 IndexingCompletedEvent(
