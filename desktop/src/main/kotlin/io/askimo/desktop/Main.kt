@@ -108,6 +108,7 @@ import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.LocalFontScale
+import io.askimo.ui.common.theme.SepiaColorScheme
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.theme.createCustomTypography
@@ -649,12 +650,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkMode
+        ThemeMode.SEPIA -> false
     }
 
-    val colorScheme = if (useDarkMode) {
-        getDarkColorScheme(accentColor)
-    } else {
-        getLightColorScheme(accentColor)
+    val colorScheme = when (themeMode) {
+        ThemeMode.SEPIA -> SepiaColorScheme
+        else -> if (useDarkMode) getDarkColorScheme(accentColor) else getLightColorScheme(accentColor)
     }
 
     val customTypography = remember(fontSettings) {

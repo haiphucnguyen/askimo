@@ -195,6 +195,7 @@ object NativeMenuBar {
             val systemThemeItem = MenuItem("")
             val lightThemeItem = MenuItem("")
             val darkThemeItem = MenuItem("")
+            val sepiaThemeItem = MenuItem("")
 
             // Helper function to update all theme menu items
             fun updateThemeMenuItems() {
@@ -205,6 +206,8 @@ object NativeMenuBar {
                     LocalizationManager.getString("menu.view.appearance.light")
                 darkThemeItem.label = (if (currentTheme == ThemeMode.DARK) "✓ " else "  ") +
                     LocalizationManager.getString("menu.view.appearance.dark")
+                sepiaThemeItem.label = (if (currentTheme == ThemeMode.SEPIA) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.sepia")
             }
 
             // Initialize labels
@@ -233,6 +236,14 @@ object NativeMenuBar {
                 },
             )
             appearanceMenu.add(darkThemeItem)
+
+            sepiaThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.SEPIA)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(sepiaThemeItem)
 
             viewMenu.add(appearanceMenu)
 
