@@ -4,70 +4,69 @@
  */
 package io.askimo.ui.common.theme
 
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Light Theme Colors
-private val md_theme_light_primary = Color(0xFF006C4C)
+private val md_theme_light_primary = Color(0xFF707070) // Modern Gray
 private val md_theme_light_onPrimary = Color(0xFFFFFFFF)
-private val md_theme_light_primaryContainer = Color(0xFF4DB894)
-private val md_theme_light_onPrimaryContainer = Color(0xFF002114)
+private val md_theme_light_primaryContainer = Color(0xFF707070).copy(alpha = 0.3f)
+private val md_theme_light_onPrimaryContainer = Color.Black
 private val md_theme_light_secondary = Color(0xFF4D6357)
 private val md_theme_light_onSecondary = Color(0xFFFFFFFF)
-private val md_theme_light_secondaryContainer = Color(0xFFCFE9D9)
-private val md_theme_light_onSecondaryContainer = Color(0xFF092016)
+private val md_theme_light_secondaryContainer = Color(0xFF707070).copy(alpha = 0.15f)
+private val md_theme_light_onSecondaryContainer = Color.Black
 private val md_theme_light_tertiary = Color(0xFF3D6373)
 private val md_theme_light_onTertiary = Color(0xFFFFFFFF)
 private val md_theme_light_tertiaryContainer = Color(0xFFC1E8FB)
 private val md_theme_light_onTertiaryContainer = Color(0xFF001F29)
-private val md_theme_light_error = Color(0xFFBA1A1A)
+private val md_theme_light_error = Color(0xFFD32F2F) // Material Design Red 700
 private val md_theme_light_errorContainer = Color(0xFFFFDAD6)
 private val md_theme_light_onError = Color(0xFFFFFFFF)
 private val md_theme_light_onErrorContainer = Color(0xFF410002)
 private val md_theme_light_background = Color(0xFFFBFDF9)
-private val md_theme_light_onBackground = Color(0xFF191C1A)
+private val md_theme_light_onBackground = Color.Black
 private val md_theme_light_surface = Color(0xFFFBFDF9)
-private val md_theme_light_onSurface = Color(0xFF191C1A)
+private val md_theme_light_onSurface = Color.Black
 private val md_theme_light_surfaceVariant = Color(0xFFDBE5DD)
-private val md_theme_light_onSurfaceVariant = Color(0xFF404943)
+private val md_theme_light_onSurfaceVariant = Color(0xFF424242) // Slightly lighter for secondary text
 private val md_theme_light_outline = Color(0xFF707973)
 private val md_theme_light_inverseOnSurface = Color(0xFFEFF1ED)
 private val md_theme_light_inverseSurface = Color(0xFF2E312F)
-private val md_theme_light_inversePrimary = Color(0xFF6CDBAC)
-private val md_theme_light_surfaceTint = Color(0xFF006C4C)
+private val md_theme_light_inversePrimary = Color(0xFF0D0D0D) // Modern Gray dark
+private val md_theme_light_surfaceTint = Color(0xFF707070) // Modern Gray
 private val md_theme_light_outlineVariant = Color(0xFFBFC9C2)
 private val md_theme_light_scrim = Color(0xFF000000)
 
 // Dark Theme Colors
-private val md_theme_dark_primary = Color(0xFF6CDBAC)
-private val md_theme_dark_onPrimary = Color(0xFF003826)
-private val md_theme_dark_primaryContainer = Color(0xFF005138)
-private val md_theme_dark_onPrimaryContainer = Color(0xFF89F8C7)
+private val md_theme_dark_primary = Color(0xFF0D0D0D) // Modern Gray dark
+private val md_theme_dark_onPrimary = Color.White
+private val md_theme_dark_primaryContainer = Color(0xFF0D0D0D).copy(alpha = 0.3f)
+private val md_theme_dark_onPrimaryContainer = Color.White
 private val md_theme_dark_secondary = Color(0xFFB3CCBE)
 private val md_theme_dark_onSecondary = Color(0xFF1F352A)
-private val md_theme_dark_secondaryContainer = Color(0xFF354B40)
-private val md_theme_dark_onSecondaryContainer = Color(0xFFCFE9D9)
+private val md_theme_dark_secondaryContainer = Color(0xFF0D0D0D).copy(alpha = 0.15f)
+private val md_theme_dark_onSecondaryContainer = Color.White
 private val md_theme_dark_tertiary = Color(0xFFA5CCDF)
 private val md_theme_dark_onTertiary = Color(0xFF073543)
 private val md_theme_dark_tertiaryContainer = Color(0xFF244C5B)
 private val md_theme_dark_onTertiaryContainer = Color(0xFFC1E8FB)
-private val md_theme_dark_error = Color(0xFFFFB4AB)
+private val md_theme_dark_error = Color(0xFFD32F2F) // Material Design Red 700 (consistent with light)
 private val md_theme_dark_errorContainer = Color(0xFF93000A)
-private val md_theme_dark_onError = Color(0xFF690005)
+private val md_theme_dark_onError = Color.White
 private val md_theme_dark_onErrorContainer = Color(0xFFFFDAD6)
 private val md_theme_dark_background = Color(0xFF353937)
-private val md_theme_dark_onBackground = Color(0xFFE1E3DF)
+private val md_theme_dark_onBackground = Color.White
 private val md_theme_dark_surface = Color(0xFF353937)
-private val md_theme_dark_onSurface = Color(0xFFE1E3DF)
+private val md_theme_dark_onSurface = Color.White
 private val md_theme_dark_surfaceVariant = Color(0xFF4A524D)
-private val md_theme_dark_onSurfaceVariant = Color(0xFFBFC9C2)
+private val md_theme_dark_onSurfaceVariant = Color(0xFFE0E0E0) // Slightly darker white for secondary text
 private val md_theme_dark_outline = Color(0xFF8A938C)
 private val md_theme_dark_inverseOnSurface = Color(0xFF373B39)
 private val md_theme_dark_inverseSurface = Color(0xFFE1E3DF)
-private val md_theme_dark_inversePrimary = Color(0xFF006C4C)
-private val md_theme_dark_surfaceTint = Color(0xFF6CDBAC)
+private val md_theme_dark_inversePrimary = Color(0xFF707070) // Modern Gray light
+private val md_theme_dark_surfaceTint = Color(0xFF0D0D0D) // Modern Gray dark
 private val md_theme_dark_outlineVariant = Color(0xFF565E59)
 private val md_theme_dark_scrim = Color(0xFF000000)
 
@@ -134,60 +133,6 @@ val DarkColorScheme = darkColorScheme(
     outlineVariant = md_theme_dark_outlineVariant,
     scrim = md_theme_dark_scrim,
 )
-
-/**
- * Creates a light color scheme with the specified accent color
- */
-fun getLightColorScheme(accentColor: AccentColor): ColorScheme {
-    val baseScheme = LightColorScheme
-    return baseScheme.copy(
-        // Keep primary as accent color for backgrounds/highlights
-        primary = accentColor.lightColor,
-        onPrimary = Color.White, // White text on primary background
-        primaryContainer = accentColor.lightColor.copy(alpha = 0.3f),
-        onPrimaryContainer = Color.Black,
-        secondaryContainer = accentColor.lightColor.copy(alpha = 0.15f),
-        onSecondaryContainer = Color.Black,
-        inversePrimary = accentColor.darkColor,
-        surfaceTint = accentColor.lightColor,
-
-        // Error colors for danger buttons - darker red with white text
-        error = Color(0xFFD32F2F), // Material Design Red 700
-        onError = Color.White, // White text on error background
-
-        // Text colors should always be black in light mode
-        onSurface = Color.Black,
-        onBackground = Color.Black,
-        onSurfaceVariant = Color(0xFF424242), // Slightly lighter for secondary text
-    )
-}
-
-/**
- * Creates a dark color scheme with the specified accent color
- */
-fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
-    val baseScheme = DarkColorScheme
-    return baseScheme.copy(
-        // Keep primary as accent color for backgrounds/highlights
-        primary = accentColor.darkColor,
-        onPrimary = Color.White, // White text on primary background
-        primaryContainer = accentColor.darkColor.copy(alpha = 0.3f),
-        onPrimaryContainer = Color.White,
-        secondaryContainer = accentColor.darkColor.copy(alpha = 0.15f),
-        onSecondaryContainer = Color.White,
-        inversePrimary = accentColor.lightColor,
-        surfaceTint = accentColor.darkColor,
-
-        // Error colors for danger buttons - darker red with white text
-        error = Color(0xFFD32F2F), // Material Design Red 700 (same as light mode for consistency)
-        onError = Color.White, // White text on error background
-
-        // Text colors should always be white in dark mode
-        onSurface = Color.White,
-        onBackground = Color.White,
-        onSurfaceVariant = Color(0xFFE0E0E0), // Slightly darker white for secondary text
-    )
-}
 
 private val sepia_primary = Color(0xFF6B4226) // warm brown
 private val sepia_onPrimary = Color(0xFFFFF8F0)

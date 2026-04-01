@@ -11,7 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.components.dangerButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.AccentColor
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemeMode
@@ -63,7 +61,6 @@ import java.io.File
 @Composable
 fun appearanceSettingsSection() {
     val currentThemeMode by ThemePreferences.themeMode.collectAsState()
-    val currentAccentColor by ThemePreferences.accentColor.collectAsState()
     val scrollState = rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -135,32 +132,6 @@ fun appearanceSettingsSection() {
                     selected = currentThemeMode == ThemeMode.SEPIA,
                     onClick = { ThemePreferences.setThemeMode(ThemeMode.SEPIA) },
                 )
-
-                // Accent Color Section
-                Text(
-                    text = stringResource("settings.accent.color"),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = Spacing.small),
-                )
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.medium),
-                ) {
-                    AccentColor.entries.forEach { accentColor ->
-                        Box(
-                            modifier = Modifier.widthIn(min = 120.dp, max = 160.dp),
-                        ) {
-                            accentColorOption(
-                                accentColor = accentColor,
-                                selected = currentAccentColor == accentColor,
-                                onClick = { ThemePreferences.setAccentColor(accentColor) },
-                            )
-                        }
-                    }
-                }
 
                 // AI Avatar Section
                 aiAvatarSettingsSection()
@@ -388,65 +359,6 @@ private fun avatarSetting(
                         Text(stringResource("action.remove"))
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun accentColorOption(
-    accentColor: AccentColor,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickableCard(onClick = onClick),
-        colors = if (selected) {
-            AppComponents.primaryCardColors()
-        } else {
-            AppComponents.surfaceVariantCardColors()
-        },
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                // Color preview circle
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            color = accentColor.lightColor,
-                            shape = MaterialTheme.shapes.small,
-                        ),
-                )
-                Text(
-                    text = accentColor.displayName,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-            if (selected) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
             }
         }
     }

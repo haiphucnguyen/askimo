@@ -107,14 +107,14 @@ import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.DarkColorScheme
+import io.askimo.ui.common.theme.LightColorScheme
 import io.askimo.ui.common.theme.LocalFontScale
 import io.askimo.ui.common.theme.SepiaColorScheme
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.theme.detectMacOSDarkMode
-import io.askimo.ui.common.theme.getDarkColorScheme
-import io.askimo.ui.common.theme.getLightColorScheme
 import io.askimo.ui.common.ui.util.CustomUriHandler
 import io.askimo.ui.project.ProjectsViewModel
 import io.askimo.ui.project.editProjectDialog
@@ -534,7 +534,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     // Theme state
     val themeMode by ThemePreferences.themeMode.collectAsState()
-    val accentColor by ThemePreferences.accentColor.collectAsState()
     val fontSettings by ThemePreferences.fontSettings.collectAsState()
     val locale by ThemePreferences.locale.collectAsState()
 
@@ -655,7 +654,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     val colorScheme = when (themeMode) {
         ThemeMode.SEPIA -> SepiaColorScheme
-        else -> if (useDarkMode) getDarkColorScheme(accentColor) else getLightColorScheme(accentColor)
+        else -> if (useDarkMode) DarkColorScheme else LightColorScheme
     }
 
     val customTypography = remember(fontSettings) {
