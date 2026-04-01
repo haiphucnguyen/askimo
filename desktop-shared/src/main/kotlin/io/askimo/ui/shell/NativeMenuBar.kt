@@ -196,6 +196,8 @@ object NativeMenuBar {
             val lightThemeItem = MenuItem("")
             val darkThemeItem = MenuItem("")
             val sepiaThemeItem = MenuItem("")
+            val oceanThemeItem = MenuItem("")
+            val nordThemeItem = MenuItem("")
 
             // Helper function to update all theme menu items
             fun updateThemeMenuItems() {
@@ -208,6 +210,10 @@ object NativeMenuBar {
                     LocalizationManager.getString("menu.view.appearance.dark")
                 sepiaThemeItem.label = (if (currentTheme == ThemeMode.SEPIA) "✓ " else "  ") +
                     LocalizationManager.getString("menu.view.appearance.sepia")
+                oceanThemeItem.label = (if (currentTheme == ThemeMode.OCEAN) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.ocean")
+                nordThemeItem.label = (if (currentTheme == ThemeMode.NORD) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.nord")
             }
 
             // Initialize labels
@@ -244,6 +250,22 @@ object NativeMenuBar {
                 },
             )
             appearanceMenu.add(sepiaThemeItem)
+
+            oceanThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.OCEAN)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(oceanThemeItem)
+
+            nordThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.NORD)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(nordThemeItem)
 
             viewMenu.add(appearanceMenu)
 

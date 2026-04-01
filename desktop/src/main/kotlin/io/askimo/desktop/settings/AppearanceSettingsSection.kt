@@ -133,6 +133,36 @@ fun appearanceSettingsSection() {
                     onClick = { ThemePreferences.setThemeMode(ThemeMode.SEPIA) },
                 )
 
+                // Ocean Mode
+                themeOption(
+                    title = stringResource("theme.ocean"),
+                    description = stringResource("theme.ocean.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFF0284C7),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.OCEAN,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.OCEAN) },
+                )
+
+                // Nord Mode
+                themeOption(
+                    title = stringResource("theme.nord"),
+                    description = stringResource("theme.nord.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.DarkMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFF88C0D0),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.NORD,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.NORD) },
+                )
+
                 // AI Avatar Section
                 aiAvatarSettingsSection()
             }
