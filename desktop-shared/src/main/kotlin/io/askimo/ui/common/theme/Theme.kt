@@ -188,3 +188,65 @@ fun getDarkColorScheme(accentColor: AccentColor): ColorScheme {
         onSurfaceVariant = Color(0xFFE0E0E0), // Slightly darker white for secondary text
     )
 }
+
+private val sepia_primary = Color(0xFF6B4226) // warm brown
+private val sepia_onPrimary = Color(0xFFFFF8F0)
+private val sepia_primaryContainer = Color(0xFFD4A574).copy(alpha = 0.35f)
+private val sepia_onPrimaryContainer = Color(0xFF3B1E0A)
+private val sepia_secondary = Color(0xFF8B6347)
+private val sepia_onSecondary = Color(0xFFFFF8F0)
+private val sepia_secondaryContainer = Color(0xFFD4A574).copy(alpha = 0.20f)
+private val sepia_onSecondaryContainer = Color(0xFF3B1E0A)
+private val sepia_tertiary = Color(0xFF7A6B4F)
+private val sepia_onTertiary = Color(0xFFFFF8F0)
+private val sepia_tertiaryContainer = Color(0xFFD6C5A0).copy(alpha = 0.30f)
+private val sepia_onTertiaryContainer = Color(0xFF3B2D10)
+private val sepia_error = Color(0xFFB00020)
+private val sepia_onError = Color(0xFFFFF8F0)
+private val sepia_errorContainer = Color(0xFFFFDAD6)
+private val sepia_onErrorContainer = Color(0xFF410002)
+private val sepia_background = Color(0xFFF5ECD7) // classic parchment
+private val sepia_onBackground = Color(0xFF2C1A0E) // very dark brown text
+private val sepia_surface = Color(0xFFF5ECD7)
+private val sepia_onSurface = Color(0xFF2C1A0E)
+private val sepia_surfaceVariant = Color(0xFFE8D9BC)
+private val sepia_onSurfaceVariant = Color(0xFF4A3728)
+private val sepia_outline = Color(0xFF9C7B5E)
+private val sepia_inverseOnSurface = Color(0xFFF5ECD7)
+private val sepia_inverseSurface = Color(0xFF2C1A0E)
+private val sepia_inversePrimary = Color(0xFFD4A574)
+private val sepia_surfaceTint = Color(0xFF6B4226)
+private val sepia_outlineVariant = Color(0xFFCCB08A)
+private val sepia_scrim = Color(0xFF000000)
+
+val SepiaColorScheme = lightColorScheme(
+    primary = sepia_primary,
+    onPrimary = sepia_onPrimary,
+    primaryContainer = sepia_primaryContainer,
+    onPrimaryContainer = sepia_onPrimaryContainer,
+    secondary = sepia_secondary,
+    onSecondary = sepia_onSecondary,
+    secondaryContainer = sepia_secondaryContainer,
+    onSecondaryContainer = sepia_onSecondaryContainer,
+    tertiary = sepia_tertiary,
+    onTertiary = sepia_onTertiary,
+    tertiaryContainer = sepia_tertiaryContainer,
+    onTertiaryContainer = sepia_onTertiaryContainer,
+    error = sepia_error,
+    errorContainer = sepia_errorContainer,
+    onError = sepia_onError,
+    onErrorContainer = sepia_onErrorContainer,
+    background = sepia_background,
+    onBackground = sepia_onBackground,
+    surface = sepia_surface,
+    onSurface = sepia_onSurface,
+    surfaceVariant = sepia_surfaceVariant,
+    onSurfaceVariant = sepia_onSurfaceVariant,
+    outline = sepia_outline,
+    inverseOnSurface = sepia_inverseOnSurface,
+    inverseSurface = sepia_inverseSurface,
+    inversePrimary = sepia_inversePrimary,
+    surfaceTint = sepia_surfaceTint,
+    outlineVariant = sepia_outlineVariant,
+    scrim = sepia_scrim,
+)

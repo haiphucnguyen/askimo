@@ -121,6 +121,21 @@ fun appearanceSettingsSection() {
                     onClick = { ThemePreferences.setThemeMode(ThemeMode.SYSTEM) },
                 )
 
+                // Sepia Mode
+                themeOption(
+                    title = stringResource("theme.sepia"),
+                    description = stringResource("theme.sepia.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFF6B4226),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.SEPIA,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.SEPIA) },
+                )
+
                 // Accent Color Section
                 Text(
                     text = stringResource("settings.accent.color"),
