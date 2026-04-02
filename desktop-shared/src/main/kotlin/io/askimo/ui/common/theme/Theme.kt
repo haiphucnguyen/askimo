@@ -134,6 +134,7 @@ val DarkColorScheme = darkColorScheme(
     scrim = md_theme_dark_scrim,
 )
 
+// ── Sepia ─────────────────────────────────────────────────────────────────────
 private val sepia_primary = Color(0xFF6B4226) // warm brown
 private val sepia_onPrimary = Color(0xFFFFF8F0)
 private val sepia_primaryContainer = Color(0xFFD4A574).copy(alpha = 0.35f)
@@ -322,4 +323,196 @@ val NordColorScheme = darkColorScheme(
     surfaceTint = nord_surfaceTint,
     outlineVariant = nord_outlineVariant,
     scrim = nord_scrim,
+)
+
+// ── Sage ──────────────────────────────────────────────────────────────────────
+// Light theme — muted grey-green, sophisticated and editorial
+private val sage_primary = Color(0xFF4A7C59) // mid sage green
+private val sage_onPrimary = Color(0xFFFFFFFF)
+private val sage_primaryContainer = Color(0xFFB2D4BC) // pale sage
+private val sage_onPrimaryContainer = Color(0xFF102018)
+private val sage_secondary = Color(0xFF5E7A65) // slightly muted sage
+private val sage_onSecondary = Color(0xFFFFFFFF)
+private val sage_secondaryContainer = Color(0xFFA8C4AE) // richer sage — visible as banner
+private val sage_onSecondaryContainer = Color(0xFF0E2016) // deep green for contrast
+private val sage_tertiary = Color(0xFF7A7A5C) // warm olive accent
+private val sage_onTertiary = Color(0xFFFFFFFF)
+private val sage_tertiaryContainer = Color(0xFFDDDDB8) // pale olive
+private val sage_onTertiaryContainer = Color(0xFF242410)
+private val sage_error = Color(0xFFD32F2F)
+private val sage_onError = Color(0xFFFFFFFF)
+private val sage_errorContainer = Color(0xFFFFDAD6)
+private val sage_onErrorContainer = Color(0xFF410002)
+private val sage_background = Color(0xFFF1F5F0) // warm grey-green white
+private val sage_onBackground = Color(0xFF1A241C) // deep green-black text
+private val sage_surface = Color(0xFFF1F5F0)
+private val sage_onSurface = Color(0xFF1A241C)
+private val sage_surfaceVariant = Color(0xFFDDE5DE) // subtle sage tint
+private val sage_onSurfaceVariant = Color(0xFF3A4E3E)
+private val sage_outline = Color(0xFF6B8C71)
+private val sage_inverseOnSurface = Color(0xFFF1F5F0)
+private val sage_inverseSurface = Color(0xFF1A241C)
+private val sage_inversePrimary = Color(0xFF8FBFA0)
+private val sage_surfaceTint = Color(0xFF4A7C59)
+private val sage_outlineVariant = Color(0xFFB8CCBB)
+private val sage_scrim = Color(0xFF000000)
+
+val SageColorScheme = lightColorScheme(
+    primary = sage_primary,
+    onPrimary = sage_onPrimary,
+    primaryContainer = sage_primaryContainer,
+    onPrimaryContainer = sage_onPrimaryContainer,
+    secondary = sage_secondary,
+    onSecondary = sage_onSecondary,
+    secondaryContainer = sage_secondaryContainer,
+    onSecondaryContainer = sage_onSecondaryContainer,
+    tertiary = sage_tertiary,
+    onTertiary = sage_onTertiary,
+    tertiaryContainer = sage_tertiaryContainer,
+    onTertiaryContainer = sage_onTertiaryContainer,
+    error = sage_error,
+    errorContainer = sage_errorContainer,
+    onError = sage_onError,
+    onErrorContainer = sage_onErrorContainer,
+    background = sage_background,
+    onBackground = sage_onBackground,
+    surface = sage_surface,
+    onSurface = sage_onSurface,
+    surfaceVariant = sage_surfaceVariant,
+    onSurfaceVariant = sage_onSurfaceVariant,
+    outline = sage_outline,
+    inverseOnSurface = sage_inverseOnSurface,
+    inverseSurface = sage_inverseSurface,
+    inversePrimary = sage_inversePrimary,
+    surfaceTint = sage_surfaceTint,
+    outlineVariant = sage_outlineVariant,
+    scrim = sage_scrim,
+)
+
+// ── Rose ──────────────────────────────────────────────────────────────────────
+// Light theme — soft blush pink, elegant and warm
+private val rose_primary = Color(0xFFE11D48) // rose-600
+private val rose_onPrimary = Color(0xFFFFFFFF)
+private val rose_primaryContainer = Color(0xFFFFCDD2) // rose-200 — soft blush
+private val rose_onPrimaryContainer = Color(0xFF4A0012)
+private val rose_secondary = Color(0xFFBE185D) // pink-700
+private val rose_onSecondary = Color(0xFFFFFFFF)
+private val rose_secondaryContainer = Color(0xFFFDA4AF) // rose-300 — richer banner
+private val rose_onSecondaryContainer = Color(0xFF3D0018) // deep rose for contrast
+private val rose_tertiary = Color(0xFF9333EA) // purple-600 — creative accent
+private val rose_onTertiary = Color(0xFFFFFFFF)
+private val rose_tertiaryContainer = Color(0xFFE9D5FF) // purple-100
+private val rose_onTertiaryContainer = Color(0xFF3B0764)
+private val rose_error = Color(0xFFD32F2F)
+private val rose_onError = Color(0xFFFFFFFF)
+private val rose_errorContainer = Color(0xFFFFDAD6)
+private val rose_onErrorContainer = Color(0xFF410002)
+private val rose_background = Color(0xFFFFF1F2) // rose-50 — barely-there blush
+private val rose_onBackground = Color(0xFF3D0010)
+private val rose_surface = Color(0xFFFFF1F2)
+private val rose_onSurface = Color(0xFF3D0010)
+private val rose_surfaceVariant = Color(0xFFFFE4E6) // rose-100
+private val rose_onSurfaceVariant = Color(0xFF6B1530)
+private val rose_outline = Color(0xFFE87B93)
+private val rose_inverseOnSurface = Color(0xFFFFF1F2)
+private val rose_inverseSurface = Color(0xFF3D0010)
+private val rose_inversePrimary = Color(0xFFFF8FA3)
+private val rose_surfaceTint = Color(0xFFE11D48)
+private val rose_outlineVariant = Color(0xFFFCB3C0)
+private val rose_scrim = Color(0xFF000000)
+
+val RoseColorScheme = lightColorScheme(
+    primary = rose_primary,
+    onPrimary = rose_onPrimary,
+    primaryContainer = rose_primaryContainer,
+    onPrimaryContainer = rose_onPrimaryContainer,
+    secondary = rose_secondary,
+    onSecondary = rose_onSecondary,
+    secondaryContainer = rose_secondaryContainer,
+    onSecondaryContainer = rose_onSecondaryContainer,
+    tertiary = rose_tertiary,
+    onTertiary = rose_onTertiary,
+    tertiaryContainer = rose_tertiaryContainer,
+    onTertiaryContainer = rose_onTertiaryContainer,
+    error = rose_error,
+    errorContainer = rose_errorContainer,
+    onError = rose_onError,
+    onErrorContainer = rose_onErrorContainer,
+    background = rose_background,
+    onBackground = rose_onBackground,
+    surface = rose_surface,
+    onSurface = rose_onSurface,
+    surfaceVariant = rose_surfaceVariant,
+    onSurfaceVariant = rose_onSurfaceVariant,
+    outline = rose_outline,
+    inverseOnSurface = rose_inverseOnSurface,
+    inverseSurface = rose_inverseSurface,
+    inversePrimary = rose_inversePrimary,
+    surfaceTint = rose_surfaceTint,
+    outlineVariant = rose_outlineVariant,
+    scrim = rose_scrim,
+)
+
+// ── Indigo ────────────────────────────────────────────────────────────────────
+// Dark theme — deep violet-blue, mystical and creative
+private val indigo_primary = Color(0xFF818CF8) // indigo-400 — soft violet glow
+private val indigo_onPrimary = Color(0xFF1A1040)
+private val indigo_primaryContainer = Color(0xFF3730A3) // indigo-700
+private val indigo_onPrimaryContainer = Color(0xFFC7D2FE) // indigo-200
+private val indigo_secondary = Color(0xFFA5B4FC) // indigo-300 — lighter accent
+private val indigo_onSecondary = Color(0xFF1E1B4B)
+private val indigo_secondaryContainer = Color(0xFF312E81) // indigo-800 — dark banner
+private val indigo_onSecondaryContainer = Color(0xFFE0E7FF) // indigo-100
+private val indigo_tertiary = Color(0xFFC084FC) // purple-400 — creative pop
+private val indigo_onTertiary = Color(0xFF2D1B4E)
+private val indigo_tertiaryContainer = Color(0xFF4C1D95)
+private val indigo_onTertiaryContainer = Color(0xFFEDE9FE)
+private val indigo_error = Color(0xFFFF8A9A) // soft rose-red on dark
+private val indigo_onError = Color(0xFF3D001A)
+private val indigo_errorContainer = Color(0xFF5C1230)
+private val indigo_onErrorContainer = Color(0xFFFFDAD6)
+private val indigo_background = Color(0xFF1E1B4B) // indigo-950 — deep night indigo
+private val indigo_onBackground = Color(0xFFE0E7FF) // indigo-100 — soft lavender text
+private val indigo_surface = Color(0xFF1E1B4B)
+private val indigo_onSurface = Color(0xFFE0E7FF)
+private val indigo_surfaceVariant = Color(0xFF2D2A6E) // slightly lighter indigo
+private val indigo_onSurfaceVariant = Color(0xFFC7D2FE) // indigo-200
+private val indigo_outline = Color(0xFF6366F1) // indigo-500
+private val indigo_inverseOnSurface = Color(0xFF1E1B4B)
+private val indigo_inverseSurface = Color(0xFFE0E7FF)
+private val indigo_inversePrimary = Color(0xFF4338CA)
+private val indigo_surfaceTint = Color(0xFF818CF8)
+private val indigo_outlineVariant = Color(0xFF3730A3)
+private val indigo_scrim = Color(0xFF000000)
+
+val IndigoColorScheme = darkColorScheme(
+    primary = indigo_primary,
+    onPrimary = indigo_onPrimary,
+    primaryContainer = indigo_primaryContainer,
+    onPrimaryContainer = indigo_onPrimaryContainer,
+    secondary = indigo_secondary,
+    onSecondary = indigo_onSecondary,
+    secondaryContainer = indigo_secondaryContainer,
+    onSecondaryContainer = indigo_onSecondaryContainer,
+    tertiary = indigo_tertiary,
+    onTertiary = indigo_onTertiary,
+    tertiaryContainer = indigo_tertiaryContainer,
+    onTertiaryContainer = indigo_onTertiaryContainer,
+    error = indigo_error,
+    errorContainer = indigo_errorContainer,
+    onError = indigo_onError,
+    onErrorContainer = indigo_onErrorContainer,
+    background = indigo_background,
+    onBackground = indigo_onBackground,
+    surface = indigo_surface,
+    onSurface = indigo_onSurface,
+    surfaceVariant = indigo_surfaceVariant,
+    onSurfaceVariant = indigo_onSurfaceVariant,
+    outline = indigo_outline,
+    inverseOnSurface = indigo_inverseOnSurface,
+    inverseSurface = indigo_inverseSurface,
+    inversePrimary = indigo_inversePrimary,
+    surfaceTint = indigo_surfaceTint,
+    outlineVariant = indigo_outlineVariant,
+    scrim = indigo_scrim,
 )

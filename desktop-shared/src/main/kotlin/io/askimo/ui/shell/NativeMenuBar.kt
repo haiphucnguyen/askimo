@@ -198,6 +198,9 @@ object NativeMenuBar {
             val sepiaThemeItem = MenuItem("")
             val oceanThemeItem = MenuItem("")
             val nordThemeItem = MenuItem("")
+            val sageThemeItem = MenuItem("")
+            val roseThemeItem = MenuItem("")
+            val indigoThemeItem = MenuItem("")
 
             // Helper function to update all theme menu items
             fun updateThemeMenuItems() {
@@ -214,6 +217,12 @@ object NativeMenuBar {
                     LocalizationManager.getString("menu.view.appearance.ocean")
                 nordThemeItem.label = (if (currentTheme == ThemeMode.NORD) "✓ " else "  ") +
                     LocalizationManager.getString("menu.view.appearance.nord")
+                sageThemeItem.label = (if (currentTheme == ThemeMode.SAGE) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.sage")
+                roseThemeItem.label = (if (currentTheme == ThemeMode.ROSE) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.rose")
+                indigoThemeItem.label = (if (currentTheme == ThemeMode.INDIGO) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.indigo")
             }
 
             // Initialize labels
@@ -266,6 +275,30 @@ object NativeMenuBar {
                 },
             )
             appearanceMenu.add(nordThemeItem)
+
+            sageThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.SAGE)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(sageThemeItem)
+
+            roseThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.ROSE)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(roseThemeItem)
+
+            indigoThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.INDIGO)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(indigoThemeItem)
 
             viewMenu.add(appearanceMenu)
 

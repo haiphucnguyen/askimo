@@ -108,10 +108,13 @@ import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.DarkColorScheme
+import io.askimo.ui.common.theme.IndigoColorScheme
 import io.askimo.ui.common.theme.LightColorScheme
 import io.askimo.ui.common.theme.LocalFontScale
 import io.askimo.ui.common.theme.NordColorScheme
 import io.askimo.ui.common.theme.OceanColorScheme
+import io.askimo.ui.common.theme.RoseColorScheme
+import io.askimo.ui.common.theme.SageColorScheme
 import io.askimo.ui.common.theme.SepiaColorScheme
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
@@ -654,12 +657,18 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         ThemeMode.SEPIA -> false
         ThemeMode.OCEAN -> false
         ThemeMode.NORD -> true
+        ThemeMode.SAGE -> false
+        ThemeMode.ROSE -> false
+        ThemeMode.INDIGO -> true
     }
 
     val colorScheme = when (themeMode) {
         ThemeMode.SEPIA -> SepiaColorScheme
         ThemeMode.OCEAN -> OceanColorScheme
         ThemeMode.NORD -> NordColorScheme
+        ThemeMode.SAGE -> SageColorScheme
+        ThemeMode.ROSE -> RoseColorScheme
+        ThemeMode.INDIGO -> IndigoColorScheme
         else -> if (useDarkMode) DarkColorScheme else LightColorScheme
     }
 

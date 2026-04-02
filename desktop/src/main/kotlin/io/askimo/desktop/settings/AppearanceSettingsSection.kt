@@ -163,6 +163,51 @@ fun appearanceSettingsSection() {
                     onClick = { ThemePreferences.setThemeMode(ThemeMode.NORD) },
                 )
 
+                // Sage Mode
+                themeOption(
+                    title = stringResource("theme.sage"),
+                    description = stringResource("theme.sage.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFF4A7C59),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.SAGE,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.SAGE) },
+                )
+
+                // Rose Mode
+                themeOption(
+                    title = stringResource("theme.rose"),
+                    description = stringResource("theme.rose.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.LightMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFFE11D48),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.ROSE,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.ROSE) },
+                )
+
+                // Indigo Mode
+                themeOption(
+                    title = stringResource("theme.indigo"),
+                    description = stringResource("theme.indigo.description"),
+                    icon = {
+                        Icon(
+                            Icons.Default.DarkMode,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFF818CF8),
+                        )
+                    },
+                    selected = currentThemeMode == ThemeMode.INDIGO,
+                    onClick = { ThemePreferences.setThemeMode(ThemeMode.INDIGO) },
+                )
+
                 // AI Avatar Section
                 aiAvatarSettingsSection()
             }
