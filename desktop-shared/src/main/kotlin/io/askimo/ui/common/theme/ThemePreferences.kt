@@ -35,6 +35,7 @@ object ThemePreferences {
     private const val AI_AVATAR_PATH_KEY = "ai_avatar_path"
     private const val MAIN_SIDEBAR_WIDTH_FRACTION_KEY = "main_sidebar_width_fraction"
     private const val SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY = "settings_sidebar_width_fraction"
+    private const val BACKGROUND_IMAGE_KEY = "background_image"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
@@ -48,6 +49,9 @@ object ThemePreferences {
 
     private val _logLevel = MutableStateFlow(loadLogLevel())
     val logLevel: StateFlow<LogLevel> = _logLevel.asStateFlow()
+
+    private val _backgroundImage = MutableStateFlow(loadBackgroundImage())
+    val backgroundImage: StateFlow<BackgroundImage> = _backgroundImage.asStateFlow()
 
     private fun loadThemeMode(): ThemeMode {
         val themeName = prefs.get(THEME_MODE_KEY, ThemeMode.SYSTEM.name)
@@ -180,5 +184,16 @@ object ThemePreferences {
 
     fun setSettingsSidebarWidthFraction(fraction: Float) {
         prefs.putFloat(SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY, fraction)
+    }
+
+    // Background image management
+    private fun loadBackgroundImage(): BackgroundImage {
+        val stored = prefs.get(BACKGROUND_IMAGE_KEY, null)
+        return BackgroundImage.fromPrefsString(stored)
+    }
+
+    fun setBackgroundImage(image: BackgroundImage) {
+        _backgroundImage.value = image
+        prefs.put(BACKGROUND_IMAGE_KEY, image.toPrefsString())
     }
 }

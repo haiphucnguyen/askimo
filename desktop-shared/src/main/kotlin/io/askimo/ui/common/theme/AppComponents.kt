@@ -124,16 +124,21 @@ object AppComponents {
         val primaryColor = MaterialTheme.colorScheme.primary
         val isLight = surfaceColor.luminance() > 0.5
         val tintAmount = if (isLight) 0.08f else 0.12f
-        return Color(
+        val base = Color(
             red = surfaceColor.red + (primaryColor.red - surfaceColor.red) * tintAmount,
             green = surfaceColor.green + (primaryColor.green - surfaceColor.green) * tintAmount,
             blue = surfaceColor.blue + (primaryColor.blue - surfaceColor.blue) * tintAmount,
             alpha = surfaceColor.alpha,
         )
+        // When a background image is active, let it show through the sidebar
+        return if (LocalBackgroundActive.current) base.copy(alpha = 0.82f) else base
     }
 
     @Composable
-    fun sidebarHeaderColor(): Color = MaterialTheme.colorScheme.secondaryContainer
+    fun sidebarHeaderColor(): Color {
+        val base = MaterialTheme.colorScheme.secondaryContainer
+        return if (LocalBackgroundActive.current) base.copy(alpha = 0.82f) else base
+    }
 
     @Composable
     fun userMessageBackground(): Color {

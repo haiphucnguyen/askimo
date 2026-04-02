@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.settings.appearanceSettingsSection
 import io.askimo.ui.settings.generalSettingsSection
 import io.askimo.ui.settings.shortcutsSettingsSection
 import org.jetbrains.skia.Image
@@ -74,9 +75,9 @@ enum class SettingsSection {
 fun settingsViewWithSidebar(
     onClose: () -> Unit,
     settingsViewModel: SettingsViewModel,
-    initialSection: SettingsSection = SettingsSection.GENERAL,
+    selectedSection: SettingsSection = SettingsSection.GENERAL,
+    onSectionChange: (SettingsSection) -> Unit = {},
 ) {
-    var selectedSection by remember { mutableStateOf(initialSection) }
     // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getSettingsSidebarWidthFraction()) }
 
@@ -169,49 +170,49 @@ fun settingsViewWithSidebar(
                         title = stringResource("settings.general"),
                         icon = Icons.Default.Settings,
                         isSelected = selectedSection == SettingsSection.GENERAL,
-                        onClick = { selectedSection = SettingsSection.GENERAL },
+                        onClick = { onSectionChange(SettingsSection.GENERAL) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.ai.provider"),
                         icon = Icons.Default.SmartToy,
                         isSelected = selectedSection == SettingsSection.AI_PROVIDER,
-                        onClick = { selectedSection = SettingsSection.AI_PROVIDER },
+                        onClick = { onSectionChange(SettingsSection.AI_PROVIDER) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.appearance"),
                         icon = Icons.Default.Palette,
                         isSelected = selectedSection == SettingsSection.APPEARANCE,
-                        onClick = { selectedSection = SettingsSection.APPEARANCE },
+                        onClick = { onSectionChange(SettingsSection.APPEARANCE) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.network"),
                         icon = Icons.Outlined.NetworkCheck,
                         isSelected = selectedSection == SettingsSection.NETWORK,
-                        onClick = { selectedSection = SettingsSection.NETWORK },
+                        onClick = { onSectionChange(SettingsSection.NETWORK) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.shortcuts"),
                         icon = Icons.Outlined.Keyboard,
                         isSelected = selectedSection == SettingsSection.SHORTCUTS,
-                        onClick = { selectedSection = SettingsSection.SHORTCUTS },
+                        onClick = { onSectionChange(SettingsSection.SHORTCUTS) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.mcp.servers"),
                         icon = Icons.Outlined.Cable,
                         isSelected = selectedSection == SettingsSection.MCP_SERVERS,
-                        onClick = { selectedSection = SettingsSection.MCP_SERVERS },
+                        onClick = { onSectionChange(SettingsSection.MCP_SERVERS) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.advanced"),
                         icon = Icons.Outlined.Tune,
                         isSelected = selectedSection == SettingsSection.ADVANCED,
-                        onClick = { selectedSection = SettingsSection.ADVANCED },
+                        onClick = { onSectionChange(SettingsSection.ADVANCED) },
                     )
                     settingsSidebarItem(
                         title = stringResource("settings.about"),
                         icon = Icons.Default.Info,
                         isSelected = selectedSection == SettingsSection.ABOUT,
-                        onClick = { selectedSection = SettingsSection.ABOUT },
+                        onClick = { onSectionChange(SettingsSection.ABOUT) },
                     )
                 } // End Left Sidebar Column
 
