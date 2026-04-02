@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -91,6 +92,7 @@ import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.service.AvatarService
@@ -326,7 +328,13 @@ fun chatView(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(
+                if (LocalBackgroundActive.current) {
+                    Color.Transparent
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            )
             .focusRequester(chatViewFocusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->

@@ -639,6 +639,7 @@ private fun projectsList(
 private fun navigationItemLabelWithMenu(
     text: String,
     onMenuClick: () -> Unit,
+    isHovered: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -661,11 +662,16 @@ private fun navigationItemLabelWithMenu(
                 modifier = Modifier
                     .size(24.dp)
                     .pointerHoverIcon(PointerIcon.Hand),
+                enabled = isHovered,
             ) {
                 Icon(
                     Icons.Default.MoreVert,
                     contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (isHovered) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        androidx.compose.ui.graphics.Color.Transparent
+                    },
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -682,6 +688,8 @@ private fun projectItemWithMenu(
     onDeleteProject: (Project) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
 
     val tooltipText = if (project.description.isNullOrBlank()) {
         project.name
@@ -692,7 +700,8 @@ private fun projectItemWithMenu(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 2.dp)
+            .hoverable(interactionSource),
     ) {
         themedTooltip(
             text = tooltipText,
@@ -703,6 +712,7 @@ private fun projectItemWithMenu(
                     navigationItemLabelWithMenu(
                         text = project.name,
                         onMenuClick = { showMenu = true },
+                        isHovered = isHovered || showMenu,
                     )
                 },
                 selected = isSelected,
@@ -905,13 +915,16 @@ private fun sessionItemWithMenu(
     var showMenu by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var sessionIdToMove by remember { mutableStateOf<String?>(null) }
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
 
     val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 2.dp)
+            .hoverable(interactionSource),
     ) {
         themedTooltip(
             text = session.title,
@@ -922,6 +935,7 @@ private fun sessionItemWithMenu(
                     navigationItemLabelWithMenu(
                         text = session.title,
                         onMenuClick = { showMenu = true },
+                        isHovered = isHovered || showMenu,
                     )
                 },
                 selected = isSelected,

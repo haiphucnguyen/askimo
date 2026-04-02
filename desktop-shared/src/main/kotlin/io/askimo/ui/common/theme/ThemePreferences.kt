@@ -23,7 +23,6 @@ object ThemePreferences {
     val CONTENT_MAX_WIDTH = 900.dp
 
     private const val THEME_MODE_KEY = "theme_mode"
-    private const val ACCENT_COLOR_KEY = "accent_color"
     private const val FONT_FAMILY_KEY = "font_family"
     private const val FONT_SIZE_KEY = "font_size"
     private const val LOCALE_KEY = "locale"
@@ -36,13 +35,11 @@ object ThemePreferences {
     private const val AI_AVATAR_PATH_KEY = "ai_avatar_path"
     private const val MAIN_SIDEBAR_WIDTH_FRACTION_KEY = "main_sidebar_width_fraction"
     private const val SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY = "settings_sidebar_width_fraction"
+    private const val BACKGROUND_IMAGE_KEY = "background_image"
     private val prefs = Preferences.userNodeForPackage(ThemePreferences::class.java)
 
     private val _themeMode = MutableStateFlow(loadThemeMode())
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
-
-    private val _accentColor = MutableStateFlow(loadAccentColor())
-    val accentColor: StateFlow<AccentColor> = _accentColor.asStateFlow()
 
     private val _fontSettings = MutableStateFlow(loadFontSettings())
     val fontSettings: StateFlow<FontSettings> = _fontSettings.asStateFlow()
@@ -53,21 +50,15 @@ object ThemePreferences {
     private val _logLevel = MutableStateFlow(loadLogLevel())
     val logLevel: StateFlow<LogLevel> = _logLevel.asStateFlow()
 
+    private val _backgroundImage = MutableStateFlow(loadBackgroundImage())
+    val backgroundImage: StateFlow<BackgroundImage> = _backgroundImage.asStateFlow()
+
     private fun loadThemeMode(): ThemeMode {
         val themeName = prefs.get(THEME_MODE_KEY, ThemeMode.SYSTEM.name)
         return try {
             ThemeMode.valueOf(themeName)
         } catch (_: IllegalArgumentException) {
             ThemeMode.SYSTEM
-        }
-    }
-
-    private fun loadAccentColor(): AccentColor {
-        val colorName = prefs.get(ACCENT_COLOR_KEY, AccentColor.MODERN_GRAY.name)
-        return try {
-            AccentColor.valueOf(colorName)
-        } catch (_: IllegalArgumentException) {
-            AccentColor.MODERN_GRAY
         }
     }
 
@@ -129,11 +120,6 @@ object ThemePreferences {
     fun setThemeMode(mode: io.askimo.ui.common.theme.ThemeMode) {
         _themeMode.value = mode
         prefs.put(THEME_MODE_KEY, mode.name)
-    }
-
-    fun setAccentColor(color: io.askimo.ui.common.theme.AccentColor) {
-        _accentColor.value = color
-        prefs.put(ACCENT_COLOR_KEY, color.name)
     }
 
     fun setFontSettings(settings: io.askimo.ui.common.theme.FontSettings) {
@@ -198,5 +184,16 @@ object ThemePreferences {
 
     fun setSettingsSidebarWidthFraction(fraction: Float) {
         prefs.putFloat(SETTINGS_SIDEBAR_WIDTH_FRACTION_KEY, fraction)
+    }
+
+    // Background image management
+    private fun loadBackgroundImage(): BackgroundImage {
+        val stored = prefs.get(BACKGROUND_IMAGE_KEY, null)
+        return BackgroundImage.fromPrefsString(stored)
+    }
+
+    fun setBackgroundImage(image: BackgroundImage) {
+        _backgroundImage.value = image
+        prefs.put(BACKGROUND_IMAGE_KEY, image.toPrefsString())
     }
 }

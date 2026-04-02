@@ -41,4 +41,9 @@ enum class ThemeMode {
     DARK,
     SYSTEM,
     SEPIA,
+    OCEAN,
+    NORD,
+    SAGE,
+    ROSE,
+    INDIGO,
 }
