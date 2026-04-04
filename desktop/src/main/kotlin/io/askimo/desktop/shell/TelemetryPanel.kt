@@ -4,9 +4,6 @@
  */
 package io.askimo.desktop.shell
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
-import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -39,7 +35,6 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.askimo.core.context.AppContext
@@ -203,7 +198,6 @@ internal fun telemetryPanel(metrics: TelemetryMetrics, maxHeight: Dp) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun telemetryMetricCard(
     label: String,
@@ -223,26 +217,7 @@ private fun telemetryMetricCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (valueTooltip != null) {
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            color = MaterialTheme.colorScheme.inverseSurface,
-                            shape = RoundedCornerShape(4.dp),
-                        ) {
-                            Text(
-                                text = valueTooltip,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                            )
-                        }
-                    },
-                    delayMillis = 300,
-                    tooltipPlacement = TooltipPlacement.CursorPoint(
-                        offset = DpOffset(0.dp, 16.dp),
-                    ),
-                ) {
+                themedTooltip(text = valueTooltip) {
                     Text(
                         text = value,
                         style = MaterialTheme.typography.titleMedium,
@@ -273,7 +248,6 @@ private fun telemetryMetricCard(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun telemetryProviderRow(
     providerModel: String,
@@ -310,25 +284,8 @@ private fun telemetryProviderRow(
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TooltipArea(
-                tooltip = {
-                    Surface(
-                        modifier = Modifier.padding(4.dp),
-                        color = MaterialTheme.colorScheme.inverseSurface,
-                        shape = RoundedCornerShape(4.dp),
-                    ) {
-                        Text(
-                            text = formatDurationDetailed(avgDurationMs),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                        )
-                    }
-                },
-                delayMillis = 300,
-                tooltipPlacement = TooltipPlacement.CursorPoint(
-                    offset = DpOffset(0.dp, 16.dp),
-                ),
+            themedTooltip(
+                text = formatDurationDetailed(avgDurationMs),
             ) {
                 Text(
                     text = formatDuration(avgDurationMs),

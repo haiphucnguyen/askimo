@@ -57,7 +57,7 @@ object ChatRequestTransformers {
         log.trace("Processing chat request for $modelKey with context size: $contextSize tokens")
 
         // First, add custom system messages and remove duplicates
-        val requestWithCustomMessages = buildRequestWithCustomMessages(sessionId, chatRequest, memoryId)
+        val requestWithCustomMessages = buildRequestWithCustomMessages(sessionId, chatRequest)
 
         // Then, enforce token budget
         return enforceTokenBudget(requestWithCustomMessages, contextSize, provider, settings.defaultModel)
@@ -66,7 +66,6 @@ object ChatRequestTransformers {
     private fun buildRequestWithCustomMessages(
         sessionId: String?,
         chatRequest: ChatRequest,
-        @Suppress("UNUSED_PARAMETER") memoryId: Any?,
     ): ChatRequest {
         val existingMessages = chatRequest.messages()
 

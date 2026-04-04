@@ -123,13 +123,6 @@ class TemplateResolver(private val parameterValues: Map<String, String>) {
                 errors.add("Unmatched opening braces")
             }
 
-            // Extract all placeholders and validate them
-            val simpleRegex = """\{\{(\w+)\}\}""".toRegex()
-            val conditionalRegex = """\{\{\?(\w+):([^}]+)\}\}""".toRegex()
-
-            val simplePlaceholders = simpleRegex.findAll(template).map { it.groupValues[1] }.toList()
-            val conditionalPlaceholders = conditionalRegex.findAll(template).map { it.groupValues[1] }.toList()
-
             // Check for empty placeholders
             if (template.contains("{{}}")) {
                 errors.add("Empty placeholder found")

@@ -421,17 +421,14 @@ fun footerBar(
 ) {
     val resourceMonitor = remember { get<SystemResourceMonitor>(SystemResourceMonitor::class.java) }
     val appContext = remember { get<AppContext>(AppContext::class.java) }
-    val scope = rememberCoroutineScope()
 
     val memoryUsage by resourceMonitor.memoryUsageMB.collectAsState()
     val cpuUsage by resourceMonitor.cpuUsagePercent.collectAsState()
     val metrics by appContext.telemetry.metricsFlow.collectAsState()
     var telemetryExpanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        scope.launch {
-            resourceMonitor.startMonitoring(intervalMillis = 2000)
-        }
+    LaunchedEffect(resourceMonitor) {
+        resourceMonitor.startMonitoring(intervalMillis = 2000)
     }
 
     Column(
@@ -449,46 +446,42 @@ fun footerBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            themedTooltip(
-                text = stringResource("system.resources.tooltip", memoryUsage.toString(), "%.1f".format(cpuUsage)),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource("system.memory") + ":",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "$memoryUsage MB",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                    Text(
+                        text = stringResource("system.memory") + ":",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "$memoryUsage MB",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource("system.cpu") + ":",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "%.1f%%".format(cpuUsage),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource("system.cpu") + ":",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "%.1f%%".format(cpuUsage),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
 

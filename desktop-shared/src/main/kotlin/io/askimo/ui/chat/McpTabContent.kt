@@ -4,8 +4,6 @@
  */
 package io.askimo.ui.chat
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +26,6 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.ExtensionOff
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +52,7 @@ import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.ProjectMcpInstanceService
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
@@ -67,7 +63,6 @@ import org.koin.core.context.GlobalContext as KoinGlobalContext
 /**
  * Shows list of MCP instances and their available tools.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun mcpTabContent(project: Project?) {
     if (project == null) {
@@ -182,7 +177,6 @@ fun mcpTabContent(project: Project?) {
 /**
  * MCP instance item with expandable tools list
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun mcpInstanceItem(
     instance: McpInstance,
@@ -359,7 +353,6 @@ private fun mcpInstanceItem(
 /**
  * Individual tool item with selection support and detailed tooltip
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun toolItem(
     tool: ToolSpecification,
@@ -367,80 +360,30 @@ private fun toolItem(
     isSelected: Boolean,
     onSelected: () -> Unit,
 ) {
-    TooltipArea(
-        tooltip = {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.widthIn(max = 500.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Tool name
-                    Text(
-                        text = tool.name(),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    // Tool description
-                    tool.description()?.let { desc ->
-                        Text(
-                            text = desc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+    val tooltipText = remember(tool) {
+        buildString {
+            append(tool.name())
+            tool.description()?.let { desc ->
+                append("\n\n")
+                append(desc)
+            }
+            val params = tool.parameters()
+            if (params != null) {
+                val properties = params.properties()
+                if (!properties.isNullOrEmpty()) {
+                    append("\n\nParameters:")
+                    properties.entries.take(5).forEach { (paramName, _) ->
+                        append("\n• $paramName")
                     }
-
-                    // Parameters section
-                    if (tool.parameters() != null) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-
-                        Text(
-                            text = stringResource("mcp.tool.parameters"),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        // Show parameter structure (simplified)
-                        val params = tool.parameters()
-                        if (params != null) {
-                            val properties = params.properties()
-                            if (properties != null && properties.isNotEmpty()) {
-                                Column(
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                                ) {
-                                    properties.entries.take(5).forEach { (paramName, _) ->
-                                        Text(
-                                            text = "• $paramName",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = AppComponents.secondaryTextColor(),
-                                        )
-                                    }
-                                    if (properties.size > 5) {
-                                        Text(
-                                            text = "... and ${properties.size - 5} more",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = AppComponents.tertiaryTextColor(),
-                                            fontStyle = FontStyle.Italic,
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    if (properties.size > 5) {
+                        append("\n... and ${properties.size - 5} more")
                     }
                 }
             }
-        },
-    ) {
+        }
+    }
+
+    themedTooltip(text = tooltipText) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

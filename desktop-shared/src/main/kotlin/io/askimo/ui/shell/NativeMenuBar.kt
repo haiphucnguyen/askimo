@@ -72,8 +72,7 @@ object NativeMenuBar {
                     desktop.setAboutHandler { onShowAbout() }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
     }
 

@@ -356,15 +356,6 @@ class AppContext private constructor(
     }
 
     /**
-     * Get the vision model name for the current provider.
-     */
-    private fun getVisionModelForProvider(provider: ModelProvider): String = if (provider == ModelProvider.UNKNOWN) {
-        params.model
-    } else {
-        AppConfig.models[provider].visionModel
-    }
-
-    /**
      * Set the language directive based on user's locale selection.
      * This constructs a comprehensive instruction for the AI to communicate in the specified language,
      * with a fallback to English if the language is not supported by the AI.

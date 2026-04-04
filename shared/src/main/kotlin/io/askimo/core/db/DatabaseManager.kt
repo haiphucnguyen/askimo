@@ -217,7 +217,8 @@ class DatabaseManager private constructor(
                     ALTER TABLE chat_sessions ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE CASCADE
                     """,
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
+                // Column already exists — safe to ignore
             }
 
             // Migration: Add synced_at column if it doesn't exist.
