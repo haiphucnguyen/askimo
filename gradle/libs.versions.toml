@@ -13,6 +13,7 @@ mockitoKotlin = "6.1.0"
 kotlin = "2.3.20"
 jackson = "2.19.2"
 spotless = "8.0.0"
+detekt = "1.23.8"
 shadow = "9.0.1"
 graalvmSvm = "25.0.2"
 sqlite = "3.51.1.0"
@@ -123,6 +124,11 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", ve
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
+# Detekt
+detekt-cli = { module = "io.gitlab.arturbosch.detekt:detekt-cli", version.ref = "detekt" }
+detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detekt" }
+detekt-test = { module = "io.gitlab.arturbosch.detekt:detekt-test", version.ref = "detekt" }
+
 [bundles]
 langchain4j = [
     "langchain4j",
@@ -200,6 +206,7 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-plugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

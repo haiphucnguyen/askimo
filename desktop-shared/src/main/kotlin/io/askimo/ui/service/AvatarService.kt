@@ -33,7 +33,6 @@ class AvatarService {
         private val USER_AVATAR_DIR get() = File(AVATARS_DIR, "user")
         private val AI_AVATAR_DIR get() = File(AVATARS_DIR, "ai")
 
-        private const val DEFAULT_USER_AVATAR = "user-avatar.png"
         private const val DEFAULT_AI_AVATAR = "ai-avatar.png"
 
         /** Built-in fallback — decoded once for the entire app lifetime. */

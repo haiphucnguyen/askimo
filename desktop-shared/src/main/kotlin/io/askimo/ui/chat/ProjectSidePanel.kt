@@ -6,8 +6,6 @@ package io.askimo.ui.chat
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -42,7 +40,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,6 +68,7 @@ import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.project.addReferenceMaterialDialog
 import io.askimo.ui.project.buildKnowledgeSourceConfigs
 import io.askimo.ui.project.mergeKnowledgeSourceConfigs
@@ -92,7 +90,6 @@ enum class PanelTab(
  * Shows as icon bar when collapsed, full panel when expanded.
  * Supports drag-to-resize when expanded.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun projectSidePanel(
     project: Project?,
@@ -386,7 +383,6 @@ fun projectSidePanel(
 /**
  * Tab icon with tooltip and selection state
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun tabIcon(
     tab: PanelTab,
@@ -401,19 +397,7 @@ private fun tabIcon(
         PanelTab.MCP -> stringResource("panel.tab.mcp")
     }
 
-    TooltipArea(
-        tooltip = {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Text(
-                    text = tooltipText,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        },
-    ) {
+    themedTooltip(text = tooltipText) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -580,12 +564,6 @@ private fun ragSourcesEmptyState(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource("rag.empty.button.add"))
             }
-
-            Text(
-                text = stringResource("rag.empty.coming.soon"),
-                style = MaterialTheme.typography.labelSmall,
-                color = AppComponents.tertiaryTextColor(),
-            )
         }
     }
 }

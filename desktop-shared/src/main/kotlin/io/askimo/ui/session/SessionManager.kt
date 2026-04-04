@@ -165,6 +165,7 @@ class SessionManager(
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
         disabledServerIds: Set<String> = emptySet(),
+        directiveId: String? = null,
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -180,6 +181,12 @@ class SessionManager(
                     )
                     createdSessions.add(sessionId)
                     log.debug("Created new session: $sessionId")
+
+                    // Persist the selected directive (if any) to the newly created session
+                    if (directiveId != null) {
+                        chatSessionService.updateSessionDirective(sessionId, directiveId)
+                        log.debug("Applied directive $directiveId to new session $sessionId")
+                    }
                 }
             }
         }

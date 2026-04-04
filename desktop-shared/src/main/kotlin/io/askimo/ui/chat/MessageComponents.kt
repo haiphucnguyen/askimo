@@ -65,7 +65,6 @@ import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.RunCodeEvent
-import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
@@ -77,8 +76,6 @@ import io.askimo.ui.common.ui.util.highlightSearchText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
-
-private val log = currentFileLogger()
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

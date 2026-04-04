@@ -132,22 +132,19 @@ class LocalFsToolsTest {
         // Create files
         val imgDir = tmp.resolve("imgs").apply { createDirectories() }
         val nested = imgDir.resolve("nested").apply { createDirectories() }
-        val f1 =
-            imgDir.resolve("a.PNG").apply {
-                createFile()
-                writeBytes(ByteArray(10))
-            }
-        val f2 =
-            imgDir.resolve("b.png").apply {
-                createFile()
-                writeBytes(ByteArray(20))
-            }
-        val f3 =
-            nested.resolve("c.jpg").apply {
-                createFile()
-                writeBytes(ByteArray(30))
-            }
-        val doc = tmp.resolve("readme.md").apply { writeText("# readme") }
+        imgDir.resolve("a.PNG").apply {
+            createFile()
+            writeBytes(ByteArray(10))
+        }
+        imgDir.resolve("b.png").apply {
+            createFile()
+            writeBytes(ByteArray(20))
+        }
+        nested.resolve("c.jpg").apply {
+            createFile()
+            writeBytes(ByteArray(30))
+        }
+        tmp.resolve("readme.md").apply { writeText("# readme") }
 
         val r1 = parseToolResponse(LocalFsTools.filesByType(imgDir.toString(), extensions = " PNG, jpg ", recursive = false, limit = 10))
         assertEquals(imgDir.toString(), r1["directory"])
@@ -187,7 +184,7 @@ class LocalFsToolsTest {
         val d = tmp.resolve("data").apply { createDirectories() }
         val p1 = d.resolve("one.PDF").apply { writeBytes(ByteArray(5)) }
         val p2 = d.resolve("two.pdf").apply { writeBytes(ByteArray(7)) }
-        val i1 = d.resolve("pic.png").apply { writeBytes(ByteArray(11)) }
+        d.resolve("pic.png").apply { writeBytes(ByteArray(11)) }
 
         val res = parseToolResponse(LocalFsTools.totalSizeByType(d.toString(), extensions = "['PDF', ' pdf ' ]", category = "image", recursive = false))
         assertEquals(d.toString(), res["directory"])
@@ -257,11 +254,11 @@ class LocalFsToolsTest {
         val srcDir = tmp.resolve("src").apply { createDirectories() }
         val testDir = tmp.resolve("test").apply { createDirectories() }
 
-        val userService = srcDir.resolve("UserService.kt").apply { createFile() }
-        val userHelper = srcDir.resolve("user_helper.py").apply { createFile() }
-        val userConfig = testDir.resolve("user-config.json").apply { createFile() }
-        val readme = tmp.resolve("README.md").apply { createFile() }
-        val hiddenFile = tmp.resolve(".hidden.txt").apply { createFile() }
+        srcDir.resolve("UserService.kt").apply { createFile() }
+        srcDir.resolve("user_helper.py").apply { createFile() }
+        testDir.resolve("user-config.json").apply { createFile() }
+        tmp.resolve("README.md").apply { createFile() }
+        tmp.resolve(".hidden.txt").apply { createFile() }
 
         // Test exact filename search
         val result1 = parseToolResponse(LocalFsTools.searchFilesByGlob(tmp.toString(), "UserService"))
@@ -446,16 +443,16 @@ class LocalFsToolsTest {
         val srcDir = tmp.resolve("src").apply { createDirectories() }
         val docsDir = tmp.resolve("docs").apply { createDirectories() }
 
-        val javaFile = srcDir.resolve("Example.java").apply {
+        srcDir.resolve("Example.java").apply {
             writeText("public class Example {\n    // TODO: implement this\n    private String name;\n}")
         }
-        val kotlinFile = srcDir.resolve("Service.kt").apply {
+        srcDir.resolve("Service.kt").apply {
             writeText("class Service {\n    fun getName(): String {\n        return \"service\"\n    }\n}")
         }
-        val readmeFile = docsDir.resolve("README.md").apply {
+        docsDir.resolve("README.md").apply {
             writeText("# Documentation\nThis is a TODO list\nfor the project.")
         }
-        val binaryFile = tmp.resolve("binary.dat").apply {
+        tmp.resolve("binary.dat").apply {
             writeBytes(byteArrayOf(0, 1, 2, 3, 255.toByte()))
         }
 

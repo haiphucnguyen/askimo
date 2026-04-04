@@ -587,6 +587,7 @@ class ChatViewModel(
                     userMessage = userMessage,
                     willSaveUserMessage = true,
                     disabledServerIds = disabledServerIds,
+                    directiveId = selectedDirective,
                 )
 
                 if (threadId == null) {

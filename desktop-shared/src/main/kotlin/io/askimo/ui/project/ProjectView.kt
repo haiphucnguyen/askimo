@@ -275,10 +275,9 @@ fun projectView(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            projectSessions.forEachIndexed { index, session ->
+                            projectSessions.forEach { session ->
                                 sessionCard(
                                     session = session,
-                                    index = index,
                                     onClick = { onResumeSession(session.id) },
                                     onDeleteSession = { sessionId ->
                                         onDeleteSession(sessionId, currentProject.id)
@@ -395,7 +394,6 @@ fun projectView(
 @Composable
 private fun sessionCard(
     session: ChatSession,
-    index: Int,
     onClick: () -> Unit,
     onDeleteSession: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
@@ -408,19 +406,13 @@ private fun sessionCard(
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var sessionIdToMove by remember { mutableStateOf<String?>(null) }
 
-    val backgroundColor = if (index % 2 == 0) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickableCard(cornerRadius = 8.dp, onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(
