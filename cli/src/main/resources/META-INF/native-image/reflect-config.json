@@ -760,8 +760,7 @@
     "name": "com.github.dockerjava.api.model.PeerNode",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [{ "name": "<init>", "parameterTypes": [] }]
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "com.github.dockerjava.api.model.Ports",
@@ -4952,7 +4951,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$VRRMpwO4",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$TJ5euPwO",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -7339,7 +7338,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$S6nuyYvP",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$TfaM2s4g",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

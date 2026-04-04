@@ -1,0 +1,415 @@
+# Triggered ONLY when a GitHub Release is explicitly published (un-drafted in the UI).
+# This ensures homebrew/scoop/docker are never updated by test or draft builds.
+#
+# Flow:
+#   Push tag → cli-release.yml builds binaries → creates DRAFT release
+#   You review the draft → click "Publish release"
+#   ↓ this workflow fires ↓
+#   homebrew tap + scoop bucket + docker images are updated
+name: Publish Packages
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  # ── Homebrew tap ────────────────────────────────────────────────────────────
+  homebrew:
+    name: Publish Homebrew tap
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Collect release assets & checksums
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name }}"   # e.g. v0.4.0
+          VERSION_PLAIN="${TAG#v}"                      # e.g. 0.4.0
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+
+          echo "Release : $TAG"
+          echo "Draft   : ${{ github.event.release.draft }}"
+          echo "Pre     : ${{ github.event.release.prerelease }}"
+          echo "Assets  :"
+          echo "$JSON" | jq -r '.assets[].name'
+          echo ""
+
+          ARM_NAME="askimo-darwin-arm64.tar.gz"
+          AMD_NAME="askimo-darwin-amd64.tar.gz"
+
+          ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
+          AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
+
+          # If no macOS CLI binary is present this is a desktop-only release — skip silently
+          if [ -z "${ARM_URL:-}" ] || [ -z "${SHA_URL:-}" ]; then
+            echo "⚠️  No CLI macOS assets found — skipping homebrew (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          curl -sSL -o SHA256SUMS.txt "$SHA_URL"
+
+          ARM_SHA="$(grep -E "  ${ARM_NAME//./\\.}$" SHA256SUMS.txt | awk '{print $1}')"
+          AMD_SHA=""
+          if [ -n "${AMD_URL:-}" ]; then
+            AMD_SHA="$(grep -E "  ${AMD_NAME//./\\.}$" SHA256SUMS.txt | awk '{print $1}')" || true
+          fi
+
+          if [ -z "${ARM_SHA:-}" ]; then
+            echo "❌ Could not find ARM sha in SHA256SUMS.txt" >&2; exit 1
+          fi
+
+          {
+            echo "skip=false"
+            echo "tag=$TAG"
+            echo "version_plain=$VERSION_PLAIN"
+            echo "arm_url=$ARM_URL"
+            echo "arm_sha=$ARM_SHA"
+            echo "amd_url=${AMD_URL:-}"
+            echo "amd_sha=${AMD_SHA:-}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tap repo
+        if: steps.meta.outputs.skip != 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ vars.TAP_REPO || 'haiphucnguyen/homebrew-askimo' }}
+          token: ${{ secrets.TAP_PUSH_TOKEN }}
+          path: tap
+          fetch-depth: 0
+
+      - name: Write formula into tap
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tap/Formula
+
+          VERSION="${{ steps.meta.outputs.version_plain }}"
+          ARM_URL="${{ steps.meta.outputs.arm_url }}"
+          ARM_SHA="${{ steps.meta.outputs.arm_sha }}"
+          AMD_URL="${{ steps.meta.outputs.amd_url }}"
+          AMD_SHA="${{ steps.meta.outputs.amd_sha }}"
+
+          # 1) Header
+          cat > tap/Formula/askimo.rb <<'RUBY'
+          # typed: false
+          # frozen_string_literal: true
+
+          class Askimo < Formula
+            desc "AI-powered terminal assistant for multiple LLM providers"
+            homepage "https://github.com/haiphucnguyen/askimo"
+            license "AGPLv3"
+
+            on_macos do
+          RUBY
+
+          # 2) ARM stanza (required)
+          cat >> tap/Formula/askimo.rb <<RUBY
+              on_arm do
+                version "${VERSION}"
+                url "${ARM_URL}"
+                sha256 "${ARM_SHA}"
+              end
+          RUBY
+
+          # 3) Optional Intel stanza
+          if [ -n "${AMD_URL}" ] && [ -n "${AMD_SHA}" ]; then
+          cat >> tap/Formula/askimo.rb <<RUBY
+
+              on_intel do
+                version "${VERSION}"
+                url "${AMD_URL}"
+                sha256 "${AMD_SHA}"
+              end
+          RUBY
+          fi
+
+          # 4) Footer
+          cat >> tap/Formula/askimo.rb <<'RUBY'
+            end
+
+            def install
+              bin.install "askimo"
+            end
+
+            test do
+              output = shell_output("#{bin}/askimo --version")
+              assert_match "askimo", output.downcase
+            end
+          end
+          RUBY
+
+          echo "==== tap/Formula/askimo.rb ===="
+          nl -ba tap/Formula/askimo.rb
+
+          # Catch structure errors early
+          ruby -c tap/Formula/askimo.rb
+
+      - name: Commit & push to tap repo
+        if: steps.meta.outputs.skip != 'true'
+        working-directory: tap
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add Formula/askimo.rb
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "askimo ${{ steps.meta.outputs.version_plain }}: update formula for ${{ steps.meta.outputs.tag }}"
+            git push
+          fi
+
+  # ── Scoop bucket ────────────────────────────────────────────────────────────
+  scoop:
+    name: Publish Scoop manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Collect release assets & checksums
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION_PLAIN="${TAG#v}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+
+          echo "Release : $TAG"
+          echo "Assets  :"
+          echo "$JSON" | jq -r '.assets[].name'
+          echo ""
+
+          WIN_NAME="askimo-windows-x64.zip"
+          WIN_URL="$(echo "$JSON" | jq -r --arg N "$WIN_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
+
+          if [ -z "${WIN_URL:-}" ] || [ -z "${SHA_URL:-}" ]; then
+            echo "⚠️  No CLI Windows assets found — skipping scoop (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          curl -sSL -o SHA256SUMS.txt "$SHA_URL"
+          WIN_SHA="$(grep "  $WIN_NAME" SHA256SUMS.txt | awk '{print $1}')"
+          if [ -z "$WIN_SHA" ]; then
+            echo "❌ SHA256 for $WIN_NAME not in SHA256SUMS.txt" >&2; exit 1
+          fi
+
+          {
+            echo "skip=false"
+            echo "tag=$TAG"
+            echo "version=$VERSION_PLAIN"
+            echo "win_url=$WIN_URL"
+            echo "win_sha=$WIN_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout scoop bucket
+        if: steps.meta.outputs.skip != 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: haiphucnguyen/scoop-askimo
+          token: ${{ secrets.TAP_PUSH_TOKEN }}
+          ref: main
+          path: bucket
+          fetch-depth: 0
+
+      - name: Write askimo manifest
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bucket/bucket
+          cat > bucket/bucket/askimo.json <<EOF
+          {
+            "version": "${{ steps.meta.outputs.version }}",
+            "description": "AI-powered terminal assistant for multiple LLM providers",
+            "homepage": "https://github.com/haiphucnguyen/askimo",
+            "license": "AGPLv3",
+            "architecture": {
+              "64bit": {
+                "url": "${{ steps.meta.outputs.win_url }}",
+                "hash": "${{ steps.meta.outputs.win_sha }}",
+                "bin": "askimo.exe"
+              }
+            }
+          }
+          EOF
+          cat bucket/bucket/askimo.json
+
+      - name: Commit & push to bucket
+        if: steps.meta.outputs.skip != 'true'
+        working-directory: bucket
+        env:
+          TOKEN: ${{ secrets.TAP_PUSH_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add bucket/askimo.json
+          if ! git diff --cached --quiet; then
+            git commit -m "askimo ${{ steps.meta.outputs.tag }}"
+            git remote set-url origin "https://x-access-token:${TOKEN}@github.com/haiphucnguyen/scoop-askimo.git"
+            git push origin HEAD:main
+          else
+            echo "No changes to commit."
+          fi
+
+  # ── Docker multi-arch images ────────────────────────────────────────────────
+  docker:
+    name: Build & Push Docker (native, multi-arch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Check for CLI Linux assets
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+
+          AMD_NAME="askimo-linux-x64.tar.gz"
+          AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
+
+          if [ -z "${AMD_URL:-}" ]; then
+            echo "⚠️  No CLI Linux x64 asset found — skipping docker (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url')"
+          ARM_NAME="askimo-linux-arm64.tar.gz"
+          ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url')"
+
+          curl -sSL -o SHA256SUMS.txt "$SHA_URL"
+
+          {
+            echo "skip=false"
+            echo "amd_url=$AMD_URL"
+            echo "arm_url=${ARM_URL:-}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download & extract amd64 binary
+        if: steps.check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          curl -sSL "${{ steps.check.outputs.amd_url }}" | tar -xz -C out/
+          mv out/askimo out/askimo-amd64
+          chmod +x out/askimo-amd64
+          echo "✅ amd64: $(out/askimo-amd64 --version 2>&1 || true)"
+
+      - name: Download & extract arm64 binary
+        if: steps.check.outputs.skip != 'true' && steps.check.outputs.arm_url != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          curl -sSL "${{ steps.check.outputs.arm_url }}" | tar -xz -C out/
+          mv out/askimo out/askimo-arm64
+          chmod +x out/askimo-arm64
+          echo "✅ arm64 binary ready"
+
+      - name: Set up Buildx
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        if: steps.check.outputs.skip != 'true'
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/askimo"
+          V="${{ github.event.release.tag_name }}"
+          echo "base=$REPO"                                   >> $GITHUB_OUTPUT
+          echo "tags=$REPO:latest,$REPO:${V},$REPO:${V#v}"    >> $GITHUB_OUTPUT
+
+      - name: Build & push amd64 image
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-amd64
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.tags.outputs.base }}:amd64-temp
+          provenance: false
+          sbom: false
+
+      - name: Build & push arm64 image
+        if: steps.check.outputs.skip != 'true' && steps.check.outputs.arm_url != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runtime
+          build-args: BIN=out/askimo-arm64
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.base }}:arm64-temp
+          provenance: false
+          sbom: false
+
+      - name: Create & push multi-arch manifests
+        if: steps.check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          I="${{ steps.tags.outputs.base }}"
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
+          AMENDS="--amend $I:amd64-temp"
+          if [ -n "${{ steps.check.outputs.arm_url }}" ]; then
+            AMENDS="$AMENDS --amend $I:arm64-temp"
+          fi
+          for T in "${TAGS[@]}"; do
+            docker manifest create "$T" $AMENDS
+            docker manifest push "$T"
+          done
+          docker rmi "$I:amd64-temp" "$I:arm64-temp" 2>/dev/null || true
+
