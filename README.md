@@ -161,7 +161,7 @@ cd askimo
 ./gradlew :desktop:package
 
 # Build CLI native binary (requires GraalVM)
-./gradlew :cli:nativeImage
+./gradlew :cli:nativeCompile
 ```
 
 ### Project Structure
