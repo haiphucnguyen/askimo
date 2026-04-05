@@ -37,6 +37,18 @@ import kotlinx.coroutines.delay
 /** Maximum number of characters shown in a tooltip before truncating with "…". */
 const val TOOLTIP_MAX_CHARS = 1200
 
+/** Controls which side the tooltip appears on relative to its anchor. */
+enum class TooltipPlacement {
+    /** Default: above when in bottom half of screen, below otherwise. */
+    AUTO,
+
+    /** Always to the left of the anchor. */
+    LEFT,
+
+    /** Always to the right of the anchor. */
+    RIGHT,
+}
+
 /**
  * A reusable tooltip component that follows the application theme.
  * Automatically positions itself to avoid overlapping with the component and screen edges.
@@ -47,6 +59,7 @@ const val TOOLTIP_MAX_CHARS = 1200
  *
  * @param text The text to display in the tooltip
  * @param maxChars Maximum characters to show before truncating (default [TOOLTIP_MAX_CHARS])
+ * @param placement Controls where the tooltip appears relative to the anchor (default [TooltipPlacement.AUTO])
  * @param modifier Optional modifier for the TooltipBox
  * @param content The composable content that the tooltip wraps
  */
@@ -55,6 +68,7 @@ const val TOOLTIP_MAX_CHARS = 1200
 fun themedTooltip(
     text: String,
     maxChars: Int = TOOLTIP_MAX_CHARS,
+    placement: TooltipPlacement = TooltipPlacement.AUTO,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -84,8 +98,8 @@ fun themedTooltip(
 
     Box {
         TooltipBox(
-            positionProvider = remember(containerHeight) {
-                SmartTooltipPositionProvider(maxHeightPx = containerHeight)
+            positionProvider = remember(containerHeight, placement) {
+                SmartTooltipPositionProvider(maxHeightPx = containerHeight, placement = placement)
             },
             tooltip = {
                 Surface(
@@ -130,6 +144,7 @@ fun themedTooltip(
  */
 private class SmartTooltipPositionProvider(
     private val maxHeightPx: Float,
+    private val placement: TooltipPlacement = TooltipPlacement.AUTO,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -139,21 +154,29 @@ private class SmartTooltipPositionProvider(
     ): IntOffset {
         val spacing = 8
 
-        val isInBottomHalf = anchorBounds.top > maxHeightPx / 2
-
-        return when {
-            isInBottomHalf -> IntOffset(
-                x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
-                y = anchorBounds.top - popupContentSize.height - spacing,
+        return when (placement) {
+            TooltipPlacement.LEFT -> IntOffset(
+                x = anchorBounds.left - popupContentSize.width - spacing,
+                y = anchorBounds.top + (anchorBounds.height - popupContentSize.height) / 2,
             )
-            !isInBottomHalf -> IntOffset(
-                x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
-                y = anchorBounds.bottom + spacing,
-            )
-            else -> IntOffset(
+            TooltipPlacement.RIGHT -> IntOffset(
                 x = anchorBounds.right + spacing,
                 y = anchorBounds.top + (anchorBounds.height - popupContentSize.height) / 2,
             )
+            TooltipPlacement.AUTO -> {
+                val isInBottomHalf = anchorBounds.top > maxHeightPx / 2
+                if (isInBottomHalf) {
+                    IntOffset(
+                        x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
+                        y = anchorBounds.top - popupContentSize.height - spacing,
+                    )
+                } else {
+                    IntOffset(
+                        x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
+                        y = anchorBounds.bottom + spacing,
+                    )
+                }
+            }
         }
     }
 }

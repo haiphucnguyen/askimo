@@ -651,29 +651,26 @@ private fun navigationItemLabelWithMenu(
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
         )
 
-        Box(
-            modifier = Modifier.padding(start = 4.dp),
-        ) {
-            IconButton(
-                onClick = onMenuClick,
-                modifier = Modifier
-                    .size(24.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                enabled = isHovered,
+        if (isHovered) {
+            Box(
+                modifier = Modifier.padding(start = 4.dp),
             ) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = if (isHovered) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        androidx.compose.ui.graphics.Color.Transparent
-                    },
-                    modifier = Modifier.size(18.dp),
-                )
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
     }
