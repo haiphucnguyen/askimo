@@ -12,7 +12,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -176,14 +178,24 @@ fun projectView(
                             .fillMaxWidth()
                             .padding(bottom = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
-                        Text(
-                            text = currentProject.name,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(
+                                text = currentProject.name,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            currentProject.description?.takeIf { it.isNotBlank() }?.let { desc ->
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
+                        }
 
                         Box {
                             themedTooltip(text = stringResource("project.menu.tooltip")) {
@@ -225,16 +237,6 @@ fun projectView(
                                 )
                             }
                         }
-                    }
-
-                    // Project Description (if exists)
-                    currentProject.description?.let { desc ->
-                        Text(
-                            text = desc,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp),
-                        )
                     }
 
                     // Knowledge Sources Panel
@@ -405,10 +407,13 @@ private fun sessionCard(
     var showMenu by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var sessionIdToMove by remember { mutableStateOf<String?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .hoverable(interactionSource)
             .clickableCard(cornerRadius = 8.dp, onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
@@ -436,14 +441,16 @@ private fun sessionCard(
             Column(
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             ) {
-                Text(
-                    text = session.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                themedTooltip(text = session.title) {
+                    Text(
+                        text = session.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = TimeUtil.formatDisplay(session.updatedAt),
                     style = MaterialTheme.typography.bodySmall,
@@ -451,53 +458,55 @@ private fun sessionCard(
                 )
             }
 
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier
-                        .size(24.dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+            if (isHovered || showMenu) {
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier
+                            .size(24.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
 
-                AppComponents.dropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    SessionActionMenu.projectViewMenu(
-                        sessionId = session.id,
-                        currentProjectId = currentProject.id,
-                        currentProjectName = currentProject.name,
-                        availableProjects = allProjects,
-                        onExport = { onExportSession(session.id) },
-                        onRename = { onRenameSession(session.id, session.title) },
-                        onDelete = { onDeleteSession(session.id) },
-                        onMoveToNewProject = {
-                            sessionIdToMove = session.id
-                            showNewProjectDialog = true
-                        },
-                        onMoveToExistingProject = { selectedProject ->
-                            viewModel.moveSessionToProject(session.id, selectedProject.id)
-                        },
-                        onRemoveFromProject = {
-                            viewModel.removeSessionFromProject(session.id)
-                            // Refresh global sessions list (session now appears in "All Sessions")
-                            EventBus.post(
-                                SessionsRefreshEvent(
-                                    reason = "Session ${session.id} removed from project",
-                                ),
-                            )
-                        },
-                        onDismiss = { showMenu = false },
-                    )
-                }
-            }
+                    AppComponents.dropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        SessionActionMenu.projectViewMenu(
+                            sessionId = session.id,
+                            currentProjectId = currentProject.id,
+                            currentProjectName = currentProject.name,
+                            availableProjects = allProjects,
+                            onExport = { onExportSession(session.id) },
+                            onRename = { onRenameSession(session.id, session.title) },
+                            onDelete = { onDeleteSession(session.id) },
+                            onMoveToNewProject = {
+                                sessionIdToMove = session.id
+                                showNewProjectDialog = true
+                            },
+                            onMoveToExistingProject = { selectedProject ->
+                                viewModel.moveSessionToProject(session.id, selectedProject.id)
+                            },
+                            onRemoveFromProject = {
+                                viewModel.removeSessionFromProject(session.id)
+                                // Refresh global sessions list (session now appears in "All Sessions")
+                                EventBus.post(
+                                    SessionsRefreshEvent(
+                                        reason = "Session ${session.id} removed from project",
+                                    ),
+                                )
+                            },
+                            onDismiss = { showMenu = false },
+                        )
+                    }
+                } // end Box
+            } // end if (isHovered || showMenu)
         }
     }
 

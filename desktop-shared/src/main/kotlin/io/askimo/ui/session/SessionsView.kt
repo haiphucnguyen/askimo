@@ -7,7 +7,9 @@ package io.askimo.ui.session
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -49,12 +52,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.themedTooltip
 
 @Composable
 fun sessionsView(
@@ -257,9 +262,14 @@ private fun sessionCard(
     onDeleteSession: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val showActions = isHovered || showMenu
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .hoverable(interactionSource),
         colors = AppComponents.bannerCardColors(),
     ) {
         Row(
@@ -269,7 +279,7 @@ private fun sessionCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
-            // Clickable content area
+            // Clickable content area — takes full width when not hovered, shrinks to make room for menu
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -279,12 +289,16 @@ private fun sessionCard(
                     ) { onResumeSession(session.id) }
                     .pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text(
-                    text = session.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                themedTooltip(text = session.title) {
+                    Text(
+                        text = session.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -305,38 +319,43 @@ private fun sessionCard(
                 }
             }
 
-            // Menu button
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // Menu button — only shown on hover, no space reserved when hidden
+            if (showActions) {
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
 
-                AppComponents.dropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource("action.delete")) },
-                        onClick = {
-                            showMenu = false
-                            onDeleteSession(session.id)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    )
+                    AppComponents.dropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource("action.delete")) },
+                            onClick = {
+                                showMenu = false
+                                onDeleteSession(session.id)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        )
+                    }
                 }
             }
         }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -720,7 +721,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 if (backgroundImage is BackgroundImage.None) {
                                     MaterialTheme.colorScheme.background
                                 } else {
-                                    androidx.compose.ui.graphics.Color.Transparent
+                                    Transparent
                                 },
                             ),
                     ) {
@@ -1695,7 +1696,7 @@ fun mainContent(
             .fillMaxSize()
             .background(
                 if (LocalBackgroundActive.current) {
-                    androidx.compose.ui.graphics.Color.Transparent
+                    Transparent
                 } else {
                     MaterialTheme.colorScheme.background
                 },

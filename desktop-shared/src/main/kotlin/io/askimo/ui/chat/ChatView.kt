@@ -89,6 +89,7 @@ import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.TooltipPlacement
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.service.AvatarService
 import io.askimo.ui.session.manageDirectivesDialog
@@ -494,10 +495,10 @@ fun chatView(
 
                             // Session title
                             themedTooltip(
-                                text = sessionTitle ?: "New Chat",
+                                text = sessionTitle,
                             ) {
                                 Text(
-                                    text = sessionTitle ?: "New Chat",
+                                    text = sessionTitle,
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
@@ -597,6 +598,7 @@ fun chatView(
                                         availableDirectives.forEach { directive ->
                                             themedTooltip(
                                                 text = "${directive.name}\n${directive.content}",
+                                                placement = TooltipPlacement.LEFT,
                                             ) {
                                                 DropdownMenuItem(
                                                     text = {
@@ -706,7 +708,7 @@ fun chatView(
                                 }
                             }
 
-                            if (sessionId != null) {
+                            if (sessionId != null && messages.isNotEmpty()) {
                                 sessionActionsMenu(
                                     sessionId = sessionId,
                                     onRenameSession = onRenameSession,
