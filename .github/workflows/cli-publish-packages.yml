@@ -32,46 +32,31 @@ jobs:
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"   # e.g. v0.4.0
           VERSION_PLAIN="${TAG#v}"                      # e.g. 0.4.0
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          RELEASE_ID="${{ github.event.release.id }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}"
 
-          echo "Release : $TAG"
+          echo "Release : $TAG (id=${RELEASE_ID})"
           echo "Draft   : ${{ github.event.release.draft }}"
           echo "Pre     : ${{ github.event.release.prerelease }}"
 
           ARM_NAME="askimo-darwin-arm64.tar.gz"
           AMD_NAME="askimo-darwin-amd64.tar.gz"
 
-          # Poll until the expected ARM asset appears (race condition: assets may still be uploading)
-          ARM_URL=""
-          SHA_URL=""
-          WAIT=0
-          MAX_WAIT=600   # 10 minutes
-          INTERVAL=20
-          until [ -n "${ARM_URL:-}" ] && [ -n "${SHA_URL:-}" ]; do
-            JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
-            echo "Assets  :"
-            echo "$JSON" | jq -r '.assets[].name'
-            echo ""
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+          echo "Assets  :"
+          echo "$JSON" | jq -r '.assets[].name'
+          echo ""
 
-            ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
-            SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
-
-            if [ -n "${ARM_URL:-}" ] && [ -n "${SHA_URL:-}" ]; then
-              echo "✅ Required assets found."
-              break
-            fi
-
-            WAIT=$((WAIT + INTERVAL))
-            if [ "$WAIT" -ge "$MAX_WAIT" ]; then
-              echo "⚠️  No CLI macOS assets found after ${MAX_WAIT}s — skipping homebrew (desktop-only release?)"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "⏳ Assets not ready yet — waiting ${INTERVAL}s (${WAIT}/${MAX_WAIT}s elapsed)..."
-            sleep "$INTERVAL"
-          done
-
+          ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
           AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
+
+          # If no macOS CLI binary is present this is a desktop-only release — skip silently
+          if [ -z "${ARM_URL:-}" ] || [ -z "${SHA_URL:-}" ]; then
+            echo "⚠️  No CLI macOS assets found — skipping homebrew (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           curl -sSL -o SHA256SUMS.txt "$SHA_URL"
 
@@ -210,41 +195,26 @@ jobs:
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
           VERSION_PLAIN="${TAG#v}"
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          RELEASE_ID="${{ github.event.release.id }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}"
 
-          echo "Release : $TAG"
+          echo "Release : $TAG (id=${RELEASE_ID})"
 
           WIN_NAME="askimo-windows-x64.zip"
 
-          # Poll until the expected Windows asset appears
-          WIN_URL=""
-          SHA_URL=""
-          WAIT=0
-          MAX_WAIT=600   # 10 minutes
-          INTERVAL=20
-          until [ -n "${WIN_URL:-}" ] && [ -n "${SHA_URL:-}" ]; do
-            JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
-            echo "Assets  :"
-            echo "$JSON" | jq -r '.assets[].name'
-            echo ""
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+          echo "Assets  :"
+          echo "$JSON" | jq -r '.assets[].name'
+          echo ""
 
-            WIN_URL="$(echo "$JSON" | jq -r --arg N "$WIN_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
-            SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
+          WIN_URL="$(echo "$JSON" | jq -r --arg N "$WIN_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
 
-            if [ -n "${WIN_URL:-}" ] && [ -n "${SHA_URL:-}" ]; then
-              echo "✅ Required assets found."
-              break
-            fi
-
-            WAIT=$((WAIT + INTERVAL))
-            if [ "$WAIT" -ge "$MAX_WAIT" ]; then
-              echo "⚠️  No CLI Windows assets found after ${MAX_WAIT}s — skipping scoop (desktop-only release?)"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "⏳ Assets not ready yet — waiting ${INTERVAL}s (${WAIT}/${MAX_WAIT}s elapsed)..."
-            sleep "$INTERVAL"
-          done
+          if [ -z "${WIN_URL:-}" ] || [ -z "${SHA_URL:-}" ]; then
+            echo "⚠️  No CLI Windows assets found — skipping scoop (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           curl -sSL -o SHA256SUMS.txt "$SHA_URL"
           WIN_SHA="$(grep "  $WIN_NAME" SHA256SUMS.txt | awk '{print $1}')"
@@ -336,40 +306,25 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}"
+          RELEASE_ID="${{ github.event.release.id }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}"
 
           AMD_NAME="askimo-linux-x64.tar.gz"
           ARM_NAME="askimo-linux-arm64.tar.gz"
 
-          # Poll until the expected Linux x64 asset appears (race condition: assets may still be uploading)
-          AMD_URL=""
-          SHA_URL=""
-          WAIT=0
-          MAX_WAIT=600   # 10 minutes
-          INTERVAL=20
-          until [ -n "${AMD_URL:-}" ] && [ -n "${SHA_URL:-}" ]; do
-            JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
-            echo "Assets  :"
-            echo "$JSON" | jq -r '.assets[].name'
-            echo ""
+          JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
+          echo "Assets  :"
+          echo "$JSON" | jq -r '.assets[].name'
+          echo ""
 
-            AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
-            SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
+          AMD_URL="$(echo "$JSON" | jq -r --arg N "$AMD_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
+          SHA_URL="$(echo "$JSON" | jq -r '.assets[] | select(.name=="SHA256SUMS.txt") | .browser_download_url // empty')"
 
-            if [ -n "${AMD_URL:-}" ] && [ -n "${SHA_URL:-}" ]; then
-              echo "✅ Required assets found."
-              break
-            fi
-
-            WAIT=$((WAIT + INTERVAL))
-            if [ "$WAIT" -ge "$MAX_WAIT" ]; then
-              echo "⚠️  No CLI Linux x64 asset found after ${MAX_WAIT}s — skipping docker (desktop-only release?)"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "⏳ Assets not ready yet — waiting ${INTERVAL}s (${WAIT}/${MAX_WAIT}s elapsed)..."
-            sleep "$INTERVAL"
-          done
+          if [ -z "${AMD_URL:-}" ] || [ -z "${SHA_URL:-}" ]; then
+            echo "⚠️  No CLI Linux x64 asset found — skipping docker (desktop-only release?)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           ARM_URL="$(echo "$JSON" | jq -r --arg N "$ARM_NAME" '.assets[] | select(.name==$N) | .browser_download_url // empty')"
 
