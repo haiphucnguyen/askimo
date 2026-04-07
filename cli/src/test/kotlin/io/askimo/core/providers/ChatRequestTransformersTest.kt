@@ -49,6 +49,7 @@ class ChatRequestTransformersTest {
         AppContext.reset()
         databaseManager.close()
         DatabaseManager.reset()
+        ModelCapabilitiesCache.clear()
         testBaseScope.close()
     }
 
@@ -91,7 +92,9 @@ class ChatRequestTransformersTest {
         @Test
         @DisplayName("should truncate old messages when exceeding budget")
         fun shouldTruncateOldMessagesWhenExceedingBudget() {
-            // Given - create many large messages to exceed budget
+            val modelKey = ModelCapabilitiesCache.modelKey(ModelProvider.OPENAI, "gpt-3.5-turbo")
+            ModelCapabilitiesCache.update(modelKey) { it.copy(contextSize = 16_384) }
+
             val systemMessage = SystemMessage.from("System directive")
             val messages = mutableListOf<ChatMessage>(systemMessage)
 
@@ -105,7 +108,7 @@ class ChatRequestTransformersTest {
                 .messages(messages)
                 .build()
 
-            // When - using gpt-3.5-turbo with smaller context (typically 4096 tokens)
+            // When - using gpt-3.5-turbo with the forced small context (16 384 tokens)
             val result = ChatRequestTransformers.addCustomSystemMessagesAndRemoveDuplicates(
                 sessionId = null,
                 chatRequest = chatRequest,
