@@ -1039,6 +1039,9 @@ private fun getCategoryDescription(category: ToolCategory): String = stringResou
         ToolCategory.VERSION_CONTROL -> "mcp.tool.category.VERSION_CONTROL.desc"
         ToolCategory.COMMUNICATION -> "mcp.tool.category.COMMUNICATION.desc"
         ToolCategory.MONITORING -> "mcp.tool.category.MONITORING.desc"
+        ToolCategory.WEATHER -> "mcp.tool.category.WEATHER.desc"
+        ToolCategory.WEB_SEARCH -> "mcp.tool.category.WEB_SEARCH.desc"
+        ToolCategory.DATETIME -> "mcp.tool.category.DATETIME.desc"
         ToolCategory.OTHER -> "mcp.tool.category.OTHER.desc"
     },
 )

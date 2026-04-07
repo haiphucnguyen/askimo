@@ -69,25 +69,23 @@ object ChatRequestTransformers {
     ): ChatRequest {
         val existingMessages = chatRequest.messages()
 
-        val existingSystemMessageTexts = existingMessages
-            .filterIsInstance<SystemMessage>()
-            .map { it.text() }
-            .toSet()
+        val existingSystemMessages = existingMessages.filterIsInstance<SystemMessage>()
+        val existingSystemMessageTexts = existingSystemMessages.map { it.text() }.toSet()
 
         val nonSystemMessages = existingMessages.filterNot { it is SystemMessage }
 
-        val newSystemMessages = mutableListOf<SystemMessage>()
+        val additionalSystemMessages = mutableListOf<SystemMessage>()
 
-        // Add language directive if set
+        // Add language directive if set and not already present
         val appSystemDirective = AppContext.getInstance().systemLanguageDirective
         if (appSystemDirective != null && appSystemDirective !in existingSystemMessageTexts) {
-            newSystemMessages.add(SystemMessage.from(appSystemDirective))
+            additionalSystemMessages.add(SystemMessage.from(appSystemDirective))
         }
 
-        // Add user profile directive if set
+        // Add user profile directive if set and not already present
         val userProfileDirective = AppContext.getInstance().userProfileDirective
         if (userProfileDirective != null && userProfileDirective !in existingSystemMessageTexts) {
-            newSystemMessages.add(SystemMessage.from(userProfileDirective))
+            additionalSystemMessages.add(SystemMessage.from(userProfileDirective))
         }
 
         if (sessionId != null) {
@@ -96,11 +94,13 @@ object ChatRequestTransformers {
                 directive.content.isNotBlank() &&
                 directive.content !in existingSystemMessageTexts
             ) {
-                newSystemMessages.add(SystemMessage.from(directive.content))
+                additionalSystemMessages.add(SystemMessage.from(directive.content))
             }
         }
 
-        val rebuiltMessages = newSystemMessages + nonSystemMessages
+        // Preserve existing system messages (e.g. tool instructions from AiServiceBuilder),
+        // append new non-duplicate ones after, then all conversation messages
+        val rebuiltMessages = existingSystemMessages + additionalSystemMessages + nonSystemMessages
         return chatRequest.toBuilder().messages(rebuiltMessages).build()
     }
 
@@ -121,18 +121,16 @@ object ChatRequestTransformers {
         model: String,
     ): ChatRequest {
         val messages = chatRequest.messages()
-        // Reserve percentage of context for AI response
+
         val reservedForResponse = (maxTokens * RESPONSE_RESERVE_PERCENT).toInt()
         val availableForMessages = maxTokens - reservedForResponse
 
         val keptMessages = mutableListOf<ChatMessage>()
         var totalTokens = 0
 
-        // Separate system and non-system messages
         val systemMessages = messages.filterIsInstance<SystemMessage>()
         val nonSystemMessages = messages.filterNot { it is SystemMessage }
 
-        // Always keep system messages (they're critical for behavior)
         systemMessages.forEach { msg ->
             val tokens = estimateTokens(getMessageText(msg))
             totalTokens += tokens

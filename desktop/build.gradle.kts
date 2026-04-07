@@ -348,6 +348,9 @@ tasks.test {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        javaParameters = true
+    }
 }
 
 // Task to check for missing i18n keys across language files

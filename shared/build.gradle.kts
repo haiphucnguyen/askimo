@@ -76,4 +76,9 @@ tasks.test {
 }
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        // Preserve parameter names in bytecode so LangChain4j @Tool/@P reflection works correctly.
+        // Without this, tool method parameters appear as arg0, arg1 in the LLM's tool schema.
+        javaParameters = true
+    }
 }

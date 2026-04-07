@@ -355,7 +355,7 @@ class SessionsViewModel(
 
                 // Set state to show dialog
                 renameSessionId = sessionId
-                renameCurrentTitle = session.title ?: ""
+                renameCurrentTitle = session.title
                 showRenameDialog = true
             } catch (e: Exception) {
                 errorMessage = ErrorHandler.getUserFriendlyError(

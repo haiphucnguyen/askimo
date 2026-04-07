@@ -15,6 +15,8 @@ import io.askimo.core.intent.detectors.SearchDetector
 import io.askimo.core.intent.detectors.TransformDetector
 import io.askimo.core.intent.detectors.VersionControlDetector
 import io.askimo.core.intent.detectors.VisualizationDetector
+import io.askimo.core.intent.detectors.WeatherDetector
+import io.askimo.core.intent.detectors.WebSearchDetector
 
 /**
  * Chain of Responsibility pattern for intent detection.
@@ -61,6 +63,8 @@ class IntentDetectionChain(
             DatabaseDetector(),
             NetworkDetector(),
             SearchDetector(),
+            WeatherDetector(),
+            WebSearchDetector(),
             TransformDetector(),
             VersionControlDetector(),
             CommunicationDetector(),
