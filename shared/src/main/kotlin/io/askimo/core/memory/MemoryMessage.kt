@@ -120,17 +120,57 @@ fun ChatMessage.getTextContent(): String = when (this) {
 
 /**
  * Returns a copy of this [ChatMessage] with all inline base64 images stripped.
- * The message type is preserved; only the text content is sanitised.
+ * The message type and all other attributes (tool calls, tool execution id, name, etc.)
+ * are preserved — only base64 image data in text content is replaced with placeholders.
  */
-fun ChatMessage.stripImages(): ChatMessage {
-    val stripped = MemoryMessage.stripBase64Images(getTextContent())
-    return when (this) {
-        is UserMessage -> UserMessage.from(stripped)
-        is AiMessage -> AiMessage.from(stripped)
-        is SystemMessage -> SystemMessage.from(stripped)
-        is ToolExecutionResultMessage -> ToolExecutionResultMessage.builder().text(stripped).build()
-        else -> UserMessage.from(stripped)
+fun ChatMessage.stripImages(): ChatMessage = when (this) {
+    is AiMessage -> {
+        val strippedText = text()?.let { MemoryMessage.stripBase64Images(it) }
+        // Preserve tool execution requests — they must not be lost when stripping images
+        if (hasToolExecutionRequests()) {
+            if (strippedText != null) {
+                AiMessage.from(strippedText, toolExecutionRequests())
+            } else {
+                AiMessage.from(toolExecutionRequests())
+            }
+        } else {
+            AiMessage.from(strippedText ?: "")
+        }
     }
+
+    is UserMessage -> {
+        // Filter out ImageContent parts with base64 src; keep all other content parts
+        val filteredContents = contents().filter { content ->
+            content !is dev.langchain4j.data.message.ImageContent ||
+                content.image().url() != null // keep URL-based images, drop base64-only
+        }
+        // Strip base64 image markdown from any TextContent parts
+        val sanitisedContents = filteredContents.map { content ->
+            if (content is dev.langchain4j.data.message.TextContent) {
+                dev.langchain4j.data.message.TextContent.from(
+                    MemoryMessage.stripBase64Images(content.text()),
+                )
+            } else {
+                content
+            }
+        }
+        if (name() != null) {
+            UserMessage.from(name(), sanitisedContents)
+        } else {
+            UserMessage.from(sanitisedContents)
+        }
+    }
+
+    is SystemMessage -> SystemMessage.from(MemoryMessage.stripBase64Images(text()))
+
+    is ToolExecutionResultMessage ->
+        ToolExecutionResultMessage.from(
+            id(),
+            toolName(),
+            MemoryMessage.stripBase64Images(text() ?: ""),
+        )
+
+    else -> this
 }
 
 /**

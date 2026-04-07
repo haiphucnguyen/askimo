@@ -79,7 +79,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
                 .temperature(AppConfig.chat.samplingTemperature)
                 .logger(log)
                 .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
+                .logResponses(log.isDebugEnabled)
                 .listeners(listOf(TelemetryChatModelListener(telemetry, OPENAI.name.lowercase())))
                 .build()
 

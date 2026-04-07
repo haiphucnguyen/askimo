@@ -136,6 +136,24 @@ enum class ToolCategory {
     MONITORING,
 
     /**
+     * Weather data retrieval: current conditions, forecasts
+     * Examples: get_weather, weather_forecast, check_temperature
+     */
+    WEATHER,
+
+    /**
+     * Web search and page reading: live internet searches, page content extraction
+     * Examples: search_web, read_web_page, browse_url
+     */
+    WEB_SEARCH,
+
+    /**
+     * Date and time operations: current date/time, timezone conversion, date arithmetic
+     * Examples: get_current_datetime, convert_timezone, days_until
+     */
+    DATETIME,
+
+    /**
      * Other/unclassified tools that don't fit into above categories
      */
     OTHER,
