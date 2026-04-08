@@ -21,6 +21,8 @@ import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.FileContentExtractor
+import io.askimo.core.chat.util.FileSizeExceededException
+import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
@@ -696,6 +698,9 @@ class ChatSessionService(
                         } else {
                             FileContentExtractor.extractContent(file)
                         }
+                    } catch (e: FileSizeExceededException) {
+                        log.error("File too large: ${attachment.fileName} (${e.fileSize} bytes, max: ${e.maxAllowedSize} bytes)")
+                        throw e // Re-throw to be handled by the UI
                     } catch (e: Exception) {
                         log.error("Failed to extract content from ${attachment.fileName}: ${e.message}", e)
                         null
