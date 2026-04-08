@@ -11,6 +11,7 @@ import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.anthropic.AnthropicChatModel
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.service.AiServices
@@ -64,9 +65,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (external service)
+        // Configure HTTP client for thinking probe (probe needs its own builder)
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
@@ -75,39 +74,13 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             val supportsThinking = probeThinkingSupport(settings, jdkHttpClientBuilder)
             ModelCapabilitiesCache.setThinkingSupport(ModelProvider.ANTHROPIC, settings.defaultModel, supportsThinking)
         }
-        val supportsThinking = ModelCapabilitiesCache.supportsThinking(ModelProvider.ANTHROPIC, settings.defaultModel)
-
-        val chatModel =
-            AnthropicStreamingChatModel
-                .builder()
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .apiKey(safeApiKey(settings.apiKey))
-                .modelName(settings.defaultModel)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.ANTHROPIC.name.lowercase())))
-                .baseUrl(settings.baseUrl)
-                .apply {
-                    if (supportsThinking) {
-                        thinkingType("enabled")
-                        thinkingBudgetTokens(1024)
-                        maxTokens(2048) // must be > thinkingBudgetTokens
-                        sendThinking(true)
-                        returnThinking(true)
-                        temperature(1.0)
-                    } else {
-                        temperature(AppConfig.chat.samplingTemperature)
-                    }
-                }
-                .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
             settings = settings,
             provider = ModelProvider.ANTHROPIC,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
+            chatModel = createStreamingModel(settings),
+            secondaryChatModel = createSecondaryModel(settings),
             chatMemory = chatMemory,
             toolProvider = toolProvider,
             retriever = retriever,
@@ -159,26 +132,66 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
         TODO("Not yet implemented")
     }
 
-    private fun createSecondaryChatModel(settings: AnthropicSettings): ChatModel {
+    override fun createStreamingModel(settings: AnthropicSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
-        val modelName = AppConfig.models[ModelProvider.ANTHROPIC].utilityModel
-            .ifBlank { settings.defaultModel }
+        val supportsThinking = ModelCapabilitiesCache.supportsThinking(ModelProvider.ANTHROPIC, settings.defaultModel)
+
+        return AnthropicStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(settings.defaultModel)
+            .baseUrl(settings.baseUrl)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.ANTHROPIC.name.lowercase())))
+            .apply {
+                if (supportsThinking) {
+                    thinkingType("enabled")
+                    thinkingBudgetTokens(1024)
+                    maxTokens(2048)
+                    sendThinking(true)
+                    returnThinking(true)
+                    temperature(1.0)
+                } else {
+                    temperature(AppConfig.chat.samplingTemperature)
+                }
+            }
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: AnthropicSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        return AnthropicChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(AppConfig.models[ModelProvider.ANTHROPIC].utilityModel.ifBlank { settings.defaultModel })
+            .baseUrl(settings.baseUrl)
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds))
+            .build()
+    }
+
+    override fun createModel(settings: AnthropicSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
         return AnthropicChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(modelName)
+            .modelName(settings.defaultModel)
             .baseUrl(settings.baseUrl)
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds))
+            .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }
 
     override fun createUtilityClient(
         settings: AnthropicSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     private fun fetchAnthropicModels(

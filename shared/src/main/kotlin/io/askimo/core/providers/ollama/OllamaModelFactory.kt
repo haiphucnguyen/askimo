@@ -7,6 +7,7 @@ package io.askimo.core.providers.ollama
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -62,38 +63,17 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
-
-        val chatModel =
-            OpenAiStreamingChatModel
-                .builder()
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .baseUrl(settings.baseUrl)
-                .modelName(settings.defaultModel)
-                .timeout(Duration.ofMinutes(5))
-                .temperature(AppConfig.chat.samplingTemperature)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase()))).build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = ModelProvider.OLLAMA,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = ModelProvider.OLLAMA,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(
         settings: OllamaSettings,
@@ -106,10 +86,27 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
         .logResponses(log.isTraceEnabled)
         .build()
 
-    private fun createSecondaryChatModel(settings: OllamaSettings): ChatModel {
+    override fun createStreamingModel(settings: OllamaSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .modelName(settings.defaultModel)
+            .timeout(Duration.ofMinutes(5))
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: OllamaSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
@@ -121,10 +118,28 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .build()
     }
 
+    override fun createModel(settings: OllamaSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
+
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey("ollama")
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .timeout(Duration.ofMinutes(5))
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase())))
+            .build()
+    }
+
     override fun createUtilityClient(
         settings: OllamaSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true

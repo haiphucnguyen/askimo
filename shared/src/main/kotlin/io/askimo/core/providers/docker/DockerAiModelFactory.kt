@@ -7,6 +7,7 @@ package io.askimo.core.providers.docker
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -78,39 +79,17 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
-
-        val chatModel =
-            OpenAiStreamingChatModel
-                .builder()
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .baseUrl(settings.baseUrl)
-                .modelName(settings.defaultModel)
-                .temperature(AppConfig.chat.samplingTemperature)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .timeout(Duration.ofMinutes(5))
-                .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
-                .build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = ModelProvider.DOCKER,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = ModelProvider.DOCKER,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(
         settings: DockerAiSettings,
@@ -123,10 +102,27 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
         .logResponses(log.isTraceEnabled)
         .build()
 
-    private fun createSecondaryChatModel(settings: DockerAiSettings): ChatModel {
+    override fun createStreamingModel(settings: DockerAiSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .timeout(Duration.ofMinutes(5))
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: DockerAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
@@ -136,10 +132,26 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .build()
     }
 
+    override fun createModel(settings: DockerAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
+
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey("docker-ai")
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .timeout(Duration.ofMinutes(5))
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
+            .build()
+    }
+
     override fun createUtilityClient(
         settings: DockerAiSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true

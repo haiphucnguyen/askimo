@@ -7,6 +7,7 @@ package io.askimo.core.providers.localai
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -56,39 +57,17 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
-
-        val chatModel =
-            OpenAiStreamingChatModel
-                .builder()
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .baseUrl(settings.baseUrl)
-                .apiKey("localai")
-                .modelName(settings.defaultModel)
-                .timeout(Duration.ofMinutes(5))
-                .temperature(AppConfig.chat.samplingTemperature)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase()))).build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = LOCALAI,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = LOCALAI,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(
         settings: LocalAiSettings,
@@ -101,10 +80,28 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
         .logResponses(log.isTraceEnabled)
         .build()
 
-    private fun createSecondaryChatModel(settings: LocalAiSettings): ChatModel {
+    override fun createStreamingModel(settings: LocalAiSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey("localai")
+            .modelName(settings.defaultModel)
+            .timeout(Duration.ofMinutes(5))
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: LocalAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
@@ -114,10 +111,26 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .build()
     }
 
+    override fun createModel(settings: LocalAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder(), settings.baseUrl)
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
+
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey("localai")
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .timeout(Duration.ofMinutes(5))
+            .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase())))
+            .build()
+    }
+
     override fun createUtilityClient(
         settings: LocalAiSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true

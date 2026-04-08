@@ -7,6 +7,7 @@ package io.askimo.core.providers.openaicompatible
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -66,35 +67,17 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
-        val apiKey = settings.apiKey.ifBlank { "not-needed" }
-
-        val chatModel = OpenAiStreamingChatModel.builder()
-            .httpClientBuilder(jdkHttpClientBuilder)
-            .baseUrl(settings.baseUrl)
-            .apiKey(safeApiKey(apiKey))
-            .modelName(settings.defaultModel)
-            .temperature(AppConfig.chat.samplingTemperature)
-            .logger(log)
-            .logRequests(log.isDebugEnabled)
-            .logResponses(log.isTraceEnabled)
-            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OPENAI_COMPATIBLE.providerKey())))
-            .build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = ModelProvider.OPENAI_COMPATIBLE,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = ModelProvider.OPENAI_COMPATIBLE,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(settings: OpenAiCompatibleSettings): ImageModel {
         val apiKey = settings.apiKey.ifBlank { "not-needed" }
@@ -108,23 +91,53 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
             .build()
     }
 
-    private fun createSecondaryChatModel(settings: OpenAiCompatibleSettings): ChatModel {
+    override fun createStreamingModel(settings: OpenAiCompatibleSettings): StreamingChatModel {
         val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
-        val modelName = AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModel
-            .ifBlank { settings.defaultModel }
         val apiKey = settings.apiKey.ifBlank { "not-needed" }
+        val telemetry = AppContext.getInstance().telemetry
+
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey(safeApiKey(apiKey))
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OPENAI_COMPATIBLE.providerKey())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: OpenAiCompatibleSettings): ChatModel {
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
+        val apiKey = settings.apiKey.ifBlank { "not-needed" }
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey(safeApiKey(apiKey))
+            .modelName(AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModel.ifBlank { settings.defaultModel })
+            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModelTimeoutSeconds))
+            .build()
+    }
+
+    override fun createModel(settings: OpenAiCompatibleSettings): ChatModel {
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
+        val apiKey = settings.apiKey.ifBlank { "not-needed" }
+        val telemetry = AppContext.getInstance().telemetry
 
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(apiKey))
-            .modelName(modelName)
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModelTimeoutSeconds))
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OPENAI_COMPATIBLE.providerKey())))
             .build()
     }
 
     override fun createUtilityClient(settings: OpenAiCompatibleSettings): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true
