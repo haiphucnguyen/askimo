@@ -4,7 +4,6 @@
  */
 package io.askimo.core.providers.openai
 
-import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import dev.langchain4j.data.message.UserMessage
 import io.askimo.core.config.AppConfig
@@ -22,7 +21,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
-import java.net.InetSocketAddress
 import kotlin.inc
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -324,27 +322,5 @@ class OpenAiModelFactoryProxyTest {
 
         println("✓ Fetched ${models.size} OpenAI models through proxy")
         println("Sample models: ${models.take(3)}")
-    }
-
-    /**
-     * Helper to start a simple HTTP proxy server for testing
-     * (Currently not used, but available for future local proxy testing)
-     */
-    @Suppress("unused")
-    private fun startMockProxyServer(port: Int, handler: (HttpExchange) -> Unit): HttpServer {
-        val server = HttpServer.create(InetSocketAddress("localhost", port), 0)
-        server.createContext("/") { exchange ->
-            try {
-                proxyRequestCount++
-                handler(exchange)
-            } catch (e: Exception) {
-                println("Mock proxy server error: ${e.message}")
-            } finally {
-                exchange.close()
-            }
-        }
-        server.executor = null
-        server.start()
-        return server
     }
 }

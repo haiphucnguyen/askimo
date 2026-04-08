@@ -5,7 +5,7 @@
 package io.askimo.core.chat.domain
 
 import io.askimo.core.db.sqliteDatetime
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 import java.time.LocalDateTime
 
 /**
@@ -37,6 +37,7 @@ object ProjectsTable : Table("projects") {
     val knowledgeSourcesConfig = text("indexed_paths") // JSON - database column name kept as 'indexed_paths' for backward compatibility
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")
+    val syncedAt = varchar("synced_at", 32).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

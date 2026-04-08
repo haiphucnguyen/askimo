@@ -17,6 +17,7 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
+import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.ui.session.SessionManager
 import io.askimo.ui.util.ErrorHandler
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
@@ -165,6 +167,25 @@ class ChatViewModel(
 
     init {
         observeProjectEvents()
+        observeSessionTitleEvents()
+    }
+
+    /**
+     * Observe session title update events so the header title updates immediately
+     * when the async AI title generation in createSession completes — without
+     * waiting for the AI chat response to finish.
+     */
+    private fun observeSessionTitleEvents() {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<SessionTitleUpdatedEvent>()
+                .collect { event ->
+                    if (event.sessionId == currentSessionId.value) {
+                        log.debug("Session title updated to: ${event.newTitle}")
+                        sessionTitle = event.newTitle
+                    }
+                }
+        }
     }
 
     /**
@@ -566,6 +587,7 @@ class ChatViewModel(
                     userMessage = userMessage,
                     willSaveUserMessage = true,
                     disabledServerIds = disabledServerIds,
+                    directiveId = selectedDirective,
                 )
 
                 if (threadId == null) {

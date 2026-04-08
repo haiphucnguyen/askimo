@@ -36,7 +36,7 @@ import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import java.util.UUID
 import kotlin.collections.plus
 
@@ -113,7 +113,7 @@ fun addReferenceMaterialDialog(
                         Text(stringResource("projects.sources.add.button"))
                     }
 
-                    ComponentColors.themedDropdownMenu(
+                    AppComponents.dropdownMenu(
                         expanded = showAddSourceMenu,
                         onDismissRequest = { showAddSourceMenu = false },
                     ) {

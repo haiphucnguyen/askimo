@@ -29,7 +29,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.project.newProjectDialog
 import io.askimo.ui.shell.DeveloperModePreferences
 
@@ -91,7 +91,7 @@ fun sessionActionsMenu(
             )
         }
 
-        ComponentColors.themedDropdownMenu(
+        AppComponents.dropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {

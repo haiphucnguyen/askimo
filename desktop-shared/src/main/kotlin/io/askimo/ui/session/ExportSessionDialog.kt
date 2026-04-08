@@ -55,7 +55,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.export.ExportFormat
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import java.io.File
 import javax.swing.JFileChooser
 
@@ -207,7 +207,7 @@ fun exportSessionDialog(
                         label = { Text(stringResource("session.export.file.path")) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                     )
 
                     IconButton(

@@ -59,7 +59,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -282,7 +282,7 @@ private fun editProjectForm(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
 
@@ -294,7 +294,7 @@ private fun editProjectForm(
                     minLines = 3,
                     maxLines = 5,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 )
 

@@ -14,10 +14,17 @@ import io.askimo.core.service.UpdateInfo
 /**
  * Desktop-specific service to check for application updates.
  * Wraps the core UpdateChecker and emits EventBus events for the desktop UI.
+ *
+ * @param githubRepo The GitHub repository to check for releases
  */
-class UpdateService {
+class UpdateService(
+    githubRepo: String = "haiphucnguyen/askimo",
+) {
     private val log = logger<UpdateService>()
-    private val updateChecker = UpdateChecker(userAgent = "Askimo-Desktop/${VersionInfo.version}")
+    private val updateChecker = UpdateChecker(
+        githubRepo = githubRepo,
+        userAgent = "Askimo-Desktop/${VersionInfo.version}",
+    )
 
     // Track the last version for which we emitted an event to prevent duplicates
     private var lastEmittedVersion: String? = null

@@ -1,35 +1,36 @@
 [versions]
-graalvm-plugin = "0.11.3"
+graalvm-plugin = "0.11.5"
 jline = "3.30.6"
 langchain4j = "1.12.2"
-commonmark = "0.27.0"
-kotlinxSerializationJson = "1.9.0"
-kotlinxCoroutines = "1.9.0"
+commonmark = "0.27.1"
+kotlinxSerializationJson = "1.10.0"
+kotlinxCoroutines = "1.10.2"
 slf4j = "2.0.17"
 logback = "1.5.21"
 junitBom = "5.14.0"
 testcontainers = "1.21.3"
 mockitoKotlin = "6.1.0"
-kotlin = "2.2.20"
+kotlin = "2.3.20"
 jackson = "2.19.2"
 spotless = "8.0.0"
+detekt = "1.23.8"
 shadow = "9.0.1"
-graalvmSvm = "25.0.1"
+graalvmSvm = "25.0.2"
 sqlite = "3.51.1.0"
 hikaricp = "7.0.2"
-exposed = "0.61.0"
+exposed = "1.1.1"
 compose = "1.9.3"
-coil = "3.3.0"
-koin = "4.1.1"
+coil = "3.4.0"
+koin = "4.2.0"
 jlatexmath = "1.0.7"
-tika = "3.2.3"
-lucene = "10.3.2"
+tika = "3.3.0"
+lucene = "10.4.0"
 langchain4j-extra = "1.12.2-beta22"
 caffeine = "3.2.3"
 jsoup = "1.22.1"
 konform = "0.11.1"
-pty4j = "0.13.4"
-jediterm = "3.61"
+pty4j = "0.13.12"
+jediterm = "3.64"
 
 [libraries]
 # JLine
@@ -123,6 +124,11 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", ve
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
+# Detekt
+detekt-cli = { module = "io.gitlab.arturbosch.detekt:detekt-cli", version.ref = "detekt" }
+detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detekt" }
+detekt-test = { module = "io.gitlab.arturbosch.detekt:detekt-test", version.ref = "detekt" }
+
 [bundles]
 langchain4j = [
     "langchain4j",
@@ -200,6 +206,7 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-plugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

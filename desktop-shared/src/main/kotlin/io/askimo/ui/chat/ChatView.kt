@@ -6,7 +6,6 @@ package io.askimo.ui.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollbarStyle
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -14,14 +13,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -48,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -90,8 +86,10 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.TooltipPlacement
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.service.AvatarService
 import io.askimo.ui.session.manageDirectivesDialog
@@ -126,6 +124,7 @@ fun chatView(
     onDeleteSession: (String) -> Unit = {},
     onNavigateToProject: ((String) -> Unit)? = null,
     userAvatarPath: String? = null,
+    serverBaseUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
     // Unpack state for internal use
@@ -297,7 +296,7 @@ fun chatView(
 
     LaunchedEffect(userAvatarPath) {
         userAvatarPainter = withContext(Dispatchers.IO) {
-            avatarService.getUserAvatarPainter(userAvatarPath)
+            avatarService.getUserAvatarPainter(userAvatarPath, serverBaseUrl)
         }
     }
 
@@ -325,7 +324,13 @@ fun chatView(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(
+                if (LocalBackgroundActive.current) {
+                    Color.Transparent
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            )
             .focusRequester(chatViewFocusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
@@ -381,7 +386,7 @@ fun chatView(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = ComponentColors.sidebarSurfaceColor(),
+                        containerColor = AppComponents.sidebarSurfaceColor(),
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
@@ -404,78 +409,17 @@ fun chatView(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     // Clickable project name as breadcrumb
-                                    TooltipArea(
-                                        tooltip = {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                shape = RoundedCornerShape(4.dp),
-                                                modifier = Modifier.width(350.dp),
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier.padding(12.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                                ) {
-                                                    Text(
-                                                        text = project.name,
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        fontWeight = FontWeight.Bold,
-                                                    )
-
-                                                    project.description?.let { description ->
-                                                        if (description.isNotBlank()) {
-                                                            Text(
-                                                                text = description,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            )
-                                                        }
-                                                    }
-
-                                                    if (project.knowledgeSources.isNotEmpty()) {
-                                                        Spacer(modifier = Modifier.height(4.dp))
-                                                        Text(
-                                                            text = stringResource("projects.sources.title"),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.Bold,
-                                                        )
-                                                        Column(
-                                                            modifier = Modifier.padding(start = 8.dp),
-                                                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                                                        ) {
-                                                            project.knowledgeSources.forEach { source ->
-                                                                Row(
-                                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                ) {
-                                                                    Text(
-                                                                        text = "•",
-                                                                        style = MaterialTheme.typography.bodySmall,
-                                                                    )
-                                                                    Text(
-                                                                        text = source.resourceIdentifier,
-                                                                        style = MaterialTheme.typography.bodySmall,
-                                                                        maxLines = 1,
-                                                                        overflow = TextOverflow.Ellipsis,
-                                                                    )
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    // Timestamps
-                                                    Spacer(modifier = Modifier.height(4.dp))
-                                                    Text(
-                                                        text = "Created: ${formatDisplay(project.createdAt)}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                    Text(
-                                                        text = "Updated: ${formatDisplay(project.updatedAt)}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
+                                    themedTooltip(
+                                        text = buildString {
+                                            append(project.name)
+                                            project.description?.takeIf { it.isNotBlank() }?.let {
+                                                append("\n").append(it)
                                             }
+                                            if (project.knowledgeSources.isNotEmpty()) {
+                                                append("\n").append(project.knowledgeSources.joinToString("\n") { "• ${it.resourceIdentifier}" })
+                                            }
+                                            append("\nCreated: ${formatDisplay(project.createdAt)}")
+                                            append("\nUpdated: ${formatDisplay(project.updatedAt)}")
                                         },
                                     ) {
                                         TextButton(
@@ -526,20 +470,7 @@ fun chatView(
                                 }
 
                                 if (statusText != null) {
-                                    TooltipArea(
-                                        tooltip = {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                shape = RoundedCornerShape(4.dp),
-                                            ) {
-                                                Text(
-                                                    text = statusText,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                )
-                                            }
-                                        },
-                                    ) {
+                                    themedTooltip(text = statusText) {
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -564,10 +495,10 @@ fun chatView(
 
                             // Session title
                             themedTooltip(
-                                text = sessionTitle ?: "New Chat",
+                                text = sessionTitle,
                             ) {
                                 Text(
-                                    text = sessionTitle ?: "New Chat",
+                                    text = sessionTitle,
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
@@ -601,31 +532,11 @@ fun chatView(
                             }
 
                             Box {
-                                TooltipArea(
-                                    tooltip = {
-                                        if (selectedDirectiveObj != null) {
-                                            Surface(
-                                                modifier = Modifier.width(400.dp),
-                                                shadowElevation = 4.dp,
-                                                shape = MaterialTheme.shapes.small,
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier.padding(12.dp),
-                                                ) {
-                                                    Text(
-                                                        text = selectedDirectiveObj.name,
-                                                        style = MaterialTheme.typography.labelMedium,
-                                                        color = MaterialTheme.colorScheme.onSurface,
-                                                        fontWeight = FontWeight.Bold,
-                                                    )
-                                                    Text(
-                                                        text = selectedDirectiveObj.content,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        modifier = Modifier.padding(top = 8.dp),
-                                                    )
-                                                }
-                                            }
-                                        }
+                                themedTooltip(
+                                    text = if (selectedDirectiveObj != null) {
+                                        "${selectedDirectiveObj.name}\n${selectedDirectiveObj.content}"
+                                    } else {
+                                        ""
                                     },
                                 ) {
                                     TextButton(
@@ -649,7 +560,7 @@ fun chatView(
                                     }
                                 }
 
-                                ComponentColors.themedDropdownMenu(
+                                AppComponents.dropdownMenu(
                                     expanded = directiveDropdownExpanded,
                                     onDismissRequest = { directiveDropdownExpanded = false },
                                     modifier = Modifier.fillMaxWidth(0.3f),
@@ -685,30 +596,9 @@ fun chatView(
                                         HorizontalDivider()
 
                                         availableDirectives.forEach { directive ->
-                                            TooltipArea(
-                                                tooltip = {
-                                                    Surface(
-                                                        modifier = Modifier.width(400.dp),
-                                                        shadowElevation = 4.dp,
-                                                        shape = MaterialTheme.shapes.small,
-                                                    ) {
-                                                        Column(
-                                                            modifier = Modifier.padding(12.dp),
-                                                        ) {
-                                                            Text(
-                                                                text = directive.name,
-                                                                style = MaterialTheme.typography.labelMedium,
-                                                                color = MaterialTheme.colorScheme.onSurface,
-                                                                fontWeight = FontWeight.Bold,
-                                                            )
-                                                            Text(
-                                                                text = directive.content,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                modifier = Modifier.padding(top = 8.dp),
-                                                            )
-                                                        }
-                                                    }
-                                                },
+                                            themedTooltip(
+                                                text = "${directive.name}\n${directive.content}",
+                                                placement = TooltipPlacement.LEFT,
                                             ) {
                                                 DropdownMenuItem(
                                                     text = {
@@ -818,7 +708,7 @@ fun chatView(
                                 }
                             }
 
-                            if (sessionId != null) {
+                            if (sessionId != null && messages.isNotEmpty()) {
                                 sessionActionsMenu(
                                     sessionId = sessionId,
                                     onRenameSession = onRenameSession,
@@ -843,7 +733,7 @@ fun chatView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Row(
                         modifier = Modifier
@@ -868,7 +758,7 @@ fun chatView(
                                 .focusRequester(searchFocusRequester),
                             placeholder = { Text(stringResource("chat.search.placeholder")) },
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Result count
@@ -981,10 +871,15 @@ fun chatView(
                 }
             }
 
-            LaunchedEffect(messagesScrollState.value, messagesScrollState.maxValue) {
-                if (isThinking || messages.lastOrNull()?.isUser == false) {
+            // Only update userScrolledUp when the user is physically dragging/scrolling,
+            // not when maxValue grows underneath a stationary scroll position.
+            LaunchedEffect(messagesScrollState.value) {
+                if (messagesScrollState.isScrollInProgress) {
                     val distanceFromBottom = messagesScrollState.maxValue - messagesScrollState.value
                     userScrolledUp = distanceFromBottom > 100
+                }
+                if (messagesScrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
+                    actions.loadPrevious()
                 }
             }
 
@@ -998,12 +893,6 @@ fun chatView(
                     savedScrollMax = -1
                 } else if (!userScrolledUp && sv < 0) {
                     messagesScrollState.scrollTo(messagesScrollState.maxValue)
-                }
-            }
-
-            LaunchedEffect(messagesScrollState.value) {
-                if (messagesScrollState.value < 100 && hasMoreMessages && !isLoadingPrevious) {
-                    actions.loadPrevious()
                 }
             }
 

@@ -17,6 +17,7 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.SessionCreatedEvent
 import io.askimo.core.exception.ExceptionHandler
 import io.askimo.core.logging.logger
+import io.askimo.core.providers.ConfigurationErrorException
 import io.askimo.core.providers.sendStreamingMessageWithCallback
 import io.askimo.core.vision.ImageProcessor
 import io.askimo.ui.chat.ChatViewModel
@@ -164,6 +165,7 @@ class SessionManager(
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
         disabledServerIds: Set<String> = emptySet(),
+        directiveId: String? = null,
     ): String? {
         // Create session lazily on first message (only once per session)
         if (!createdSessions.contains(sessionId)) {
@@ -179,6 +181,12 @@ class SessionManager(
                     )
                     createdSessions.add(sessionId)
                     log.debug("Created new session: $sessionId")
+
+                    // Persist the selected directive (if any) to the newly created session
+                    if (directiveId != null) {
+                        chatSessionService.updateSessionDirective(sessionId, directiveId)
+                        log.debug("Applied directive $directiveId to new session $sessionId")
+                    }
                 }
             }
         }
@@ -286,11 +294,15 @@ class SessionManager(
                 thread.markFailed()
 
                 val partialResponse = thread.getCurrentContent()
-                val failedResponse = ExceptionHandler.handleWithPartialContent(
-                    throwable = e,
-                    partialContent = partialResponse,
-                    contextId = sessionId,
-                )
+                val failedResponse = if (e is ConfigurationErrorException) {
+                    e.displayMessage
+                } else {
+                    ExceptionHandler.handleWithPartialContent(
+                        throwable = e,
+                        partialContent = partialResponse,
+                        contextId = sessionId,
+                    )
+                }
 
                 val savedMessage = chatSessionService.saveAiResponse(sessionId, failedResponse, isFailed = true)
                 thread.setSavedMessage(savedMessage)

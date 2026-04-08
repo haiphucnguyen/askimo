@@ -9,8 +9,13 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
 import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.time.Duration
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
@@ -28,7 +33,6 @@ class AvatarService {
         private val USER_AVATAR_DIR get() = File(AVATARS_DIR, "user")
         private val AI_AVATAR_DIR get() = File(AVATARS_DIR, "ai")
 
-        private const val DEFAULT_USER_AVATAR = "user-avatar.png"
         private const val DEFAULT_AI_AVATAR = "ai-avatar.png"
 
         /** Built-in fallback — decoded once for the entire app lifetime. */
@@ -105,20 +109,37 @@ class AvatarService {
      * The result is cached by path — decoded only on first call for a given path
      * (or after [invalidateUserAvatarCache]).
      *
-     * Pass the path from [UserProfile.preferences]["avatarPath"].
+     * If [avatarPath] starts with "/" it is treated as a server-relative URL and fetched
+     * via HTTP using [serverBaseUrl]. Otherwise it is treated as a local file path.
+     *
+     * Pass the path from [UserProfile.preferences]["serverAvatarUrl"] or ["avatarPath"].
      */
-    fun getUserAvatarPainter(avatarPath: String?): BitmapPainter? {
+    fun getUserAvatarPainter(avatarPath: String?, serverBaseUrl: String? = null): BitmapPainter? {
         if (avatarPath == null) return null
 
         // Return cached painter if path hasn't changed
         if (avatarPath == cachedUserAvatarPath) return cachedUserAvatarPainter
 
-        val file = File(avatarPath)
-        if (!file.exists()) return null
+        val bytes: ByteArray? = when {
+            avatarPath.startsWith("/") && serverBaseUrl != null -> {
+                // Server-relative URL — fetch via HTTP
+                fetchRemoteAvatar("$serverBaseUrl$avatarPath")
+            }
+            avatarPath.startsWith("http://") || avatarPath.startsWith("https://") -> {
+                fetchRemoteAvatar(avatarPath)
+            }
+            else -> {
+                // Local file path
+                val file = File(avatarPath)
+                if (file.exists()) file.readBytes() else null
+            }
+        }
+
+        if (bytes == null) return null
 
         return try {
             val painter = BitmapPainter(
-                SkiaImage.makeFromEncoded(file.readBytes()).toComposeImageBitmap(),
+                SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap(),
             )
             cachedUserAvatarPainter = painter
             cachedUserAvatarPath = avatarPath
@@ -127,6 +148,24 @@ class AvatarService {
             log.warn("Failed to decode user avatar at $avatarPath", e)
             null
         }
+    }
+
+    private fun fetchRemoteAvatar(url: String): ByteArray? = runCatching {
+        val http = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .version(HttpClient.Version.HTTP_1_1)
+            .build()
+        // Strip query string for cache key but keep full URL for request
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(url.substringBefore("?")))
+            .timeout(Duration.ofSeconds(15))
+            .GET()
+            .build()
+        val response = http.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        if (response.statusCode() in 200..299) response.body() else null
+    }.getOrElse { e ->
+        log.warn("Failed to fetch remote avatar from $url: ${e.message}", e)
+        null
     }
 
     /** Clears the cached AI avatar painter so the next call to [getAiAvatarPainter] re-decodes. */
@@ -138,32 +177,6 @@ class AvatarService {
     fun invalidateUserAvatarCache() {
         cachedUserAvatarPainter = null
         cachedUserAvatarPath = null
-    }
-
-    // ── Save / remove ────────────────────────────────────────────────────────
-
-    /**
-     * Copies the image at [sourcePath] to the user avatar directory and invalidates the cache.
-     * @return The saved file path, or null on failure.
-     */
-    fun saveUserAvatar(sourcePath: String): String? = try {
-        val sourceFile = File(sourcePath)
-        if (!sourceFile.exists()) {
-            log.error("Source avatar file does not exist: $sourcePath")
-            null
-        } else if (!isValidImageFile(sourceFile)) {
-            log.error("Invalid image file: $sourcePath")
-            null
-        } else {
-            val destFile = File(USER_AVATAR_DIR, DEFAULT_USER_AVATAR.replace(".png", ".${sourceFile.extension}"))
-            Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            invalidateUserAvatarCache()
-            log.info("User avatar saved to: ${destFile.absolutePath}")
-            destFile.absolutePath
-        }
-    } catch (e: Exception) {
-        log.error("Failed to save user avatar", e)
-        null
     }
 
     /**
@@ -188,16 +201,6 @@ class AvatarService {
     } catch (e: Exception) {
         log.error("Failed to save AI avatar", e)
         null
-    }
-
-    fun removeUserAvatar(): Boolean = try {
-        USER_AVATAR_DIR.listFiles()?.forEach { it.delete() }
-        invalidateUserAvatarCache()
-        log.info("User avatar removed")
-        true
-    } catch (e: Exception) {
-        log.error("Failed to remove user avatar", e)
-        false
     }
 
     fun removeAIAvatar(): Boolean = try {

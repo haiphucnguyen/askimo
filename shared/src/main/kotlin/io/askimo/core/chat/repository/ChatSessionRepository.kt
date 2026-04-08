@@ -10,16 +10,21 @@ import io.askimo.core.chat.domain.SESSION_TITLE_MAX_LENGTH
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.jdbc.deleteAll
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -67,6 +72,7 @@ class ChatSessionRepository internal constructor(
             }
         }
 
+        EventBus.post(PushDataToServerEvent(reason = "session created"))
         return sessionWithInjectedFields
     }
 
@@ -81,9 +87,9 @@ class ChatSessionRepository internal constructor(
         ChatSessionsTable
             .selectAll()
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(limit)
             .map { it.toChatSession() }
@@ -141,9 +147,9 @@ class ChatSessionRepository internal constructor(
             }
         }
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(pageSize)
             .offset(offset)
@@ -169,7 +175,7 @@ class ChatSessionRepository internal constructor(
         ChatSessionsTable
             .selectAll()
             .where { ChatSessionsTable.projectId eq projectId }
-            .orderBy(ChatSessionsTable.updatedAt to SortOrder.DESC)
+            .orderBy(ChatSessionsTable.updatedAt, SortOrder.DESC)
             .map { it.toChatSession() }
     }
 
@@ -189,7 +195,7 @@ class ChatSessionRepository internal constructor(
         ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
             it[updatedAt] = LocalDateTime.now()
         } > 0
-    }
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session touched")) }
 
     private fun generateTitle(firstMessage: String): String {
         val cleaned = firstMessage.trim().replace("\n", " ")
@@ -228,8 +234,10 @@ class ChatSessionRepository internal constructor(
         transaction(database) {
             ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
                 it[ChatSessionsTable.title] = title
+                it[updatedAt] = LocalDateTime.now()
             }
         }
+        EventBus.post(PushDataToServerEvent(reason = "session title generated"))
         return title
     }
 
@@ -244,7 +252,7 @@ class ChatSessionRepository internal constructor(
             it[ChatSessionsTable.directiveId] = directiveId
             it[updatedAt] = LocalDateTime.now()
         } > 0
-    }
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session directive changed")) }
 
     /**
      * Delete a chat session.
@@ -277,7 +285,7 @@ class ChatSessionRepository internal constructor(
             it[ChatSessionsTable.isStarred] = if (isStarred) 1 else 0
             it[updatedAt] = LocalDateTime.now()
         } > 0
-    }
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session starred")) }
 
     /**
      * Update the sort order of a session
@@ -287,7 +295,7 @@ class ChatSessionRepository internal constructor(
             it[ChatSessionsTable.sortOrder] = sortOrder
             it[updatedAt] = LocalDateTime.now()
         } > 0
-    }
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session sort order changed")) }
 
     /**
      * Update the title of a session
@@ -303,7 +311,7 @@ class ChatSessionRepository internal constructor(
                 it[ChatSessionsTable.title] = trimmedTitle
                 it[updatedAt] = LocalDateTime.now()
             } > 0
-        }
+        }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session title updated")) }
     }
 
     /**
@@ -314,8 +322,8 @@ class ChatSessionRepository internal constructor(
             .selectAll()
             .where { ChatSessionsTable.isStarred eq 1 }
             .orderBy(
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .map { it.toChatSession() }
     }
@@ -332,9 +340,9 @@ class ChatSessionRepository internal constructor(
             .selectAll()
             .where { ChatSessionsTable.projectId.isNull() }
             .orderBy(
-                ChatSessionsTable.isStarred to SortOrder.DESC,
-                ChatSessionsTable.sortOrder to SortOrder.ASC,
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
+                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
+                Pair(ChatSessionsTable.sortOrder, SortOrder.ASC),
+                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
             )
             .limit(limit)
             .map { it.toChatSession() }
@@ -348,7 +356,7 @@ class ChatSessionRepository internal constructor(
             it[ChatSessionsTable.projectId] = projectId
             it[updatedAt] = LocalDateTime.now()
         } > 0
-    }
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session project changed")) }
 
     /**
      * Get multiple sessions by their IDs.
@@ -365,5 +373,88 @@ class ChatSessionRepository internal constructor(
                 .where { ChatSessionsTable.id inList sessionIds }
                 .map { it.toChatSession() }
         }
+    }
+
+    /**
+     * Upsert a batch of sessions received from the server during a pull.
+     *
+     * @param sessions Sessions received from the server pull response.
+     */
+    fun upsertFromServer(sessions: List<ChatSession>) {
+        if (sessions.isEmpty()) return
+
+        transaction(database) {
+            val nowStr = LocalDateTime.now().toString()
+            val ids = sessions.map { it.id }
+
+            val existingById = ChatSessionsTable
+                .selectAll()
+                .where { ChatSessionsTable.id inList ids }
+                .associate { row ->
+                    row[ChatSessionsTable.id] to row[ChatSessionsTable.updatedAt]
+                }
+
+            for (session in sessions) {
+                val storedUpdatedAt = existingById[session.id]
+
+                if (storedUpdatedAt == null) {
+                    // Brand-new row — insert and mark as synced
+                    ChatSessionsTable.insert {
+                        it[id] = session.id
+                        it[title] = session.title.take(SESSION_TITLE_MAX_LENGTH)
+                        it[createdAt] = session.createdAt
+                        it[updatedAt] = session.updatedAt
+                        it[projectId] = session.projectId
+                        it[directiveId] = session.directiveId
+                        it[isStarred] = if (session.isStarred) 1 else 0
+                        it[sortOrder] = session.sortOrder
+                        it[syncedAt] = nowStr
+                    }
+                    log.debug("upsertFromServer: inserted session {}", session.id)
+                } else if (session.updatedAt.isAfter(storedUpdatedAt)) {
+                    // Server version is newer — overwrite
+                    ChatSessionsTable.update({ ChatSessionsTable.id eq session.id }) {
+                        it[title] = session.title.take(SESSION_TITLE_MAX_LENGTH)
+                        it[updatedAt] = session.updatedAt
+                        it[projectId] = session.projectId
+                        it[directiveId] = session.directiveId
+                        it[isStarred] = if (session.isStarred) 1 else 0
+                        it[sortOrder] = session.sortOrder
+                        it[syncedAt] = nowStr
+                    }
+                    log.debug("upsertFromServer: updated session {} (server newer)", session.id)
+                } else {
+                    log.debug("upsertFromServer: skipped session {} (local is same age or newer)", session.id)
+                }
+            }
+        }
+    }
+
+    /**
+     * Mark a session as successfully synced to the server by setting [syncedAt]
+     * to the current timestamp.
+     *
+     * @param sessionId The session to mark as synced.
+     */
+    fun markSynced(sessionId: String): Boolean = transaction(database) {
+        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
+            it[syncedAt] = LocalDateTime.now().toString()
+        } > 0
+    }
+
+    /**
+     *
+     * @param limit Maximum rows to return in one batch.
+     */
+    fun getUnsyncedSessions(limit: Int = 50): List<ChatSession> = transaction(database) {
+        ChatSessionsTable
+            .selectAll()
+            .orderBy(ChatSessionsTable.updatedAt, SortOrder.ASC)
+            .mapNotNull { row ->
+                val syncedAt = row[ChatSessionsTable.syncedAt]
+                val updatedAt = row[ChatSessionsTable.updatedAt].toString()
+                if (syncedAt == null || updatedAt > syncedAt) row.toChatSession() else null
+            }
+            .take(limit)
     }
 }

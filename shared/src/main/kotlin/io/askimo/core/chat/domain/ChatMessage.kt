@@ -6,8 +6,8 @@ package io.askimo.core.chat.domain
 
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.sqliteDatetime
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 import java.time.LocalDateTime
 
 data class ChatMessage(
@@ -38,11 +38,12 @@ object ChatMessagesTable : Table("chat_messages") {
     val createdAt = sqliteDatetime("created_at")
     val isOutdated = integer("is_outdated").default(0)
 
-    // Self-referencing foreign key with SET NULL on delete
     val editParentId = varchar("edit_parent_id", 36).nullable()
 
     val isEdited = integer("is_edited").default(0)
     val isFailed = integer("is_failed").default(0)
+
+    val syncedAt = varchar("synced_at", 32).nullable()
 
     override val primaryKey = PrimaryKey(id)
 

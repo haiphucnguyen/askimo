@@ -43,20 +43,20 @@ import kotlin.io.path.isRegularFile
 private object AppConfigObject
 private val log = logger<AppConfigObject>()
 
-// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.30 — kept for backward compatibility with pre-snake_case config files
 data class EmbeddingConfig(
     @field:JsonAlias("maxCharsPerChunk") val maxCharsPerChunk: Int = 3000,
     @field:JsonAlias("chunkOverlap") val chunkOverlap: Int = 100,
     @field:JsonAlias("preferredDim") val preferredDim: Int? = null,
 )
 
-// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.30 — kept for backward compatibility with pre-snake_case config files
 data class RetryConfig(
     val attempts: Int = 4,
     @field:JsonAlias("baseDelayMs") val baseDelayMs: Long = 150,
 )
 
-// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.30 — kept for backward compatibility with pre-snake_case config files
 data class ThrottleConfig(
     @field:JsonAlias("perRequestSleepMs") val perRequestSleepMs: Long = 30,
 )
@@ -101,11 +101,7 @@ private class CommaSeparatedSetDeserializer : StdDeserializer<Set<String>>(Set::
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<String> = parseCommaSeparated(p).toSet()
 }
 
-private class CommaSeparatedListDeserializer : StdDeserializer<List<String>>(List::class.java) {
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): List<String> = parseCommaSeparated(p)
-}
-
-// TODO: Remove @JsonAlias camelCase aliases in v1.2.25 — kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @JsonAlias camelCase aliases in v1.2.30 — kept for backward compatibility with pre-snake_case config files
 data class IndexingConfig(
     @field:JsonAlias("maxFileBytes") val maxFileBytes: Long = 5_000_000,
     @field:JsonAlias("concurrentIndexingThreads") val concurrentIndexingThreads: Int = 10,
@@ -249,7 +245,7 @@ data class ProxyConfig(
     }
 }
 
-// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.30 - kept for backward compatibility with pre-snake_case config files
 data class ChatConfig(
     @field:JsonAlias("maxTokens") val maxTokens: Int = 8000,
     @field:JsonAlias("summarizationThreshold") val summarizationThreshold: Double = 0.75,
@@ -263,7 +259,7 @@ data class ChatConfig(
  * RAG (Retrieval-Augmented Generation) configuration.
  * Controls how relevant documents are retrieved from the knowledge base.
  */
-// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.30 - kept for backward compatibility with pre-snake_case config files
 data class RagConfig(
     /** Maximum number of documents to retrieve from vector search */
     @field:JsonAlias("vectorSearchMaxResults") val vectorSearchMaxResults: Int = 20,
@@ -277,7 +273,7 @@ data class RagConfig(
     @field:JsonAlias("useAbsolutePathInCitations") val useAbsolutePathInCitations: Boolean = true,
 )
 
-// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.25 - kept for backward compatibility with pre-snake_case config files
+// TODO: Remove @field:JsonAlias camelCase aliases in v1.2.30 - kept for backward compatibility with pre-snake_case config files
 data class ProviderModelConfig(
     @field:JsonAlias("utilityModel") val utilityModel: String = "",
     @field:JsonAlias("utilityModelTimeoutSeconds") val utilityModelTimeoutSeconds: Long = 45,
@@ -326,6 +322,16 @@ data class ModelsConfig(
     }
 }
 
+/**
+ * Configuration for the Askimo business analytics system.
+ * Lives under the `analytics:` key in askimo.yml.
+ */
+data class AnalyticsConfig(
+    /** True only when the user has explicitly opted in via the consent dialog. Default false. */
+    val optedIn: Boolean = false,
+    val endpoint: String = "https://analytics.askimo.chat/ingest",
+)
+
 data class AppConfigData(
     val embedding: EmbeddingConfig = EmbeddingConfig(),
     val retry: RetryConfig = RetryConfig(),
@@ -336,6 +342,7 @@ data class AppConfigData(
     val rag: RagConfig = RagConfig(),
     val models: ModelsConfig = ModelsConfig(),
     val proxy: ProxyConfig = ProxyConfig(),
+    val analytics: AnalyticsConfig = AnalyticsConfig(),
     val context: AppContextParams = AppContextParams.noOp(),
 )
 
@@ -348,6 +355,7 @@ object AppConfig {
     val rag: RagConfig get() = delegate.rag
     val models: ModelsConfig get() = delegate.models
     val context: AppContextParams get() = delegate.context
+    val analytics: AnalyticsConfig get() = delegate.analytics
 
     /**
      * Proxy configuration with password loaded from secure storage.
@@ -539,6 +547,10 @@ object AppConfig {
           enabled: ${'$'}{ASKIMO_DEVELOPER_ENABLED:true}
           active:  ${'$'}{ASKIMO_DEVELOPER_ACTIVE:false}
 
+        analytics:
+          opted_in: ${'$'}{ASKIMO_ANALYTICS_OPTED_IN:false}
+          endpoint: ${'$'}{ASKIMO_ANALYTICS_ENDPOINT:https://analytics.askimo.chat/ingest}
+
         context:
           current_provider: ${'$'}{ASKIMO_CONTEXT_CURRENT_PROVIDER:UNKNOWN}
           models: {}
@@ -556,7 +568,7 @@ object AppConfig {
         val path = resolveOrCreateConfigPath()
         return if (path != null && path.isRegularFile()) {
             val raw = Files.readString(path)
-            // TODO: Remove migration call in v1.2.25 — only needed for users upgrading from pre-snake_case config files
+            // TODO: Remove migration call in v1.2.30 — only needed for users upgrading from pre-snake_case config files
             val migrated = migrateCamelToSnake(raw)
             if (migrated != raw) {
                 try {
@@ -584,7 +596,7 @@ object AppConfig {
      * One-time migration: rewrites camelCase YAML keys to snake_case in-place.
      * This handles users upgrading from versions prior to the snake_case config format.
      *
-     * TODO: Remove this method in v1.2.25 along with all @field:JsonAlias camelCase annotations.
+     * TODO: Remove this method in v1.2.30 along with all @field:JsonAlias camelCase annotations.
      */
     private fun migrateCamelToSnake(yaml: String): String {
         val replacements = mapOf(
@@ -687,6 +699,7 @@ object AppConfig {
         "io.askimo.core.providers.docker.DockerAiSettings" to "docker",
         "io.askimo.core.providers.localai.LocalAiSettings" to "localai",
         "io.askimo.core.providers.lmstudio.LmStudioSettings" to "lmstudio",
+        "io.askimo.app.team.AskimoProSettings" to "openai_compatible",
     )
 
     /** Builds an indented YAML `context:` block from the parsed JSON session root. */
@@ -1004,13 +1017,22 @@ object AppConfig {
     fun saveContext(params: AppContextParams) {
         synchronized(this) {
             val sanitized = secureSessionManager.saveSecureSession(params)
+            // ASKIMO_PRO settings contain a transient accessToken and use a type id
+            // not registered in shared's @JsonSubTypes — strip before persisting.
+            val persistable = sanitized.copy(
+                providerSettings = sanitized.providerSettings.filterKeys {
+                    it.name != ModelProvider.ASKIMO_PRO.name
+                }.toMutableMap(),
+            )
             val current = cached ?: loadOnce()
             cached = current.copy(context = sanitized)
 
             val configPath = resolveOrCreateConfigPath()
             if (configPath != null && configPath.exists()) {
                 try {
-                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(cached)
+                    val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(
+                        current.copy(context = persistable),
+                    )
                     Files.writeString(configPath, updatedYaml)
                     log.info("Saved context to $configPath")
                 } catch (e: Exception) {
@@ -1051,6 +1073,7 @@ object AppConfig {
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
                 "proxy" -> current.copy(proxy = updateProxyField(current.proxy, field, value))
+                "analytics" -> current.copy(analytics = updateAnalyticsField(current.analytics, field, value))
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -1069,6 +1092,12 @@ object AppConfig {
                 }
             }
         }
+    }
+
+    private fun updateAnalyticsField(config: AnalyticsConfig, field: String, value: Any): AnalyticsConfig = when (field) {
+        "opted_in" -> config.copy(optedIn = value as Boolean)
+        "endpoint" -> config.copy(endpoint = value as String)
+        else -> config
     }
 
     private fun updateDeveloperField(config: DeveloperConfig, field: String, value: Any): DeveloperConfig = when (field) {

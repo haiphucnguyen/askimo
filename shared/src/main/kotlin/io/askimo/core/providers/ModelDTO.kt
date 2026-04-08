@@ -24,6 +24,9 @@ data class ModelDTO(
     val provider: ModelProvider,
     val modelId: String,
     val displayName: String = modelId,
+    val category: ModelCategory? = null,
+    /** True when this EMBEDDING model is the designated RAG anchor. */
+    val isRagDefault: Boolean = false,
 ) {
     companion object {
         /**

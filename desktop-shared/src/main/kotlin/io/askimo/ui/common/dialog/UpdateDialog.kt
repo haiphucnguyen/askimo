@@ -25,9 +25,8 @@ import io.askimo.core.service.UpdateInfo
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.markdownText
-import io.askimo.ui.shell.UpdateViewModel
 
 @Composable
 fun updateCheckDialog(
@@ -36,7 +35,7 @@ fun updateCheckDialog(
 ) {
     when {
         viewModel.showUpdateDialog && viewModel.releaseInfo?.isNewVersion == true -> {
-            _root_ide_package_.io.askimo.ui.common.dialog.newVersionDialog(
+            newVersionDialog(
                 releaseInfo = viewModel.releaseInfo!!,
                 currentVersion = viewModel.getCurrentVersion(),
                 onDownload = {
@@ -47,13 +46,13 @@ fun updateCheckDialog(
             )
         }
         viewModel.releaseInfo != null && !viewModel.releaseInfo!!.isNewVersion -> {
-            _root_ide_package_.io.askimo.ui.common.dialog.upToDateDialog(
+            upToDateDialog(
                 currentVersion = viewModel.getCurrentVersion(),
                 onDismiss = onDismiss,
             )
         }
         viewModel.errorMessage != null -> {
-            _root_ide_package_.io.askimo.ui.common.dialog.errorDialog(
+            errorDialog(
                 message = viewModel.errorMessage!!,
                 onDismiss = onDismiss,
             )
@@ -68,11 +67,11 @@ private fun newVersionDialog(
     onDownload: () -> Unit,
     onLater: () -> Unit,
 ) {
-    _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onLater,
         title = {
             Text(
-                text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.title"),
+                text = stringResource("update.dialog.title"),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
@@ -85,7 +84,7 @@ private fun newVersionDialog(
             ) {
                 // Header message
                 Text(
-                    text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.new.version.available"),
+                    text = stringResource("update.dialog.new.version.available"),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -94,7 +93,7 @@ private fun newVersionDialog(
                 // Version info card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -102,7 +101,7 @@ private fun newVersionDialog(
                     ) {
                         Column {
                             Text(
-                                text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.current.version.label"),
+                                text = stringResource("update.dialog.current.version.label"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                             )
@@ -114,7 +113,7 @@ private fun newVersionDialog(
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.new.version.label"),
+                                text = stringResource("update.dialog.new.version.label"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                             )
@@ -131,7 +130,7 @@ private fun newVersionDialog(
                 // Release info
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.release.date"),
+                        text = stringResource("update.dialog.release.date"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
@@ -144,13 +143,13 @@ private fun newVersionDialog(
                 // Release notes
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.release.notes"),
+                        text = stringResource("update.dialog.release.notes"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         Column(
                             modifier = Modifier
@@ -159,7 +158,7 @@ private fun newVersionDialog(
                                 .verticalScroll(rememberScrollState())
                                 .padding(12.dp),
                         ) {
-                            _root_ide_package_.io.askimo.ui.common.ui.markdownText(
+                            markdownText(
                                 markdown = releaseInfo.releaseNotes,
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -169,17 +168,17 @@ private fun newVersionDialog(
             }
         },
         confirmButton = {
-            _root_ide_package_.io.askimo.ui.common.components.primaryButton(
+            primaryButton(
                 onClick = onDownload,
             ) {
-                Text(_root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.download"))
+                Text(stringResource("update.dialog.download"))
             }
         },
         dismissButton = {
-            _root_ide_package_.io.askimo.ui.common.components.secondaryButton(
+            secondaryButton(
                 onClick = onLater,
             ) {
-                Text(_root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.later"))
+                Text(stringResource("update.dialog.later"))
             }
         },
     )
@@ -190,30 +189,30 @@ private fun upToDateDialog(
     currentVersion: String,
     onDismiss: () -> Unit,
 ) {
-    _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.title"),
+                text = stringResource("update.dialog.title"),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.check.up.to.date"),
+                    text = stringResource("update.check.up.to.date"),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.bannerCardColors(),
+                    colors = AppComponents.bannerCardColors(),
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.dialog.current.version.label"),
+                            text = stringResource("update.dialog.current.version.label"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
                         )
@@ -227,10 +226,10 @@ private fun upToDateDialog(
             }
         },
         confirmButton = {
-            _root_ide_package_.io.askimo.ui.common.components.primaryButton(
+            primaryButton(
                 onClick = onDismiss,
             ) {
-                Text(_root_ide_package_.io.askimo.ui.common.i18n.stringResource("action.ok"))
+                Text(stringResource("action.ok"))
             }
         },
     )
@@ -241,11 +240,11 @@ private fun errorDialog(
     message: String,
     onDismiss: () -> Unit,
 ) {
-    _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.themedAlertDialog(
+    AppComponents.alertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = _root_ide_package_.io.askimo.ui.common.i18n.stringResource("update.check.failed"),
+                text = stringResource("update.check.failed"),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -253,7 +252,7 @@ private fun errorDialog(
         text = {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = _root_ide_package_.io.askimo.ui.common.theme.ComponentColors.bannerCardColors(),
+                colors = AppComponents.bannerCardColors(),
             ) {
                 Text(
                     text = message,
@@ -264,10 +263,10 @@ private fun errorDialog(
             }
         },
         confirmButton = {
-            _root_ide_package_.io.askimo.ui.common.components.primaryButton(
+            primaryButton(
                 onClick = onDismiss,
             ) {
-                Text(_root_ide_package_.io.askimo.ui.common.i18n.stringResource("action.ok"))
+                Text(stringResource("action.ok"))
             }
         },
     )

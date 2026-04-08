@@ -32,7 +32,7 @@ fun provideLocalization(
     }
 
     CompositionLocalProvider(
-        _root_ide_package_.io.askimo.ui.common.i18n.defaultLocale provides locale,
+        defaultLocale provides locale,
     ) {
         content()
     }
@@ -49,7 +49,7 @@ fun provideLocalization(
 @Composable
 fun stringResource(key: String, vararg args: Any): String {
     // Access the locale to trigger recomposition when it changes
-    val currentLocale = _root_ide_package_.io.askimo.ui.common.i18n.defaultLocale.current
+    val currentLocale = defaultLocale.current
 
     // Trigger recomposition when locale changes by using it in a derived state
     return remember(key, currentLocale, *args) {

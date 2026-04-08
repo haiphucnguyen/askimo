@@ -20,7 +20,6 @@ import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
-import io.askimo.core.chat.util.ExtractedUrlContent
 import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.chat.util.FileSizeExceededException
 import io.askimo.core.chat.util.UrlContentExtractor
@@ -31,7 +30,9 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
+import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.event.internal.SessionCreatedEvent
+import io.askimo.core.event.internal.SessionDeletedEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.memory.MemoryMessage
@@ -345,7 +346,11 @@ class ChatSessionService(
         messageRepository.deleteMessagesBySession(sessionId)
         sessionMemoryRepository.deleteBySessionId(sessionId)
 
-        return sessionRepository.deleteSession(sessionId)
+        val deleted = sessionRepository.deleteSession(sessionId)
+        if (deleted) {
+            EventBus.post(SessionDeletedEvent(sessionId = sessionId))
+        }
+        return deleted
     }
 
     /**
@@ -384,6 +389,7 @@ class ChatSessionService(
     fun addMessage(message: ChatMessage): ChatMessage {
         val createdMessage = messageRepository.addMessage(message)
         sessionRepository.touchSession(message.sessionId)
+        EventBus.post(PushDataToServerEvent(reason = "message written"))
         return createdMessage
     }
 
@@ -629,22 +635,6 @@ class ChatSessionService(
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
     ): UserMessage {
-        val urls = UrlContentExtractor.extractUrls(userMessage.content)
-        val urlContents = urls.mapNotNull { url ->
-            if (!UrlIntentDetector.shouldExtractUrlContent(userMessage.content, url)) {
-                log.debug("Skipping URL content extraction for: $url (no explicit intent detected)")
-                return@mapNotNull null
-            }
-
-            log.info("Extracting URL content for: $url (explicit user intent detected)")
-            try {
-                UrlContentExtractor.extractContent(url)
-            } catch (e: Exception) {
-                log.warn("Failed to fetch URL content for $url: ${e.message}", e)
-                null
-            }
-        }
-
         if (willSaveUserMessage) {
             messageRepository.addMessage(
                 ChatMessage(
@@ -675,7 +665,7 @@ class ChatSessionService(
         }
 
         // Construct enriched message with attachments and URL contents
-        val enrichedContent = constructMessageWithAttachmentsAndUrls(userMessage, urlContents)
+        val enrichedContent = constructMessageWithAttachmentsAndUrls(userMessage)
 
         // Create enriched ChatMessageDTO with combined content but preserve image attachments
         val enrichedMessage = userMessage.copy(content = enrichedContent)
@@ -688,12 +678,10 @@ class ChatSessionService(
      * Constructs a formatted message with both file attachments and extracted URL contents.
      *
      * @param userMessage The original user message
-     * @param urlContents List of extracted URL contents
      * @return Formatted message with attachments and URL contents appended
      */
     private fun constructMessageWithAttachmentsAndUrls(
         userMessage: ChatMessageDTO,
-        urlContents: List<ExtractedUrlContent>,
     ): String = buildString {
         userMessage.attachments.forEach { attachment ->
             val content = when {
@@ -731,21 +719,6 @@ class ChatSessionService(
                 appendLine("File size: ${formatFileSize(attachment.size)}")
                 appendLine()
                 appendLine(content)
-                appendLine("---")
-                appendLine()
-            }
-        }
-
-        // Add URL contents if present
-        if (urlContents.isNotEmpty()) {
-            urlContents.forEach { content ->
-                appendLine("---")
-                appendLine("URL: ${content.url}")
-                if (content.title != null) {
-                    appendLine("Title: ${content.title}")
-                }
-                appendLine()
-                appendLine(content.content)
                 appendLine("---")
                 appendLine()
             }

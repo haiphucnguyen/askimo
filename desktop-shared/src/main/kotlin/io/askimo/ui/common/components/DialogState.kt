@@ -73,4 +73,4 @@ class DialogState {
  * @return A remembered DialogState instance
  */
 @Composable
-fun rememberDialogState() = remember { _root_ide_package_.io.askimo.ui.common.components.DialogState() }
+fun rememberDialogState() = remember { DialogState() }

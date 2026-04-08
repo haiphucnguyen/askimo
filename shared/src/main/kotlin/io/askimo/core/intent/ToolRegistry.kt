@@ -7,6 +7,9 @@ package io.askimo.core.intent
 import dev.langchain4j.agent.tool.ToolSpecifications
 import io.askimo.core.logging.logger
 import io.askimo.tools.chart.ChartTools
+import io.askimo.tools.datetime.DateTimeTools
+import io.askimo.tools.weather.WeatherTools
+import io.askimo.tools.web.WebSearchTools
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -33,6 +36,48 @@ object ToolRegistry {
                     specification = toolSpec,
                     category = ToolCategory.VISUALIZE,
                     strategy = ToolStrategy.BOTH,
+                    source = ToolSource.ASKIMO_BUILTIN,
+                    serverId = BUILTIN_SERVER_ID,
+                ),
+            )
+        }
+
+        // Register weather tools — intent-based (user asks) + follow-up (AI suggests after a trip plan)
+        val weatherTools = ToolSpecifications.toolSpecificationsFrom(WeatherTools)
+        weatherTools.forEach { toolSpec ->
+            register(
+                ToolConfig(
+                    specification = toolSpec,
+                    category = ToolCategory.WEATHER,
+                    strategy = ToolStrategy.BOTH,
+                    source = ToolSource.ASKIMO_BUILTIN,
+                    serverId = BUILTIN_SERVER_ID,
+                ),
+            )
+        }
+
+        // Register web search tools — intent-based (user asks) + follow-up (AI uses when researching)
+        val webSearchTools = ToolSpecifications.toolSpecificationsFrom(WebSearchTools)
+        webSearchTools.forEach { toolSpec ->
+            register(
+                ToolConfig(
+                    specification = toolSpec,
+                    category = ToolCategory.WEB_SEARCH,
+                    strategy = ToolStrategy.BOTH,
+                    source = ToolSource.ASKIMO_BUILTIN,
+                    serverId = BUILTIN_SERVER_ID,
+                ),
+            )
+        }
+
+        // Register date/time tools — intent-based (user asks about current date/time, conversions)
+        val dateTimeTools = ToolSpecifications.toolSpecificationsFrom(DateTimeTools)
+        dateTimeTools.forEach { toolSpec ->
+            register(
+                ToolConfig(
+                    specification = toolSpec,
+                    category = ToolCategory.DATETIME,
+                    strategy = ToolStrategy.INTENT_BASED,
                     source = ToolSource.ASKIMO_BUILTIN,
                     serverId = BUILTIN_SERVER_ID,
                 ),

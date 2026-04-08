@@ -179,7 +179,7 @@ object AiServiceBuilder {
             }
 
         if (toolProvider != null) {
-            builder.toolProvider(toolProvider).maxSequentialToolsInvocations(3)
+            builder.toolProvider(toolProvider).maxSequentialToolsInvocations(10)
         }
 
         if (retriever != null) {
@@ -206,18 +206,21 @@ object AiServiceBuilder {
      * Can be overridden by passing custom instructions to buildChatClient.
      */
     fun defaultToolResponseFormatInstructions(): String = """
-        Tool response format:
-        • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
-        • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data
-        • success=false: Tool failed, check "error" for reason
-        • Always check the "success" field before using "output"
-        • If success=false, inform the user about the error from the "error" field
-        • When success=true, extract data from "metadata" field for detailed information
+    Tool response format:
+    • All tools return: { "success": boolean, "output": string, "error": string, "metadata": object }
+    • success=true: Tool executed successfully, check "output" for results and "metadata" for structured data
+    • success=false: Tool failed, check "error" for reason
+    • Always check the "success" field before using "output"
+    • If success=false, inform the user about the error from the "error" field
+    • When success=true, extract data from "metadata" field for detailed information
 
-        Tool execution guidelines:
-        • Parse the tool response JSON before responding to user
-        • If success=true: Use the output and metadata to answer user's question
-        • If success=false: Explain what went wrong using the error message
-        • Never assume tool success without checking the response
+    Tool execution guidelines:
+    • Parse the tool response JSON before responding to user
+    • If success=true: Use the output and metadata to answer the user IMMEDIATELY — do NOT call the same tool again
+    • If success=false: Explain what went wrong using the error message
+    • Never assume tool success without checking the response
+    • STOP calling tools as soon as you have enough information to answer the user
+    • Do NOT call the same tool twice with the same or similar arguments
+    • If a tool returns success=true with data, synthesise the answer and respond directly — do not retry
     """.trimIndent()
 }

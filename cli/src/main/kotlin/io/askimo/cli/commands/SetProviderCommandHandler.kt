@@ -4,6 +4,8 @@
  */
 package io.askimo.cli.commands
 
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.context.AppContext
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
@@ -59,6 +61,7 @@ class SetProviderCommandHandler(
             return
         }
 
+        val previousProvider = appContext.params.currentProvider
         // ✅ Switch provider and apply default settings if not already stored
         appContext.params.currentProvider = provider
         val providerSettings = appContext.getOrCreateProviderSettings(provider)
@@ -77,6 +80,11 @@ class SetProviderCommandHandler(
         log.display("✅ Model provider set to: ${provider.name.lowercase()}")
         log.display("💡 Use `:models` to list all available models for this provider.")
         log.display("💡 Then use `:set-param model <modelName>` to choose one.")
+
+        Analytics.track(
+            AnalyticsEvents.PROVIDER_SWITCHED,
+            mapOf("from" to previousProvider.name, "to" to provider.name),
+        )
 
         val settings = appContext.getCurrentProviderSettings()
         if (!settings.validate()) {

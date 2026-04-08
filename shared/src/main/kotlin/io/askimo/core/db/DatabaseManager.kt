@@ -174,10 +174,19 @@ class DatabaseManager private constructor(
                     description TEXT,
                     indexed_paths TEXT NOT NULL,
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    synced_at TEXT
                 )
                 """,
             )
+
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE projects ADD COLUMN synced_at TEXT",
+                )
+            } catch (e: Exception) {
+                // Column already exists — safe to ignore.
+            }
         }
     }
 
@@ -195,7 +204,8 @@ class DatabaseManager private constructor(
                     directive_id TEXT,
                     folder_id TEXT,
                     is_starred INTEGER DEFAULT 0,
-                    sort_order INTEGER DEFAULT 0
+                    sort_order INTEGER DEFAULT 0,
+                    synced_at TEXT
                 )
                 """,
             )
@@ -207,7 +217,20 @@ class DatabaseManager private constructor(
                     ALTER TABLE chat_sessions ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE CASCADE
                     """,
                 )
+            } catch (_: Exception) {
+                // Column already exists — safe to ignore
+            }
+
+            // Migration: Add synced_at column if it doesn't exist.
+            // NULL  = row has never been pushed to the sync server.
+            // Non-null = ISO-8601 timestamp of the last successful push for this row.
+            // Used by ConversationSyncService to identify rows that need pushing.
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE chat_sessions ADD COLUMN synced_at TEXT",
+                )
             } catch (e: Exception) {
+                // Column already exists — safe to ignore.
             }
         }
     }
@@ -225,6 +248,7 @@ class DatabaseManager private constructor(
                     is_outdated INTEGER DEFAULT 0,
                     edit_parent_id TEXT,
                     is_edited INTEGER DEFAULT 0,
+                    synced_at TEXT,
                     FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE,
                     FOREIGN KEY (edit_parent_id) REFERENCES chat_messages (id) ON DELETE SET NULL
                 )
@@ -251,6 +275,18 @@ class DatabaseManager private constructor(
                 )
             } catch (e: Exception) {
                 // Column already exists, ignore the error
+            }
+
+            // Migration: Add synced_at column if it doesn't exist.
+            // NULL  = row has never been pushed to the sync server.
+            // Non-null = ISO-8601 timestamp of the last successful push for this row.
+            // Used by ConversationSyncService to identify rows that need pushing.
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE chat_messages ADD COLUMN synced_at TEXT",
+                )
+            } catch (e: Exception) {
+                // Column already exists — safe to ignore.
             }
 
             // Create composite index for efficient session-based queries with time ordering
@@ -333,7 +369,10 @@ class DatabaseManager private constructor(
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     content TEXT NOT NULL,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    deleted_at TEXT,
+                    synced_at TEXT
                 )
                 """,
             )
@@ -343,6 +382,29 @@ class DatabaseManager private constructor(
                 stmt.executeUpdate("DROP INDEX IF EXISTS chat_directives_name")
             } catch (e: Exception) {
                 // Ignore - index might not exist
+            }
+
+            // Migration: Add updated_at column if it doesn't exist (for existing databases)
+            try {
+                stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'")
+            } catch (e: Exception) {
+                // Column already exists — safe to ignore.
+            }
+
+            // Migration: Add deleted_at column if it doesn't exist (for existing databases)
+            try {
+                stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN deleted_at TEXT")
+            } catch (e: Exception) {
+                // Column already exists — safe to ignore.
+            }
+
+            // Migration: Add synced_at column if it doesn't exist.
+            // NULL  = row has never been pushed to the sync server.
+            // Non-null = ISO-8601 timestamp of the last successful push for this row.
+            try {
+                stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN synced_at TEXT")
+            } catch (e: Exception) {
+                // Column already exists — safe to ignore.
             }
         }
     }

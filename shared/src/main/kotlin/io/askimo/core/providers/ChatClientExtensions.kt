@@ -119,13 +119,9 @@ fun ChatClient.sendStreamingMessageWithCallback(
                             }
                             done.countDown()
                         }.onToolExecuted { tool ->
-//                            if (tool.hasFailed()) {
-//                                throw ToolExecutionException(
-//                                    toolName = tool.request().name() ?: "unknown",
-//                                    errorDetails = tool.result(),
-//                                )
-//                            }
-                        }.onError { e ->
+                            log.debug("Tool executed: {}", tool)
+                        }
+                        .onError { e ->
                             errorOccurred = true
                             capturedError = e
 
@@ -236,7 +232,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
                     val result = sb.toString()
 
                     if (isConfigurationError) {
-                        return@retry result
+                        throw ConfigurationErrorException(result)
                     }
 
                     if (errorOccurred) {

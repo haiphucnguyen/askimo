@@ -52,7 +52,7 @@ import io.askimo.core.util.AskimoHome
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import java.awt.FileDialog
 import java.awt.Frame
 import java.nio.file.Files
@@ -208,7 +208,7 @@ fun welcomeProfileDialog(
                         },
                         placeholder = { Text(stringResource("welcome.name.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                         singleLine = true,
                     )
 
@@ -219,7 +219,7 @@ fun welcomeProfileDialog(
                         label = { Text(stringResource("welcome.occupation")) },
                         placeholder = { Text(stringResource("welcome.occupation.placeholder")) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.outlinedTextFieldColors(),
+                        colors = AppComponents.outlinedTextFieldColors(),
                         singleLine = true,
                     )
 

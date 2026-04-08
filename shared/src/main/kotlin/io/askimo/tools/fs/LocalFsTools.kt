@@ -1058,11 +1058,6 @@ object LocalFsTools {
         return control > n / 10
     }
 
-    private fun err(
-        code: String,
-        message: String,
-    ): Map<String, Any?> = mapOf("ok" to false, "error" to code, "message" to message)
-
     private fun humanReadable(bytes: Long): String {
         val units = arrayOf("B", "KB", "MB", "GB", "TB", "PB", "EB")
         var b = bytes.toDouble()

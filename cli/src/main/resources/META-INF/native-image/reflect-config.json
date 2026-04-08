@@ -2428,6 +2428,187 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      { "name": "cleanUp", "parameterTypes": [] },
+      { "name": "setUpClass", "parameterTypes": ["java.nio.file.Path"] },
+      { "name": "tearDownClass", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$Companion",
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$GetUnsyncedMessages",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      { "name": "does not return outdated messages", "parameterTypes": [] },
+      { "name": "respects limit parameter", "parameterTypes": [] },
+      {
+        "name": "returns locally created messages that have never been pushed",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$GetUnsyncedSessions",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      {
+        "name": "does not return session after markSynced is called",
+        "parameterTypes": []
+      },
+      { "name": "respects limit parameter", "parameterTypes": [] },
+      {
+        "name": "returns session that was never synced (syncedAt is null)",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$InsertIfAbsent",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      {
+        "name": "calling twice with identical data produces one row",
+        "parameterTypes": []
+      },
+      {
+        "name": "inserted message has syncedAt set (not returned in getUnsyncedMessages)",
+        "parameterTypes": []
+      },
+      { "name": "inserts message when it does not exist", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$MarkMessageSynced",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      {
+        "name": "returns false for a non-existent message id",
+        "parameterTypes": []
+      },
+      {
+        "name": "returns true and message is excluded from getUnsyncedMessages",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$MarkSessionSynced",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      {
+        "name": "returns false for a non-existent session id",
+        "parameterTypes": []
+      },
+      {
+        "name": "returns true and session is then excluded from getUnsyncedSessions",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "io.askimo.core.chat.repository.ConversationSyncRepositoryIT$UpsertFromServer",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "io.askimo.core.chat.repository.ConversationSyncRepositoryIT"
+        ]
+      },
+      {
+        "name": "does NOT overwrite when server updatedAt equals local updatedAt",
+        "parameterTypes": []
+      },
+      {
+        "name": "does NOT overwrite when server updatedAt is older than local",
+        "parameterTypes": []
+      },
+      {
+        "name": "inserts session when it does not exist locally",
+        "parameterTypes": []
+      },
+      {
+        "name": "is idempotent - calling twice with same data produces one row",
+        "parameterTypes": []
+      },
+      {
+        "name": "processes a batch of sessions in one call",
+        "parameterTypes": []
+      },
+      { "name": "sets syncedAt on fresh insert", "parameterTypes": [] },
+      {
+        "name": "updates title when server updatedAt is strictly newer",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
     "name": "io.askimo.core.chat.repository.ProjectRepositoryIT",
     "allDeclaredFields": true,
     "allDeclaredClasses": true,
@@ -2770,6 +2951,26 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.askimo.core.config.AnalyticsConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["boolean", "java.lang.String"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "boolean",
+          "java.lang.String",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getEndpoint", "parameterTypes": [] },
+      { "name": "getOptedIn", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.AppConfig",
     "methods": [
       {
@@ -2840,6 +3041,7 @@
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "io.askimo.core.config.ProxyConfig",
+          "io.askimo.core.config.AnalyticsConfig",
           "io.askimo.core.context.AppContextParams"
         ]
       },
@@ -2855,11 +3057,13 @@
           "io.askimo.core.config.RagConfig",
           "io.askimo.core.config.ModelsConfig",
           "io.askimo.core.config.ProxyConfig",
+          "io.askimo.core.config.AnalyticsConfig",
           "io.askimo.core.context.AppContextParams",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
+      { "name": "getAnalytics", "parameterTypes": [] },
       { "name": "getChat", "parameterTypes": [] },
       { "name": "getContext", "parameterTypes": [] },
       { "name": "getDeveloper", "parameterTypes": [] },
@@ -4747,7 +4951,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$95UhdKce",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$TJ5euPwO",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5879,6 +6083,9 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "java.lang.SecurityManager"
+  },
+  {
     "name": "java.lang.StackWalker",
     "methods": [
       {
@@ -6476,6 +6683,9 @@
   },
   {
     "name": "kotlin.Function1"
+  },
+  {
+    "name": "kotlin.IgnorableReturnValue"
   },
   {
     "name": "kotlin.Int"
@@ -7128,9 +7338,13 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$8mnnvm1i",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$TfaM2s4g",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
+  },
+  {
+    "name": "org.opentest4j.TestAbortedException",
+    "queryAllDeclaredMethods": true
   },
   {
     "name": "org.osgi.framework.FrameworkUtil"

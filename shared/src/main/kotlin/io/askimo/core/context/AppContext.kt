@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import org.koin.java.KoinJavaComponent
+import org.koin.java.KoinJavaComponent.getKoin
 import java.util.Locale
 
 /**
@@ -356,15 +356,6 @@ class AppContext private constructor(
     }
 
     /**
-     * Get the vision model name for the current provider.
-     */
-    private fun getVisionModelForProvider(provider: ModelProvider): String = if (provider == ModelProvider.UNKNOWN) {
-        params.model
-    } else {
-        AppConfig.models[provider].visionModel
-    }
-
-    /**
      * Set the language directive based on user's locale selection.
      * This constructs a comprehensive instruction for the AI to communicate in the specified language,
      * with a fallback to English if the language is not supported by the AI.
@@ -454,7 +445,7 @@ class AppContext private constructor(
      * @return ToolProvider instance or null if not available
      */
     fun getToolProvider(): ToolProvider? = try {
-        KoinJavaComponent.getKoin().getOrNull<ToolProviderImpl>()
+        getKoin().getOrNull<ToolProviderImpl>()
     } catch (_: Exception) {
         log.debug("ToolProvider not available (Koin not initialized or CLI mode)")
         null

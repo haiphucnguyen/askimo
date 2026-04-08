@@ -72,8 +72,7 @@ object NativeMenuBar {
                     desktop.setAboutHandler { onShowAbout() }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
     }
 
@@ -195,6 +194,12 @@ object NativeMenuBar {
             val systemThemeItem = MenuItem("")
             val lightThemeItem = MenuItem("")
             val darkThemeItem = MenuItem("")
+            val sepiaThemeItem = MenuItem("")
+            val oceanThemeItem = MenuItem("")
+            val nordThemeItem = MenuItem("")
+            val sageThemeItem = MenuItem("")
+            val roseThemeItem = MenuItem("")
+            val indigoThemeItem = MenuItem("")
 
             // Helper function to update all theme menu items
             fun updateThemeMenuItems() {
@@ -205,6 +210,18 @@ object NativeMenuBar {
                     LocalizationManager.getString("menu.view.appearance.light")
                 darkThemeItem.label = (if (currentTheme == ThemeMode.DARK) "✓ " else "  ") +
                     LocalizationManager.getString("menu.view.appearance.dark")
+                sepiaThemeItem.label = (if (currentTheme == ThemeMode.SEPIA) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.sepia")
+                oceanThemeItem.label = (if (currentTheme == ThemeMode.OCEAN) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.ocean")
+                nordThemeItem.label = (if (currentTheme == ThemeMode.NORD) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.nord")
+                sageThemeItem.label = (if (currentTheme == ThemeMode.SAGE) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.sage")
+                roseThemeItem.label = (if (currentTheme == ThemeMode.ROSE) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.rose")
+                indigoThemeItem.label = (if (currentTheme == ThemeMode.INDIGO) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.appearance.indigo")
             }
 
             // Initialize labels
@@ -233,6 +250,54 @@ object NativeMenuBar {
                 },
             )
             appearanceMenu.add(darkThemeItem)
+
+            sepiaThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.SEPIA)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(sepiaThemeItem)
+
+            oceanThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.OCEAN)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(oceanThemeItem)
+
+            nordThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.NORD)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(nordThemeItem)
+
+            sageThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.SAGE)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(sageThemeItem)
+
+            roseThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.ROSE)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(roseThemeItem)
+
+            indigoThemeItem.addActionListener(
+                ActionListener {
+                    ThemePreferences.setThemeMode(ThemeMode.INDIGO)
+                    updateThemeMenuItems()
+                },
+            )
+            appearanceMenu.add(indigoThemeItem)
 
             viewMenu.add(appearanceMenu)
 

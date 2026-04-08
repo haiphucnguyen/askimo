@@ -65,8 +65,11 @@ object FileContentExtractor {
         validateFileSize(file)
 
         val extension = FileTypeSupport.getExtension(file.name)
-        if (FileTypeSupport.isTextExtractable(extension) &&
-            extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
+        if ((
+                FileTypeSupport.isTextExtractable(extension) &&
+                    extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
+                ) ||
+            file.name.lowercase() in FileTypeSupport.CONFIG_EXTENSIONS
         ) {
             return ContentSanitizer.sanitizeTemplateVariables(file.readText())
         }
@@ -146,12 +149,10 @@ object FileContentExtractor {
 
         // Fallback: Check file extension for text files that Tika misdetects
         // This handles cases like .md, .gradle.kts, .gitignore, etc.
-        if (mimeType == "application/octet-stream" ||
-            mimeType.startsWith("application/x-") ||
-            mimeType == "text/plain"
-        ) {
+        if (mimeType == "application/octet-stream" || mimeType.startsWith("application/x-")) {
             val extension = FileTypeSupport.getExtension(file.name)
-            return FileTypeSupport.isTextExtractable(extension)
+            return extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS) ||
+                file.name.lowercase() in FileTypeSupport.CONFIG_EXTENSIONS
         }
 
         return false
@@ -175,7 +176,8 @@ object FileContentExtractor {
         // Fallback to extension check for files Tika misdetects
         if (mimeType == "application/octet-stream" || mimeType.startsWith("application/x-")) {
             val extension = FileTypeSupport.getExtension(file.name)
-            return extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
+            return extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS) ||
+                file.name.lowercase() in FileTypeSupport.CONFIG_EXTENSIONS
         }
 
         return false

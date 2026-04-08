@@ -65,20 +65,17 @@ import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.RunCodeEvent
-import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.formatFileSize
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.markdownText
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.common.ui.util.highlightSearchText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
-
-private val log = currentFileLogger()
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -185,7 +182,7 @@ fun messageList(
 
     // Retry confirmation dialog
     if (showRetryConfirmDialog) {
-        ComponentColors.themedAlertDialog(
+        AppComponents.alertDialog(
             onDismissRequest = {
                 showRetryConfirmDialog = false
                 retryMessageId = null
@@ -325,14 +322,14 @@ fun messageBubble(
                                     ),
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isOutdatedMessage) {
-                                        ComponentColors.userMessageBackground().copy(alpha = 0.5f)
+                                        AppComponents.userMessageBackground().copy(alpha = 0.5f)
                                     } else {
-                                        ComponentColors.userMessageBackground()
+                                        AppComponents.userMessageBackground()
                                     },
                                     contentColor = if (isOutdatedMessage) {
                                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                     } else {
-                                        ComponentColors.userMessageContentColor()
+                                        AppComponents.userMessageContentColor()
                                     },
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -908,7 +905,7 @@ fun aiMessageEditDialog(
                         .fillMaxWidth()
                         .height(400.dp),
                     textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                     label = { Text(stringResource("message.ai.edit.content.label")) },
                 )
 

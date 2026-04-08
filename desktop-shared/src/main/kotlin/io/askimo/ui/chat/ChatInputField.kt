@@ -87,7 +87,7 @@ import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.util.Platform
@@ -288,7 +288,7 @@ fun chatInputField(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                colors = ComponentColors.bannerCardColors(),
+                colors = AppComponents.bannerCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -452,7 +452,7 @@ fun chatInputField(
                             } else {
                                 null
                             },
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Status badge bar - height is 0 when no status
@@ -532,7 +532,7 @@ fun chatInputField(
                                 IconButton(
                                     onClick = { onSendMessage(creationMode, disabledServerIds) },
                                     enabled = inputText.text.isNotBlank(),
-                                    colors = ComponentColors.primaryIconButtonColors(),
+                                    colors = AppComponents.primaryIconButtonColors(),
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 ) {
                                     Icon(
@@ -592,7 +592,7 @@ fun chatInputField(
                             },
                             enabled = !isLoading,
                             colors = if (creationMode is CreationMode.Image) {
-                                ComponentColors.primaryIconButtonColors()
+                                AppComponents.primaryIconButtonColors()
                             } else {
                                 IconButtonDefaults.iconButtonColors()
                             },
@@ -947,7 +947,7 @@ private fun mcpServerItem(
     Box {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = ComponentColors.surfaceVariantCardColors(),
+            colors = AppComponents.surfaceVariantCardColors(),
         ) {
             Row(
                 modifier = Modifier
@@ -1036,7 +1036,7 @@ private fun mcpServerItem(
         }
 
         // Submenu dropdown with tools
-        ComponentColors.themedDropdownMenu(
+        AppComponents.dropdownMenu(
             expanded = showToolsSubmenu,
             onDismissRequest = {
                 showToolsSubmenu = false
@@ -1093,7 +1093,7 @@ private fun mcpServerItem(
                                 }
                             },
                             onClick = { /* Tools are read-only for now */ },
-                            colors = ComponentColors.menuItemColors(),
+                            colors = AppComponents.menuItemColors(),
                         )
                     }
                 }
@@ -1109,7 +1109,7 @@ private fun fileAttachmentItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.surfaceVariantCardColors(),
+        colors = AppComponents.surfaceVariantCardColors(),
     ) {
         Row(
             modifier = Modifier

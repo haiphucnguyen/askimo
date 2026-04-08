@@ -4,8 +4,6 @@
  */
 package io.askimo.ui.session
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,9 +46,9 @@ import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.themedTooltip
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun manageDirectivesDialog(
     directives: List<ChatDirective>,
@@ -124,7 +122,7 @@ fun manageDirectivesDialog(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = ComponentColors.sidebarSurfaceColor(),
+                                    containerColor = AppComponents.sidebarSurfaceColor(),
                                 ),
                             ) {
                                 Column(
@@ -193,7 +191,7 @@ fun manageDirectivesDialog(
                                                 placeholder = { Text(stringResource("directive.edit.name.placeholder")) },
                                                 singleLine = true,
                                                 isError = editError != null && editName.isBlank(),
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
                                             OutlinedTextField(
                                                 value = editContent,
@@ -209,13 +207,13 @@ fun manageDirectivesDialog(
                                                 maxLines = 10,
                                                 isError = editError != null,
                                                 supportingText = editError?.let { { Text(it) } },
-                                                colors = ComponentColors.outlinedTextFieldColors(),
+                                                colors = AppComponents.outlinedTextFieldColors(),
                                             )
 
                                             // Action buttons for edit mode
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.End,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
                                                 secondaryButton(
@@ -259,39 +257,10 @@ fun manageDirectivesDialog(
                                             }
                                         }
                                     } else {
-                                        // Display mode with truncated content and tooltip
-                                        val truncatedContent = if (directive.content.length > 150) {
-                                            directive.content.take(150) + "..."
-                                        } else {
-                                            directive.content
-                                        }
-
-                                        TooltipArea(
-                                            tooltip = {
-                                                Surface(
-                                                    modifier = Modifier.width(400.dp),
-                                                    shadowElevation = 4.dp,
-                                                    shape = MaterialTheme.shapes.small,
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.padding(12.dp),
-                                                    ) {
-                                                        Text(
-                                                            text = stringResource("directive.tooltip.full.content"),
-                                                            style = MaterialTheme.typography.labelMedium,
-                                                            color = MaterialTheme.colorScheme.onSurface,
-                                                        )
-                                                        Text(
-                                                            text = directive.content,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            modifier = Modifier.padding(top = 8.dp),
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                        ) {
+                                        // Display mode: show truncated content, full text in tooltip
+                                        themedTooltip(text = directive.content) {
                                             Text(
-                                                text = truncatedContent,
+                                                text = directive.content,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 3,

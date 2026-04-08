@@ -101,7 +101,7 @@ val desktopModule = module {
         )
     }
 
-    single { UpdateService() }
+    single { UpdateService(githubRepo = "haiphucnguyen/askimo") }
     single { AvatarService() }
     factory { (scope: CoroutineScope) ->
         UpdateViewModel(

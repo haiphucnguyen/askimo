@@ -30,7 +30,7 @@ import androidx.compose.ui.window.Dialog
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 
 @Composable
 fun newDirectiveDialog(
@@ -85,7 +85,7 @@ fun newDirectiveDialog(
                     singleLine = true,
                     isError = nameError != null,
                     supportingText = nameError?.let { { Text(it) } },
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                 )
 
                 // Content field
@@ -103,7 +103,7 @@ fun newDirectiveDialog(
                     maxLines = 8,
                     isError = contentError != null,
                     supportingText = contentError?.let { { Text(it) } },
-                    colors = ComponentColors.outlinedTextFieldColors(),
+                    colors = AppComponents.outlinedTextFieldColors(),
                 )
 
                 // Apply to current session checkbox
@@ -127,7 +127,7 @@ fun newDirectiveDialog(
                 // Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     secondaryButton(

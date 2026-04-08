@@ -11,7 +11,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -66,7 +69,7 @@ import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
 
 @Composable
@@ -91,7 +94,6 @@ fun projectsView(
                     .fillMaxWidth()
                     .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 24.dp),
             ) {
-                // ── Header ────────────────────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -156,84 +158,76 @@ fun projectsView(
                     }
                 }
 
-                // ── Scrollable content ────────────────────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState),
-                ) {
-                    when {
-                        viewModel.isLoading -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(200.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                when {
+                    viewModel.isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
                         }
+                    }
 
-                        viewModel.errorMessage != null -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(200.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource("projects.error", viewModel.errorMessage ?: ""),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                    TextButton(onClick = {
-                                        viewModel.clearError()
-                                        viewModel.refresh()
-                                    }) {
-                                        Text(stringResource("action.retry"))
-                                    }
-                                }
-                            }
-                        }
-
-                        viewModel.pagedProjects?.isEmpty == true -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(200.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource("projects.empty"),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = stringResource("projects.empty.hint"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-
-                        else -> {
-                            val pagedProjects = viewModel.pagedProjects!!
+                    viewModel.errorMessage != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                pagedProjects.items.forEach { project ->
-                                    projectCard(
-                                        project = project,
-                                        onSelectProject = onSelectProject,
-                                        onEditProject = onEditProject,
-                                        onDeleteProject = { viewModel.deleteProject(it) },
-                                    )
+                                Text(
+                                    text = stringResource("projects.error", viewModel.errorMessage ?: ""),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(onClick = {
+                                    viewModel.clearError()
+                                    viewModel.refresh()
+                                }) {
+                                    Text(stringResource("action.retry"))
                                 }
+                            }
+                        }
+                    }
+
+                    viewModel.pagedProjects?.isEmpty == true -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = stringResource("projects.empty"),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = stringResource("projects.empty.hint"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        val pagedProjects = viewModel.pagedProjects!!
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            pagedProjects.items.forEach { project ->
+                                projectCard(
+                                    project = project,
+                                    onSelectProject = onSelectProject,
+                                    onEditProject = onEditProject,
+                                    onDeleteProject = { viewModel.deleteProject(it) },
+                                )
                             }
                         }
                     }
@@ -255,7 +249,6 @@ fun projectsView(
             } // end width-constrained column
         } // end scrollable column
 
-        // ── Scrollbar ─────────────────────────────────────────────────────────
         VerticalScrollbar(
             adapter = rememberScrollbarAdapter(scrollState),
             modifier = Modifier
@@ -282,10 +275,15 @@ private fun projectCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val showActions = isHovered || showMenu
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .hoverable(interactionSource),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -312,6 +310,8 @@ private fun projectCard(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         project.description?.let { desc ->
                             Spacer(modifier = Modifier.height(4.dp))
@@ -342,53 +342,58 @@ private fun projectCard(
                     }
                 }
 
-                // Menu button
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                // Menu button — only shown on hover, no space reserved when hidden
+                if (showActions) {
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "More options",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
 
-                    ComponentColors.themedDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource("action.edit")) },
-                            onClick = {
-                                showMenu = false
-                                onEditProject(project.id)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource("action.delete")) },
-                            onClick = {
-                                showMenu = false
-                                onDeleteProject(project.id)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        )
+                        AppComponents.dropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource("action.edit")) },
+                                onClick = {
+                                    showMenu = false
+                                    onEditProject(project.id)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource("action.delete")) },
+                                onClick = {
+                                    showMenu = false
+                                    onDeleteProject(project.id)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            )
+                        }
                     }
                 }
             }

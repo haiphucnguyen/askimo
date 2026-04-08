@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -57,6 +58,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.backup.BackupManager
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -75,11 +78,13 @@ import io.askimo.core.event.system.InvalidateCacheEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.currentFileLogger
+import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
 import io.askimo.core.util.PersonalAskimoHome
 import io.askimo.desktop.di.allDesktopModules
+import io.askimo.desktop.settings.SettingsSection
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.settings.aboutDialog
 import io.askimo.desktop.settings.fileViewerDialog
@@ -103,14 +108,23 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
 import io.askimo.ui.common.preferences.ApplicationPreferences
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.BackgroundImage
+import io.askimo.ui.common.theme.DarkColorScheme
+import io.askimo.ui.common.theme.IndigoColorScheme
+import io.askimo.ui.common.theme.LightColorScheme
+import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.LocalFontScale
+import io.askimo.ui.common.theme.NordColorScheme
+import io.askimo.ui.common.theme.OceanColorScheme
+import io.askimo.ui.common.theme.RoseColorScheme
+import io.askimo.ui.common.theme.SageColorScheme
+import io.askimo.ui.common.theme.SepiaColorScheme
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.theme.appBackground
 import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.theme.detectMacOSDarkMode
-import io.askimo.ui.common.theme.getDarkColorScheme
-import io.askimo.ui.common.theme.getLightColorScheme
 import io.askimo.ui.common.ui.util.CustomUriHandler
 import io.askimo.ui.project.ProjectsViewModel
 import io.askimo.ui.project.editProjectDialog
@@ -128,6 +142,7 @@ import io.askimo.ui.shell.ErrorDialogState
 import io.askimo.ui.shell.EventLogDockPosition
 import io.askimo.ui.shell.NativeMenuBar
 import io.askimo.ui.shell.UpdateViewModel
+import io.askimo.ui.shell.analyticsConsentDialog
 import io.askimo.ui.shell.eventLogPanel
 import io.askimo.ui.shell.eventLogWindow
 import io.askimo.ui.shell.globalErrorHandler
@@ -155,10 +170,17 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JFileChooser
 import kotlin.system.exitProcess
 
 private val log = currentFileLogger()
+
+/** Show the analytics consent dialog after this many completed LLM responses. */
+private const val ANALYTICS_CONSENT_THRESHOLD = 5
+
+/** Tracks total LLM responses in this session; read by onCloseRequest for session-end analytics. */
+private val sessionMessageCount = AtomicInteger(0)
 
 fun main() {
     AskimoHome.register(PersonalAskimoHome)
@@ -224,6 +246,8 @@ fun main() {
         Window(
             icon = icon,
             onCloseRequest = {
+                Analytics.trackSessionEnd(sessionMessageCount.get())
+                Analytics.shutdown()
                 exitApplication()
             },
             title = "Askimo",
@@ -248,6 +272,7 @@ data class ChatViewState(
 fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = null) {
     var currentView by remember { mutableStateOf(View.CHAT) }
     var previousView by remember { mutableStateOf(View.CHAT) }
+    var settingsSection by remember { mutableStateOf(SettingsSection.GENERAL) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isProjectsExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
@@ -266,6 +291,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var pendingTerminalCommand by remember { mutableStateOf<PendingTerminalCommand?>(null) }
     var showStarPromptDialog by remember { mutableStateOf(false) }
+    var showAnalyticsConsentDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
@@ -484,11 +510,44 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
     }
 
+    // Initialize business analytics and show one-time consent dialog after meaningful usage
+    LaunchedEffect(Unit) {
+        Analytics.initialize()
+        val hasRag = withContext(Dispatchers.IO) {
+            AskimoHome.projectsDir().toFile().let { it.exists() && it.listFiles()?.isNotEmpty() == true }
+        }
+        val hasMcp = withContext(Dispatchers.IO) {
+            runCatching { koin.get<GlobalMcpInstanceService>().getInstances().isNotEmpty() }.getOrDefault(false)
+        }
+        Analytics.track(
+            AnalyticsEvents.APP_STARTED,
+            mapOf(
+                "mode" to "desktop",
+                "has_rag" to hasRag.toString(),
+                "has_mcp" to hasMcp.toString(),
+            ),
+        )
+    }
+
+    // Watch LLM call count from the user-facing telemetry — show the consent dialog once
+    // after ANALYTICS_CONSENT_THRESHOLD completed responses.
+    val telemetryMetrics by appContext.telemetry.metricsFlow.collectAsState()
+    LaunchedEffect(telemetryMetrics.llmCallsByProvider) {
+        val totalCalls = telemetryMetrics.llmCallsByProvider.values.sum()
+        sessionMessageCount.set(totalCalls)
+        if (totalCalls >= ANALYTICS_CONSENT_THRESHOLD &&
+            !ApplicationPreferences.isAnalyticsConsentAsked() &&
+            !Analytics.isEnabled
+        ) {
+            showAnalyticsConsentDialog = true
+        }
+    }
+
     // Theme state
     val themeMode by ThemePreferences.themeMode.collectAsState()
-    val accentColor by ThemePreferences.accentColor.collectAsState()
     val fontSettings by ThemePreferences.fontSettings.collectAsState()
     val locale by ThemePreferences.locale.collectAsState()
+    val backgroundImage by ThemePreferences.backgroundImage.collectAsState()
 
     // Watch AI response language config and update directive
     var preferredResponseAILocale by remember { mutableStateOf(AppConfig.chat.defaultResponseAILocale) }
@@ -602,12 +661,22 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkMode
+        ThemeMode.SEPIA -> false
+        ThemeMode.OCEAN -> false
+        ThemeMode.NORD -> true
+        ThemeMode.SAGE -> false
+        ThemeMode.ROSE -> false
+        ThemeMode.INDIGO -> true
     }
 
-    val colorScheme = if (useDarkMode) {
-        getDarkColorScheme(accentColor)
-    } else {
-        getLightColorScheme(accentColor)
+    val colorScheme = when (themeMode) {
+        ThemeMode.SEPIA -> SepiaColorScheme
+        ThemeMode.OCEAN -> OceanColorScheme
+        ThemeMode.NORD -> NordColorScheme
+        ThemeMode.SAGE -> SageColorScheme
+        ThemeMode.ROSE -> RoseColorScheme
+        ThemeMode.INDIGO -> IndigoColorScheme
+        else -> if (useDarkMode) DarkColorScheme else LightColorScheme
     }
 
     val customTypography = remember(fontSettings) {
@@ -639,374 +708,388 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 colorScheme = colorScheme,
                 typography = customTypography,
             ) {
-                // Main application structure: MenuBar → Body (Stack) → Footer
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
+                appBackground(
+                    backgroundImage = backgroundImage,
+                    useDarkMode = useDarkMode,
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    Row(
+                    // Main application structure: MenuBar → Body (Stack) → Footer
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    ) {
-                        if (currentView == View.SETTINGS) {
-                            settingsViewWithSidebar(
-                                onClose = {
-                                    currentView = previousView
+                            .fillMaxSize()
+                            .background(
+                                if (backgroundImage is BackgroundImage.None) {
+                                    MaterialTheme.colorScheme.background
+                                } else {
+                                    Transparent
                                 },
-                                settingsViewModel = settingsViewModel,
-                            )
-                        } else {
-                            // Main View - With sidebar and content
-                            // Main content area - supports event log docking at left/right/bottom
-                            // Event Log Panel - LEFT position
-                            if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.LEFT) {
-                                eventLogPanel(
-                                    events = eventLogEvents,
-                                    onDetach = {
-                                        showEventLogPanel = false
-                                        showEventLogWindow = true
-                                    },
+                            ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                        ) {
+                            if (currentView == View.SETTINGS) {
+                                settingsViewWithSidebar(
                                     onClose = {
-                                        showEventLogPanel = false
+                                        currentView = previousView
                                     },
-                                    onClearEvents = {
-                                        eventLogEvents.clear()
-                                    },
-                                    onDockPositionChange = { newPosition ->
-                                        eventLogDockPosition = newPosition
-                                    },
-                                    currentDockPosition = eventLogDockPosition,
-                                    size = eventLogPanelSize,
-                                    onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                                    modifier = Modifier.fillMaxHeight(),
+                                    settingsViewModel = settingsViewModel,
+                                    selectedSection = settingsSection,
+                                    onSectionChange = { settingsSection = it },
                                 )
-                            }
+                            } else {
+                                // Main View - With sidebar and content
+                                // Main content area - supports event log docking at left/right/bottom
+                                // Event Log Panel - LEFT position
+                                if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.LEFT) {
+                                    eventLogPanel(
+                                        events = eventLogEvents,
+                                        onDetach = {
+                                            showEventLogPanel = false
+                                            showEventLogWindow = true
+                                        },
+                                        onClose = {
+                                            showEventLogPanel = false
+                                        },
+                                        onClearEvents = {
+                                            eventLogEvents.clear()
+                                        },
+                                        onDockPositionChange = { newPosition ->
+                                            eventLogDockPosition = newPosition
+                                        },
+                                        currentDockPosition = eventLogDockPosition,
+                                        size = eventLogPanelSize,
+                                        onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                                        modifier = Modifier.fillMaxHeight(),
+                                    )
+                                }
 
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                            ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
                                         .weight(1f)
-                                        .onPreviewKeyEvent { keyEvent ->
-                                            val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
+                                        .fillMaxHeight(),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f)
+                                            .onPreviewKeyEvent { keyEvent ->
+                                                val shortcut = KeyMapManager.handleKeyEvent(keyEvent)
 
-                                            when (shortcut) {
-                                                AppShortcut.NEW_CHAT -> {
-                                                    chatViewModel?.clearChat()
-                                                    currentView = View.CHAT
-                                                    true
-                                                }
-                                                AppShortcut.CREATE_PROJECT -> {
-                                                    showNewProjectDialog = true
-                                                    true
-                                                }
-                                                AppShortcut.SEARCH_IN_CHAT -> {
-                                                    if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
-                                                        chatViewModel.enableSearchMode()
-                                                    }
-                                                    true
-                                                }
-                                                AppShortcut.GLOBAL_SEARCH -> {
-                                                    showGlobalSearchDialog = true
-                                                    true
-                                                }
-                                                AppShortcut.TOGGLE_CHAT_HISTORY -> {
-                                                    isSessionsExpanded = !isSessionsExpanded
-                                                    true
-                                                }
-                                                AppShortcut.OPEN_SETTINGS -> {
-                                                    previousView = currentView
-                                                    currentView = View.SETTINGS
-                                                    true
-                                                }
-                                                AppShortcut.STOP_AI_RESPONSE -> {
-                                                    if (chatViewModel?.isLoading == true) {
-                                                        chatViewModel.cancelResponse()
+                                                when (shortcut) {
+                                                    AppShortcut.NEW_CHAT -> {
+                                                        chatViewModel?.clearChat()
+                                                        currentView = View.CHAT
                                                         true
-                                                    } else {
-                                                        false
                                                     }
-                                                }
-                                                AppShortcut.QUIT_APPLICATION -> {
-                                                    showQuitDialog = true
-                                                    true
-                                                }
-                                                AppShortcut.ENTER_FULLSCREEN -> {
-                                                    windowState?.let { state ->
-                                                        state.placement = if (state.placement == WindowPlacement.Fullscreen) {
-                                                            WindowPlacement.Floating
+                                                    AppShortcut.CREATE_PROJECT -> {
+                                                        showNewProjectDialog = true
+                                                        true
+                                                    }
+                                                    AppShortcut.SEARCH_IN_CHAT -> {
+                                                        if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
+                                                            chatViewModel.enableSearchMode()
+                                                        }
+                                                        true
+                                                    }
+                                                    AppShortcut.GLOBAL_SEARCH -> {
+                                                        showGlobalSearchDialog = true
+                                                        true
+                                                    }
+                                                    AppShortcut.TOGGLE_CHAT_HISTORY -> {
+                                                        isSessionsExpanded = !isSessionsExpanded
+                                                        true
+                                                    }
+                                                    AppShortcut.OPEN_SETTINGS -> {
+                                                        previousView = currentView
+                                                        currentView = View.SETTINGS
+                                                        true
+                                                    }
+                                                    AppShortcut.STOP_AI_RESPONSE -> {
+                                                        if (chatViewModel?.isLoading == true) {
+                                                            chatViewModel.cancelResponse()
+                                                            true
                                                         } else {
-                                                            WindowPlacement.Fullscreen
+                                                            false
                                                         }
                                                     }
-                                                    true
-                                                }
-                                                AppShortcut.NAVIGATE_TO_SESSIONS -> {
-                                                    currentView = View.SESSIONS
-                                                    true
-                                                }
-                                                AppShortcut.NAVIGATE_TO_PROJECTS -> {
-                                                    currentView = View.PROJECTS
-                                                    true
-                                                }
-                                                else -> false
-                                            }
-                                        },
-                                ) {
-                                    Row(modifier = Modifier.fillMaxSize()) {
-                                        BoxWithConstraints {
-                                            // Calculate actual sidebar width from fraction
-                                            // Min 200dp, max 35% of screen width, default ~20%
-                                            val minSidebarWidth = 200.dp
-                                            val maxSidebarWidthFraction = 0.35f
-                                            // Guard: max must never be less than min (happens when
-                                            // the window is resized smaller than ~571dp wide)
-                                            val maxSidebarWidth = maxOf(maxWidth * maxSidebarWidthFraction, minSidebarWidth)
-                                            val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
-                                                minSidebarWidth,
-                                                maxSidebarWidth,
-                                            )
-
-                                            navigationSidebar(
-                                                isExpanded = isSidebarExpanded,
-                                                width = calculatedWidth,
-                                                currentView = currentView,
-                                                isProjectsExpanded = isProjectsExpanded,
-                                                isSessionsExpanded = isSessionsExpanded,
-                                                projectsViewModel = projectsViewModel,
-                                                sessionsViewModel = sessionsViewModel,
-                                                currentSessionId = activeSessionId,
-                                                currentProjectId = selectedProjectId,
-                                                userProfile = userProfile,
-                                                onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
-                                                onNewChat = {
-                                                    chatViewModel?.clearChat()
-                                                    currentView = View.CHAT
-                                                },
-                                                onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
-                                                onNewProject = {
-                                                    showNewProjectDialog = true
-                                                },
-                                                onSelectProject = { projectId ->
-                                                    selectedProjectId = projectId
-                                                    currentView = View.PROJECT_DETAIL
-                                                },
-                                                onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
-                                                onNavigateToSessions = { currentView = View.SESSIONS },
-                                                onResumeSession = handleResumeSession,
-                                                onDeleteSession = { sessionId ->
-                                                    sessionsViewModel.deleteSessionWithCleanup(sessionId)
-                                                },
-                                                onStarSession = { sessionId, isStarred ->
-                                                    sessionsViewModel.updateSessionStarred(sessionId, isStarred)
-                                                },
-                                                onRenameSession = { sessionId, _ ->
-                                                    sessionsViewModel.showRenameDialog(sessionId)
-                                                },
-                                                onExportSession = { sessionId ->
-                                                    sessionsViewModel.exportSession(sessionId)
-                                                },
-                                                onShowSessionSummary = { sessionId ->
-                                                    sessionMemorySessionId = sessionId
-                                                    showSessionMemoryDialog = true
-                                                },
-                                                onEditUserProfile = {
-                                                    showUserProfileDialog = true
-                                                },
-                                                onNavigateToSettings = {
-                                                    previousView = currentView
-                                                    currentView = View.SETTINGS
-                                                },
-                                                onNavigateToAbout = {
-                                                    showAboutDialog = true
-                                                },
-                                            )
-                                        } // End BoxWithConstraints
-
-                                        // Draggable divider
-                                        if (isSidebarExpanded) {
-                                            // Need to recalculate containerWidth for the divider
-                                            BoxWithConstraints {
-                                                val containerWidth = maxWidth
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .width(8.dp)
-                                                        .fillMaxHeight()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                                                        .pointerInput(containerWidth) {
-                                                            detectDragGestures { change, dragAmount ->
-                                                                change.consume()
-                                                                // Calculate new fraction based on drag
-                                                                val dragWidthDp = (dragAmount.x / density).dp
-                                                                val newFraction = sidebarWidthFraction + (dragWidthDp / containerWidth)
-                                                                // Min 10%, max 35%
-                                                                val coercedFraction = newFraction.coerceIn(0.10f, 0.35f)
-                                                                sidebarWidthFraction = coercedFraction
-                                                                // Save preference
-                                                                ThemePreferences.setMainSidebarWidthFraction(coercedFraction)
+                                                    AppShortcut.QUIT_APPLICATION -> {
+                                                        showQuitDialog = true
+                                                        true
+                                                    }
+                                                    AppShortcut.ENTER_FULLSCREEN -> {
+                                                        windowState?.let { state ->
+                                                            state.placement = if (state.placement == WindowPlacement.Fullscreen) {
+                                                                WindowPlacement.Floating
+                                                            } else {
+                                                                WindowPlacement.Fullscreen
                                                             }
-                                                        },
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    Column(
+                                                        }
+                                                        true
+                                                    }
+                                                    AppShortcut.NAVIGATE_TO_SESSIONS -> {
+                                                        currentView = View.SESSIONS
+                                                        true
+                                                    }
+                                                    AppShortcut.NAVIGATE_TO_PROJECTS -> {
+                                                        currentView = View.PROJECTS
+                                                        true
+                                                    }
+                                                    else -> false
+                                                }
+                                            },
+                                    ) {
+                                        Row(modifier = Modifier.fillMaxSize()) {
+                                            BoxWithConstraints {
+                                                // Calculate actual sidebar width from fraction
+                                                // Min 200dp, max 35% of screen width, default ~20%
+                                                val minSidebarWidth = 200.dp
+                                                val maxSidebarWidthFraction = 0.35f
+                                                // Guard: max must never be less than min (happens when
+                                                // the window is resized smaller than ~571dp wide)
+                                                val maxSidebarWidth = maxOf(maxWidth * maxSidebarWidthFraction, minSidebarWidth)
+                                                val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
+                                                    minSidebarWidth,
+                                                    maxSidebarWidth,
+                                                )
+
+                                                navigationSidebar(
+                                                    isExpanded = isSidebarExpanded,
+                                                    width = calculatedWidth,
+                                                    currentView = currentView,
+                                                    isProjectsExpanded = isProjectsExpanded,
+                                                    isSessionsExpanded = isSessionsExpanded,
+                                                    projectsViewModel = projectsViewModel,
+                                                    sessionsViewModel = sessionsViewModel,
+                                                    currentSessionId = activeSessionId,
+                                                    currentProjectId = selectedProjectId,
+                                                    userProfile = userProfile,
+                                                    onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
+                                                    onNewChat = {
+                                                        chatViewModel?.clearChat()
+                                                        currentView = View.CHAT
+                                                    },
+                                                    onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
+                                                    onNewProject = {
+                                                        showNewProjectDialog = true
+                                                    },
+                                                    onSelectProject = { projectId ->
+                                                        selectedProjectId = projectId
+                                                        currentView = View.PROJECT_DETAIL
+                                                    },
+                                                    onToggleSessions = { isSessionsExpanded = !isSessionsExpanded },
+                                                    onNavigateToSessions = { currentView = View.SESSIONS },
+                                                    onResumeSession = handleResumeSession,
+                                                    onDeleteSession = { sessionId ->
+                                                        sessionsViewModel.deleteSessionWithCleanup(sessionId)
+                                                    },
+                                                    onStarSession = { sessionId, isStarred ->
+                                                        sessionsViewModel.updateSessionStarred(sessionId, isStarred)
+                                                    },
+                                                    onRenameSession = { sessionId, _ ->
+                                                        sessionsViewModel.showRenameDialog(sessionId)
+                                                    },
+                                                    onExportSession = { sessionId ->
+                                                        sessionsViewModel.exportSession(sessionId)
+                                                    },
+                                                    onShowSessionSummary = { sessionId ->
+                                                        sessionMemorySessionId = sessionId
+                                                        showSessionMemoryDialog = true
+                                                    },
+                                                    onEditUserProfile = {
+                                                        showUserProfileDialog = true
+                                                    },
+                                                    onNavigateToSettings = {
+                                                        previousView = currentView
+                                                        currentView = View.SETTINGS
+                                                    },
+                                                    onNavigateToAbout = {
+                                                        showAboutDialog = true
+                                                    },
+                                                )
+                                            } // End BoxWithConstraints
+
+                                            // Draggable divider
+                                            if (isSidebarExpanded) {
+                                                // Need to recalculate containerWidth for the divider
+                                                BoxWithConstraints {
+                                                    val containerWidth = maxWidth
+
+                                                    Box(
                                                         modifier = Modifier
-                                                            .width(2.dp)
-                                                            .fillMaxHeight(0.1f),
-                                                        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                                                            .width(8.dp)
+                                                            .fillMaxHeight()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                                                            .pointerInput(containerWidth) {
+                                                                detectDragGestures { change, dragAmount ->
+                                                                    change.consume()
+                                                                    // Calculate new fraction based on drag
+                                                                    val dragWidthDp = (dragAmount.x / density).dp
+                                                                    val newFraction = sidebarWidthFraction + (dragWidthDp / containerWidth)
+                                                                    // Min 10%, max 35%
+                                                                    val coercedFraction = newFraction.coerceIn(0.10f, 0.35f)
+                                                                    sidebarWidthFraction = coercedFraction
+                                                                    // Save preference
+                                                                    ThemePreferences.setMainSidebarWidthFraction(coercedFraction)
+                                                                }
+                                                            },
+                                                        contentAlignment = Alignment.Center,
                                                     ) {
-                                                        repeat(3) {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(2.dp)
-                                                                    .background(
-                                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                                        shape = CircleShape,
-                                                                    ),
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .width(2.dp)
+                                                                .fillMaxHeight(0.1f),
+                                                            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                                                        ) {
+                                                            repeat(3) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .size(2.dp)
+                                                                        .background(
+                                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                                            shape = CircleShape,
+                                                                        ),
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                } // End BoxWithConstraints for divider
+                                            }
+
+                                            // Main content - only show when chatViewModel exists
+                                            if (chatViewModel != null) {
+                                                mainContent(
+                                                    currentView = currentView,
+                                                    chatViewModel = chatViewModel,
+                                                    sessionsViewModel = sessionsViewModel,
+                                                    projectsViewModel = projectsViewModel,
+                                                    appContext = appContext,
+                                                    sessionManager = sessionManager,
+                                                    deleteSessionCommand = deleteSessionCommand,
+                                                    onResumeSession = handleResumeSession,
+                                                    onNavigateToChat = {
+                                                        currentView = View.CHAT
+                                                    },
+                                                    onNavigateToSessions = {
+                                                        currentView = View.SESSIONS
+                                                    },
+                                                    onSelectProject = { projectId ->
+                                                        selectedProjectId = projectId
+                                                        currentView = View.PROJECT_DETAIL
+                                                    },
+                                                    onEditProject = { projectId ->
+                                                        editingProjectId = projectId
+                                                        showEditProjectDialog = true
+                                                    },
+                                                    activeSessionId = activeSessionId,
+                                                    sessionChatState = sessionChatStates[activeSessionId],
+                                                    onChatStateChange = { inputText, attachments, editingMessage ->
+                                                        activeSessionId?.let { sessionId ->
+                                                            sessionChatStates[sessionId] = ChatViewState(
+                                                                inputText = inputText,
+                                                                attachments = attachments,
+                                                                editingMessage = editingMessage,
                                                             )
                                                         }
-                                                    }
-                                                }
-                                            } // End BoxWithConstraints for divider
-                                        }
-
-                                        // Main content - only show when chatViewModel exists
-                                        if (chatViewModel != null) {
-                                            mainContent(
-                                                currentView = currentView,
-                                                chatViewModel = chatViewModel,
-                                                sessionsViewModel = sessionsViewModel,
-                                                projectsViewModel = projectsViewModel,
-                                                appContext = appContext,
-                                                sessionManager = sessionManager,
-                                                deleteSessionCommand = deleteSessionCommand,
-                                                onResumeSession = handleResumeSession,
-                                                onNavigateToChat = {
-                                                    currentView = View.CHAT
-                                                },
-                                                onNavigateToSessions = {
-                                                    currentView = View.SESSIONS
-                                                },
-                                                onSelectProject = { projectId ->
-                                                    selectedProjectId = projectId
-                                                    currentView = View.PROJECT_DETAIL
-                                                },
-                                                onEditProject = { projectId ->
-                                                    editingProjectId = projectId
-                                                    showEditProjectDialog = true
-                                                },
-                                                activeSessionId = activeSessionId,
-                                                sessionChatState = sessionChatStates[activeSessionId],
-                                                onChatStateChange = { inputText, attachments, editingMessage ->
-                                                    activeSessionId?.let { sessionId ->
-                                                        sessionChatStates[sessionId] = ChatViewState(
-                                                            inputText = inputText,
-                                                            attachments = attachments,
-                                                            editingMessage = editingMessage,
-                                                        )
-                                                    }
-                                                },
-                                                selectedProjectId = selectedProjectId,
-                                                userAvatarPath = userProfile?.preferences?.get("avatarPath"),
-                                            )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Text(
-                                                    text = stringResource("chat.no.active.session"),
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    },
+                                                    selectedProjectId = selectedProjectId,
+                                                    userAvatarPath = userProfile?.preferences?.get("avatarPath"),
                                                 )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Text(
+                                                        text = stringResource("chat.no.active.session"),
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
                                             }
-                                        }
-                                    } // End Row (sidebar + divider + content)
+                                        } // End Row (sidebar + divider + content)
+                                    }
+                                } // End of main content column (chat/sessions)
+
+                                // Event Log Panel - RIGHT position
+                                if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.RIGHT) {
+                                    eventLogPanel(
+                                        events = eventLogEvents,
+                                        onDetach = {
+                                            showEventLogPanel = false
+                                            showEventLogWindow = true
+                                        },
+                                        onClose = {
+                                            showEventLogPanel = false
+                                        },
+                                        onClearEvents = {
+                                            eventLogEvents.clear()
+                                        },
+                                        onDockPositionChange = { newPosition ->
+                                            eventLogDockPosition = newPosition
+                                        },
+                                        currentDockPosition = eventLogDockPosition,
+                                        size = eventLogPanelSize,
+                                        onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                                        modifier = Modifier.fillMaxHeight(),
+                                    )
                                 }
-                            } // End of main content column (chat/sessions)
+                            } // End of if-else (Settings OR Chat/Sessions)
+                        } // End of Row (Stack body)
 
-                            // Event Log Panel - RIGHT position
-                            if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.RIGHT) {
-                                eventLogPanel(
-                                    events = eventLogEvents,
-                                    onDetach = {
-                                        showEventLogPanel = false
-                                        showEventLogWindow = true
-                                    },
-                                    onClose = {
-                                        showEventLogPanel = false
-                                    },
-                                    onClearEvents = {
-                                        eventLogEvents.clear()
-                                    },
-                                    onDockPositionChange = { newPosition ->
-                                        eventLogDockPosition = newPosition
-                                    },
-                                    currentDockPosition = eventLogDockPosition,
-                                    size = eventLogPanelSize,
-                                    onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                                    modifier = Modifier.fillMaxHeight(),
-                                )
-                            }
-                        } // End of if-else (Settings OR Chat/Sessions)
-                    } // End of Row (Stack body)
-
-                    // Footer - Always visible at bottom
-                    footerBar(
-                        onShowUpdateDetails = {
-                            updateViewModel.showUpdateDialogForExistingRelease()
-                        },
-                        onConfigureAiProvider = {
-                            settingsViewModel.onChangeProvider()
-                        },
-                    )
-
-                    // Event Log Panel - BOTTOM position
-                    if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.BOTTOM) {
-                        eventLogPanel(
-                            events = eventLogEvents,
-                            onDetach = {
-                                showEventLogPanel = false
-                                showEventLogWindow = true
+                        // Footer - Always visible at bottom
+                        footerBar(
+                            onShowUpdateDetails = {
+                                updateViewModel.showUpdateDialogForExistingRelease()
                             },
-                            onClose = {
-                                showEventLogPanel = false
+                            onConfigureAiProvider = {
+                                settingsViewModel.onChangeProvider()
                             },
-                            onClearEvents = {
-                                eventLogEvents.clear()
-                            },
-                            onDockPositionChange = { newPosition ->
-                                eventLogDockPosition = newPosition
-                            },
-                            currentDockPosition = eventLogDockPosition,
-                            size = eventLogPanelSize,
-                            onSizeChange = { newSize -> eventLogPanelSize = newSize },
-                            modifier = Modifier.fillMaxWidth(),
                         )
-                    }
 
-                    // Terminal Panel - BOTTOM position
-                    if (showTerminalPanel) {
-                        terminalPanel(
-                            onClose = { showTerminalPanel = false },
-                            panelHeight = terminalPanelSize,
-                            onHeightChange = { newSize -> terminalPanelSize = newSize },
-                            pendingCommand = pendingTerminalCommand,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                } // End of main Column
+                        // Event Log Panel - BOTTOM position
+                        if (showEventLogPanel && eventLogDockPosition == EventLogDockPosition.BOTTOM) {
+                            eventLogPanel(
+                                events = eventLogEvents,
+                                onDetach = {
+                                    showEventLogPanel = false
+                                    showEventLogWindow = true
+                                },
+                                onClose = {
+                                    showEventLogPanel = false
+                                },
+                                onClearEvents = {
+                                    eventLogEvents.clear()
+                                },
+                                onDockPositionChange = { newPosition ->
+                                    eventLogDockPosition = newPosition
+                                },
+                                currentDockPosition = eventLogDockPosition,
+                                size = eventLogPanelSize,
+                                onSizeChange = { newSize -> eventLogPanelSize = newSize },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        // Terminal Panel - BOTTOM position
+                        if (showTerminalPanel) {
+                            terminalPanel(
+                                onClose = { showTerminalPanel = false },
+                                panelHeight = terminalPanelSize,
+                                onHeightChange = { newSize -> terminalPanelSize = newSize },
+                                pendingCommand = pendingTerminalCommand,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    } // End of main Column
+                } // End appBackground
 
                 // Quit confirmation dialog
                 if (showQuitDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showQuitDialog = false },
                         title = { Text(stringResource("menu.quit") + "?") },
                         text = { Text(stringResource("session.delete.confirm")) },
@@ -1032,7 +1115,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Invalidate cache confirmation dialog
                 if (showInvalidateCacheDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showInvalidateCacheDialog = false },
                         title = { Text(stringResource("menu.invalidate.caches.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.message")) },
@@ -1061,7 +1144,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Cache deleted success dialog
                 if (showCacheDeletedDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { showCacheDeletedDialog = false },
                         title = { Text(stringResource("menu.invalidate.caches.success.title")) },
                         text = { Text(stringResource("menu.invalidate.caches.success.message")) },
@@ -1077,7 +1160,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Import backup confirmation dialog
                 if (showImportBackupConfirm) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = {
                             showImportBackupConfirm = false
                             pendingImportBackupPath = null
@@ -1132,7 +1215,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                 // Provider setup required dialog
                 if (showProviderSetupDialog) {
-                    ComponentColors.themedAlertDialog(
+                    AppComponents.alertDialog(
                         onDismissRequest = { },
                         title = {
                             Text(
@@ -1467,6 +1550,21 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     )
                 }
 
+                // Analytics Consent Dialog (One-time after meaningful usage)
+                if (showAnalyticsConsentDialog) {
+                    analyticsConsentDialog(
+                        onDecline = {
+                            ApplicationPreferences.markAnalyticsConsentAsked()
+                            showAnalyticsConsentDialog = false
+                        },
+                        onAccept = {
+                            ApplicationPreferences.markAnalyticsConsentAsked()
+                            showAnalyticsConsentDialog = false
+                            Analytics.optIn()
+                        },
+                    )
+                }
+
                 if (errorDialogState.show) {
                     errorDialog(
                         title = errorDialogState.title,
@@ -1596,7 +1694,13 @@ fun mainContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(
+                if (LocalBackgroundActive.current) {
+                    Transparent
+                } else {
+                    MaterialTheme.colorScheme.background
+                },
+            ),
     ) {
         when (currentView) {
             View.CHAT, View.NEW_CHAT -> {

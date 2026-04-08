@@ -65,7 +65,7 @@ import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
@@ -157,7 +157,7 @@ fun mcpServerTemplatesSection() {
                                 Text(stringResource("mcp.servers.add"))
                             }
 
-                            ComponentColors.themedDropdownMenu(
+                            AppComponents.dropdownMenu(
                                 expanded = showAddDropdown,
                                 onDismissRequest = { showAddDropdown = false },
                             ) {
@@ -249,7 +249,7 @@ fun mcpServerTemplatesSection() {
                     // Templates list
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         if (servers.isEmpty()) {
                             Box(
@@ -304,7 +304,7 @@ fun mcpServerTemplatesSection() {
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ComponentColors.bannerCardColors(),
+                        colors = AppComponents.bannerCardColors(),
                     ) {
                         if (globalInstances.isEmpty()) {
                             Box(
@@ -421,7 +421,7 @@ fun mcpServerTemplatesSection() {
 
     // Delete Template Confirmation
     deletingServer?.let { server ->
-        ComponentColors.themedAlertDialog(
+        AppComponents.alertDialog(
             onDismissRequest = { deletingServer = null },
             title = { Text(stringResource("mcp.servers.delete.confirm.title")) },
             text = { Text(stringResource("mcp.servers.delete.confirm.message", server.name)) },
@@ -446,7 +446,7 @@ fun mcpServerTemplatesSection() {
 
     // Delete Global Instance Confirmation
     deletingGlobalInstance?.let { instance ->
-        ComponentColors.themedAlertDialog(
+        AppComponents.alertDialog(
             onDismissRequest = { deletingGlobalInstance = null },
             title = { Text(stringResource("mcp.global.instance.delete.confirm.title")) },
             text = { Text(stringResource("mcp.global.instance.delete.confirm.message", instance.name)) },
@@ -473,7 +473,7 @@ fun mcpServerTemplatesSection() {
 
     // Reset Templates Confirmation
     if (showResetConfirm) {
-        ComponentColors.themedAlertDialog(
+        AppComponents.alertDialog(
             onDismissRequest = { showResetConfirm = false },
             title = { Text(stringResource("mcp.servers.reset.confirm.title")) },
             text = { Text(stringResource("mcp.servers.reset.confirm.message")) },

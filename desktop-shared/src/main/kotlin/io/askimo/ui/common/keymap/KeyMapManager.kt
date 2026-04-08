@@ -24,7 +24,7 @@ object KeyMapManager {
     /**
      * Determines if the primary modifier key (Command on macOS, Ctrl on others) is pressed
      */
-    fun KeyEvent.isPrimaryModifierPressed(): Boolean = if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) isMetaPressed else isCtrlPressed
+    fun KeyEvent.isPrimaryModifierPressed(): Boolean = if (Platform.isMac) isMetaPressed else isCtrlPressed
 
     /**
      * Defines all application shortcuts
@@ -100,28 +100,28 @@ object KeyMapManager {
             val parts = mutableListOf<String>()
 
             if (requiresPrimaryModifier) {
-                parts.add(_root_ide_package_.io.askimo.ui.util.Platform.modifierKey)
+                parts.add(Platform.modifierKey)
             }
             if (requiresCtrl) {
-                parts.add(if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "⌃" else "Ctrl")
+                parts.add(if (Platform.isMac) "⌃" else "Ctrl")
             }
             if (requiresShift) {
-                parts.add(if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "⇧" else "Shift")
+                parts.add(if (Platform.isMac) "⇧" else "Shift")
             }
             if (requiresAlt) {
-                parts.add(if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "⌥" else "Alt")
+                parts.add(if (Platform.isMac) "⌥" else "Alt")
             }
 
             // Special key names
             val keyName = when (key) {
-                Key.Enter -> if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "↵" else "Enter"
-                Key.Escape -> if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "⎋" else "Esc"
+                Key.Enter -> if (Platform.isMac) "↵" else "Enter"
+                Key.Escape -> if (Platform.isMac) "⎋" else "Esc"
                 Key.Comma -> ","
                 else -> key.keyCode.toInt().toChar().uppercaseChar().toString()
             }
             parts.add(keyName)
 
-            return parts.joinToString(if (_root_ide_package_.io.askimo.ui.util.Platform.isMac) "" else "+")
+            return parts.joinToString(if (Platform.isMac) "" else "+")
         }
     }
 

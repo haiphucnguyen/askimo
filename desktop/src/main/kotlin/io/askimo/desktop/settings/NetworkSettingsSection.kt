@@ -43,7 +43,7 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.config.ProxyType
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
@@ -114,7 +114,7 @@ private fun proxyConfigurationCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = ComponentColors.bannerCardColors(),
+        colors = AppComponents.bannerCardColors(),
     ) {
         Column(
             modifier = Modifier
@@ -207,7 +207,7 @@ private fun proxyConfigurationCard() {
                         }
                     }
 
-                    ComponentColors.themedDropdownMenu(
+                    AppComponents.dropdownMenu(
                         expanded = proxyTypeDropdownExpanded,
                         onDismissRequest = { proxyTypeDropdownExpanded = false },
                     ) {

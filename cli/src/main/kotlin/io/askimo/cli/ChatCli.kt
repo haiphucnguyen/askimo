@@ -36,6 +36,8 @@ import io.askimo.cli.service.CliUpdateService
 import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.service.ChatSessionService
@@ -85,6 +87,22 @@ fun main(args: Array<String>) {
     }
 
     val appContext = AppContext.initialize(mode)
+
+    Analytics.initialize()
+    val hasRag = AskimoHome.projectsDir().toFile().let { it.exists() && (it.listFiles()?.isNotEmpty() == true) }
+    Analytics.track(
+        AnalyticsEvents.APP_STARTED,
+        mapOf(
+            "mode" to "cli",
+            "has_rag" to hasRag.toString(),
+        ),
+    )
+    Runtime.getRuntime().addShutdownHook(
+        Thread({
+            Analytics.trackSessionEnd(messageCount = 0)
+            Analytics.shutdown()
+        }, "analytics-shutdown"),
+    )
 
     // Shared command handlers available in both modes
     val sharedCommandHandlers: List<CommandHandler> =

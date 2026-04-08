@@ -53,7 +53,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.theme.ComponentColors
+import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -340,7 +340,7 @@ fun addGlobalMcpInstanceDialog(
                             placeholder = { Text(stringResource("mcp.integrations.instance.name.placeholder")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         // Description (optional)
@@ -352,7 +352,7 @@ fun addGlobalMcpInstanceDialog(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 3,
-                            colors = ComponentColors.outlinedTextFieldColors(),
+                            colors = AppComponents.outlinedTextFieldColors(),
                         )
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
@@ -413,7 +413,7 @@ fun addGlobalMcpInstanceDialog(
                                     supportingText = { Text(stringResource("mcp.template.field.command.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -424,7 +424,7 @@ fun addGlobalMcpInstanceDialog(
                                     supportingText = { Text(stringResource("mcp.global.instance.field.args.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -435,7 +435,7 @@ fun addGlobalMcpInstanceDialog(
                                     supportingText = { Text(stringResource("mcp.global.instance.field.workingdir.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -447,7 +447,7 @@ fun addGlobalMcpInstanceDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 3,
                                     maxLines = 5,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                             }
                         }
@@ -463,7 +463,7 @@ fun addGlobalMcpInstanceDialog(
                                     supportingText = { Text(stringResource("mcp.template.http.url.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -475,7 +475,7 @@ fun addGlobalMcpInstanceDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 3,
                                     maxLines = 5,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
 
                                 OutlinedTextField(
@@ -486,7 +486,7 @@ fun addGlobalMcpInstanceDialog(
                                     supportingText = { Text(stringResource("mcp.template.http.timeout.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    colors = ComponentColors.outlinedTextFieldColors(),
+                                    colors = AppComponents.outlinedTextFieldColors(),
                                 )
                             }
                         }
