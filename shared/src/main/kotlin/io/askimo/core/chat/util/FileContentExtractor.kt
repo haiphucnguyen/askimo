@@ -4,7 +4,9 @@
  */
 package io.askimo.core.chat.util
 
+import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.logger
+import io.askimo.core.util.formatFileSize
 import org.apache.tika.Tika
 import org.apache.tika.exception.TikaException
 import org.apache.tika.metadata.Metadata
@@ -12,6 +14,12 @@ import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.sax.BodyContentHandler
 import java.io.File
 import java.io.FileInputStream
+
+/**
+ * Exception thrown when a file exceeds the maximum allowed size for chat attachments.
+ */
+class FileSizeExceededException(val fileSize: Long, val maxAllowedSize: Long) :
+    Exception("File size exceeds the maximum allowed limit of ${formatFileSize(maxAllowedSize)}")
 
 /**
  * Utility for extracting text content from various file types.
@@ -26,14 +34,36 @@ object FileContentExtractor {
     private val parser = AutoDetectParser()
 
     /**
+     * Maximum file size for chat attachments (from AppConfig).
+     */
+    private val maxFileSizeBytes: Long = AppConfig.indexing.maxFileBytes
+
+    /**
+     * Validate that a file does not exceed the maximum allowed size.
+     *
+     * @param file The file to check
+     * @throws FileSizeExceededException if the file exceeds the maximum allowed size
+     */
+    fun validateFileSize(file: File) {
+        val fileSize = file.length()
+        if (fileSize > maxFileSizeBytes) {
+            throw FileSizeExceededException(fileSize, maxFileSizeBytes)
+        }
+    }
+
+    /**
      * Extract text content from a file.
      * Supports text files, PDF, DOCX, XLSX, PPTX, OpenDocument, emails, and other formats supported by Tika.
      *
      * @param file The file to extract content from
      * @return The extracted text content
      * @throws Exception if the file cannot be read or the format is unsupported
+     * @throws FileSizeExceededException if the file exceeds the maximum allowed size
      */
     fun extractContent(file: File): String {
+        // Validate file size first
+        validateFileSize(file)
+
         val extension = FileTypeSupport.getExtension(file.name)
         if (FileTypeSupport.isTextExtractable(extension) &&
             extension in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS)
@@ -188,6 +218,14 @@ object FileContentExtractor {
             mimeType.startsWith("audio/") -> "Audio files are not supported"
             else -> "Unsupported file type: $mimeType"
         }
+    }
+
+    /**
+     * Get a user-friendly message for file size exceeded errors.
+     */
+    fun getFileSizeExceededMessage(file: File): String {
+        val fileSize = file.length()
+        return "File '${file.name}' is too large (${formatFileSize(fileSize)}). Maximum allowed size is ${formatFileSize(maxFileSizeBytes)}."
     }
 
     // Application MIME types that contain text

@@ -13,5 +13,5 @@ package io.askimo.core.util
 fun formatFileSize(bytes: Long): String = when {
     bytes < 1024 -> "$bytes B"
     bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> "${bytes / (1024 * 1024)} MB"
+    else -> "${String.format("%.1f", bytes / (1024.0 * 1024))} MB"
 }

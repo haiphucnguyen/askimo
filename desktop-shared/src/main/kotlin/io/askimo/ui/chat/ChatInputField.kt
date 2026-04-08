@@ -74,6 +74,7 @@ import androidx.compose.ui.window.Popup
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.i18n.LocalizationManager
@@ -220,7 +221,6 @@ fun chatInputField(
         }
     }
 
-    // File attachment handler
     val selectFileTitle = stringResource("chat.select.file")
     val openFileDialog = {
         val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
@@ -230,20 +230,33 @@ fun chatInputField(
         val selectedFiles = fileChooser.files
         if (selectedFiles != null && selectedFiles.isNotEmpty()) {
             try {
-                val newAttachments = selectedFiles.map { file ->
-                    FileAttachmentDTO(
-                        id = UUID.randomUUID().toString(),
-                        messageId = "",
-                        sessionId = sessionId ?: "",
-                        fileName = file.name,
-                        mimeType = file.extension,
-                        size = file.length(),
-                        createdAt = LocalDateTime.now(),
-                        content = null,
-                        filePath = file.absolutePath,
+                val maxFileSizeBytes = AppConfig.indexing.maxFileBytes
+                val invalidFiles = selectedFiles.filter { it.length() > maxFileSizeBytes }
+
+                if (invalidFiles.isNotEmpty()) {
+                    val firstInvalidFile = invalidFiles.first()
+                    EventBus.post(
+                        AppErrorEvent(
+                            title = "File Too Large",
+                            message = "File '${firstInvalidFile.name}' is too large (${formatFileSize(firstInvalidFile.length())}). Maximum allowed size is ${formatFileSize(maxFileSizeBytes)}.",
+                        )
                     )
+                } else {
+                    val newAttachments = selectedFiles.map { file ->
+                        FileAttachmentDTO(
+                            id = UUID.randomUUID().toString(),
+                            messageId = "",
+                            sessionId = sessionId ?: "",
+                            fileName = file.name,
+                            mimeType = file.extension,
+                            size = file.length(),
+                            createdAt = LocalDateTime.now(),
+                            content = null,
+                            filePath = file.absolutePath,
+                        )
+                    }
+                    onAttachmentsChange(attachments + newAttachments)
                 }
-                onAttachmentsChange(attachments + newAttachments)
             } catch (e: Exception) {
                 log.error("Error adding file attachments: ${e.message}", e)
             }
