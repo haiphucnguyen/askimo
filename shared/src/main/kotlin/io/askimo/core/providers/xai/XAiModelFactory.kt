@@ -7,6 +7,7 @@ package io.askimo.core.providers.xai
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiImageModel
@@ -52,39 +53,17 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (external service)
-        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
-        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
-
-        val chatModel =
-            OpenAiStreamingChatModel
-                .builder()
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .apiKey(safeApiKey(settings.apiKey))
-                .baseUrl(settings.baseUrl)
-                .modelName(settings.defaultModel)
-                .temperature(AppConfig.chat.samplingTemperature)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
-                .build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = XAI,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = XAI,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(
         settings: XAiSettings,
@@ -97,25 +76,54 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
         .logResponses(log.isTraceEnabled)
         .build()
 
-    private fun createSecondaryChatModel(settings: XAiSettings): ChatModel {
+    override fun createStreamingModel(settings: XAiSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
-        val modelName = AppConfig.models[XAI].utilityModel
-            .ifBlank { settings.defaultModel }
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .baseUrl(settings.baseUrl)
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: XAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        return OpenAiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .baseUrl(settings.baseUrl)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(AppConfig.models[XAI].utilityModel.ifBlank { settings.defaultModel })
+            .timeout(Duration.ofSeconds(AppConfig.models[XAI].utilityModelTimeoutSeconds))
+            .build()
+    }
+
+    override fun createModel(settings: XAiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
         return OpenAiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(modelName)
-            .timeout(Duration.ofSeconds(AppConfig.models[XAI].utilityModelTimeoutSeconds))
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
             .build()
     }
 
     override fun createUtilityClient(
         settings: XAiSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 }

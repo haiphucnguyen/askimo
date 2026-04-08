@@ -7,6 +7,7 @@ package io.askimo.core.providers.lmstudio
 import dev.langchain4j.http.client.jdk.JdkHttpClient
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -68,39 +69,17 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
         retriever: ContentRetriever?,
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
-    ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (automatically skips proxy for localhost)
-        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
-
-        val chatModel =
-            OpenAiStreamingChatModel
-                .builder()
-                .baseUrl(settings.baseUrl)
-                .apiKey("lm-studio")
-                .modelName(settings.defaultModel)
-                .temperature(AppConfig.chat.samplingTemperature)
-                .logger(log)
-                .logRequests(log.isDebugEnabled)
-                .logResponses(log.isTraceEnabled)
-                .timeout(Duration.ofMinutes(5))
-                .httpClientBuilder(jdkHttpClientBuilder)
-                .listeners(listOf(TelemetryChatModelListener(telemetry, LMSTUDIO.name.lowercase())))
-                .build()
-
-        return AiServiceBuilder.buildChatClient(
-            sessionId = sessionId,
-            settings = settings,
-            provider = LMSTUDIO,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
-            chatMemory = chatMemory,
-            toolProvider = toolProvider,
-            retriever = retriever,
-            executionMode = executionMode,
-        )
-    }
+    ): ChatClient = AiServiceBuilder.buildChatClient(
+        sessionId = sessionId,
+        settings = settings,
+        provider = LMSTUDIO,
+        chatModel = createStreamingModel(settings),
+        secondaryChatModel = createSecondaryModel(settings),
+        chatMemory = chatMemory,
+        toolProvider = toolProvider,
+        retriever = retriever,
+        executionMode = executionMode,
+    )
 
     override fun createImageModel(
         settings: LmStudioSettings,
@@ -118,12 +97,26 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .build()
     }
 
-    private fun createSecondaryChatModel(
-        settings: LmStudioSettings,
-    ): ChatModel {
-        // Configure HTTP client with proxy (automatically skips proxy for localhost)
+    override fun createStreamingModel(settings: LmStudioSettings): StreamingChatModel {
         val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
+        val telemetry = AppContext.getInstance().telemetry
 
+        return OpenAiStreamingChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey("lm-studio")
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .timeout(Duration.ofMinutes(5))
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, LMSTUDIO.name.lowercase())))
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: LmStudioSettings): ChatModel {
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
         return OpenAiChatModel.builder()
             .baseUrl(settings.baseUrl)
             .apiKey("lm-studio")
@@ -133,10 +126,25 @@ class LmStudioModelFactory : ChatModelFactory<LmStudioSettings> {
             .build()
     }
 
+    override fun createModel(settings: LmStudioSettings): ChatModel {
+        val jdkHttpClientBuilder = createHttpClientBuilder(settings.baseUrl)
+        val telemetry = AppContext.getInstance().telemetry
+
+        return OpenAiChatModel.builder()
+            .baseUrl(settings.baseUrl)
+            .apiKey("lm-studio")
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
+            .timeout(Duration.ofMinutes(5))
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, LMSTUDIO.name.lowercase())))
+            .build()
+    }
+
     override fun createUtilityClient(
         settings: LmStudioSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true

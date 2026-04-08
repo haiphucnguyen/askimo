@@ -10,6 +10,7 @@ import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.Capability
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.googleai.GeminiThinkingConfig
 import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel
@@ -62,9 +63,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         executionMode: ExecutionMode,
         chatMemory: ChatMemory?,
     ): ChatClient {
-        val telemetry = AppContext.getInstance().telemetry
-
-        // Configure HTTP client with proxy (external service)
+        // Configure HTTP client for thinking probe (probe needs its own builder)
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
 
@@ -73,39 +72,13 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             val supportsThinking = probeThinkingSupport(settings, jdkHttpClientBuilder)
             ModelCapabilitiesCache.setThinkingSupport(GEMINI, settings.defaultModel, supportsThinking)
         }
-        val supportsThinking = ModelCapabilitiesCache.supportsThinking(GEMINI, settings.defaultModel)
-
-        val chatModel = GoogleAiGeminiStreamingChatModel
-            .builder()
-            .httpClientBuilder(jdkHttpClientBuilder)
-            .apiKey(safeApiKey(settings.apiKey))
-            .modelName(settings.defaultModel)
-            .logger(log)
-            .logRequests(log.isDebugEnabled)
-            .logResponses(log.isTraceEnabled)
-            .listeners(listOf(TelemetryChatModelListener(telemetry, GEMINI.name.lowercase())))
-            .apply {
-                if (supportsThinking) {
-                    thinkingConfig(
-                        GeminiThinkingConfig.builder()
-                            .thinkingLevel(GeminiThinkingConfig.GeminiThinkingLevel.LOW)
-                            .build(),
-                    )
-                    sendThinking(true)
-                    returnThinking(true)
-                    temperature(1.0)
-                } else {
-                    temperature(AppConfig.chat.samplingTemperature)
-                }
-            }
-            .build()
 
         return AiServiceBuilder.buildChatClient(
             sessionId = sessionId,
             settings = settings,
             provider = GEMINI,
-            chatModel = chatModel,
-            secondaryChatModel = createSecondaryChatModel(settings),
+            chatModel = createStreamingModel(settings),
+            secondaryChatModel = createSecondaryModel(settings),
             chatMemory = chatMemory,
             toolProvider = toolProvider,
             retriever = retriever,
@@ -161,26 +134,66 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
         .logResponses(log.isTraceEnabled)
         .build()
 
-    private fun createSecondaryChatModel(settings: GeminiSettings): ChatModel {
+    override fun createStreamingModel(settings: GeminiSettings): StreamingChatModel {
         val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
         val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+        val telemetry = AppContext.getInstance().telemetry
 
-        val modelName = AppConfig.models[GEMINI].utilityModel
-            .ifBlank { settings.defaultModel }
+        val supportsThinking = ModelCapabilitiesCache.supportsThinking(GEMINI, settings.defaultModel)
 
+        return GoogleAiGeminiStreamingChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(settings.defaultModel)
+            .logger(log)
+            .logRequests(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
+            .listeners(listOf(TelemetryChatModelListener(telemetry, GEMINI.name.lowercase())))
+            .apply {
+                if (supportsThinking) {
+                    thinkingConfig(
+                        GeminiThinkingConfig.builder()
+                            .thinkingLevel(GeminiThinkingConfig.GeminiThinkingLevel.LOW)
+                            .build(),
+                    )
+                    sendThinking(true)
+                    returnThinking(true)
+                    temperature(1.0)
+                } else {
+                    temperature(AppConfig.chat.samplingTemperature)
+                }
+            }
+            .build()
+    }
+
+    override fun createSecondaryModel(settings: GeminiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
         return GoogleAiGeminiChatModel.builder()
             .httpClientBuilder(jdkHttpClientBuilder)
             .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
             .apiKey(safeApiKey(settings.apiKey))
-            .modelName(modelName)
+            .modelName(AppConfig.models[GEMINI].utilityModel.ifBlank { settings.defaultModel })
             .timeout(Duration.ofSeconds(AppConfig.models[GEMINI].utilityModelTimeoutSeconds))
+            .build()
+    }
+
+    override fun createModel(settings: GeminiSettings): ChatModel {
+        val httpClientBuilder = ProxyUtil.configureProxy(HttpClient.newBuilder())
+        val jdkHttpClientBuilder = JdkHttpClient.builder().httpClientBuilder(httpClientBuilder)
+
+        return GoogleAiGeminiChatModel.builder()
+            .httpClientBuilder(jdkHttpClientBuilder)
+            .apiKey(safeApiKey(settings.apiKey))
+            .modelName(settings.defaultModel)
+            .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }
 
     override fun createUtilityClient(
         settings: GeminiSettings,
     ): ChatClient = AiServices.builder(ChatClient::class.java)
-        .chatModel(createSecondaryChatModel(settings))
+        .chatModel(createSecondaryModel(settings))
         .build()
 
     override fun supportsEmbedding(): Boolean = true

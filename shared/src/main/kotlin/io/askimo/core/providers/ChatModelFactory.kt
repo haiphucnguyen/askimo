@@ -5,6 +5,8 @@
 package io.askimo.core.providers
 
 import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -69,6 +71,43 @@ interface ChatModelFactory<T : ProviderSettings> {
     fun createImageModel(
         settings: T,
     ): ImageModel
+
+    /**
+     * Creates a bare [StreamingChatModel] instance configured for this provider.
+     * @param settings Provider-specific settings (credentials, model name, base URL, etc.)
+     * @return A fully configured [StreamingChatModel] ready to be used or wrapped
+     */
+    fun createStreamingModel(settings: T): StreamingChatModel
+
+    /**
+     * Creates a bare [ChatModel] (non-streaming) instance configured for this provider.
+     *
+     * Uses the same model as [createStreamingModel] — i.e. `settings.defaultModel` with the
+     * same temperature — but returns a synchronous [ChatModel] instead of a streaming one.
+     * Useful when a caller needs a blocking chat call (e.g. LangChain4j components that only
+     * accept [ChatModel]) without sacrificing model quality.
+     *
+     * Note: for lightweight classification or utility tasks, prefer [createUtilityClient] which
+     * uses a cheaper secondary model where available.
+     *
+     * @param settings Provider-specific settings (credentials, model name, base URL, etc.)
+     * @return A fully configured [ChatModel] ready to be used or wrapped
+     */
+    fun createModel(settings: T): ChatModel
+
+    /**
+     * Creates a lightweight secondary [ChatModel] using the provider's utility/cheap model.
+     *
+     * This is the non-streaming counterpart used for tasks that don't need the full frontier
+     * model — e.g. RAG query compression, intent classification, session title generation.
+     * For cloud providers this maps to a smaller/cheaper model (e.g. `utilityModel` from
+     * AppConfig). For local providers it typically falls back to `settings.defaultModel`
+     * since there is no extra cost distinction.
+     *
+     * @param settings Provider-specific settings (credentials, model name, base URL, etc.)
+     * @return A fully configured cheap [ChatModel] ready to be used or wrapped
+     */
+    fun createSecondaryModel(settings: T): ChatModel
 
     /**
      * Returns helpful guidance text to display when no models are available for this provider.

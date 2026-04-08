@@ -193,11 +193,6 @@ object ProxyUtil {
                     log.error("Failed to configure SOCKS5 proxy: ${e.message}", e)
                 }
             }
-
-            else -> {
-                // ProxyType.NONE - already handled with early return above
-                log.debug("Proxy disabled (else branch - should not reach here)")
-            }
         }
 
         return builder
