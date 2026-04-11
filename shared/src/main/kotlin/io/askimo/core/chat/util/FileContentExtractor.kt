@@ -18,8 +18,7 @@ import java.io.FileInputStream
 /**
  * Exception thrown when a file exceeds the maximum allowed size for chat attachments.
  */
-class FileSizeExceededException(val fileSize: Long, val maxAllowedSize: Long) :
-    Exception("File size exceeds the maximum allowed limit of ${formatFileSize(maxAllowedSize)}")
+class FileSizeExceededException(val fileSize: Long, val maxAllowedSize: Long) : Exception("File size exceeds the maximum allowed limit of ${formatFileSize(maxAllowedSize)}")
 
 /**
  * Utility for extracting text content from various file types.
@@ -98,11 +97,13 @@ object FileContentExtractor {
                 mimeType.contains("rtf") -> {
                 ContentSanitizer.sanitizeTemplateVariables(extractUsingTika(file))
             }
+
             // Plain text files (includes CSV, TSV, etc.)
             mimeType.startsWith("text/") ||
                 mimeType in SUPPORTED_APPLICATION_TYPES -> {
                 ContentSanitizer.sanitizeTemplateVariables(file.readText())
             }
+
             // Fallback: Extension-based check for files Tika misdetects
             // This handles .md, .gradle.kts, .gitignore, and other text files
             mimeType == "application/octet-stream" ||
@@ -113,6 +114,7 @@ object FileContentExtractor {
                     throw UnsupportedOperationException("Cannot extract content from: $mimeType (extension: .$extension)")
                 }
             }
+
             else -> throw UnsupportedOperationException("Cannot extract content from: $mimeType")
         }
     }

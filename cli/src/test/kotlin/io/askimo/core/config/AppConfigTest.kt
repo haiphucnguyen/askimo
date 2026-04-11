@@ -38,7 +38,10 @@ class AppConfigTest {
         assertEquals("", models[ModelProvider.ANTHROPIC].utilityModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].visionModel)
         assertEquals("claude-sonnet-4-6", models[ModelProvider.ANTHROPIC].imageModel)
-        assertEquals(45L, models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds)
+
+        // Global timeouts
+        assertEquals(45L, models.timeouts.utilityModelTimeoutSeconds)
+        assertEquals(300L, models.timeouts.defaultModelTimeoutSeconds)
 
         // Gemini
         assertEquals("", models[ModelProvider.GEMINI].utilityModel)

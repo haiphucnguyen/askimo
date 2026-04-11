@@ -101,6 +101,7 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
@@ -117,7 +118,7 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(apiKey))
             .modelName(AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModel.ifBlank { settings.defaultModel })
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.OPENAI_COMPATIBLE].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -131,6 +132,7 @@ class OpenAiCompatibleModelFactory : ChatModelFactory<OpenAiCompatibleSettings> 
             .baseUrl(settings.baseUrl)
             .apiKey(safeApiKey(apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OPENAI_COMPATIBLE.providerKey())))
             .build()

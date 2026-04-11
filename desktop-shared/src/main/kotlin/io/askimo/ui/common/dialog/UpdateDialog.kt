@@ -45,12 +45,14 @@ fun updateCheckDialog(
                 onLater = onDismiss,
             )
         }
+
         viewModel.releaseInfo != null && !viewModel.releaseInfo!!.isNewVersion -> {
             upToDateDialog(
                 currentVersion = viewModel.getCurrentVersion(),
                 onDismiss = onDismiss,
             )
         }
+
         viewModel.errorMessage != null -> {
             errorDialog(
                 message = viewModel.errorMessage!!,

@@ -752,10 +752,12 @@ private fun getShellCommand(): String {
                 "cmd.exe"
             }
         }
+
         os.contains("mac") -> {
             // macOS: prefer zsh (default since Catalina)
             System.getenv("SHELL") ?: "/bin/zsh"
         }
+
         else -> {
             // Linux/Unix: use user's default shell
             System.getenv("SHELL") ?: "/bin/bash"

@@ -112,6 +112,7 @@ fun modelSelectionDialog(
                             )
                         }
                     }
+
                     viewModel.modelError != null -> {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                             Text(
@@ -130,12 +131,14 @@ fun modelSelectionDialog(
                             }
                         }
                     }
+
                     viewModel.availableModels.isEmpty() -> {
                         Text(
                             text = stringResource("settings.model.none"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+
                     else -> {
                         Text(
                             text = stringResource("settings.model.change.description"),

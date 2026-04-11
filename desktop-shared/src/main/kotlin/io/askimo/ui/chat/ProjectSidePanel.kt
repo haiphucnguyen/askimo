@@ -303,6 +303,7 @@ fun projectSidePanel(
                                     },
                                 )
                             }
+
                             PanelTab.MCP -> {
                                 mcpTabContent(project = project)
                             }
@@ -462,11 +463,15 @@ private fun ragSourcesTabContent(
                 Text(
                     text = when (ragIndexingStatus) {
                         "started" -> stringResource("rag.status.started")
+
                         "inprogress" -> ragIndexingPercentage?.let {
                             stringResource("rag.status.inprogress", it)
                         } ?: stringResource("rag.status.inprogress.unknown")
+
                         "completed" -> stringResource("rag.status.ready")
+
                         "failed" -> stringResource("rag.status.failed")
+
                         else -> stringResource("rag.status.not.indexed")
                     },
                     style = MaterialTheme.typography.bodyMedium,

@@ -1,8 +1,9 @@
 [versions]
 graalvm-plugin = "0.11.5"
 jline = "3.30.6"
-langchain4j = "1.12.2"
-commonmark = "0.27.1"
+langchain4j = "1.13.0"
+langchain4j-extra = "1.13.0-beta23"
+commonmark = "0.28.0"
 kotlinxSerializationJson = "1.10.0"
 kotlinxCoroutines = "1.10.2"
 slf4j = "2.0.17"
@@ -12,25 +13,26 @@ testcontainers = "1.21.3"
 mockitoKotlin = "6.1.0"
 kotlin = "2.3.20"
 jackson = "2.19.2"
-spotless = "8.0.0"
+spotless = "8.4.0"
 detekt = "1.23.8"
 shadow = "9.0.1"
 graalvmSvm = "25.0.2"
-sqlite = "3.51.1.0"
+sqlite = "3.51.3.0"
 hikaricp = "7.0.2"
-exposed = "1.1.1"
-compose = "1.9.3"
+exposed = "1.2.0"
+compose = "1.10.3"
 coil = "3.4.0"
 koin = "4.2.0"
 jlatexmath = "1.0.7"
 tika = "3.3.0"
 lucene = "10.4.0"
-langchain4j-extra = "1.12.2-beta22"
 caffeine = "3.2.3"
 jsoup = "1.22.1"
 konform = "0.11.1"
 pty4j = "0.13.12"
 jediterm = "3.64"
+openpdf = "2.2.2"
+poi = "5.4.0"
 
 [libraries]
 # JLine
@@ -84,6 +86,12 @@ caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "c
 
 # HTML Parser
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+
+# PDF Export (OpenPDF / LibrePDF)
+openpdf = { module = "com.github.librepdf:openpdf", version.ref = "openpdf" }
+
+# Word Export (Apache POI)
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 
 # Logging
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }

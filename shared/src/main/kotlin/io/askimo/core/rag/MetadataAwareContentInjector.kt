@@ -78,6 +78,7 @@ class MetadataAwareContentInjector(
                 CitationStyle.MINIMAL -> {
                     "Source: [$title]($url)"
                 }
+
                 CitationStyle.COMPACT -> {
                     buildString {
                         append("Source: [`$title`]($url)")
@@ -86,6 +87,7 @@ class MetadataAwareContentInjector(
                         }
                     }
                 }
+
                 CitationStyle.DETAILED -> {
                     buildString {
                         append("Source: [`$title`]($url)")
@@ -113,6 +115,7 @@ class MetadataAwareContentInjector(
                     "Source: $fileName"
                 }
             }
+
             CitationStyle.COMPACT -> {
                 // Filename with line numbers if available
                 buildString {
@@ -130,6 +133,7 @@ class MetadataAwareContentInjector(
                     }
                 }
             }
+
             CitationStyle.DETAILED -> {
                 // Full path and all available metadata
                 buildString {

@@ -95,6 +95,7 @@ class CustomUriHandler(
                         }
                     }
                 }
+
                 uri.startsWith("http://") || uri.startsWith("https://") -> {
                     // Open web URLs in the default browser
                     if (Desktop.isDesktopSupported()) {
@@ -105,6 +106,7 @@ class CustomUriHandler(
                         }
                     }
                 }
+
                 else -> {
                     log.warn("Unsupported URI scheme: $uri")
                 }

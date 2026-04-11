@@ -239,7 +239,7 @@ fun chatInputField(
                         AppErrorEvent(
                             title = "File Too Large",
                             message = "File '${firstInvalidFile.name}' is too large (${formatFileSize(firstInvalidFile.length())}). Maximum allowed size is ${formatFileSize(maxFileSizeBytes)}.",
-                        )
+                        ),
                     )
                 } else {
                     val newAttachments = selectedFiles.map { file ->

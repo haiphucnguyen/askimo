@@ -420,6 +420,7 @@ private fun sanitizeArraysInKeyFacts(jsonText: String): String {
                     }
                     JsonPrimitive(arrayValues.joinToString(", "))
                 }
+
                 else -> value
             }
         }

@@ -159,10 +159,12 @@ private class SmartTooltipPositionProvider(
                 x = anchorBounds.left - popupContentSize.width - spacing,
                 y = anchorBounds.top + (anchorBounds.height - popupContentSize.height) / 2,
             )
+
             TooltipPlacement.RIGHT -> IntOffset(
                 x = anchorBounds.right + spacing,
                 y = anchorBounds.top + (anchorBounds.height - popupContentSize.height) / 2,
             )
+
             TooltipPlacement.AUTO -> {
                 val isInBottomHalf = anchorBounds.top > maxHeightPx / 2
                 if (isInBottomHalf) {

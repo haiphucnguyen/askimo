@@ -157,16 +157,19 @@ class ChatMessageRepository internal constructor(
                 // Start from the beginning (oldest messages)
                 query.orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
             }
+
             cursor == null && direction == PaginationDirection.BACKWARD -> {
                 // Start from the end (newest messages)
                 query.orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
             }
+
             direction == PaginationDirection.FORWARD -> {
                 // Get messages after the cursor (newer messages)
                 query
                     .andWhere { ChatMessagesTable.createdAt greater cursor!! }
                     .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
             }
+
             else -> {
                 // Get messages before the cursor (older messages)
                 query
@@ -264,7 +267,9 @@ class ChatMessageRepository internal constructor(
         // Apply sorting at database level - Exposed supports this natively!
         selectQuery = when (sortBy) {
             SearchSortBy.DATE_DESC -> selectQuery.orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
+
             SearchSortBy.DATE_ASC -> selectQuery.orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
+
             SearchSortBy.RELEVANCE -> {
                 // For now, fall back to DATE_DESC
                 // In future, could add SQL CASE WHEN for relevance scoring

@@ -114,16 +114,20 @@ object AiServiceBuilder {
         val isToolUnsupportedError =
             // Direct error messages
             errorMessage.contains("does not support tool") ||
-                errorMessage.contains("tool") && (
-                    errorMessage.contains("not supported") ||
-                        errorMessage.contains("unsupported") ||
-                        errorMessage.contains("not available") ||
-                        errorMessage.contains("unavailable")
+                (
+                    errorMessage.contains("tool") && (
+                        errorMessage.contains("not supported") ||
+                            errorMessage.contains("unsupported") ||
+                            errorMessage.contains("not available") ||
+                            errorMessage.contains("unavailable")
+                        )
                     ) ||
                 causeMessage.contains("does not support tool") ||
-                causeMessage.contains("tool") && (
-                    causeMessage.contains("not supported") ||
-                        causeMessage.contains("unsupported")
+                (
+                    causeMessage.contains("tool") && (
+                        causeMessage.contains("not supported") ||
+                            causeMessage.contains("unsupported")
+                        )
                     ) ||
                 e is InvalidRequestException ||
                 e.cause is InvalidRequestException

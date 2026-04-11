@@ -1,0 +1,39 @@
+id: job-application
+name: Job Application Writer
+icon: "💼"
+description: Write a tailored cover letter and optimise your CV for a specific job.
+built_in: true
+
+inputs:
+  - key: job_description
+    label: Job Description
+    type: multiline
+    required: true
+    hint: Paste the full job description
+  - key: cv_summary
+    label: Your Background / CV Summary
+    type: multiline
+    required: true
+    hint: Paste your CV or a summary of your experience and skills
+  - key: company_name
+    label: Company Name
+    type: text
+    required: false
+    hint: 'e.g. "Acme Corp"'
+
+steps:
+  - id: job_analysis
+    message: "Analyse the following job description and extract:\n- Key required skills and qualifications\n- Nice-to-have skills\n- Company culture signals\n- Role priorities and responsibilities\n\nJob Description:\n{{job_description}}"
+
+  - id: cv_match
+    message: "Compare the candidate's background against the job requirements below.\nIdentify:\n- Strong matches to highlight\n- Gaps to address or frame positively\n- Keywords to include for ATS optimisation\n\nJob Analysis:\n{{job_analysis}}\n\nCandidate Background:\n{{cv_summary}}"
+
+  - id: cover_letter
+    message: "Write a compelling, personalised cover letter for this application.\nOpen with a strong hook, highlight top 2-3 relevant achievements, address the company's needs, and close with a clear call to action.\nKeep to 3-4 paragraphs.\n\nCompany: {{company_name}}\nJob Analysis:\n{{job_analysis}}\n\nCandidate Matches:\n{{cv_match}}"
+
+  - id: cv_tips
+    message: "Provide specific, actionable CV optimisation tips for this role.\nInclude: sections to emphasise, keywords to add, achievements to quantify, and any gaps to address in a cover letter note.\n\nJob Analysis:\n{{job_analysis}}\n\nCandidate Background:\n{{cv_summary}}"
+
+  - id: resume_rewrite
+    message: "Using all the analysis above, produce a complete, ATS-optimised resume tailored to this role.\n\nOutput the resume in EXACTLY this order — do not deviate from the section sequence:\n\n1. **Professional Summary** — 3-4 punchy sentences that mirror the job's language and highlight top value.\n2. **Core Skills** — Grouped by category (e.g. Technical, Leadership, Domain) and ordered by relevance to the role; include ATS keywords from the job description. If the original background lists skills scattered elsewhere, consolidate them all here.\n3. **Work Experience** — For EVERY role in the original background, rewrite or expand the bullet points to emphasise achievements and skills relevant to this job. Use strong action verbs and quantify results where possible. List roles in reverse-chronological order. Do NOT omit any employer or role.\n4. **Education & Certifications** — Preserve all entries from the original; flag any that are directly relevant to the role.\n5. **Other Sections** (Projects, Open Source, Publications, Volunteer, Awards, Languages, etc.) — Preserve ANY such sections that appear in the original background. Rewrite descriptions to emphasise relevance where applicable. If a section does not exist in the original, omit it entirely — do not invent new sections.\n\nRules:\n- Follow the numbered order above strictly; do not reorder or merge sections.\n- Do NOT omit any content from the original background — map and rewrite everything.\n- Do NOT add sections or experiences that do not exist in the original background.\n- Use consistent markdown formatting: ## for section headings, ### for job titles, bullet points for achievements.\n\nJob Analysis:\n{{job_analysis}}\nCandidate Matches & Gaps:\n{{cv_match}}\nCV Optimisation Tips:\n{{cv_tips}}\n\nOriginal Background (rewrite ALL sections, do not omit any):\n{{cv_summary}}"
+

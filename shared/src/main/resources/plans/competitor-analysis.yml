@@ -1,0 +1,35 @@
+id: competitor-analysis
+name: Competitor Analysis
+icon: "🏆"
+description: Analyse a competitor or market landscape and identify opportunities.
+built_in: true
+
+inputs:
+  - key: product
+    label: Your Product / Service
+    type: text
+    required: true
+    hint: 'e.g. "AI-powered chat client", "Project management SaaS"'
+  - key: competitor
+    label: Competitor or Market
+    type: text
+    required: true
+    hint: 'e.g. "ChatGPT", "Notion vs Obsidian", "CRM market"'
+  - key: focus_area
+    label: Focus Area
+    type: text
+    required: false
+    hint: 'e.g. "pricing", "features", "target audience", "go-to-market"'
+
+steps:
+  - id: profile
+    message: "Create a detailed profile of the following competitor or market segment.\nCover: overview, target audience, key features, pricing model, strengths, and weaknesses.\n\nCompetitor/Market: {{competitor}}\nContext (our product): {{product}}"
+
+  - id: comparison
+    message: "Compare the following product against the competitor profile.\nIdentify: feature gaps, pricing differences, audience overlap, and positioning differences.\n\nOur Product: {{product}}\nFocus Area: {{focus_area}}\n\nCompetitor Profile:\n{{profile}}"
+
+  - id: opportunities
+    message: "Based on the competitor analysis, identify strategic opportunities and recommendations.\nInclude: differentiation opportunities, underserved market segments, feature priorities, and messaging recommendations.\n\nOur Product: {{product}}\n\nComparison Analysis:\n{{comparison}}"
+
+  - id: report
+    message: "Produce a comprehensive competitor analysis report.\n\nStructure as:\n## Executive Summary\n## Competitor Profile\n## Feature & Positioning Comparison\n## Strategic Opportunities\n## Recommended Actions\n\nProfile:\n{{profile}}\n\nComparison:\n{{comparison}}\n\nOpportunities:\n{{opportunities}}"

@@ -161,6 +161,7 @@ class LocalFoldersIndexingCoordinator(
 
         when {
             path.isRegularFile() -> result.add(path)
+
             path.isDirectory() -> {
                 try {
                     path.listDirectoryEntries().forEach { entry ->

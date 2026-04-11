@@ -13,9 +13,6 @@ import java.time.Instant
 /**
  * Internal events for component-to-component communication.
  * These events are not shown in the UI but enable decoupled communication between services.
- */
-
-/**
  * Emitted when the user changes the AI model in settings.
  * ChatSessionService should clear cached clients when receiving this event.
  */

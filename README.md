@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <b><a href="https://askimo.chat">askimo.chat</a></b> · Local-first AI agent platform: chat, search, run, automate.
+  <b><a href="https://askimo.chat">askimo.chat</a></b> · Local-first AI agent platform: chat, search, run, plan.
 </p>
 
 <p align="center">
@@ -60,9 +60,9 @@
 
 ## What is Askimo?
 
-Askimo is a local-first AI desktop app and CLI. It connects AI models to your local files, tools, and workflows without routing data through a cloud service.
+Askimo is a local-first AI desktop app and CLI. It connects AI models to your local files, tools, and workflows - without routing data through a cloud service.
 
-It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), persistent chat sessions backed by SQLite, document and code search via hybrid RAG (BM25 + vector), MCP tool integration, and a script runner that executes Python, Bash, and JavaScript inline. All state lives on disk.
+It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), persistent chat sessions backed by SQLite, document and code search via hybrid RAG (BM25 + vector), MCP tool integration, a script runner for Python/Bash/JavaScript, and a **Plans engine** that chains multi-step AI workflows into a single click. All state lives on your disk.
 
 ---
 
@@ -70,13 +70,37 @@ It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), per
 
 - **Multi-provider** - Configure and switch between cloud and local AI providers per session. Supported: OpenAI, Anthropic, Google Gemini, xAI Grok, Ollama, LM Studio, LocalAI, Docker AI, and any OpenAI-compatible endpoint
 - **Persistent sessions** - Conversations are stored in a local SQLite database and restored on restart
-- **RAG** - Index local folders, files, and web URLs. Uses hybrid BM25 + vector retrieval with an AI-based classifier that skips retrieval when the query does not need it
+- **RAG** - Index local folders, files, and web URLs. Uses hybrid BM25 + vector retrieval with an AI-based classifier that skips retrieval when the query doesn't need it
+- **Plans (agentic workflows)** - Run multi-step AI pipelines from a form-based UI. Each step builds on the previous one; progress is shown live. Export results as PDF or Word. Define your own plans in YAML
 - **Script runner** - Execute Python, Bash, and JavaScript directly from chat. Python scripts run in an auto-managed virtualenv with automatic dependency installation
 - **Vision** - Attach images to conversations; works with any multimodal model
 - **MCP tool integration** - Connect MCP-compatible servers via stdio or HTTP, scoped globally or per project
 - **Recipe automation (CLI)** - Define prompt templates in YAML with variables, file I/O, and post-actions. Run with `askimo -r <recipe> [args]`
 - **Local telemetry** - Tracks token usage, estimated cost, and RAG performance per provider. Nothing is uploaded
 - **i18n** - UI available in English, Chinese (Simplified and Traditional), Japanese, Korean, French, Spanish, German, Portuguese, and Vietnamese
+
+---
+
+## Plans - Multi-Step AI Workflows
+
+Plans let you run a sequence of AI steps from a single form. Each step receives the outputs of previous steps as context, so the AI builds up a complete, coherent result incrementally rather than in one large prompt.
+
+**Built-in plans:**
+
+| Plan | What it does |
+|---|---|
+| 💼 Job Application Writer | Analyses a job description, matches your CV, writes a tailored cover letter, and produces an ATS-optimised resume |
+| ✍️ Blog Post Writer | Generates an outline, writes the full draft, adds SEO metadata, and outputs the polished final post |
+| 🏆 Competitor Analysis | Profiles a competitor, compares against your product, and produces a strategic opportunities report |
+| 📋 Meeting Notes Processor | Structures raw notes, extracts action items with owners, and produces shareable meeting minutes |
+| 📝 Research Report | Researches a topic and writes a structured report with executive summary and key findings |
+| 📧 Email Writer | Drafts and self-refines a professional email from a one-line description |
+
+**Key capabilities:**
+- Live step-by-step progress with per-step timing
+- Run history with one-click input restore or re-run
+- Export any result as **PDF** or **Word (.docx)**
+- Write your own plans in YAML and run them alongside built-ins
 
 ---
 
@@ -97,13 +121,19 @@ After installation, open Askimo, configure a provider (API key for cloud models,
 
 ### System Requirements
 
-- **Memory**: 50-300 MB (AI models require additional memory depending on the provider)
-- **OS**: macOS 11+, Windows 10+, Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+)
-- **Disk**: 250 MB for the application
+| | |
+|---|---|
+| **OS** | macOS 11+, Windows 10+, Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+) |
+| **Memory** | 50–300 MB (AI models require additional memory depending on provider) |
+| **Disk** | 250 MB |
 
 ---
 
 ## Screenshots and Demos
+
+**Plan:**
+
+[![Askimo Plans Demo](public/askimo_plan_1280.gif)](public/askimo_plan_1920.gif)
 
 **RAG:**
 
@@ -169,7 +199,7 @@ cd askimo
 - **`desktop/`** - Compose Multiplatform desktop application
 - **`desktop-shared/`** - Shared UI components usable across products
 - **`cli/`** - JLine3 REPL and GraalVM native image
-- **`shared/`** - Core logic: providers, RAG, MCP, memory, tools, database
+- **`shared/`** - Core logic: providers, RAG, MCP, memory, tools, database, plans engine
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, code style, and DCO requirements.
 

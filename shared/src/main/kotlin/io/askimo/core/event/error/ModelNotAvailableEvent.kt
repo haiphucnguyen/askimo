@@ -11,11 +11,6 @@ import io.askimo.core.providers.ModelProvider
 import java.time.Instant
 
 /**
- * Error events that require user attention.
- * These events are shown as error dialogs or notifications in the UI.
- */
-
-/**
  * Emitted when a model is not available and cannot be used.
  * UI should display an appropriate error message to the user.
  *

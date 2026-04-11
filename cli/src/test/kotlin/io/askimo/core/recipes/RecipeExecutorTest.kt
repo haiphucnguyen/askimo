@@ -72,6 +72,7 @@ class RecipeExecutorTest {
                             }
                         if (arg == "/tmp/mockfile.txt") "MOCK_CONTENT" else "ERROR: $arg"
                     }
+
                     else -> "UNKNOWN_TOOL"
                 }
             }
@@ -139,6 +140,7 @@ class RecipeExecutorTest {
                             }
                         if (arg == "/tmp/mockfile.txt") "MOCK_CONTENT" else "ERROR: $arg"
                     }
+
                     else -> "UNKNOWN_TOOL"
                 }
             }

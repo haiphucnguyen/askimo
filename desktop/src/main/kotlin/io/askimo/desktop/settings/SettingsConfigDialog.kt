@@ -74,6 +74,7 @@ fun settingsConfigDialog(
                                 colors = AppComponents.outlinedTextFieldColors(),
                             )
                         }
+
                         is SettingField.EnumField -> {
                             var expanded by remember { mutableStateOf(false) }
 

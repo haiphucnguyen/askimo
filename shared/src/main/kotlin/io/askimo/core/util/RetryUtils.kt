@@ -81,9 +81,12 @@ object RetryPresets {
                 when {
                     exception is IllegalArgumentException &&
                         exception.message?.contains("Model returned empty output") == true -> true
+
                     exception is NullPointerException &&
                         exception.stackTrace.any { it.className.contains("dev.langchain4j") } -> true
+
                     exception.javaClass.name.startsWith("dev.langchain4j") -> true
+
                     else -> false
                 }
             },
@@ -92,8 +95,10 @@ object RetryPresets {
                     when {
                         exception.message?.contains("Model returned empty output") == true ->
                             "Model returned empty output"
+
                         exception is NullPointerException ->
                             "LangChain4j internal error"
+
                         else ->
                             "Transient error: ${exception.message}"
                     }

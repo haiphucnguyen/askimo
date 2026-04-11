@@ -43,10 +43,14 @@ class CliUpdateService {
         return when {
             executable.contains("/Cellar/") || executable.contains("/homebrew/") ||
                 executable.contains("/opt/homebrew/") -> InstallMethod.HOMEBREW
+
             executable.contains("\\scoop\\") -> InstallMethod.SCOOP
+
             executable.contains("\\chocolatey\\") || executable.contains("\\ProgramData\\chocolatey\\") ->
                 InstallMethod.CHOCOLATEY
+
             File(executable).exists() && !executable.contains("build") -> InstallMethod.MANUAL
+
             else -> InstallMethod.UNKNOWN
         }
     }
@@ -103,12 +107,16 @@ class CliUpdateService {
     private fun getUpdateInstructions(method: InstallMethod): Pair<String, String> = when (method) {
         InstallMethod.HOMEBREW ->
             "brew update && brew upgrade askimo" to ""
+
         InstallMethod.SCOOP ->
             "scoop update askimo" to ""
+
         InstallMethod.CHOCOLATEY ->
             "choco upgrade askimo" to ""
+
         InstallMethod.MANUAL ->
             "Download from GitHub:" to "https://github.com/haiphucnguyen/askimo/releases"
+
         InstallMethod.UNKNOWN ->
             "Update using your package manager" to "or download from GitHub releases"
     }

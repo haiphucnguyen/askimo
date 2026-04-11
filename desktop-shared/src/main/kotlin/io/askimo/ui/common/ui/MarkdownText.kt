@@ -158,20 +158,27 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((
                     renderParagraph(child)
                 }
             }
+
             is Heading -> renderHeading(child)
+
             is BulletList -> renderBulletList(child)
+
             is OrderedList -> renderOrderedList(child)
+
             is FencedCodeBlock -> renderCodeBlock(
                 child,
                 viewportTopY,
                 onRunRequest,
             )
+
             is BlockQuote -> renderBlockQuote(
                 child,
                 viewportTopY,
                 onRunRequest,
             )
+
             is TableBlock -> renderTable(child)
+
             is Image -> {
                 val destination = child.destination
                 if (isVideoUrl(destination)) {
@@ -180,6 +187,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((
                     renderImage(child)
                 }
             }
+
             else -> renderNode(child, viewportTopY, onRunRequest)
         }
         child = child.next
@@ -1095,6 +1103,7 @@ private fun renderTable(table: TableBlock) {
                         headerRow = headerRow.next
                     }
                 }
+
                 is TableBody -> {
                     // Render table body
                     var bodyRow = child.firstChild
@@ -1306,16 +1315,19 @@ private fun buildInlineContent(
                     append(text.substring(lastIndex))
                 }
             }
+
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
                     append(buildInlineContent(child, inlineCodeBg, linkColor))
                 }
             }
+
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
                     append(buildInlineContent(child, inlineCodeBg, linkColor))
                 }
             }
+
             is Code -> {
                 withStyle(
                     SpanStyle(
@@ -1326,6 +1338,7 @@ private fun buildInlineContent(
                     append(" ${child.literal} ")
                 }
             }
+
             is FencedCodeBlock -> {
                 // Treat fenced code blocks as inline code when they appear in inline contexts
                 withStyle(
@@ -1337,6 +1350,7 @@ private fun buildInlineContent(
                     append(" ${child.literal} ")
                 }
             }
+
             is Link -> {
                 // Add link annotation for clickable links using the new LinkAnnotation API
                 // Build styled content for link children (e.g., inline code with backticks)
@@ -1359,6 +1373,7 @@ private fun buildInlineContent(
                     append(displayContent)
                 }
             }
+
             is Image -> {
                 // For inline images, render as a clickable link with the alt text
                 val altText = extractTextContent(child)
@@ -1378,8 +1393,11 @@ private fun buildInlineContent(
                     append(displayText)
                 }
             }
+
             is HardLineBreak, is SoftLineBreak -> append("\n")
+
             is Paragraph -> append(buildInlineContent(child, inlineCodeBg, linkColor))
+
             else -> append(buildInlineContent(child, inlineCodeBg, linkColor))
         }
         child = child.next
@@ -1515,6 +1533,7 @@ private fun parseLatexMath(latex: String): AnnotatedString = buildAnnotatedStrin
                     i++
                 }
             }
+
             // Subscript
             text[i] == '_' && i + 1 < text.length && text[i + 1] == '(' -> {
                 val end = text.indexOf(')', i + 2)
@@ -1533,6 +1552,7 @@ private fun parseLatexMath(latex: String): AnnotatedString = buildAnnotatedStrin
                     i++
                 }
             }
+
             else -> {
                 append(text[i])
                 i++
@@ -1584,11 +1604,13 @@ private fun extractVideoUrl(paragraph: Paragraph): String? {
                     hasOtherContent = true
                 }
             }
+
             is MarkdownText -> {
                 if (child.literal.trim().isNotEmpty()) {
                     hasOtherContent = true
                 }
             }
+
             else -> hasOtherContent = true
         }
         child = child.next
@@ -1732,6 +1754,7 @@ private fun downloadImage(
                     val ext = urlFileName.substringAfterLast('.', "png")
                     ext to urlFileName
                 }
+
                 else -> "png" to defaultFileName
             }
 
@@ -1755,6 +1778,7 @@ private fun downloadImage(
                         file.writeBytes(imageData)
                         log.info("Image saved to: {}", file.absolutePath)
                     }
+
                     imageUrl != null -> {
                         val url = URI(imageUrl).toURL()
                         url.openStream().use { input ->
@@ -1764,6 +1788,7 @@ private fun downloadImage(
                         }
                         log.info("Image downloaded and saved to: {}", file.absolutePath)
                     }
+
                     else -> {
                         log.error("No image data or URL provided")
                     }

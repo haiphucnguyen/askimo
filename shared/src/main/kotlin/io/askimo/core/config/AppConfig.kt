@@ -89,11 +89,13 @@ private fun parseCommaSeparated(p: JsonParser): List<String> = when (p.currentTo
             raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         }
     }
+
     JsonToken.START_ARRAY -> {
         val items = mutableListOf<String>()
         while (p.nextToken() != JsonToken.END_ARRAY) items.add(p.text.trim())
         items
     }
+
     else -> emptyList()
 }
 
@@ -276,13 +278,26 @@ data class RagConfig(
 // TODO: Remove @field:JsonAlias camelCase aliases in v1.2.30 - kept for backward compatibility with pre-snake_case config files
 data class ProviderModelConfig(
     @field:JsonAlias("utilityModel") val utilityModel: String = "",
-    @field:JsonAlias("utilityModelTimeoutSeconds") val utilityModelTimeoutSeconds: Long = 45,
     @field:JsonAlias("embeddingModel") val embeddingModel: String = "",
     @field:JsonAlias("visionModel") val visionModel: String = "",
     @field:JsonAlias("imageModel") val imageModel: String = "",
 )
 
+/**
+ * Global AI model timeouts shared across all providers.
+ *
+ * - [utilityModelTimeoutSeconds]: Applied to the secondary/utility model used for short-lived
+ *   structured tasks (title generation, RAG query compression, summarization). Keep tight.
+ * - [defaultModelTimeoutSeconds]: Applied to the primary/streaming model. Set generously to
+ *   accommodate slow local models and cloud reasoning models with extended thinking.
+ */
+data class ModelTimeoutsConfig(
+    @field:JsonAlias("utilityModelTimeoutSeconds") val utilityModelTimeoutSeconds: Long = 45,
+    @field:JsonAlias("defaultModelTimeoutSeconds") val defaultModelTimeoutSeconds: Long = 300,
+)
+
 data class ModelsConfig(
+    val timeouts: ModelTimeoutsConfig = ModelTimeoutsConfig(),
     val anthropic: ProviderModelConfig = ProviderModelConfig(),
     val gemini: ProviderModelConfig = ProviderModelConfig(),
     val openai: ProviderModelConfig = ProviderModelConfig(),
@@ -481,57 +496,51 @@ object AppConfig {
           use_absolute_path_in_citations: ${'$'}{ASKIMO_RAG_USE_ABSOLUTE_PATH:true}
 
         models:
+          timeouts:
+            utility_model_timeout_seconds: ${'$'}{ASKIMO_UTILITY_MODEL_TIMEOUT:45}
+            default_model_timeout_seconds: ${'$'}{ASKIMO_DEFAULT_MODEL_TIMEOUT:300}
           anthropic:
             utility_model: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_ANTHROPIC_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_ANTHROPIC_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-sonnet-4-6}
             image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-sonnet-4-6}
           gemini:
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_GEMINI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
             vision_model: ${'$'}{ASKIMO_GEMINI_VISION_MODEL:gemini-1.5-pro}
             image_model: ${'$'}{ASKIMO_GEMINI_IMAGE_MODEL:gemini-2.0-flash-exp}
           openai:
             utility_model: ${'$'}{ASKIMO_OPENAI_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_OPENAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             vision_model: ${'$'}{ASKIMO_OPENAI_VISION_MODEL:gpt-4o}
             image_model: ${'$'}{ASKIMO_OPENAI_IMAGE_MODEL:dall-e-3}
           ollama:
             utility_model: ${'$'}{ASKIMO_OLLAMA_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_OLLAMA_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_OLLAMA_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_OLLAMA_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_OLLAMA_IMAGE_MODEL:}
           docker:
             utility_model: ${'$'}{ASKIMO_DOCKER_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_DOCKER_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_DOCKER_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_DOCKER_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_DOCKER_IMAGE_MODEL:}
           localai:
             utility_model: ${'$'}{ASKIMO_LOCALAI_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_LOCALAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LOCALAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_LOCALAI_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_LOCALAI_IMAGE_MODEL:}
           lmstudio:
             utility_model: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_LMSTUDIO_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_LMSTUDIO_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_LMSTUDIO_VISION_MODEL:}
             image_model: ${'$'}{ASKIMO_LMSTUDIO_IMAGE_MODEL:stable-diffusion}
           xai:
             utility_model: ${'$'}{ASKIMO_XAI_UTILITY_MODEL:}
-            utility_model_timeout_seconds: ${'$'}{ASKIMO_XAI_UTILITY_TIMEOUT:45}
             embedding_model: ${'$'}{ASKIMO_XAI_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_XAI_VISION_MODEL:grok-2-vision-latest}
             image_model: ${'$'}{ASKIMO_XAI_IMAGE_MODEL:grok-2-vision-latest}
           openai_compatible:
             utility_model:
-            utility_model_timeout_seconds: 45
             embedding_model:
             vision_model:
             image_model:
@@ -932,65 +941,60 @@ object AppConfig {
             )
 
         val models = ModelsConfig(
+            timeouts = ModelTimeoutsConfig(
+                utilityModelTimeoutSeconds = envLong("ASKIMO_UTILITY_MODEL_TIMEOUT", 45L),
+                defaultModelTimeoutSeconds = envLong("ASKIMO_DEFAULT_MODEL_TIMEOUT", 300L),
+            ),
             anthropic = ProviderModelConfig(
                 utilityModel = env("ASKIMO_ANTHROPIC_UTILITY_MODEL", ""),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_ANTHROPIC_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_ANTHROPIC_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_ANTHROPIC_VISION_MODEL", "claude-sonnet-4-6"),
                 imageModel = env("ASKIMO_ANTHROPIC_IMAGE_MODEL", "claude-sonnet-4-6"),
             ),
             gemini = ProviderModelConfig(
                 utilityModel = env("ASKIMO_GEMINI_UTILITY_MODEL", "gemini-2.5-flash-lite"),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_GEMINI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
                 visionModel = env("ASKIMO_GEMINI_VISION_MODEL", "gemini-1.5-pro"),
                 imageModel = env("ASKIMO_GEMINI_IMAGE_MODEL", "gemini-2.0-flash-exp"),
             ),
             openai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_OPENAI_UTILITY_MODEL", "gpt-3.5-turbo"),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_OPENAI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
                 visionModel = env("ASKIMO_OPENAI_VISION_MODEL", "gpt-4o"),
                 imageModel = env("ASKIMO_OPENAI_IMAGE_MODEL", "dall-e-3"),
             ),
             ollama = ProviderModelConfig(
                 utilityModel = env("ASKIMO_OLLAMA_UTILITY_MODEL", ""),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_OLLAMA_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_OLLAMA_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_OLLAMA_VISION_MODEL", ""),
                 imageModel = env("ASKIMO_OLLAMA_IMAGE_MODEL", ""),
             ),
             docker = ProviderModelConfig(
                 utilityModel = env("ASKIMO_DOCKER_UTILITY_MODEL", ""),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_DOCKER_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_DOCKER_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_DOCKER_VISION_MODEL", ""),
                 imageModel = env("ASKIMO_DOCKER_IMAGE_MODEL", ""),
             ),
             localai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_LOCALAI_UTILITY_MODEL", ""),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_LOCALAI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_LOCALAI_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_LOCALAI_VISION_MODEL", ""),
                 imageModel = env("ASKIMO_LOCALAI_IMAGE_MODEL", ""),
             ),
             lmstudio = ProviderModelConfig(
                 utilityModel = env("ASKIMO_LMSTUDIO_UTILITY_MODEL", ""),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_LMSTUDIO_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_LMSTUDIO_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_LMSTUDIO_VISION_MODEL", ""),
                 imageModel = env("ASKIMO_LMSTUDIO_IMAGE_MODEL", ""),
             ),
             xai = ProviderModelConfig(
                 utilityModel = env("ASKIMO_XAI_UTILITY_MODEL", "grok-3-mini"),
-                utilityModelTimeoutSeconds = envLong("ASKIMO_XAI_UTILITY_TIMEOUT", 45L),
                 embeddingModel = env("ASKIMO_XAI_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_XAI_VISION_MODEL", "grok-2-vision-latest"),
                 imageModel = env("ASKIMO_XAI_IMAGE_MODEL", "grok-2-vision-latest"),
             ),
             openai_compatible = ProviderModelConfig(
                 utilityModel = "",
-                utilityModelTimeoutSeconds = 45L,
                 embeddingModel = "",
                 visionModel = "",
                 imageModel = "",
@@ -1066,14 +1070,23 @@ object AppConfig {
             val current = cached ?: loadOnce()
             cached = when (section) {
                 "developer" -> current.copy(developer = updateDeveloperField(current.developer, field, value))
+
                 "retry" -> current.copy(retry = updateRetryField(current.retry, field, value))
+
                 "throttle" -> current.copy(throttle = updateThrottleField(current.throttle, field, value))
+
                 "embedding" -> current.copy(embedding = updateEmbeddingField(current.embedding, field, value))
+
                 "chat" -> current.copy(chat = updateChatField(current.chat, field, value))
+
                 "rag" -> current.copy(rag = updateRagField(current.rag, field, value))
+
                 "models" -> current.copy(models = updateModelsField(current.models, field, value))
+
                 "proxy" -> current.copy(proxy = updateProxyField(current.proxy, field, value))
+
                 "analytics" -> current.copy(analytics = updateAnalyticsField(current.analytics, field, value))
+
                 else -> {
                     log.displayError("Unknown config section: $section", null)
                     return
@@ -1126,9 +1139,13 @@ object AppConfig {
 
     private fun updateChatField(config: ChatConfig, field: String, value: Any): ChatConfig = when (field) {
         "maxTokens" -> config.copy(maxTokens = value as Int)
+
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
+
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
+
         "samplingTemperature" -> config.copy(samplingTemperature = (value as Number).toDouble())
+
         "defaultResponseAILocale" -> {
             val newLocale = if (value is String && value.isBlank()) null else value as? String
             EventBus.post(
@@ -1136,6 +1153,7 @@ object AppConfig {
             )
             config.copy(defaultResponseAILocale = newLocale)
         }
+
         else -> config
     }
 
@@ -1151,13 +1169,29 @@ object AppConfig {
     private fun updateModelsField(config: ModelsConfig, field: String, value: Any): ModelsConfig {
         val parts = field.split(".")
         if (parts.size != 2) {
-            log.displayError("Models config requires nested path format: provider.field (e.g., openai.visionModel)", null)
+            log.displayError("Models config requires nested path format: provider.field or timeouts.field", null)
             return config
         }
 
         val providerKey = parts[0]
         val modelField = parts[1]
         val stringValue = value as? String ?: value.toString()
+
+        // Handle global timeouts: models.timeouts.utilityModelTimeoutSeconds / defaultModelTimeoutSeconds
+        if (providerKey == "timeouts") {
+            val current = config.timeouts
+            val updated = when (modelField) {
+                "utilityModelTimeoutSeconds" -> current.copy(utilityModelTimeoutSeconds = stringValue.toLongOrNull() ?: current.utilityModelTimeoutSeconds)
+
+                "defaultModelTimeoutSeconds" -> current.copy(defaultModelTimeoutSeconds = stringValue.toLongOrNull() ?: current.defaultModelTimeoutSeconds)
+
+                else -> {
+                    log.displayError("Unknown timeouts field '$modelField'", null)
+                    return config
+                }
+            }
+            return config.copy(timeouts = updated)
+        }
 
         val provider = ModelProvider.entries.firstOrNull { it.name.lowercase() == providerKey }
             ?: run {
@@ -1168,10 +1202,13 @@ object AppConfig {
         val current = config[provider]
         val updated = when (modelField) {
             "utilityModel" -> current.copy(utilityModel = stringValue)
-            "utilityModelTimeoutSeconds" -> current.copy(utilityModelTimeoutSeconds = stringValue.toLongOrNull() ?: current.utilityModelTimeoutSeconds)
+
             "embeddingModel" -> current.copy(embeddingModel = stringValue)
+
             "visionModel" -> current.copy(visionModel = stringValue)
+
             "imageModel" -> current.copy(imageModel = stringValue)
+
             else -> {
                 log.displayError("Unknown model field '$modelField' for provider $providerKey", null)
                 return config
@@ -1182,9 +1219,13 @@ object AppConfig {
 
     private fun updateProxyField(config: ProxyConfig, field: String, value: Any): ProxyConfig = when (field) {
         "type" -> config.copy(type = if (value is String) ProxyType.valueOf(value) else value as ProxyType)
+
         "host" -> config.copy(host = value as String)
+
         "port" -> config.copy(port = value as Int)
+
         "username" -> config.copy(username = value as String)
+
         "password" -> {
             val password = value as String
 
@@ -1196,9 +1237,11 @@ object AppConfig {
                     StorageMethod.KEYCHAIN -> {
                         log.debug("Proxy password stored securely in system keychain")
                     }
+
                     StorageMethod.ENCRYPTED -> {
                         log.warn("Proxy password stored with encryption (${result.warningMessage})")
                     }
+
                     StorageMethod.INSECURE_FALLBACK -> {
                         log.warn("⚠️ Proxy password storage: ${result.warningMessage}")
                     }
@@ -1210,6 +1253,7 @@ object AppConfig {
                 config.copy(password = password)
             }
         }
+
         else -> {
             log.displayError("Unknown proxy field: $field", null)
             config

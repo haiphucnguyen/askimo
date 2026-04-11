@@ -6,7 +6,6 @@ package io.askimo.cli.recipes
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 /**
  * Defines a recipe that can be executed by Askimo.
  *
@@ -23,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
  * @property postActions Actions to run after the model response is received.
  * @property defaults Default values for variables when not otherwise provided.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class RecipeDef(
     val name: String,
     val version: Int = 3,

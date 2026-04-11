@@ -89,6 +89,7 @@ fun parseKnowledgeSourceConfigs(configs: List<KnowledgeSourceConfig>): List<Know
                 isValid = validateFolder(config.resourceIdentifier),
             )
         }
+
         is LocalFilesKnowledgeSourceConfig -> {
             KnowledgeSourceItem.File(
                 id = UUID.randomUUID().toString(),
@@ -96,6 +97,7 @@ fun parseKnowledgeSourceConfigs(configs: List<KnowledgeSourceConfig>): List<Know
                 isValid = validateFile(config.resourceIdentifier),
             )
         }
+
         is UrlKnowledgeSourceConfig -> {
             KnowledgeSourceItem.Url(
                 id = UUID.randomUUID().toString(),
@@ -114,9 +116,11 @@ fun buildKnowledgeSourceConfigs(sources: List<KnowledgeSourceItem>): List<Knowle
         is KnowledgeSourceItem.Folder -> {
             LocalFoldersKnowledgeSourceConfig(resourceIdentifier = source.path)
         }
+
         is KnowledgeSourceItem.File -> {
             LocalFilesKnowledgeSourceConfig(resourceIdentifier = source.path)
         }
+
         is KnowledgeSourceItem.Url -> {
             UrlKnowledgeSourceConfig(resourceIdentifier = source.url)
         }

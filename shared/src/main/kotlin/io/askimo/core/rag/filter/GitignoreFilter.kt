@@ -142,9 +142,13 @@ class GitignoreParser(private val rootPath: Path) {
                             append("[^/]*")
                         }
                     }
+
                     '?' -> append("[^/]")
+
                     '.' -> append("\\.")
+
                     '/' -> append("/")
+
                     else -> append(Regex.escape(c.toString()))
                 }
                 i++
@@ -155,12 +159,16 @@ class GitignoreParser(private val rootPath: Path) {
         val finalPattern = when {
             // Pattern started with **/ - match at any level
             hasLeadingDoubleAsterisk -> "(^|.*/)$regexPattern(/.*|\$)"
+
             // Pattern starts with / - anchored to root (relative to .gitignore location)
             line.startsWith("/") -> "^${regexPattern.substring(1)}(/.*|\$)"
+
             // Pattern contains / - match from current directory down
             pattern.contains("/") -> "^$regexPattern(/.*|\$)"
+
             // Pattern contains wildcards (* or ?) - match at any level
             pattern.contains("*") || pattern.contains("?") -> "(^|.*/)$regexPattern(/.*|\$)"
+
             // Simple literal pattern without / or wildcards - match only at the .gitignore directory level
             else -> "^$regexPattern(/.*|\$)"
         }

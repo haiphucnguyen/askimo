@@ -332,6 +332,7 @@ class SettingsViewModel(
                         checkEmbeddingModelAvailability(provider, baseUrl)
                     }
                 }
+
                 is ProviderTestResult.Failure -> {
                     connectionError = result.message
                     connectionErrorHelp = result.helpText
@@ -500,6 +501,7 @@ class SettingsViewModel(
                     successMessage = "Provider changed to ${provider.name.lowercase()}"
                     showSuccessMessage = true
                 }
+
                 is ProviderTestResult.Failure -> {
                     connectionError = result.message
                     connectionErrorHelp = result.helpText
@@ -764,6 +766,7 @@ class SettingsViewModel(
                         // Model is available, no warning needed
                         embeddingModelWarning = null
                     }
+
                     is ModelAvailabilityResult.NotAvailable -> {
                         embeddingModelWarning = LocalizationManager.getString(
                             "settings.embedding.not_available_rag_only",
@@ -772,6 +775,7 @@ class SettingsViewModel(
                         embeddingModelProvider = provider.name
                         canPullEmbeddingModel = result.canAutoPull
                     }
+
                     is ModelAvailabilityResult.ProviderUnreachable -> {
                         embeddingModelWarning = LocalizationManager.getString(
                             "settings.embedding.provider_unreachable",

@@ -125,9 +125,11 @@ class AvatarService {
                 // Server-relative URL — fetch via HTTP
                 fetchRemoteAvatar("$serverBaseUrl$avatarPath")
             }
+
             avatarPath.startsWith("http://") || avatarPath.startsWith("https://") -> {
                 fetchRemoteAvatar(avatarPath)
             }
+
             else -> {
                 // Local file path
                 val file = File(avatarPath)

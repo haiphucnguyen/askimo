@@ -73,10 +73,17 @@ object DetectUserIntentCommand {
             .maxOfOrNull { (_, score) -> score } ?: 0.0
 
         val confidence = when {
-            keywordTools.isNotEmpty() && vectorOnlyTools.isNotEmpty() -> 90 // both layers agree
+            keywordTools.isNotEmpty() && vectorOnlyTools.isNotEmpty() -> 90
+
+            // both layers agree
             keywordTools.isNotEmpty() -> 85
-            topVectorScore >= 0.80 -> 70 // strong semantic signal
-            vectorOnlyTools.isNotEmpty() -> 55 // weak-to-moderate semantic signal
+
+            topVectorScore >= 0.80 -> 70
+
+            // strong semantic signal
+            vectorOnlyTools.isNotEmpty() -> 55
+
+            // weak-to-moderate semantic signal
             else -> 0
         }
 

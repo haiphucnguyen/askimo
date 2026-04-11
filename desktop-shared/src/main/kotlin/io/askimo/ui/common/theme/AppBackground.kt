@@ -73,6 +73,7 @@ fun appBackground(
                             .getResourceAsStream("/${backgroundImage.resourcePath}")
                             ?.readBytes()
                 }
+
                 is BackgroundImage.Custom -> {
                     val file = File(backgroundImage.filePath)
                     if (file.exists()) file.readBytes() else null

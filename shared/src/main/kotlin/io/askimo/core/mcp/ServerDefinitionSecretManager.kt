@@ -160,6 +160,7 @@ object ServerDefinitionSecretManager {
                         }
                     }
                 }
+
                 TransportType.STDIO -> {
                     definition.stdioConfig?.envTemplate?.forEach { (key, value) ->
                         if (isSecretReference(value)) {

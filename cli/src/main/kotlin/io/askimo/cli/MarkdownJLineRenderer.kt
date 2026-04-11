@@ -109,11 +109,13 @@ class MarkdownJLineRenderer {
             val marker =
                 when (listItem.parent) {
                     is BulletList -> "•"
+
                     is OrderedList -> {
                         val idx = counters.removeLast()
                         counters.addLast(idx + 1)
                         "$idx."
                     }
+
                     else -> "-" // fallback
                 }
             sb.append(marker).append(' ') // exactly one space after the marker
@@ -136,6 +138,7 @@ class MarkdownJLineRenderer {
                     is Paragraph, is Heading, is BulletList, is OrderedList,
                     is FencedCodeBlock, is IndentedCodeBlock,
                     -> child.accept(this)
+
                     else -> child.accept(this)
                 }
                 indent -= 2

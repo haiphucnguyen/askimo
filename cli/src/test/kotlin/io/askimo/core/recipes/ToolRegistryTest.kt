@@ -45,6 +45,7 @@ private fun parseToolResponse(jsonString: String): Map<String, Any?> {
 
 private fun parseJsonValue(value: kotlinx.serialization.json.JsonElement): Any? = when (value) {
     is JsonNull -> null
+
     is JsonPrimitive -> {
         when {
             value.isString -> value.content
@@ -53,9 +54,11 @@ private fun parseJsonValue(value: kotlinx.serialization.json.JsonElement): Any? 
             else -> value.content.toLongOrNull() ?: value.content.toDoubleOrNull() ?: value.content
         }
     }
+
     is kotlinx.serialization.json.JsonArray -> {
         value.map { parseJsonValue(it) }
     }
+
     is kotlinx.serialization.json.JsonObject -> {
         value.mapValues { (_, v) -> parseJsonValue(v) }
     }

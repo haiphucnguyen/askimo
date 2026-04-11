@@ -47,6 +47,7 @@ fun formatDuration(ms: Long): String {
                 "${days}d"
             }
         }
+
         hours > 0 -> {
             if (minutes > 0) {
                 "${hours}h ${minutes}m"
@@ -56,6 +57,7 @@ fun formatDuration(ms: Long): String {
                 "${hours}h"
             }
         }
+
         minutes > 0 -> {
             if (seconds > 0) {
                 "${minutes}m ${seconds}s"
@@ -65,6 +67,7 @@ fun formatDuration(ms: Long): String {
                 "${minutes}m"
             }
         }
+
         seconds > 0 -> {
             if (millis > 0) {
                 "${seconds}s ${millis}ms"
@@ -72,6 +75,7 @@ fun formatDuration(ms: Long): String {
                 "${seconds}s"
             }
         }
+
         else -> "${millis}ms"
     }
 }

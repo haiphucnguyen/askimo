@@ -532,16 +532,19 @@ private fun toolStrategyChip(strategy: Int) {
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
         )
+
         ToolStrategy.FOLLOW_UP_BASED -> Triple(
             stringResource("mcp.integrations.tool.strategy.followup"),
             MaterialTheme.colorScheme.secondaryContainer,
             MaterialTheme.colorScheme.onSecondaryContainer,
         )
+
         ToolStrategy.BOTH -> Triple(
             stringResource("mcp.integrations.tool.strategy.both"),
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer,
         )
+
         else -> Triple(
             stringResource("mcp.integrations.tool.strategy.unknown"),
             MaterialTheme.colorScheme.surfaceVariant,

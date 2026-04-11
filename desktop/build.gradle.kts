@@ -1065,9 +1065,7 @@ fun stapleWithRetry(
 // Task: createEntitlements
 // -----------------------------------------------------------------------------
 
-/**
- * Create entitlements file for hardened runtime
- */
+// Create entitlements file for hardened runtime
 tasks.register("createEntitlements") {
     group = "distribution"
     description = "Create entitlements.plist for macOS hardened runtime"
@@ -1267,7 +1265,7 @@ fun signDylibsInsideJar(
     }
 }
 
-/**
+/*
  * Sign all components of the .app bundle.
  * Keychain setup (cert import in CI, or unlock in local dev) happens here.
  */
@@ -1464,7 +1462,7 @@ tasks.register("signMacApp") {
     }
 }
 
-/**
+/*
  * Notarize the .app bundle
  */
 tasks.register("notarizeApp") {
@@ -1592,7 +1590,7 @@ tasks.register("notarizeApp") {
     }
 }
 
-/**
+/*
  * Create a signed DMG with Applications folder symlink
  */
 tasks.register("createSignedDmg") {
@@ -1901,7 +1899,7 @@ tasks.register("createSignedDmg") {
     }
 }
 
-/**
+/*
  * Notarize the DMG with Apple
  */
 tasks.register("customNotarizeDmg") {
@@ -2076,7 +2074,7 @@ tasks.register("customNotarizeDmg") {
     }
 }
 
-/**
+/*
  * Complete notarization workflow - notarizes both .app and DMG
  */
 tasks.register("customNotarizeMacApp") {

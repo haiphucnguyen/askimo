@@ -150,6 +150,7 @@ fun messageList(
                     isFirstMessage = false
                     messageIndex++
                 }
+
                 is MessageGroup.OutdatedBranch -> {
                     outdatedBranchComponent(
                         messages = group.messages,

@@ -111,11 +111,11 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
-            .timeout(Duration.ofMinutes(5))
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
             .build()
     }
@@ -128,7 +128,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("docker-ai")
             .modelName(AppConfig.models[ModelProvider.DOCKER].utilityModel.ifBlank { AppContext.getInstance().params.model })
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.DOCKER].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -142,8 +142,8 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("docker-ai")
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
-            .timeout(Duration.ofMinutes(5))
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
             .build()
     }

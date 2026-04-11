@@ -122,6 +122,7 @@ object LocalFsTools {
                                         dirs++
                                         walkDir(p) // Recurse into non-hidden directories
                                     }
+
                                     p.isRegularFile() -> {
                                         files++
                                         bytes += runCatching { Files.size(p) }.getOrDefault(0L)
@@ -141,6 +142,7 @@ object LocalFsTools {
                         if (!include && isHidden(p)) return@forEach
                         when {
                             p.isDirectory() -> dirs++
+
                             p.isRegularFile() -> {
                                 files++
                                 bytes += runCatching { Files.size(p) }.getOrDefault(0L)
@@ -216,8 +218,10 @@ object LocalFsTools {
         val extSet: Set<String> =
             when {
                 extensions != null -> normalizeExtensions(extensions)
+
                 !category.isNullOrBlank() ->
                     categoryExts[category.lowercase()] ?: error("Unknown category: $category")
+
                 else -> error("Provide either 'category' or 'extensions'")
             }
 
@@ -301,9 +305,11 @@ object LocalFsTools {
         val extSet: Set<String> =
             when {
                 extensions != null -> normalizeExtensions(extensions)
+
                 !category.isNullOrBlank() ->
                     categoryExts[category.lowercase(Locale.ROOT)]
                         ?: error("Unknown category: $category")
+
                 else -> error("Provide either 'extensions' or 'category'")
             }
 
@@ -422,10 +428,13 @@ object LocalFsTools {
                                 val matches = when {
                                     // Exact pattern match
                                     matcher.matches(rel) || matcher.matches(file.fileName) -> true
+
                                     // Filename contains the search term (case insensitive)
                                     fileName.contains(glob, ignoreCase = true) -> true
+
                                     // Path contains the search term
                                     rel.toString().contains(glob, ignoreCase = true) -> true
+
                                     else -> false
                                 }
 
@@ -532,6 +541,7 @@ object LocalFsTools {
                         // Windows: use cmd.exe or powershell
                         ProcessBuilderExt("cmd.exe", "/c", command)
                     }
+
                     else -> {
                         // Unix-like systems: try to find available shell
                         val shell = findAvailableShell()
@@ -1228,8 +1238,12 @@ object LocalFsTools {
         // Prefer certain file extensions (customizable)
         val extension = fileName.substringAfterLast('.', "").lowercase()
         when (extension) {
-            "kt", "java", "py", "js", "ts", "rb" -> score += 0.5 // Source code
-            "md", "txt", "rst" -> score += 0.3 // Documentation
+            "kt", "java", "py", "js", "ts", "rb" -> score += 0.5
+
+            // Source code
+            "md", "txt", "rst" -> score += 0.3
+
+            // Documentation
             "json", "yml", "yaml", "xml" -> score += 0.2 // Config
         }
 

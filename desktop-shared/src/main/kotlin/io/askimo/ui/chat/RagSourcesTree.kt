@@ -566,6 +566,7 @@ private fun loadFolderChildren(folderPath: String): List<TreeNode> {
                     ),
                 )
             }
+
             file.isFile -> {
                 children.add(
                     FileTreeNode(

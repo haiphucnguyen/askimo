@@ -52,10 +52,14 @@ data class MemoryMessage(
      */
     fun toChatMessage(): ChatMessage = when (this.type) {
         MessageRole.USER.value -> UserMessage.from(this.content)
+
         MessageRole.ASSISTANT.value -> AiMessage.from(this.content)
+
         MessageRole.SYSTEM.value -> SystemMessage.from(this.content)
+
         MessageRole.TOOL_EXECUTION_RESULT_MESSAGE.value ->
             ToolExecutionResultMessage.builder().text(this.content).build()
+
         else -> UserMessage.from(this.content) // fallback
     }
 

@@ -371,6 +371,7 @@ fun globalSearchDialog(
                                 }
                             }
                         }
+
                         hasSearched && searchResults.isEmpty() -> {
                             // No results state
                             Box(
@@ -399,6 +400,7 @@ fun globalSearchDialog(
                                 }
                             }
                         }
+
                         searchResults.isNotEmpty() -> {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 Text(
@@ -428,6 +430,7 @@ fun globalSearchDialog(
                                 }
                             }
                         }
+
                         else -> {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -586,11 +589,13 @@ private fun getMessagePreviewWithContext(content: String, searchQuery: String, m
             // Search term not found (shouldn't happen), show start
             content.take(maxLength) + "..."
         }
+
         queryIndex < 80 -> {
             // Search term near the start, show from beginning
             val endIndex = minOf(content.length, maxLength)
             content.take(endIndex) + if (content.length > maxLength) "..." else ""
         }
+
         else -> {
             // Search term in the middle/end, show context around it
             val contextBefore = 80

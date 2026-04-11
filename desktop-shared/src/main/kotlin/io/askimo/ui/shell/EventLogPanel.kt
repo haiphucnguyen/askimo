@@ -70,6 +70,7 @@ private fun Modifier.detectHover(onHoverChange: (Boolean) -> Unit): Modifier = t
                 PointerEventType.Enter -> {
                     onHoverChange(true)
                 }
+
                 PointerEventType.Exit -> {
                     onHoverChange(false)
                 }
@@ -210,6 +211,7 @@ fun eventLogPanel(
                 content(Modifier.fillMaxWidth().height(size))
             }
         }
+
         EventLogDockPosition.LEFT -> {
             Row(modifier = modifier) {
                 content(Modifier.fillMaxHeight().width(size))
@@ -225,6 +227,7 @@ fun eventLogPanel(
                 )
             }
         }
+
         EventLogDockPosition.RIGHT -> {
             Row(modifier = modifier) {
                 resizeHandle(

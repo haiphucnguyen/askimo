@@ -72,9 +72,6 @@
     "name": "[Ldev.langchain4j.model.anthropic.internal.api.AnthropicTextContent;"
   },
   {
-    "name": "[Ldev.langchain4j.model.googleai.GeminiContent;"
-  },
-  {
     "name": "[Ldev.langchain4j.model.googleai.GeminiFunctionDeclaration;"
   },
   {
@@ -1606,6 +1603,12 @@
     "name": "dev.langchain4j.model.openai.internal.chat.Role",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "dev.langchain4j.model.openai.internal.chat.SystemMessage",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true
   },
   {
     "name": "dev.langchain4j.model.openai.internal.chat.Tool",
@@ -3352,6 +3355,26 @@
     ]
   },
   {
+    "name": "io.askimo.core.config.ModelTimeoutsConfig",
+    "allDeclaredFields": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": ["long", "long"] },
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "long",
+          "long",
+          "int",
+          "kotlin.jvm.internal.DefaultConstructorMarker"
+        ]
+      },
+      { "name": "getDefaultModelTimeoutSeconds", "parameterTypes": [] },
+      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] }
+    ]
+  },
+  {
     "name": "io.askimo.core.config.ModelsConfig",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
@@ -3360,6 +3383,7 @@
       {
         "name": "<init>",
         "parameterTypes": [
+          "io.askimo.core.config.ModelTimeoutsConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
@@ -3374,6 +3398,7 @@
       {
         "name": "<init>",
         "parameterTypes": [
+          "io.askimo.core.config.ModelTimeoutsConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
@@ -3395,6 +3420,7 @@
       { "name": "getOllama", "parameterTypes": [] },
       { "name": "getOpenai", "parameterTypes": [] },
       { "name": "getOpenai_compatible", "parameterTypes": [] },
+      { "name": "getTimeouts", "parameterTypes": [] },
       { "name": "getXai", "parameterTypes": [] }
     ]
   },
@@ -3423,7 +3449,6 @@
         "name": "<init>",
         "parameterTypes": [
           "java.lang.String",
-          "long",
           "java.lang.String",
           "java.lang.String",
           "java.lang.String"
@@ -3433,7 +3458,6 @@
         "name": "<init>",
         "parameterTypes": [
           "java.lang.String",
-          "long",
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
@@ -3444,7 +3468,6 @@
       { "name": "getEmbeddingModel", "parameterTypes": [] },
       { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
-      { "name": "getUtilityModelTimeoutSeconds", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
   },
@@ -4951,7 +4974,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$TJ5euPwO",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$LyMoAAaM",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -5818,6 +5841,10 @@
     "queryAllDeclaredMethods": true
   },
   {
+    "name": "io.askimo.tools.datetime.DateTimeTools",
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "io.askimo.tools.fs.LocalFsTools",
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -5880,6 +5907,14 @@
   },
   {
     "name": "io.askimo.tools.git.GitTools",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.tools.weather.WeatherTools",
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "io.askimo.tools.web.WebSearchTools",
     "queryAllDeclaredMethods": true
   },
   {
@@ -7338,7 +7373,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$TfaM2s4g",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$dZdAwrXL",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

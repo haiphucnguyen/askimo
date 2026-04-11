@@ -61,6 +61,7 @@ object AskimoHome {
     fun base(): Path = get().base()
 
     fun recipesDir(): Path = base().resolve("recipes")
+    fun plansDir(): Path = base().resolve("plans")
     fun projectsDir(): Path = base().resolve("projects")
     fun sessionFile(): Path = base().resolve("session")
     fun encryptionKeyFile(): Path = base().resolve(".key")

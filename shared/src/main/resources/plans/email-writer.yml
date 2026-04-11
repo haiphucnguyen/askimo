@@ -1,0 +1,35 @@
+id: email-writer
+name: Email Writer
+icon: "📧"
+description: Draft a professional email from a brief description of what you need to say.
+built_in: true
+
+inputs:
+  - key: purpose
+    label: Email Purpose
+    type: text
+    required: true
+    hint: 'e.g. "Follow up on proposal", "Request a meeting", "Apologise for delay"'
+  - key: recipient
+    label: Recipient / Context
+    type: text
+    required: false
+    hint: 'e.g. "client", "manager", "colleague", "potential partner"'
+  - key: key_points
+    label: Key Points to Include
+    type: multiline
+    required: false
+    hint: Any specific details, facts, or requests to include
+  - key: tone
+    label: Tone
+    type: text
+    required: false
+    default: "professional"
+    hint: 'e.g. "formal", "friendly", "apologetic", "persuasive"'
+
+steps:
+  - id: draft
+    message: "Write a professional email for the following purpose.\n\nPurpose: {{purpose}}\nRecipient context: {{recipient}}\nTone: {{tone}}\nKey points to include: {{key_points}}\n\nProvide: subject line, greeting, body, and sign-off. Format clearly."
+
+  - id: improve
+    message: "Review and improve the following email draft.\nCheck for: clarity, tone consistency, professionalism, grammar, and persuasiveness.\nProvide the improved final version only.\n\nDraft:\n{{draft}}"
