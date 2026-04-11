@@ -10,5 +10,8 @@ enum class View {
     PROJECTS,
     PROJECT_DETAIL,
     SESSIONS,
+    PLANS,
+    PLAN_DETAIL,
+    PLAN_EDITOR,
     SETTINGS,
 }

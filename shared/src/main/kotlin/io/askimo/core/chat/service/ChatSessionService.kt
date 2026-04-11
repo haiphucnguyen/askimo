@@ -22,7 +22,6 @@ import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.chat.util.FileSizeExceededException
-import io.askimo.core.chat.util.UrlContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
@@ -686,6 +685,7 @@ class ChatSessionService(
         userMessage.attachments.forEach { attachment ->
             val content = when {
                 attachment.content != null -> attachment.content
+
                 attachment.filePath != null -> {
                     try {
                         val file = File(attachment.filePath)
@@ -706,6 +706,7 @@ class ChatSessionService(
                         null
                     }
                 }
+
                 else -> {
                     log.error("Attachment has neither content nor filePath: ${attachment.fileName}")
                     null

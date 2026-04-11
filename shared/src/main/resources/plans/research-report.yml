@@ -1,0 +1,21 @@
+id: research-report
+name: Research Report
+icon: "📝"
+description: Research a topic and write a structured report.
+built_in: true
+
+inputs:
+  - id: topic
+    key: topic
+    label: Topic
+    type: text
+    required: true
+    hint: e.g. "Quantum computing", "Climate change solutions"
+
+steps:
+  - id: research
+    message: "Research the following topic thoroughly. Provide key facts, recent developments, and notable insights.\n\nTopic: {{topic}}"
+
+  - id: report
+    message: "Write a well-structured report based on the research below. Include an executive summary, main findings, and conclusion.\n\nResearch: {{research}}"
+

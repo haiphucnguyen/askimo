@@ -80,10 +80,12 @@ class LocalFilesIndexingCoordinator(
                         log.warn("Skipping non-file path: $path")
                         false
                     }
+
                     shouldExcludeFile(path) -> {
                         log.debug("Skipping excluded file: $path")
                         false
                     }
+
                     else -> true
                 }
             }

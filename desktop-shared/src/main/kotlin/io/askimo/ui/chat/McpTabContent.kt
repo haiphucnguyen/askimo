@@ -307,6 +307,7 @@ private fun mcpInstanceItem(
                             )
                         }
                     }
+
                     hasFailed -> {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -326,6 +327,7 @@ private fun mcpInstanceItem(
                             )
                         }
                     }
+
                     tools.isEmpty() -> {
                         Text(
                             text = stringResource("mcp.tools.none"),
@@ -334,6 +336,7 @@ private fun mcpInstanceItem(
                             modifier = Modifier.padding(8.dp),
                         )
                     }
+
                     else -> {
                         tools.forEach { tool ->
                             toolItem(

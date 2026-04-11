@@ -44,10 +44,12 @@ class CopyCommandHandler : CommandHandler {
                     val process = ProcessBuilderExt("pbcopy").start()
                     process.outputStream.use { it.write(text.toByteArray()) }
                 }
+
                 os.contains("win") -> {
                     val process = ProcessBuilderExt("cmd", "/c", "clip").start()
                     process.outputStream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                 }
+
                 os.contains("nux") || os.contains("nix") -> {
                     val hasXclip = ProcessBuilderExt("which", "xclip").start().waitFor() == 0
                     val hasXsel = ProcessBuilderExt("which", "xsel").start().waitFor() == 0
@@ -57,16 +59,19 @@ class CopyCommandHandler : CommandHandler {
                             val process = ProcessBuilderExt("xclip", "-selection", "clipboard").start()
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
+
                         hasXsel -> {
                             val process = ProcessBuilderExt("xsel", "--clipboard", "--input").start()
                             process.outputStream.use { it.write(text.toByteArray()) }
                         }
+
                         else -> {
                             log.display("⚠️ No clipboard utility found (xclip or xsel). Install one to enable copying.")
                             return false
                         }
                     }
                 }
+
                 else -> {
                     log.display("⚠️ Clipboard not supported on this OS.")
                     return false

@@ -389,13 +389,15 @@ data class ModelCapabilities(
  */
 fun Throwable.isContextLengthError(): Boolean {
     val message = this.message?.lowercase() ?: ""
-    return message.contains("context") && (
-        message.contains("length") ||
-            message.contains("limit") ||
-            message.contains("exceeded") ||
-            message.contains("too long") ||
-            message.contains("maximum context") ||
-            message.contains("token limit") ||
-            message.contains("exceed")
+    return (
+        message.contains("context") && (
+            message.contains("length") ||
+                message.contains("limit") ||
+                message.contains("exceeded") ||
+                message.contains("too long") ||
+                message.contains("maximum context") ||
+                message.contains("token limit") ||
+                message.contains("exceed")
+            )
         ) || message.contains("413") // HTTP 413 Payload Too Large
 }

@@ -1,0 +1,30 @@
+id: meeting-notes
+name: Meeting Notes Processor
+icon: "📋"
+description: Transform raw meeting notes into structured minutes with action items.
+built_in: true
+
+inputs:
+  - key: notes
+    label: Raw Meeting Notes
+    type: multiline
+    required: true
+    hint: Paste your unstructured meeting notes, transcript, or bullet points
+  - key: meeting_title
+    label: Meeting Title / Context
+    type: text
+    required: false
+    hint: 'e.g. "Q2 Planning", "Sprint Retrospective", "Client Kickoff"'
+
+steps:
+  - id: structure
+    message: "Organise the following raw meeting notes into structured minutes.\n\nMeeting: {{meeting_title}}\n\nCreate sections for:\n- Date and Attendees (if mentioned)\n- Agenda / Topics Discussed\n- Key Decisions Made\n- Action Items (owner, deadline if mentioned)\n- Next Steps\n\nRaw Notes:\n{{notes}}"
+
+  - id: action_items
+    message: "Extract and list all action items from the structured meeting notes below.\nFor each item provide: assignee (if known), task description, due date (if mentioned), priority (High/Medium/Low based on context).\nFormat as a clean table.\n\nMeeting Notes:\n{{structure}}"
+
+  - id: summary
+    message: "Write a concise executive summary (3-5 sentences) of the meeting below, suitable to share with stakeholders who did not attend.\n\nMeeting Notes:\n{{structure}}\n\nAction Items:\n{{action_items}}"
+
+  - id: final
+    message: "Produce the final meeting minutes document combining all the information below.\nFormat professionally in markdown.\n\nStructured Notes:\n{{structure}}\n\nAction Items Table:\n{{action_items}}\n\nExecutive Summary:\n{{summary}}"

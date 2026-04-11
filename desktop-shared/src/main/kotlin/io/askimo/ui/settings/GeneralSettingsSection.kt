@@ -400,6 +400,7 @@ private fun fontSettingsCard() {
                                                     -> FontFamily.Serif
 
                                                     "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
+
                                                     else -> FontFamily.SansSerif
                                                 }
                                             },

@@ -33,8 +33,11 @@ object KeychainManager {
     ): Boolean = try {
         when (getOperatingSystem()) {
             MACOS -> storeMacOSKeychain(keyIdentifier, secretKey)
+
             LINUX -> storeLinuxKeyring(keyIdentifier, secretKey)
+
             WINDOWS -> storeWindowsCredentialManager(keyIdentifier, secretKey)
+
             UNKNOWN -> {
                 log.warn("Unknown operating system, keychain storage not available")
                 false
@@ -54,8 +57,11 @@ object KeychainManager {
     fun retrieveSecretKey(provider: String): String? = try {
         when (getOperatingSystem()) {
             MACOS -> retrieveMacOSKeychain(provider)
+
             LINUX -> retrieveLinuxKeyring(provider)
+
             WINDOWS -> retrieveWindowsCredentialManager(provider)
+
             UNKNOWN -> {
                 log.debug("Unknown operating system, keychain retrieval not available")
                 null

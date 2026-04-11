@@ -86,9 +86,11 @@ object UrlContentExtractor {
             contentType.contains("text/html", ignoreCase = true) -> {
                 extractHtmlContent(normalizedUrl, bytes)
             }
+
             contentType.contains("application/pdf", ignoreCase = true) -> {
                 extractPdfContent(normalizedUrl, bytes)
             }
+
             contentType.startsWith("text/", ignoreCase = true) ||
                 contentType.contains("json", ignoreCase = true) ||
                 contentType.contains("xml", ignoreCase = true) -> {
@@ -100,6 +102,7 @@ object UrlContentExtractor {
                     contentType = contentType,
                 )
             }
+
             else -> {
                 extractUsingTika(normalizedUrl, bytes, contentType)
             }
@@ -122,10 +125,10 @@ object UrlContentExtractor {
 
         val mainContent = doc.body()
 
-        val cleanText = mainContent?.text()?.trim() ?: ""
+        val cleanText = mainContent.text()?.trim() ?: ""
 
         val finalContent = if (cleanText.length < 100) {
-            doc.body()?.text()?.trim() ?: cleanText
+            doc.body().text().trim()
         } else {
             cleanText
         }

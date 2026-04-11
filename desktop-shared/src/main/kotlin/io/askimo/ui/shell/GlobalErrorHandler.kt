@@ -56,6 +56,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                                 ),
                             )
                         }
+
                         IndexingErrorType.IO_ERROR -> {
                             onStateChange(
                                 ErrorDialogState(
@@ -66,6 +67,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                                 ),
                             )
                         }
+
                         IndexingErrorType.UNKNOWN_ERROR -> {
                             onStateChange(
                                 ErrorDialogState(
@@ -78,6 +80,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                         }
                     }
                 }
+
                 is ModelNotAvailableEvent -> {
                     onStateChange(
                         ErrorDialogState(
@@ -111,6 +114,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                         ),
                     )
                 }
+
                 is SendMessageErrorEvent -> {
                     val mapped = ExceptionMapper.map(event.throwable)
                     val localizedMsg = LocalizationManager.getString(
@@ -125,6 +129,7 @@ fun globalErrorHandler(onStateChange: (ErrorDialogState) -> Unit) {
                         ),
                     )
                 }
+
                 is AppErrorEvent -> {
                     onStateChange(
                         ErrorDialogState(

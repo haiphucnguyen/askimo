@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ModelClassificationRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.plan.repository.PlanExecutionRepository
 import io.askimo.core.user.repository.UserProfileRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
@@ -106,6 +107,7 @@ class DatabaseManager private constructor(
         createFileSegmentsTable(connection)
         createModelClassificationsTable(connection)
         createIndexFileStateTable(connection)
+        createPlanExecutionsTable(connection)
     }
 
     private fun createUserProfilesTable(conn: Connection) {
@@ -496,7 +498,7 @@ class DatabaseManager private constructor(
                     indexed_at TEXT NOT NULL,
                     PRIMARY KEY (project_id, file_path)
                 )
-                """,
+                """.trimIndent(),
             )
 
             // Index on file_hash for fast hash lookups
@@ -504,7 +506,7 @@ class DatabaseManager private constructor(
                 """
                 CREATE INDEX IF NOT EXISTS idx_index_file_state_hash
                 ON index_file_state (file_hash)
-                """,
+                """.trimIndent(),
             )
 
             // Composite index on project_id and source_type for filtering
@@ -512,7 +514,36 @@ class DatabaseManager private constructor(
                 """
                 CREATE INDEX IF NOT EXISTS idx_index_file_state_project_source
                 ON index_file_state (project_id, source_type)
-                """,
+                """.trimIndent(),
+            )
+        }
+    }
+
+    private fun createPlanExecutionsTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS plan_executions (
+                    id            TEXT PRIMARY KEY,
+                    plan_id       TEXT NOT NULL,
+                    plan_name     TEXT NOT NULL,
+                    inputs        TEXT NOT NULL DEFAULT '',
+                    status        TEXT NOT NULL DEFAULT 'IDLE',
+                    run_count     INTEGER NOT NULL DEFAULT 1,
+                    session_id    TEXT,
+                    output        TEXT,
+                    error_message TEXT,
+                    created_at    TEXT NOT NULL,
+                    updated_at    TEXT NOT NULL
+                )
+                """.trimIndent(),
+            )
+
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_plan_executions_plan_id
+                ON plan_executions (plan_id, created_at)
+                """.trimIndent(),
             )
         }
     }
@@ -551,6 +582,10 @@ class DatabaseManager private constructor(
 
     private val _userProfileRepository: UserProfileRepository by lazy {
         UserProfileRepository(this)
+    }
+
+    private val _planExecutionRepository: PlanExecutionRepository by lazy {
+        PlanExecutionRepository(this)
     }
 
     /**
@@ -606,6 +641,12 @@ class DatabaseManager private constructor(
      * All access to user profiles should go through this repository.
      */
     fun getUserProfileRepository(): UserProfileRepository = _userProfileRepository
+
+    /**
+     * Get the singleton PlanExecutionRepository instance.
+     * All access to plan execution records should go through this repository.
+     */
+    fun getPlanExecutionRepository(): PlanExecutionRepository = _planExecutionRepository
 
     /**
      * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).

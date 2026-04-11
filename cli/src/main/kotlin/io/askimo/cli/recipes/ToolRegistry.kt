@@ -45,43 +45,51 @@ class ToolRegistry private constructor(
             }
             return when (targetType) {
                 String::class.java -> value.toString()
+
                 java.lang.Boolean.TYPE, java.lang.Boolean::class.java ->
                     when (value) {
                         is Boolean -> value
                         is String -> value.equals("true", ignoreCase = true)
                         else -> false
                     }
+
                 Integer.TYPE, Integer::class.java ->
                     when (value) {
                         is Number -> value.toInt()
                         is String -> value.toIntOrNull() ?: 0
                         else -> 0
                     }
+
                 Long.TYPE, Long::class.java ->
                     when (value) {
                         is Number -> value.toLong()
                         is String -> value.toLongOrNull() ?: 0L
                         else -> 0L
                     }
+
                 Double.TYPE, Double::class.java ->
                     when (value) {
                         is Number -> value.toDouble()
                         is String -> value.toDoubleOrNull() ?: 0.0
                         else -> 0.0
                     }
+
                 Float.TYPE, Float::class.java ->
                     when (value) {
                         is Number -> value.toFloat()
                         is String -> value.toFloatOrNull() ?: 0.0f
                         else -> 0.0f
                     }
+
                 else -> value
             }
         }
 
         return when (args) {
             null -> m.invoke(target)
+
             is Array<*> -> m.invoke(target, *args)
+
             is List<*> -> {
                 val params = m.parameters
                 if (params.size == 1 && params[0].type.isAssignableFrom(List::class.java)) {
@@ -96,6 +104,7 @@ class ToolRegistry private constructor(
                     m.invoke(target, *callArgs)
                 }
             }
+
             is Map<*, *> -> {
                 // Use Kotlin reflection to get actual parameter names
                 val kFunction = target::class.declaredFunctions.find { it.javaMethod == m }
@@ -114,6 +123,7 @@ class ToolRegistry private constructor(
                 }
                 m.invoke(target, *callArgs)
             }
+
             else -> m.invoke(target, args)
         }
     }

@@ -94,6 +94,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
@@ -109,7 +110,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(AppConfig.models[OPENAI].utilityModel.ifBlank { settings.defaultModel })
-            .timeout(Duration.ofSeconds(AppConfig.models[OPENAI].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -122,6 +123,7 @@ class OpenAiModelFactory : ChatModelFactory<OpenAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)

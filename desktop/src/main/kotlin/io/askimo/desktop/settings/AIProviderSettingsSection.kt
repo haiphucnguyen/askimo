@@ -567,6 +567,7 @@ private fun specialModelSelectionDialog(
                             )
                         }
                     }
+
                     errorMessage != null -> {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                             Text(
@@ -585,12 +586,14 @@ private fun specialModelSelectionDialog(
                             }
                         }
                     }
+
                     availableModels.isEmpty() -> {
                         Text(
                             text = stringResource("settings.model.none"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+
                     else -> {
                         Text(
                             text = stringResource("settings.model.change.description"),

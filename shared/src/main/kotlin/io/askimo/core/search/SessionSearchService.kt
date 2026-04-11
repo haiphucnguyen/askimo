@@ -53,8 +53,11 @@ class SessionSearchService(
 
         // Convert SortBy to SearchSortBy for repository
         val repositorySortBy = when (sortBy) {
-            SortBy.RELEVANCE -> SearchSortBy.DATE_DESC // Fall back to date sorting for now
+            SortBy.RELEVANCE -> SearchSortBy.DATE_DESC
+
+            // Fall back to date sorting for now
             SortBy.DATE_DESC -> SearchSortBy.DATE_DESC
+
             SortBy.DATE_ASC -> SearchSortBy.DATE_ASC
         }
 
@@ -106,6 +109,7 @@ class SessionSearchService(
 
         return when (filter) {
             DateFilter.ALL_TIME -> Pair(null, null)
+
             DateFilter.TODAY -> {
                 val startOfDay = LocalDateTime.now(zoneId)
                     .truncatedTo(ChronoUnit.DAYS)
@@ -113,9 +117,13 @@ class SessionSearchService(
                     .toInstant()
                 Pair(startOfDay, now)
             }
+
             DateFilter.LAST_7_DAYS -> Pair(now.minus(7, ChronoUnit.DAYS), now)
+
             DateFilter.LAST_30_DAYS -> Pair(now.minus(30, ChronoUnit.DAYS), now)
+
             DateFilter.LAST_3_MONTHS -> Pair(now.minus(90, ChronoUnit.DAYS), now)
+
             DateFilter.LAST_YEAR -> Pair(now.minus(365, ChronoUnit.DAYS), now)
         }
     }

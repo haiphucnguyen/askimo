@@ -525,10 +525,12 @@ private fun backgroundImageOption(
                     ?.getResourceAsStream(backgroundImage.resourcePath)?.readBytes()
                     ?: object {}.javaClass.getResourceAsStream("/${backgroundImage.resourcePath}")
                         ?.readBytes()
+
                 is BackgroundImage.Custom -> {
                     val f = File(backgroundImage.filePath)
                     if (f.exists()) f.readBytes() else null
                 }
+
                 else -> null
             }
             if (bytes != null) BitmapPainter(SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()) else null

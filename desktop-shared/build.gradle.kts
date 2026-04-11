@@ -39,6 +39,10 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     // Terminal support
     implementation(libs.bundles.jediterm)
+    // PDF export (OpenPDF / LibrePDF)
+    implementation(libs.openpdf)
+    // Word export
+    implementation(libs.poi.ooxml)
     testImplementation(kotlin("test"))
 }
 

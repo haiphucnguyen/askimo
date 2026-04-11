@@ -113,16 +113,24 @@ object ToolResponseBuilder {
     private fun kotlinx.serialization.json.JsonObjectBuilder.putValue(key: String, value: Any?) {
         when (value) {
             null -> put(key, JsonNull)
+
             is String -> put(key, value)
+
             is Number -> put(key, value)
+
             is Boolean -> put(key, value)
+
             is List<*> -> putJsonArray(key) {
                 value.forEach { item ->
                     when (item) {
                         null -> add(JsonNull)
+
                         is String -> add(JsonPrimitive(item))
+
                         is Number -> add(JsonPrimitive(item))
+
                         is Boolean -> add(JsonPrimitive(item))
+
                         is Map<*, *> -> {
                             val jsonObj = buildJsonObject {
                                 @Suppress("UNCHECKED_CAST")
@@ -132,16 +140,19 @@ object ToolResponseBuilder {
                             }
                             add(jsonObj)
                         }
+
                         else -> add(JsonPrimitive(item.toString()))
                     }
                 }
             }
+
             is Map<*, *> -> putJsonObject(key) {
                 @Suppress("UNCHECKED_CAST")
                 (value as Map<String, Any?>).forEach { (k, v) ->
                     putValue(k, v)
                 }
             }
+
             is Set<*> -> putJsonArray(key) {
                 value.forEach { item ->
                     when (item) {
@@ -153,6 +164,7 @@ object ToolResponseBuilder {
                     }
                 }
             }
+
             else -> put(key, value.toString())
         }
     }

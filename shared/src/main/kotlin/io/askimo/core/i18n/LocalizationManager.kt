@@ -112,14 +112,17 @@ object LocalizationManager {
                 // Full format with country: 日本語 - 日本 (Japanese - Japan)
                 "$nativeName - $nativeCountry ($englishName - $englishCountry)"
             }
+
             nativeCountry != null && nativeName == englishName -> {
                 // Same language name, show country: English - United States
                 "$nativeName - $englishCountry"
             }
+
             nativeName != englishName -> {
                 // No country, different names: 日本語 (Japanese)
                 "$nativeName ($englishName)"
             }
+
             else -> {
                 // No country, same name: English
                 nativeName

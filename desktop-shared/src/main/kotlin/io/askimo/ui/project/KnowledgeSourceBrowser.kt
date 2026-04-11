@@ -61,9 +61,11 @@ class KnowledgeSourceBrowser(
         KnowledgeSourceItem.TypeInfo.FOLDER -> {
             browseForFolder()?.let { listOf(it) } ?: emptyList()
         }
+
         KnowledgeSourceItem.TypeInfo.FILE -> {
             browseForFiles()
         }
+
         KnowledgeSourceItem.TypeInfo.URL -> {
             onShowUrlDialog()
             emptyList()

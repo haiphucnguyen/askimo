@@ -33,10 +33,13 @@ fun loadFontFamily(fontName: String): FontFamily = when (fontName.lowercase()) {
     "monospace", "courier", "courier new", "consolas", "monaco", "menlo",
     "dejavu sans mono", "lucida console",
     -> FontFamily.Monospace
+
     "serif", "times", "times new roman", "georgia", "palatino",
     "garamond", "baskerville", "book antiqua",
     -> FontFamily.Serif
+
     "cursive", "comic sans ms", "apple chancery", "brush script mt" -> FontFamily.Cursive
+
     else -> FontFamily.SansSerif
 }
 

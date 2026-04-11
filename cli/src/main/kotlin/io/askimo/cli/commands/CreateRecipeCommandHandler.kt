@@ -69,7 +69,9 @@ class CreateRecipeCommandHandler : CommandHandler {
         val name =
             when {
                 !maybeName.isNullOrBlank() -> maybeName
+
                 defFromFile.name.isNotBlank() -> defFromFile.name
+
                 else -> {
                     log.display("❌ Recipe name missing. Provide it as first arg or in YAML `name:`.")
                     return
@@ -297,9 +299,11 @@ class CreateRecipeCommandHandler : CommandHandler {
                         return null
                     }
                 }
+
                 "-i", "--interactive" -> {
                     i++
                 }
+
                 else -> return null
             }
         }

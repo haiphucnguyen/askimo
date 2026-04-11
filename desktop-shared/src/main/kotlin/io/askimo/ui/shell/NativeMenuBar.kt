@@ -50,11 +50,12 @@ object NativeMenuBar {
         onImportBackup: () -> Unit,
         onShowTutorial: () -> Unit,
         onOpenTerminal: () -> Unit,
+        onClearPreferences: () -> Unit = {},
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -94,6 +95,7 @@ object NativeMenuBar {
         onImportBackup: () -> Unit,
         onShowTutorial: () -> Unit,
         onOpenTerminal: () -> Unit,
+        onClearPreferences: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -171,6 +173,16 @@ object NativeMenuBar {
                 },
             )
             fileMenu.add(invalidateCachesItem)
+
+            val clearPreferencesItem = MenuItem(
+                LocalizationManager.getString("menu.clear.preferences"),
+            )
+            clearPreferencesItem.addActionListener(
+                ActionListener {
+                    onClearPreferences()
+                },
+            )
+            fileMenu.add(clearPreferencesItem)
 
             fileMenu.addSeparator()
 

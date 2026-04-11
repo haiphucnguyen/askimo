@@ -159,6 +159,7 @@ fun sessionsView(
                             CircularProgressIndicator()
                         }
                     }
+
                     viewModel.errorMessage != null -> {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(200.dp),
@@ -182,6 +183,7 @@ fun sessionsView(
                             }
                         }
                     }
+
                     viewModel.pagedSessions?.isEmpty == true -> {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(200.dp),
@@ -204,6 +206,7 @@ fun sessionsView(
                             }
                         }
                     }
+
                     else -> {
                         val pagedSessions = viewModel.pagedSessions!!
                         Column(

@@ -11,9 +11,12 @@ import io.askimo.core.db.DatabaseManager
 import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.plan.PlanService
+import io.askimo.core.plan.repository.PlanDefRepository
 import io.askimo.core.tools.ToolProviderImpl
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.ui.common.monitoring.SystemResourceMonitor
+import io.askimo.ui.plan.PlansViewModel
 import io.askimo.ui.project.ProjectViewModel
 import io.askimo.ui.project.ProjectsViewModel
 import io.askimo.ui.service.AvatarService
@@ -40,6 +43,17 @@ val desktopModule = module {
     single { get<DatabaseManager>().getChatMessageRepository() }
     single { get<DatabaseManager>().getChatDirectiveRepository() }
     single { get<DatabaseManager>().getProjectRepository() }
+    single { get<DatabaseManager>().getPlanExecutionRepository() }
+
+    // Plan repositories & service
+    single { PlanDefRepository() }
+    single {
+        PlanService(
+            planDefRepository = get(),
+            planExecutionRepository = get(),
+            appContext = get(),
+        )
+    }
 
     single {
         ChatSessionService(
@@ -83,6 +97,10 @@ val desktopModule = module {
 
     factory { (scope: CoroutineScope) ->
         ProjectsViewModel(scope = scope)
+    }
+
+    factory { (scope: CoroutineScope) ->
+        PlansViewModel(scope = scope, planService = get())
     }
 
     factory { (scope: CoroutineScope, projectId: String) ->

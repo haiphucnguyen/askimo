@@ -111,6 +111,7 @@ fun providerSelectionDialog(
                                 )
                             }
                         }
+
                         viewModel.modelError != null -> {
                             Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
                                 Text(
@@ -129,12 +130,14 @@ fun providerSelectionDialog(
                                 }
                             }
                         }
+
                         viewModel.availableModels.isEmpty() -> {
                             Text(
                                 text = stringResource("settings.model.none"),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+
                         else -> {
                             Text(
                                 text = stringResource("settings.model.select", viewModel.selectedProvider?.name ?: ""),
@@ -430,6 +433,7 @@ fun providerSelectionDialog(
                                                 }
                                             }
                                         }
+
                                         is ProviderConfigField.BaseUrlField -> {
                                             OutlinedTextField(
                                                 value = viewModel.providerFieldValues[field.name] ?: "",

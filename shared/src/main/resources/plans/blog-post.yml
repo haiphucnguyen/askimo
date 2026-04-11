@@ -1,0 +1,72 @@
+id: blog-post
+name: Blog Post Writer
+icon: "✍️"
+description: Research a topic and write a compelling, SEO-friendly blog post.
+built_in: true
+
+inputs:
+  - key: topic
+    label: Topic
+    type: text
+    required: true
+    hint: e.g. "Benefits of remote work", "Introduction to Rust programming"
+  - key: audience
+    label: Target Audience
+    type: text
+    required: false
+    hint: e.g. "software developers", "small business owners"
+  - key: tone
+    label: Tone
+    type: text
+    required: false
+    default: "professional yet approachable"
+    hint: e.g. "casual", "formal", "humorous"
+  - key: word_count
+    label: Approximate Word Count
+    type: text
+    required: false
+    default: "800"
+    hint: e.g. 600, 1000, 1500
+
+steps:
+  - id: outline
+    message: |
+      Create a detailed blog post outline for the following topic.
+      Include: title options, introduction hook, 4-6 main sections with subpoints, and a conclusion.
+
+      Topic: {{topic}}
+      Target Audience: {{audience}}
+      Tone: {{tone}}
+
+  - id: draft
+    message: |
+      Write a complete blog post based on the outline below.
+      Aim for approximately {{word_count}} words. Use the specified tone.
+      Include a compelling introduction, well-structured body paragraphs, and a strong call-to-action conclusion.
+      Format with markdown headings.
+
+      Outline:
+      {{outline}}
+
+  - id: seo
+    message: |
+      Review the blog post below and provide:
+      1. An optimised SEO title (under 60 characters)
+      2. A meta description (under 155 characters)
+      3. 5-8 relevant keywords/tags
+      4. Any suggestions to improve readability or SEO
+
+      Blog Post:
+      {{draft}}
+
+  - id: final
+    message: |
+      Produce the final polished blog post by incorporating SEO recommendations into the draft.
+      Output the full post in markdown format, starting with the optimised title as an H1.
+
+      Draft:
+      {{draft}}
+
+      SEO Recommendations:
+      {{seo}}
+

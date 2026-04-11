@@ -108,6 +108,7 @@ class TemplateResolver(private val parameterValues: Map<String, String>) {
                         braceDepth++
                         i += 2
                     }
+
                     i < template.length - 1 && template[i] == '}' && template[i + 1] == '}' -> {
                         braceDepth--
                         i += 2
@@ -115,6 +116,7 @@ class TemplateResolver(private val parameterValues: Map<String, String>) {
                             errors.add("Unmatched closing braces at position $i")
                         }
                     }
+
                     else -> i++
                 }
             }

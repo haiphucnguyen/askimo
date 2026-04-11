@@ -4,7 +4,6 @@
  */
 package io.askimo.desktop
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +48,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
@@ -84,6 +84,7 @@ import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
 import io.askimo.core.util.PersonalAskimoHome
 import io.askimo.desktop.di.allDesktopModules
+import io.askimo.desktop.plan.planEditorView
 import io.askimo.desktop.settings.SettingsSection
 import io.askimo.desktop.settings.SettingsViewModel
 import io.askimo.desktop.settings.aboutDialog
@@ -126,6 +127,9 @@ import io.askimo.ui.common.theme.appBackground
 import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.theme.detectMacOSDarkMode
 import io.askimo.ui.common.ui.util.CustomUriHandler
+import io.askimo.ui.plan.PlansViewModel
+import io.askimo.ui.plan.planDetailView
+import io.askimo.ui.plan.plansGalleryView
 import io.askimo.ui.project.ProjectsViewModel
 import io.askimo.ui.project.editProjectDialog
 import io.askimo.ui.project.newProjectDialog
@@ -282,6 +286,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showQuitDialog by remember { mutableStateOf(false) }
     var showInvalidateCacheDialog by remember { mutableStateOf(false) }
     var showCacheDeletedDialog by remember { mutableStateOf(false) }
+    var showClearPreferencesDialog by remember { mutableStateOf(false) }
+    var showPreferencesClearedDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showEventLogWindow by remember { mutableStateOf(false) }
     var showEventLogPanel by remember { mutableStateOf(false) }
@@ -463,6 +469,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
     }
     val projectsViewModel = remember { koin.get<ProjectsViewModel> { parametersOf(scope) } }
+    val plansViewModel = remember { koin.get<PlansViewModel> { parametersOf(scope) } }
     val settingsViewModel = remember { koin.get<SettingsViewModel> { parametersOf(scope) } }
     val updateViewModel = remember { koin.get<UpdateViewModel> { parametersOf(scope) } }
 
@@ -645,6 +652,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onOpenTerminal = {
                     showTerminalPanel = !showTerminalPanel
                 },
+                onClearPreferences = {
+                    showClearPreferencesDialog = true
+                },
             )
         }
     }
@@ -784,29 +794,35 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         currentView = View.CHAT
                                                         true
                                                     }
+
                                                     AppShortcut.CREATE_PROJECT -> {
                                                         showNewProjectDialog = true
                                                         true
                                                     }
+
                                                     AppShortcut.SEARCH_IN_CHAT -> {
                                                         if (currentView == View.CHAT && chatViewModel?.isSearchMode == false) {
                                                             chatViewModel.enableSearchMode()
                                                         }
                                                         true
                                                     }
+
                                                     AppShortcut.GLOBAL_SEARCH -> {
                                                         showGlobalSearchDialog = true
                                                         true
                                                     }
+
                                                     AppShortcut.TOGGLE_CHAT_HISTORY -> {
                                                         isSessionsExpanded = !isSessionsExpanded
                                                         true
                                                     }
+
                                                     AppShortcut.OPEN_SETTINGS -> {
                                                         previousView = currentView
                                                         currentView = View.SETTINGS
                                                         true
                                                     }
+
                                                     AppShortcut.STOP_AI_RESPONSE -> {
                                                         if (chatViewModel?.isLoading == true) {
                                                             chatViewModel.cancelResponse()
@@ -815,10 +831,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                             false
                                                         }
                                                     }
+
                                                     AppShortcut.QUIT_APPLICATION -> {
                                                         showQuitDialog = true
                                                         true
                                                     }
+
                                                     AppShortcut.ENTER_FULLSCREEN -> {
                                                         windowState?.let { state ->
                                                             state.placement = if (state.placement == WindowPlacement.Fullscreen) {
@@ -829,14 +847,17 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         }
                                                         true
                                                     }
+
                                                     AppShortcut.NAVIGATE_TO_SESSIONS -> {
                                                         currentView = View.SESSIONS
                                                         true
                                                     }
+
                                                     AppShortcut.NAVIGATE_TO_PROJECTS -> {
                                                         currentView = View.PROJECTS
                                                         true
                                                     }
+
                                                     else -> false
                                                 }
                                             },
@@ -908,6 +929,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     onNavigateToAbout = {
                                                         showAboutDialog = true
                                                     },
+                                                    onNavigateToPlans = {
+                                                        currentView = View.PLANS
+                                                    },
                                                 )
                                             } // End BoxWithConstraints
 
@@ -966,6 +990,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     chatViewModel = chatViewModel,
                                                     sessionsViewModel = sessionsViewModel,
                                                     projectsViewModel = projectsViewModel,
+                                                    plansViewModel = plansViewModel,
                                                     appContext = appContext,
                                                     sessionManager = sessionManager,
                                                     deleteSessionCommand = deleteSessionCommand,
@@ -983,6 +1008,15 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                     onEditProject = { projectId ->
                                                         editingProjectId = projectId
                                                         showEditProjectDialog = true
+                                                    },
+                                                    onNavigateToPlans = {
+                                                        currentView = View.PLANS
+                                                    },
+                                                    onNavigateToPlanDetail = {
+                                                        currentView = View.PLAN_DETAIL
+                                                    },
+                                                    onNavigateToPlanEditor = {
+                                                        currentView = View.PLAN_EDITOR
                                                     },
                                                     activeSessionId = activeSessionId,
                                                     sessionChatState = sessionChatStates[activeSessionId],
@@ -1151,6 +1185,49 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         confirmButton = {
                             primaryButton(
                                 onClick = { showCacheDeletedDialog = false },
+                            ) {
+                                Text(stringResource("action.ok"))
+                            }
+                        },
+                    )
+                }
+
+                // Clear preferences confirmation dialog
+                if (showClearPreferencesDialog) {
+                    AppComponents.alertDialog(
+                        onDismissRequest = { showClearPreferencesDialog = false },
+                        title = { Text(stringResource("menu.clear.preferences.title")) },
+                        text = { Text(stringResource("menu.clear.preferences.message")) },
+                        confirmButton = {
+                            dangerButton(
+                                onClick = {
+                                    showClearPreferencesDialog = false
+                                    ApplicationPreferences.clearAll()
+                                    showPreferencesClearedDialog = true
+                                },
+                            ) {
+                                Text(stringResource("action.yes"))
+                            }
+                        },
+                        dismissButton = {
+                            secondaryButton(
+                                onClick = { showClearPreferencesDialog = false },
+                            ) {
+                                Text(stringResource("action.cancel"))
+                            }
+                        },
+                    )
+                }
+
+                // Preferences cleared success dialog
+                if (showPreferencesClearedDialog) {
+                    AppComponents.alertDialog(
+                        onDismissRequest = { showPreferencesClearedDialog = false },
+                        title = { Text(stringResource("menu.clear.preferences.success.title")) },
+                        text = { Text(stringResource("menu.clear.preferences.success.message")) },
+                        confirmButton = {
+                            primaryButton(
+                                onClick = { showPreferencesClearedDialog = false },
                             ) {
                                 Text(stringResource("action.ok"))
                             }
@@ -1677,6 +1754,7 @@ fun mainContent(
     chatViewModel: ChatViewModel,
     sessionsViewModel: SessionsViewModel,
     projectsViewModel: ProjectsViewModel,
+    plansViewModel: PlansViewModel,
     appContext: AppContext,
     sessionManager: SessionManager,
     deleteSessionCommand: DeleteSessionFromProjectCommand,
@@ -1685,6 +1763,9 @@ fun mainContent(
     onNavigateToSessions: () -> Unit,
     onSelectProject: (String) -> Unit,
     onEditProject: (String) -> Unit,
+    onNavigateToPlans: () -> Unit = {},
+    onNavigateToPlanDetail: () -> Unit = {},
+    onNavigateToPlanEditor: () -> Unit = {},
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
@@ -1732,17 +1813,20 @@ fun mainContent(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+
             View.SESSIONS -> sessionsView(
                 viewModel = sessionsViewModel,
                 onResumeSession = onResumeSession,
                 modifier = Modifier.fillMaxSize(),
             )
+
             View.PROJECTS -> projectsView(
                 viewModel = projectsViewModel,
                 onSelectProject = onSelectProject,
                 onEditProject = onEditProject,
                 modifier = Modifier.fillMaxSize(),
             )
+
             View.PROJECT_DETAIL -> {
                 if (selectedProjectId != null) {
                     val project = projectsViewModel.projects.find { it.id == selectedProjectId }
@@ -1799,8 +1883,54 @@ fun mainContent(
                     }
                 }
             }
+
             View.SETTINGS -> {
             }
+
+            View.PLANS -> plansGalleryView(
+                viewModel = plansViewModel,
+                onSelectPlan = { plan ->
+                    plansViewModel.selectPlan(plan)
+                    onNavigateToPlanDetail()
+                },
+                onNewPlan = {
+                    plansViewModel.startNewPlan()
+                    onNavigateToPlanEditor()
+                },
+                onEditPlan = { planId ->
+                    plansViewModel.startEditPlan(planId)
+                    onNavigateToPlanEditor()
+                },
+                onDuplicatePlan = { planId ->
+                    plansViewModel.startDuplicatePlan(planId)
+                    onNavigateToPlanEditor()
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            View.PLAN_DETAIL -> planDetailView(
+                viewModel = plansViewModel,
+                onBack = onNavigateToPlans,
+                onEditPlan = {
+                    plansViewModel.selectedPlan?.id?.let { planId ->
+                        plansViewModel.startEditPlan(planId)
+                        onNavigateToPlanEditor()
+                    }
+                },
+                onDuplicatePlan = {
+                    plansViewModel.selectedPlan?.id?.let { planId ->
+                        plansViewModel.startDuplicatePlan(planId)
+                        onNavigateToPlanEditor()
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            View.PLAN_EDITOR -> planEditorView(
+                viewModel = plansViewModel,
+                onBack = onNavigateToPlans,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }

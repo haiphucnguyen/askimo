@@ -145,12 +145,16 @@ class TelemetryChatModelListener(
         // Categorise the error type without including the message (may contain PII/keys)
         val errorType = when {
             error.message?.contains("timeout", ignoreCase = true) == true -> "provider_timeout"
+
             error.message?.contains("rate limit", ignoreCase = true) == true ||
                 error.message?.contains("429", ignoreCase = true) == true -> "rate_limit"
+
             error.message?.contains("401", ignoreCase = true) == true ||
                 error.message?.contains("403", ignoreCase = true) == true -> "auth_error"
+
             error.message?.contains("context length", ignoreCase = true) == true ||
                 error.message?.contains("too long", ignoreCase = true) == true -> "context_length"
+
             else -> "provider_error"
         }
         Analytics.track(

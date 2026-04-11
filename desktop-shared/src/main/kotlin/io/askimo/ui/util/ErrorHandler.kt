@@ -34,12 +34,19 @@ object ErrorHandler {
         // Return user-friendly message based on exception type
         return when (exception) {
             is FileSizeExceededException -> "File is too large (${formatFileSize(exception.fileSize)}). Maximum allowed size is ${formatFileSize(exception.maxAllowedSize)}."
+
             is UnknownHostException -> "Unable to connect to the server. Please check your internet connection."
+
             is ConnectException -> "Failed to connect to the AI service. Please check your connection and try again."
+
             is SocketTimeoutException -> "The request timed out. Please try again."
+
             is IOException -> "A network error occurred. Please check your connection and try again."
+
             is IllegalStateException -> "An unexpected state error occurred. Please try again."
+
             is IllegalArgumentException -> "Invalid input provided. Please check your settings."
+
             else -> {
                 // Generic user-friendly message
                 val errorType = when {

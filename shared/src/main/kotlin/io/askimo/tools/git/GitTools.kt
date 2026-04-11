@@ -64,7 +64,9 @@ class GitTools {
             currentFile?.let { file ->
                 when {
                     isNewFile -> result.add("new file: $file")
+
                     isDeletedFile -> result.add("deleted file: $file")
+
                     else -> {
                         result.add("$file (+$addedLines -$deletedLines)")
                         // For modified files, include some context but limit to 20 lines
@@ -94,26 +96,33 @@ class GitTools {
                     contentLines.clear()
                     contentLines.add(line)
                 }
+
                 line.startsWith("new file mode") -> {
                     isNewFile = true
                 }
+
                 line.startsWith("deleted file mode") -> {
                     isDeletedFile = true
                 }
+
                 line.startsWith("index ") || line.startsWith("---") || line.startsWith("+++") -> {
                     if (!isNewFile && !isDeletedFile) contentLines.add(line)
                 }
+
                 line.startsWith("@@") -> {
                     if (!isNewFile && !isDeletedFile) contentLines.add(line)
                 }
+
                 line.startsWith("+") && !line.startsWith("+++") -> {
                     addedLines++
                     if (!isNewFile && !isDeletedFile) contentLines.add(line)
                 }
+
                 line.startsWith("-") && !line.startsWith("---") -> {
                     deletedLines++
                     if (!isNewFile && !isDeletedFile) contentLines.add(line)
                 }
+
                 line.isNotBlank() -> {
                     if (!isNewFile && !isDeletedFile) contentLines.add(line)
                 }

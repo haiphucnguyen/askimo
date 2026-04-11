@@ -328,12 +328,15 @@ private fun openInFileManager(file: File) {
             Platform.isMac -> {
                 Runtime.getRuntime().exec(arrayOf("open", file.absolutePath))
             }
+
             Platform.isLinux -> {
                 Runtime.getRuntime().exec(arrayOf("xdg-open", file.absolutePath))
             }
+
             Platform.isWindows -> {
                 Runtime.getRuntime().exec(arrayOf("explorer", file.absolutePath))
             }
+
             else -> {
                 if (Desktop.isDesktopSupported()) {
                     Desktop.getDesktop().open(file)

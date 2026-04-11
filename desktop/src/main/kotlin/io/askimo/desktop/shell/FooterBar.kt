@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,10 +27,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,7 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,33 +53,22 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import io.askimo.core.VersionInfo
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.getConfigInfo
-import io.askimo.core.event.Event
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.EventSource
 import io.askimo.core.event.internal.ModelChangedEvent
-import io.askimo.core.event.system.UpdateAvailableEvent
-import io.askimo.core.event.user.IndexingCompletedEvent
-import io.askimo.core.event.user.IndexingFailedEvent
-import io.askimo.core.event.user.IndexingInProgressEvent
-import io.askimo.core.event.user.IndexingStartedEvent
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
 import io.askimo.core.providers.ProviderSettings
-import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.monitoring.SystemResourceMonitor
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.clickableCard
 import io.askimo.ui.common.ui.themedTooltip
+import io.askimo.ui.shell.notificationIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -277,6 +261,7 @@ private fun modelDropdown(
                         enabled = false,
                     )
                 }
+
                 availableModels.isEmpty() -> {
                     DropdownMenuItem(
                         text = {
@@ -290,6 +275,7 @@ private fun modelDropdown(
                         enabled = false,
                     )
                 }
+
                 else -> {
                     // Search field
                     OutlinedTextField(
@@ -535,334 +521,12 @@ fun footerBar(
                 }
 
                 notificationIcon(onShowUpdateDetails = onShowUpdateDetails)
-
-                Text(
-                    text = "v${VersionInfo.version}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
             }
         }
 
         if (telemetryExpanded) {
             HorizontalDivider()
-            // Use a fixed max height of 250dp (approximately 1/3 of typical 800px window)
             telemetryPanel(metrics, 250.dp)
-        }
-    }
-}
-
-/**
- * Wrapper class to ensure unique keys for events in LazyColumn
- */
-private data class EventWithId(
-    val id: String,
-    val event: Event,
-)
-
-/**
- * Notification icon in bottom bar that shows user events only.
- * Developer events are excluded and shown in the Event Log dialog instead.
- */
-@Composable
-private fun notificationIcon(onShowUpdateDetails: () -> Unit) {
-    var showEventPopup by remember { mutableStateOf(false) }
-    val events = remember { mutableStateListOf<EventWithId>() }
-    var unreadCount by remember { mutableStateOf(0) }
-    var eventCounter by remember { mutableStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        EventBus.userEvents.collect { event ->
-            // Generate unique ID combining counter and timestamp
-            val uniqueId = "${eventCounter++}_${event.timestamp.toEpochMilli()}"
-            events.add(0, EventWithId(uniqueId, event))
-            unreadCount++
-
-            // Keep list size manageable
-            if (events.size > 100) {
-                events.removeAt(100)
-            }
-        }
-    }
-
-    Box {
-        IconButton(
-            onClick = {
-                showEventPopup = !showEventPopup
-            },
-            modifier = Modifier
-                .size(32.dp)
-                .pointerHoverIcon(PointerIcon.Hand),
-        ) {
-            BadgedBox(
-                badge = {
-                    if (unreadCount > 0) {
-                        Badge(
-                            modifier = Modifier
-                                .widthIn(min = 20.dp)
-                                .padding(horizontal = 4.dp),
-                        ) {
-                            Text(
-                                text = unreadCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                            )
-                        }
-                    }
-                },
-            ) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = "Events",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-
-        // Event popup
-        if (showEventPopup) {
-            Popup(
-                alignment = Alignment.BottomEnd,
-                offset = IntOffset(0, -40),
-                onDismissRequest = { showEventPopup = false },
-            ) {
-                Card(
-                    modifier = Modifier.padding(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                ) {
-                    eventPopupContent(
-                        events = events,
-                        onShowUpdateDetails = onShowUpdateDetails,
-                        onDismissPopup = { showEventPopup = false },
-                        onRemoveEvent = { eventWithId ->
-                            events.remove(eventWithId)
-                            if (unreadCount > 0) {
-                                unreadCount--
-                            }
-                        },
-                        onClearAll = {
-                            events.clear()
-                            unreadCount = 0
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Displays user events in a popup.
- * Only shows events where isDeveloperEvent = false.
- * Developer events are shown separately in the Event Log dialog.
- */
-@Composable
-private fun eventPopupContent(
-    events: List<EventWithId>,
-    onShowUpdateDetails: () -> Unit,
-    onDismissPopup: () -> Unit,
-    onRemoveEvent: (EventWithId) -> Unit,
-    onClearAll: () -> Unit,
-) {
-    val estimatedItemHeight = 128.dp
-    val maxHeight = 500.dp
-    val minHeight = 100.dp
-
-    val dynamicHeight = remember(events.size) {
-        val contentHeight = 60.dp + (estimatedItemHeight * events.size.toFloat())
-        when {
-            contentHeight < minHeight -> minHeight
-            contentHeight > maxHeight -> maxHeight
-            else -> contentHeight
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .width(400.dp)
-            .padding(8.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Notifications (${events.size})",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            if (events.isNotEmpty()) {
-                TextButton(
-                    onClick = onClearAll,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        text = stringResource("event.notification.clear.all"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider()
-
-        if (events.isEmpty()) {
-            Text(
-                text = stringResource("event.notification.empty"),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(16.dp),
-            )
-        } else {
-            val listState = rememberLazyListState()
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(dynamicHeight)
-                    .padding(top = 8.dp),
-            ) {
-                LazyColumn(
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(
-                        items = events,
-                        key = { it.id },
-                    ) { eventWithId ->
-                        eventItem(
-                            event = eventWithId.event,
-                            onShowUpdateDetails = onShowUpdateDetails,
-                            onDismissPopup = onDismissPopup,
-                            onRemoveEvent = { onRemoveEvent(eventWithId) },
-                        )
-                    }
-                }
-
-                if ((estimatedItemHeight * events.size.toFloat()) > maxHeight) {
-                    VerticalScrollbar(
-                        adapter = rememberScrollbarAdapter(listState),
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .fillMaxHeight(),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun eventItem(
-    event: Event,
-    onShowUpdateDetails: () -> Unit,
-    onDismissPopup: () -> Unit,
-    onRemoveEvent: () -> Unit,
-) {
-    val isSystemEvent = event.source == EventSource.SYSTEM
-    val isUpdateEvent = event is UpdateAvailableEvent
-    val isIndexingStarted = event is IndexingStartedEvent
-    val isIndexingInProgress = event is IndexingInProgressEvent
-    val isIndexingSuccess = event is IndexingCompletedEvent
-    val isIndexingFailure = event is IndexingFailedEvent
-
-    val eventName = when (event) {
-        is UpdateAvailableEvent -> stringResource("event.update.available")
-        is IndexingStartedEvent -> stringResource("event.indexing.started")
-        is IndexingInProgressEvent -> stringResource("event.indexing.inprogress")
-        is IndexingCompletedEvent -> stringResource("event.indexing.completed")
-        is IndexingFailedEvent -> stringResource("event.indexing.failed")
-        else -> event::class.simpleName ?: "Unknown"
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = AppComponents.surfaceVariantCardColors(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = eventName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = when {
-                        isIndexingFailure -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                )
-
-                TextButton(
-                    onClick = onRemoveEvent,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                ) {
-                    Text(
-                        text = stringResource("event.notification.clear"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            Text(
-                text = formatInstantDisplay(event.timestamp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Text(
-                text = event.getDetails(),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isIndexingFailure) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            )
-
-            if (isUpdateEvent) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(
-                        onClick = {
-                            onRemoveEvent()
-                            onShowUpdateDetails()
-                            onDismissPopup()
-                        },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Text(
-                            text = stringResource("event.details.action"),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
         }
     }
 }

@@ -120,6 +120,7 @@ fun editProjectDialog(
                         CircularProgressIndicator()
                     }
                 }
+
                 dialogState.errorMessage != null -> {
                     // Error state
                     Column(
@@ -140,6 +141,7 @@ fun editProjectDialog(
                         }
                     }
                 }
+
                 project != null -> {
                     // Loaded state - show edit form
                     editProjectForm(

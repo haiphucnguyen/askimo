@@ -55,6 +55,7 @@ class LocalFsToolsTest {
 
     private fun parseJsonValue(value: JsonElement): Any? = when (value) {
         is JsonNull -> null
+
         is JsonPrimitive -> {
             when {
                 value.isString -> value.content
@@ -63,9 +64,11 @@ class LocalFsToolsTest {
                 else -> value.content.toLongOrNull() ?: value.content.toDoubleOrNull() ?: value.content
             }
         }
+
         is JsonArray -> {
             value.map { parseJsonValue(it) }
         }
+
         is JsonObject -> {
             value.mapValues { (_, v) -> parseJsonValue(v) }
         }

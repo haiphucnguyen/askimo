@@ -376,6 +376,7 @@ fun mcpServerTemplateDialog(
                                                 tags = tagsList,
                                             )
                                         }
+
                                         TransportType.HTTP -> {
                                             val headersMap = parseKeyValueLines(headersTemplate)
                                             McpServerDefinition(

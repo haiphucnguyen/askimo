@@ -157,6 +157,7 @@ class CliCommandCompleter : Completer {
                 // Add only top 5 suggestions to the main candidates list
                 candidates.addAll(tempCandidates.take(MAX_SUGGESTIONS))
             }
+
             2 -> {
                 // Complete parameters for commands that need them
                 when (words[0]) {
@@ -180,6 +181,7 @@ class CliCommandCompleter : Completer {
                     }
                 }
             }
+
             3 -> {
                 // Complete values for set-param command
                 if (words[0] == ":set-param") {

@@ -144,6 +144,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
             .baseUrl(settings.baseUrl)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -171,7 +172,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(AppConfig.models[ModelProvider.ANTHROPIC].utilityModel.ifBlank { settings.defaultModel })
             .baseUrl(settings.baseUrl)
-            .timeout(Duration.ofSeconds(AppConfig.models[ModelProvider.ANTHROPIC].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -184,6 +185,7 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
             .baseUrl(settings.baseUrl)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }

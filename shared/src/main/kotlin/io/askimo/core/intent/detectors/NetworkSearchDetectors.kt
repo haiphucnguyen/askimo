@@ -40,6 +40,7 @@ class NetworkDetector :
         when {
             // Use word boundaries for short keywords to avoid false positives
             keyword.length <= 4 -> message.contains(Regex("\\b$keyword\\b"))
+
             else -> message.contains(keyword)
         }
     }

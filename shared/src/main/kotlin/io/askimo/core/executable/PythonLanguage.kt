@@ -107,10 +107,12 @@ object PythonLanguage : RunnableLanguage(setOf("python", "python3", "py"), "pyth
                         .substringBefore(" ")
                         .substringBefore(".")
                         .substringBefore(",")
+
                 trimmed.startsWith("from ") ->
                     trimmed.removePrefix("from ")
                         .substringBefore(" ")
                         .substringBefore(".")
+
                 else -> null
             }
         }

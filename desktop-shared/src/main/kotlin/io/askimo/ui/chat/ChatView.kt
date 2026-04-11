@@ -223,6 +223,7 @@ fun chatView(
                             ragIndexingStatus = "started"
                             ragIndexingPercentage = null
                         }
+
                         is IndexingInProgressEvent -> {
                             ragIndexingStatus = "inprogress"
                             ragIndexingPercentage = if (event.totalFiles > 0) {
@@ -231,10 +232,12 @@ fun chatView(
                                 0
                             }
                         }
+
                         is IndexingCompletedEvent -> {
                             ragIndexingStatus = "completed"
                             ragIndexingPercentage = null
                         }
+
                         is IndexingFailedEvent -> {
                             ragIndexingStatus = "failed"
                             ragIndexingPercentage = null
@@ -345,6 +348,7 @@ fun chatView(
                             false
                         }
                     }
+
                     AppShortcut.CLOSE_SEARCH -> {
                         if (isSearchMode) {
                             actions.clearSearch()
@@ -353,6 +357,7 @@ fun chatView(
                             false
                         }
                     }
+
                     AppShortcut.NEXT_SEARCH_RESULT -> {
                         if (isSearchMode && searchResults.isNotEmpty()) {
                             actions.nextSearchResult()
@@ -361,6 +366,7 @@ fun chatView(
                             false
                         }
                     }
+
                     AppShortcut.PREVIOUS_SEARCH_RESULT -> {
                         if (isSearchMode && searchResults.isNotEmpty()) {
                             actions.previousSearchResult()
@@ -369,6 +375,7 @@ fun chatView(
                             false
                         }
                     }
+
                     else -> false
                 }
             },
@@ -940,6 +947,7 @@ fun chatView(
                                     modifier = Modifier.align(Alignment.Center).padding(top = 32.dp),
                                 )
                             }
+
                             isSearchMode -> {
                                 messageList(
                                     messages = searchResults,
@@ -966,6 +974,7 @@ fun chatView(
                                     viewportTopY = viewportBounds?.top,
                                 )
                             }
+
                             messages.isEmpty() -> {
                                 Text(
                                     stringResource("chat.welcome"),
@@ -974,6 +983,7 @@ fun chatView(
                                     modifier = Modifier.align(Alignment.Center).padding(top = 32.dp),
                                 )
                             }
+
                             else -> {
                                 messageList(
                                     messages = messages,

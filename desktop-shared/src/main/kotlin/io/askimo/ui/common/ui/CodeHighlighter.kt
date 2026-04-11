@@ -110,15 +110,23 @@ object CodeHighlighter {
 
         return when {
             lang in listOf("kotlin", "kt", "kts") -> highlightCode(code, kotlinKeywords, theme)
+
             lang in listOf("java") -> highlightCode(code, javaKeywords, theme)
+
             lang in listOf("python", "py") -> highlightCode(code, pythonKeywords, theme, "#")
+
             lang in listOf("javascript", "js", "typescript", "ts", "jsx", "tsx") ->
                 highlightCode(code, jsKeywords, theme)
+
             lang in listOf("sql", "mysql", "postgresql", "sqlite") ->
                 highlightCode(code, sqlKeywords, theme, "--")
+
             lang in listOf("bash", "sh", "shell", "zsh") -> highlightCode(code, shellKeywords, theme, "#")
+
             lang in listOf("json") -> highlightJSON(code, theme)
+
             lang in listOf("xml", "html") -> highlightXML(code, theme)
+
             else -> buildAnnotatedString {
                 withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                     append(code)
@@ -217,6 +225,7 @@ object CodeHighlighter {
                         ),
                     ),
                 )
+
                 // Check if it's followed by '(' - likely a function
                 match.range.last + 1 < line.length && line[match.range.last + 1] == '(' ->
                     tokens.add(

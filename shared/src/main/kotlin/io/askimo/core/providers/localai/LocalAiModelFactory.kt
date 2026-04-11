@@ -90,7 +90,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
             .modelName(settings.defaultModel)
-            .timeout(Duration.ofMinutes(5))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
@@ -107,7 +107,7 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
             .modelName(AppConfig.models[LOCALAI].utilityModel.ifBlank { settings.defaultModel })
-            .timeout(Duration.ofSeconds(AppConfig.models[LOCALAI].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -121,8 +121,8 @@ class LocalAiModelFactory : ChatModelFactory<LocalAiSettings> {
             .baseUrl(settings.baseUrl)
             .apiKey("localai")
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
-            .timeout(Duration.ofMinutes(5))
             .listeners(listOf(TelemetryChatModelListener(telemetry, LOCALAI.name.lowercase())))
             .build()
     }

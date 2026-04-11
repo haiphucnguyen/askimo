@@ -279,8 +279,10 @@ class VariableExtractorTest {
             when (variable.key) {
                 "detached", "containerName", "port", "volume", "volumePath", "image" ->
                     assertTrue(variable.locations.contains(VariableExtractor.VariableLocation.COMMAND))
+
                 "apiKey", "dbHost", "dbPort", "dbName" ->
                     assertTrue(variable.locations.contains(VariableExtractor.VariableLocation.ENVIRONMENT))
+
                 "projectRoot" ->
                     assertTrue(variable.locations.contains(VariableExtractor.VariableLocation.WORKING_DIR))
             }

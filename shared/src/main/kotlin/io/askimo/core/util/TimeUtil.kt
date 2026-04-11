@@ -51,4 +51,39 @@ object TimeUtil {
         val formatter = instantDisplayFmt.withLocale(locale)
         return instant.atZone(ZoneId.systemDefault()).format(formatter)
     }
+
+    /**
+     * Formats a duration given in milliseconds into a human-readable string,
+     * showing hours, minutes, and seconds (sub-second precision is dropped).
+     *
+     * Examples:
+     * - 500      → "< 1s"
+     * - 3_200    → "3s"
+     * - 80_617   → "1m 20s"
+     * - 3_723_000 → "1h 2m 3s"
+     *
+     * @param durationMs Total duration in milliseconds.
+     * @param hourLabel   Localised label for hours   (e.g. "h").
+     * @param minuteLabel Localised label for minutes (e.g. "m").
+     * @param secondLabel Localised label for seconds (e.g. "s").
+     * @param lessThanOne Localised string shown when duration is less than one second (e.g. "< 1s").
+     */
+    fun formatDurationMs(
+        durationMs: Long,
+        hourLabel: String = "h",
+        minuteLabel: String = "m",
+        secondLabel: String = "s",
+        lessThanOne: String = "< 1s",
+    ): String {
+        val totalSeconds = durationMs / 1_000
+        if (totalSeconds == 0L) return lessThanOne
+        val hours = totalSeconds / 3_600
+        val minutes = (totalSeconds % 3_600) / 60
+        val seconds = totalSeconds % 60
+        return buildString {
+            if (hours > 0) append("${hours}$hourLabel ")
+            if (hours > 0 || minutes > 0) append("${minutes}$minuteLabel ")
+            append("${seconds}$secondLabel")
+        }.trim()
+    }
 }

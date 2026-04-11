@@ -145,6 +145,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -174,7 +175,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(AppConfig.models[GEMINI].utilityModel.ifBlank { settings.defaultModel })
-            .timeout(Duration.ofSeconds(AppConfig.models[GEMINI].utilityModelTimeoutSeconds))
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
 
@@ -186,6 +187,7 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
+            .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
             .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }

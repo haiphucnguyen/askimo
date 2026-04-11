@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenuItem
@@ -120,6 +121,7 @@ fun navigationSidebar(
     onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToPlans: () -> Unit = {},
 ) {
     // Animated width for smooth transition
     val targetWidth = if (isExpanded) width else 72.dp
@@ -155,6 +157,7 @@ fun navigationSidebar(
             onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToAbout = onNavigateToAbout,
+            onNavigateToPlans = onNavigateToPlans,
         )
     } else {
         collapsedNavigationSidebar(
@@ -167,6 +170,7 @@ fun navigationSidebar(
             onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToAbout = onNavigateToAbout,
+            onNavigateToPlans = onNavigateToPlans,
         )
     }
 }
@@ -198,6 +202,7 @@ private fun expandedNavigationSidebar(
     onEditUserProfile: () -> Unit, // Add this
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit, // Add this
+    onNavigateToPlans: () -> Unit = {},
 ) {
     val fontScale = LocalFontScale.current
 
@@ -279,6 +284,18 @@ private fun expandedNavigationSidebar(
                     colors = AppComponents.navigationDrawerItemColors(),
                 )
             }
+
+            // Plans
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.PlayCircle, contentDescription = null) },
+                label = { Text(stringResource("plans.nav.title"), style = MaterialTheme.typography.labelLarge) },
+                selected = currentView == View.PLANS || currentView == View.PLAN_DETAIL,
+                onClick = onNavigateToPlans,
+                modifier = Modifier
+                    .padding(horizontal = (12 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = AppComponents.navigationDrawerItemColors(),
+            )
 
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
@@ -384,6 +401,7 @@ private fun collapsedNavigationSidebar(
     onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToPlans: () -> Unit = {},
 ) {
     val fontScale = LocalFontScale.current
 
@@ -463,6 +481,23 @@ private fun collapsedNavigationSidebar(
                     label = null,
                     selected = false,
                     onClick = onNewChat,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationRailItemColors(),
+                )
+            }
+
+            // Plans
+            themedTooltip(text = stringResource("plans.nav.title")) {
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            contentDescription = stringResource("plans.nav.title"),
+                        )
+                    },
+                    label = null,
+                    selected = currentView == View.PLANS || currentView == View.PLAN_DETAIL,
+                    onClick = onNavigateToPlans,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     colors = AppComponents.navigationRailItemColors(),
                 )
@@ -955,7 +990,7 @@ private fun sessionItemWithMenu(
                     isStarred = session.isStarred,
                     projects = availableProjects,
                     onExport = { onExportSession(session.id) },
-                    onRename = { onRenameSession(session.id, session.title ?: "") },
+                    onRename = { onRenameSession(session.id, session.title) },
                     onStar = { onStarSession(session.id, !session.isStarred) },
                     onDelete = { onDeleteSession(session.id) },
                     onMoveToNewProject = {

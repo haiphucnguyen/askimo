@@ -164,12 +164,14 @@ class RecipeExecutor(
                         .trim()
                 "```markdown\n$clean\n```"
             }
+
             "ansi" -> {
                 val lines = t.lines()
                 if (lines.isEmpty()) return t
                 val header = "\u001B[1;36m${lines.first()}\u001B[0m"
                 (listOf(header) + lines.drop(1)).joinToString("\n")
             }
+
             else -> {
                 t
                     .removePrefix("```markdown")

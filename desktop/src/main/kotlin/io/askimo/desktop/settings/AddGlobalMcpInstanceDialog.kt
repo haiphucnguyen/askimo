@@ -163,10 +163,12 @@ fun addGlobalMcpInstanceDialog(
                     inQuotes = true
                     quoteChar = char
                 }
+
                 char == quoteChar && inQuotes -> {
                     inQuotes = false
                     quoteChar = null
                 }
+
                 // Handle spaces outside quotes
                 char.isWhitespace() && !inQuotes -> {
                     if (current.isNotEmpty()) {
@@ -174,6 +176,7 @@ fun addGlobalMcpInstanceDialog(
                         current.clear()
                     }
                 }
+
                 // Regular character
                 else -> {
                     current.append(char)

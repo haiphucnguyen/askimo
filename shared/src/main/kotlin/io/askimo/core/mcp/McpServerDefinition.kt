@@ -34,6 +34,7 @@ data class McpServerDefinition(
             TransportType.STDIO -> require(stdioConfig != null) {
                 "stdioConfig is required for STDIO transport type"
             }
+
             TransportType.HTTP -> require(httpConfig != null) {
                 "httpConfig is required for HTTP transport type"
             }

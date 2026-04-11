@@ -78,18 +78,23 @@ class HelpCommandHandler : CommandHandler {
                 line.trim().startsWith("Usage:") -> {
                     log.display("${" ".repeat(22)}$line")
                 }
+
                 line.trim().startsWith("Example:") -> {
                     log.display("${" ".repeat(22)}$line")
                 }
+
                 line.trim().startsWith("Options:") -> {
                     log.display("${" ".repeat(22)}$line")
                 }
+
                 line.trim().startsWith("--") -> {
                     log.display("${" ".repeat(24)}$line")
                 }
+
                 line.trim().isNotEmpty() -> {
                     log.display("${" ".repeat(22)}$line")
                 }
+
                 else -> {
                     log.display("")
                 }
