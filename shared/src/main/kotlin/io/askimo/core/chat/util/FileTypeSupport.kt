@@ -44,18 +44,6 @@ object FileTypeSupport {
     )
 
     /**
-     * Config files without extensions (treated as code files).
-     */
-    val CONFIG_EXTENSIONS = setOf(
-        "dockerfile",
-        "makefile",
-        "gemfile",
-        "rakefile",
-        "procfile",
-        "vagrantfile",
-    )
-
-    /**
      * Document file extensions (for content extraction).
      */
     val DOCUMENT_EXTENSIONS = setOf(
@@ -74,6 +62,23 @@ object FileTypeSupport {
         "gif",
         "webp",
         "bmp",
+    )
+
+    /**
+     * Extensionless configuration filenames stored in lowercase.
+     * These files have no extension but are recognised by their full filename.
+     */
+    val CONFIG_EXTENSIONS = setOf(
+        "dockerfile",
+        "makefile",
+        "jenkinsfile",
+        "procfile",
+        "vagrantfile",
+        "rakefile",
+        "gemfile",
+        "podfile",
+        "brewfile",
+        "guardfile",
     )
 
     /**
@@ -119,4 +124,13 @@ object FileTypeSupport {
      * @return The extension without the dot, or empty string if no extension
      */
     fun getExtension(fileName: String): String = fileName.substringAfterLast('.', "")
+
+    /**
+     * Check if a filename is a known extensionless configuration file.
+     * Comparison is case-insensitive.
+     *
+     * @param fileName The file name (without path)
+     * @return true if the filename is in CONFIG_EXTENSIONS
+     */
+    fun isConfigFile(fileName: String): Boolean = fileName.lowercase() in CONFIG_EXTENSIONS
 }
