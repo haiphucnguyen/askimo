@@ -191,12 +191,13 @@ class SettingsViewModel(
             providerConfigFields = existingSettings?.getConfigFields(LocalizationManager.messageResolver) ?: emptyList()
 
             // Initialize field values with existing or default values
-            providerFieldValues = providerConfigFields.associate { field ->
+            providerFieldValues = providerConfigFields.mapNotNull { field ->
                 when (field) {
                     is ProviderConfigField.ApiKeyField -> field.name to field.value
                     is ProviderConfigField.BaseUrlField -> field.name to field.value
+                    is ProviderConfigField.InfoField -> null
                 }
-            }
+            }.toMap()
         } else {
             // No provider configured yet
             selectedProvider = null
@@ -236,12 +237,13 @@ class SettingsViewModel(
         providerConfigFields = existingSettings?.getConfigFields(LocalizationManager.messageResolver) ?: emptyList()
 
         // Initialize field values with existing or default values
-        providerFieldValues = providerConfigFields.associate { field ->
+        providerFieldValues = providerConfigFields.mapNotNull { field ->
             when (field) {
                 is ProviderConfigField.ApiKeyField -> field.name to field.value
                 is ProviderConfigField.BaseUrlField -> field.name to field.value
+                is ProviderConfigField.InfoField -> null
             }
-        }
+        }.toMap()
     }
 
     /**

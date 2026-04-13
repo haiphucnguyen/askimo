@@ -29,6 +29,14 @@ sealed class ProviderConfigField {
         override val required: Boolean = true,
         val value: String = "",
     ) : ProviderConfigField()
+
+    data class InfoField(
+        override val name: String,
+        override val label: String = "",
+        override val description: String = "",
+        override val required: Boolean = false,
+        val message: String,
+    ) : ProviderConfigField()
 }
 
 /**
