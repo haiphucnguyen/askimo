@@ -127,6 +127,7 @@ import io.askimo.ui.common.theme.appBackground
 import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.theme.detectMacOSDarkMode
 import io.askimo.ui.common.ui.util.CustomUriHandler
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.plan.PlansViewModel
 import io.askimo.ui.plan.planDetailView
 import io.askimo.ui.plan.plansGalleryView
@@ -166,7 +167,6 @@ import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
 import java.awt.Cursor
 import java.awt.Desktop
-import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -175,7 +175,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-import javax.swing.JFileChooser
 import kotlin.system.exitProcess
 
 private val log = currentFileLogger()
@@ -222,8 +221,8 @@ fun main() {
         val isMaximized = ThemePreferences.isWindowMaximized()
 
         val windowState = rememberWindowState(
-            width = 1920.dp,
-            height = 1080.dp,
+            width = if (savedWidth > 0) savedWidth.dp else 1920.dp,
+            height = if (savedHeight > 0) savedHeight.dp else 1080.dp,
             position = if (savedX >= 0 && savedY >= 0) {
                 WindowPosition(savedX.dp, savedY.dp)
             } else {
@@ -378,30 +377,21 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 }
                 val defaultFileName = "askimo_backup_$timestamp.zip"
 
-                val fileChooser = JFileChooser().apply {
-                    dialogTitle = LocalizationManager.getString("backup.export.title")
-                    selectedFile = File(System.getProperty("user.home"), defaultFileName)
-                    fileSelectionMode = JFileChooser.FILES_ONLY
+                val backupFile = FileDialogUtils.pickSavePath(
+                    suggestedName = defaultFileName.substringBeforeLast('.'),
+                    extension = "zip",
+                    title = LocalizationManager.getString("backup.export.title"),
+                ) ?: return@launch
+
+                val savedFile = withContext(Dispatchers.IO) {
+                    BackupManager.exportBackup(Paths.get(backupFile.absolutePath))
                 }
 
-                val result = fileChooser.showSaveDialog(null)
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    var selectedPath = fileChooser.selectedFile.absolutePath
-                    // Ensure .zip extension
-                    if (!selectedPath.endsWith(".zip")) {
-                        selectedPath = "$selectedPath.zip"
-                    }
-
-                    val backupFile = withContext(Dispatchers.IO) {
-                        BackupManager.exportBackup(Paths.get(selectedPath))
-                    }
-
-                    errorDialogState = ErrorDialogState(
-                        show = true,
-                        title = LocalizationManager.getString("backup.export.success.title"),
-                        message = LocalizationManager.getString("backup.export.success.message", backupFile.toString()),
-                    )
-                }
+                errorDialogState = ErrorDialogState(
+                    show = true,
+                    title = LocalizationManager.getString("backup.export.success.title"),
+                    message = LocalizationManager.getString("backup.export.success.message", savedFile.toString()),
+                )
             } catch (e: Exception) {
                 errorDialogState = ErrorDialogState(
                     show = true,
@@ -416,19 +406,13 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     fun importBackup() {
         scope.launch {
             try {
-                val fileChooser = JFileChooser().apply {
-                    dialogTitle = LocalizationManager.getString("backup.import.title")
-                    fileSelectionMode = JFileChooser.FILES_ONLY
-                    currentDirectory = File(System.getProperty("user.home"))
-                }
+                val selectedPath = FileDialogUtils.pickFilePath(
+                    title = LocalizationManager.getString("backup.import.title"),
+                    extensions = listOf("zip"),
+                ) ?: return@launch
 
-                val result = fileChooser.showOpenDialog(null)
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    val selectedPath = fileChooser.selectedFile.absolutePath
-
-                    pendingImportBackupPath = Paths.get(selectedPath)
-                    showImportBackupConfirm = true
-                }
+                pendingImportBackupPath = Paths.get(selectedPath)
+                showImportBackupConfirm = true
             } catch (e: Exception) {
                 errorDialogState = ErrorDialogState(
                     show = true,

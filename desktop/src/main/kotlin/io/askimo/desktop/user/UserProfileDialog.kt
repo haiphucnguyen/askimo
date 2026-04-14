@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,18 +52,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.user.domain.UserProfile
-import io.askimo.core.util.AskimoHome
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
-import java.awt.FileDialog
-import java.awt.Frame
+import io.askimo.ui.service.AvatarService
+import kotlinx.coroutines.launch
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import kotlin.io.path.Path
-import kotlin.io.path.exists
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
@@ -118,6 +114,8 @@ fun userProfileDialog(
     }
 
     // Avatar handling
+    val scope = rememberCoroutineScope()
+    val avatarService = remember { AvatarService() }
     var avatarPath by remember { mutableStateOf(profile.preferences["avatarPath"]) }
     var avatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
@@ -188,36 +186,10 @@ fun userProfileDialog(
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 .clickable {
-                                    val fileDialog = FileDialog(null as Frame?, "Select Avatar Image", FileDialog.LOAD)
-                                    fileDialog.setFilenameFilter { _, name ->
-                                        name.lowercase().endsWith(".png") ||
-                                            name.lowercase().endsWith(".jpg") ||
-                                            name.lowercase().endsWith(".jpeg") ||
-                                            name.lowercase().endsWith(".gif")
-                                    }
-                                    fileDialog.isVisible = true
-                                    val selectedFile = fileDialog.file
-                                    val selectedDir = fileDialog.directory
-
-                                    if (selectedFile != null && selectedDir != null) {
-                                        val sourcePath = Path("$selectedDir$selectedFile")
-                                        if (sourcePath.exists()) {
-                                            // Copy to app data directory
-                                            val userDataDir = AskimoHome.base().resolve("avatars")
-                                            Files.createDirectories(userDataDir)
-                                            val destPath = userDataDir.resolve("user_avatar_${System.currentTimeMillis()}.${sourcePath.fileName.toString().substringAfterLast(".")}")
-                                            Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING)
-
-                                            avatarPath = destPath.toString()
-
-                                            // Load image
-                                            try {
-                                                val bytes = destPath.toFile().readBytes()
-                                                avatarImage = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-                                            } catch (_: Exception) {
-                                                // Failed to load image
-                                            }
-                                        }
+                                    scope.launch {
+                                        val (path, bitmap) = avatarService.pickAndSaveUserAvatar() ?: return@launch
+                                        avatarPath = path
+                                        avatarImage = bitmap
                                     }
                                 }
                                 .pointerHoverIcon(PointerIcon.Hand),

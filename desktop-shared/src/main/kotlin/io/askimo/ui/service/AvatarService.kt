@@ -4,10 +4,12 @@
  */
 package io.askimo.ui.service
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import io.askimo.core.logging.logger
 import io.askimo.core.util.AskimoHome
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
@@ -16,6 +18,8 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Duration
+import kotlin.io.path.Path
+import kotlin.io.path.exists
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
@@ -179,6 +183,34 @@ class AvatarService {
     fun invalidateUserAvatarCache() {
         cachedUserAvatarPainter = null
         cachedUserAvatarPath = null
+    }
+
+    /**
+     * Opens the native image picker, copies the selected image into the user avatars directory,
+     * and returns the saved path + decoded [ImageBitmap]. Returns null if cancelled or on error.
+     *
+     * This is the single canonical implementation used by UserProfileDialog,
+     * WelcomeProfileDialog, and AppearanceSettingsSection.
+     */
+    suspend fun pickAndSaveUserAvatar(): Pair<String, ImageBitmap>? {
+        val sourcePath = FileDialogUtils.pickImagePath("Select Avatar Image")
+            ?.let { Path(it) }
+            ?.takeIf { it.exists() }
+            ?: return null
+
+        return try {
+            val userDataDir = AskimoHome.base().resolve("avatars")
+            Files.createDirectories(userDataDir)
+            val ext = sourcePath.fileName.toString().substringAfterLast(".")
+            val destPath = userDataDir.resolve("user_avatar_${System.currentTimeMillis()}.$ext")
+            Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING)
+            invalidateUserAvatarCache()
+            val bitmap = SkiaImage.makeFromEncoded(destPath.toFile().readBytes()).toComposeImageBitmap()
+            destPath.toString() to bitmap
+        } catch (e: Exception) {
+            log.warn("Failed to save user avatar", e)
+            null
+        }
     }
 
     /**

@@ -93,13 +93,11 @@ import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.markdownText
 import io.askimo.ui.common.ui.themedTooltip
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.plan.PlanExportService.ExportFormat
 import io.askimo.ui.plan.PlanExportService.ExportMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
 // Characters revealed per tick during the simulated-streaming animation.
@@ -1074,7 +1072,7 @@ private fun resultPanel(
                                     text = { Text(stringResource("plans.export.result.pdf")) },
                                     onClick = {
                                         exportMenuExpanded = false
-                                        triggerExport(viewModel, planName, ExportMode.RESULT_ONLY, ExportFormat.PDF)
+                                        coroutineScope.launch { triggerExport(viewModel, planName, ExportMode.RESULT_ONLY, ExportFormat.PDF) }
                                     },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 )
@@ -1082,7 +1080,7 @@ private fun resultPanel(
                                     text = { Text(stringResource("plans.export.result.word")) },
                                     onClick = {
                                         exportMenuExpanded = false
-                                        triggerExport(viewModel, planName, ExportMode.RESULT_ONLY, ExportFormat.WORD)
+                                        coroutineScope.launch { triggerExport(viewModel, planName, ExportMode.RESULT_ONLY, ExportFormat.WORD) }
                                     },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 )
@@ -1091,7 +1089,7 @@ private fun resultPanel(
                                     text = { Text(stringResource("plans.export.fullrun.pdf")) },
                                     onClick = {
                                         exportMenuExpanded = false
-                                        triggerExport(viewModel, planName, ExportMode.FULL_RUN, ExportFormat.PDF)
+                                        coroutineScope.launch { triggerExport(viewModel, planName, ExportMode.FULL_RUN, ExportFormat.PDF) }
                                     },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 )
@@ -1099,7 +1097,7 @@ private fun resultPanel(
                                     text = { Text(stringResource("plans.export.fullrun.word")) },
                                     onClick = {
                                         exportMenuExpanded = false
-                                        triggerExport(viewModel, planName, ExportMode.FULL_RUN, ExportFormat.WORD)
+                                        coroutineScope.launch { triggerExport(viewModel, planName, ExportMode.FULL_RUN, ExportFormat.WORD) }
                                     },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 )
@@ -1132,7 +1130,7 @@ private fun resultPanel(
     }
 }
 
-private fun triggerExport(
+private suspend fun triggerExport(
     viewModel: PlansViewModel,
     planName: String,
     mode: ExportMode,
@@ -1143,15 +1141,11 @@ private fun triggerExport(
         ExportFormat.WORD -> "docx"
     }
 
-    val dialog = FileDialog(null as Frame?, "Export Plan", FileDialog.SAVE)
-    dialog.file = "${planName.replace(" ", "_")}.$extension"
-    dialog.isVisible = true // blocks the EDT until the user dismisses
-
-    val dir = dialog.directory ?: return
-    val file = dialog.file ?: return
-    val targetFile = File(dir, file).let {
-        if (it.extension.lowercase() == extension) it else File("${it.absolutePath}.$extension")
-    }
+    val targetFile = FileDialogUtils.pickSavePath(
+        suggestedName = planName.replace(" ", "_"),
+        extension = extension,
+        title = "Export Plan",
+    ) ?: return
     viewModel.exportPlan(targetFile, mode, format) { _ -> }
 }
 

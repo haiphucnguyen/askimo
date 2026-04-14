@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import kotlin.collections.plus
@@ -174,6 +176,7 @@ private fun editProjectForm(
     var knowledgeSources by remember { mutableStateOf(initialSources) }
     var showAddSourceMenu by remember { mutableStateOf(false) }
     var showUrlInputDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     var nameError by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
@@ -192,10 +195,12 @@ private fun editProjectForm(
 
     // Handle adding a source based on type
     fun handleAddSource(typeInfo: KnowledgeSourceItem.TypeInfo) {
-        val newSources = sourceBrowser.handleAddSource(typeInfo) {
-            showUrlInputDialog = true
+        scope.launch {
+            val newSources = sourceBrowser.handleAddSource(typeInfo) {
+                showUrlInputDialog = true
+            }
+            knowledgeSources = knowledgeSources + newSources
         }
-        knowledgeSources = knowledgeSources + newSources
     }
 
     // Extract save logic to reuse in button and Enter key handler

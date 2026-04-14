@@ -133,4 +133,10 @@ object FileTypeSupport {
      * @return true if the filename is in CONFIG_EXTENSIONS
      */
     fun isConfigFile(fileName: String): Boolean = fileName.lowercase() in CONFIG_EXTENSIONS
+
+    /**
+     * Returns the list of all supported file extensions (text + images).
+     * Convenience accessor for file picker extension filters.
+     */
+    fun supportedExtensions(): List<String> = ALL_SUPPORTED_EXTENSIONS.toList()
 }

@@ -5,66 +5,51 @@
 package io.askimo.ui.project
 
 import io.askimo.ui.common.ui.util.FileDialogUtils
-import java.awt.FileDialog
-import java.awt.Frame
 import java.util.UUID
 
 /**
- * Helper class for browsing and adding knowledge sources (folders, files, URLs)
+ * Helper class for browsing and adding knowledge sources (folders, files, URLs).
  */
 class KnowledgeSourceBrowser(
     private val browseFolderTitle: String,
     private val browseFileTitle: String,
 ) {
     /**
-     * Browse for a folder and return a KnowledgeSourceItem.Folder if selected
+     * Browse for a folder and return a [KnowledgeSourceItem.Folder] if selected.
      */
-    fun browseForFolder(): KnowledgeSourceItem.Folder? {
-        val folderPath = FileDialogUtils.chooseFolderPath(browseFolderTitle)
-        return if (folderPath != null) {
+    suspend fun browseForFolder(): KnowledgeSourceItem.Folder? {
+        val folderPath = FileDialogUtils.pickFolderPath(browseFolderTitle)
+        return folderPath?.let {
             KnowledgeSourceItem.Folder(
                 id = UUID.randomUUID().toString(),
-                path = folderPath,
-                isValid = validateFolder(folderPath),
+                path = it,
+                isValid = validateFolder(it),
             )
-        } else {
-            null
         }
     }
 
     /**
-     * Browse for files and return a list of KnowledgeSourceItem.File
+     * Browse for files and return a list of [KnowledgeSourceItem.File].
      */
-    fun browseForFiles(): List<KnowledgeSourceItem.File> {
-        val dialog = FileDialog(null as Frame?, browseFileTitle, FileDialog.LOAD)
-        dialog.isMultipleMode = true
-        dialog.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
-        dialog.isVisible = true
-
-        return dialog.files?.map { file ->
-            KnowledgeSourceItem.File(
-                id = UUID.randomUUID().toString(),
-                path = file.absolutePath,
-                isValid = validateFile(file.absolutePath),
-            )
-        } ?: emptyList()
+    suspend fun browseForFiles(): List<KnowledgeSourceItem.File> = FileDialogUtils.pickFilePaths(browseFileTitle).map { path ->
+        KnowledgeSourceItem.File(
+            id = UUID.randomUUID().toString(),
+            path = path,
+            isValid = validateFile(path),
+        )
     }
 
     /**
-     * Handle adding sources based on type info
-     * Returns a list of new sources to add (empty list for URL type, which needs separate dialog)
+     * Handle adding sources based on type info.
+     * Returns a list of new sources to add (empty list for URL type, which needs separate dialog).
      */
-    fun handleAddSource(
+    suspend fun handleAddSource(
         typeInfo: KnowledgeSourceItem.TypeInfo,
         onShowUrlDialog: () -> Unit,
     ): List<KnowledgeSourceItem> = when (typeInfo) {
-        KnowledgeSourceItem.TypeInfo.FOLDER -> {
-            browseForFolder()?.let { listOf(it) } ?: emptyList()
-        }
+        KnowledgeSourceItem.TypeInfo.FOLDER -> browseForFolder()?.let { listOf(it) } ?: emptyList()
 
-        KnowledgeSourceItem.TypeInfo.FILE -> {
-            browseForFiles()
-        }
+        KnowledgeSourceItem.TypeInfo.FILE -> browseForFiles()
 
         KnowledgeSourceItem.TypeInfo.URL -> {
             onShowUrlDialog()

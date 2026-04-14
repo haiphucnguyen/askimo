@@ -34,12 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
@@ -48,18 +48,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.user.domain.UserProfile
-import io.askimo.core.util.AskimoHome
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
-import java.awt.FileDialog
-import java.awt.Frame
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import org.jetbrains.skia.Image as SkiaImage
+import io.askimo.ui.service.AvatarService
+import kotlinx.coroutines.launch
 
 /**
  * Welcome dialog shown on first run to collect basic user profile information.
@@ -76,6 +70,8 @@ fun welcomeProfileDialog(
     var selectedInterests by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Avatar handling
+    val scope = rememberCoroutineScope()
+    val avatarService = remember { AvatarService() }
     var avatarPath by remember { mutableStateOf<String?>(null) }
     var avatarImage by remember { mutableStateOf<ImageBitmap?>(null) }
 
@@ -133,34 +129,10 @@ fun welcomeProfileDialog(
                                 .background(MaterialTheme.colorScheme.primaryContainer)
                                 .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 .clickable {
-                                    val fileDialog = FileDialog(null as Frame?, "Select Avatar Image", FileDialog.LOAD)
-                                    fileDialog.setFilenameFilter { _, name ->
-                                        name.lowercase().endsWith(".png") ||
-                                            name.lowercase().endsWith(".jpg") ||
-                                            name.lowercase().endsWith(".jpeg") ||
-                                            name.lowercase().endsWith(".gif")
-                                    }
-                                    fileDialog.isVisible = true
-                                    val selectedFile = fileDialog.file
-                                    val selectedDir = fileDialog.directory
-
-                                    if (selectedFile != null && selectedDir != null) {
-                                        val sourcePath = Path("$selectedDir$selectedFile")
-                                        if (sourcePath.exists()) {
-                                            val userDataDir = AskimoHome.base().resolve("avatars")
-                                            Files.createDirectories(userDataDir)
-                                            val destPath = userDataDir.resolve("user_avatar_${System.currentTimeMillis()}.${sourcePath.fileName.toString().substringAfterLast(".")}")
-                                            Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING)
-
-                                            avatarPath = destPath.toString()
-
-                                            try {
-                                                val bytes = destPath.toFile().readBytes()
-                                                avatarImage = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-                                            } catch (_: Exception) {
-                                                // Failed to load image
-                                            }
-                                        }
+                                    scope.launch {
+                                        val (path, bitmap) = avatarService.pickAndSaveUserAvatar() ?: return@launch
+                                        avatarPath = path
+                                        avatarImage = bitmap
                                     }
                                 }
                                 .pointerHoverIcon(PointerIcon.Hand),

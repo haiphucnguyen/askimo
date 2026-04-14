@@ -55,9 +55,6 @@ import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.collections.plus
@@ -104,17 +101,10 @@ fun newProjectDialog(
         }
     }
 
-    // Browse for folder using FileDialog
+    // Browse for folder
     fun browseForFolder() {
-        val dialog = FileDialog(null as Frame?, browseFolderTitle, FileDialog.LOAD)
-
-        // macOS: Enable folder selection
-        System.setProperty("apple.awt.fileDialogForDirectories", "true")
-        dialog.isVisible = true
-        System.setProperty("apple.awt.fileDialogForDirectories", "false")
-
-        if (dialog.file != null) {
-            val folderPath = File(dialog.directory, dialog.file).absolutePath
+        scope.launch {
+            val folderPath = FileDialogUtils.pickFolderPath(browseFolderTitle) ?: return@launch
             knowledgeSources = knowledgeSources + KnowledgeSourceItem.Folder(
                 id = UUID.randomUUID().toString(),
                 path = folderPath,
@@ -123,19 +113,17 @@ fun newProjectDialog(
         }
     }
 
-    // Browse for files using FileDialog
+    // Browse for files
     fun browseForFiles() {
-        val dialog = FileDialog(null as Frame?, browseFileTitle, FileDialog.LOAD)
-        dialog.isMultipleMode = true
-        dialog.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
-        dialog.isVisible = true
-
-        dialog.files?.forEach { file ->
-            knowledgeSources = knowledgeSources + KnowledgeSourceItem.File(
-                id = UUID.randomUUID().toString(),
-                path = file.absolutePath,
-                isValid = validateFile(file.absolutePath),
-            )
+        scope.launch {
+            val paths = FileDialogUtils.pickFilePaths(browseFileTitle)
+            paths.forEach { path ->
+                knowledgeSources = knowledgeSources + KnowledgeSourceItem.File(
+                    id = UUID.randomUUID().toString(),
+                    path = path,
+                    isValid = validateFile(path),
+                )
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.collections.plus
 
@@ -52,6 +54,7 @@ fun addReferenceMaterialDialog(
     var knowledgeSources by remember { mutableStateOf<List<KnowledgeSourceItem>>(emptyList()) }
     var showAddSourceMenu by remember { mutableStateOf(false) }
     var showUrlInputDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val browseFolderTitle = stringResource("project.new.dialog.folder.browse")
     val browseFileTitle = stringResource("project.new.dialog.file.browse")
@@ -66,10 +69,12 @@ fun addReferenceMaterialDialog(
 
     // Handle adding a source based on type
     fun handleAddSource(typeInfo: KnowledgeSourceItem.TypeInfo) {
-        val newSources = sourceBrowser.handleAddSource(typeInfo) {
-            showUrlInputDialog = true
+        scope.launch {
+            val newSources = sourceBrowser.handleAddSource(typeInfo) {
+                showUrlInputDialog = true
+            }
+            knowledgeSources = knowledgeSources + newSources
         }
-        knowledgeSources = knowledgeSources + newSources
     }
 
     Dialog(onDismissRequest = onDismiss) {

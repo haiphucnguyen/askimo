@@ -52,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,11 +93,10 @@ import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.util.Platform
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent
 import java.awt.Cursor
-import java.awt.FileDialog
-import java.awt.Frame
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.collections.minus
@@ -222,45 +222,46 @@ fun chatInputField(
     }
 
     val selectFileTitle = stringResource("chat.select.file")
+    val scope = rememberCoroutineScope()
     val openFileDialog = {
-        val fileChooser = FileDialog(null as Frame?, selectFileTitle, FileDialog.LOAD)
-        fileChooser.isMultipleMode = true
-        fileChooser.setFilenameFilter(FileDialogUtils.createSupportedFileFilter())
-        fileChooser.isVisible = true
-        val selectedFiles = fileChooser.files
-        if (selectedFiles != null && selectedFiles.isNotEmpty()) {
-            try {
-                val maxFileSizeBytes = AppConfig.indexing.maxFileBytes
-                val invalidFiles = selectedFiles.filter { it.length() > maxFileSizeBytes }
+        scope.launch {
+            val paths = FileDialogUtils.pickFilePaths(selectFileTitle)
+            if (paths.isNotEmpty()) {
+                try {
+                    val maxFileSizeBytes = AppConfig.indexing.maxFileBytes
+                    val files = paths.map { java.io.File(it) }
+                    val invalidFiles = files.filter { it.length() > maxFileSizeBytes }
 
-                if (invalidFiles.isNotEmpty()) {
-                    val firstInvalidFile = invalidFiles.first()
-                    EventBus.post(
-                        AppErrorEvent(
-                            title = "File Too Large",
-                            message = "File '${firstInvalidFile.name}' is too large (${formatFileSize(firstInvalidFile.length())}). Maximum allowed size is ${formatFileSize(maxFileSizeBytes)}.",
-                        ),
-                    )
-                } else {
-                    val newAttachments = selectedFiles.map { file ->
-                        FileAttachmentDTO(
-                            id = UUID.randomUUID().toString(),
-                            messageId = "",
-                            sessionId = sessionId ?: "",
-                            fileName = file.name,
-                            mimeType = file.extension,
-                            size = file.length(),
-                            createdAt = LocalDateTime.now(),
-                            content = null,
-                            filePath = file.absolutePath,
+                    if (invalidFiles.isNotEmpty()) {
+                        val firstInvalidFile = invalidFiles.first()
+                        EventBus.post(
+                            AppErrorEvent(
+                                title = "File Too Large",
+                                message = "File '${firstInvalidFile.name}' is too large (${formatFileSize(firstInvalidFile.length())}). Maximum allowed size is ${formatFileSize(maxFileSizeBytes)}.",
+                            ),
                         )
+                    } else {
+                        val newAttachments = files.map { file ->
+                            FileAttachmentDTO(
+                                id = UUID.randomUUID().toString(),
+                                messageId = "",
+                                sessionId = sessionId ?: "",
+                                fileName = file.name,
+                                mimeType = file.extension,
+                                size = file.length(),
+                                createdAt = LocalDateTime.now(),
+                                content = null,
+                                filePath = file.absolutePath,
+                            )
+                        }
+                        onAttachmentsChange(attachments + newAttachments)
                     }
-                    onAttachmentsChange(attachments + newAttachments)
+                } catch (e: Exception) {
+                    log.error("Error adding file attachments: ${e.message}", e)
                 }
-            } catch (e: Exception) {
-                log.error("Error adding file attachments: ${e.message}", e)
             }
         }
+        Unit
     }
 
     Column(

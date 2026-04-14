@@ -46,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,10 +68,10 @@ import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.asyncImage
 import io.askimo.ui.common.ui.clickableCard
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.service.AvatarService
 import io.askimo.ui.service.BackgroundImageService
-import java.awt.FileDialog
-import java.awt.Frame
+import kotlinx.coroutines.launch
 import java.io.File
 import org.jetbrains.skia.Image as SkiaImage
 
@@ -418,6 +419,7 @@ private fun avatarSetting(
     onSelectAvatar: (String) -> Unit,
     onRemoveAvatar: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = AppComponents.surfaceVariantCardColors(),
@@ -476,23 +478,9 @@ private fun avatarSetting(
             ) {
                 primaryButton(
                     onClick = {
-                        val fileDialog = FileDialog(
-                            null as Frame?,
-                            "Select Avatar",
-                            FileDialog.LOAD,
-                        )
-                        fileDialog.setFilenameFilter { _, name ->
-                            name.lowercase().endsWith(".png") ||
-                                name.lowercase().endsWith(".jpg") ||
-                                name.lowercase().endsWith(".jpeg") ||
-                                name.lowercase().endsWith(".gif") ||
-                                name.lowercase().endsWith(".bmp")
-                        }
-                        fileDialog.isVisible = true
-                        val selectedFile = fileDialog.file
-                        val selectedDir = fileDialog.directory
-                        if (selectedFile != null && selectedDir != null) {
-                            onSelectAvatar(File(selectedDir, selectedFile).absolutePath)
+                        scope.launch {
+                            val path = FileDialogUtils.pickImagePath("Select Avatar")
+                            if (path != null) onSelectAvatar(path)
                         }
                     },
                 ) {
@@ -634,6 +622,7 @@ private fun backgroundImageCustomOption(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scope = rememberCoroutineScope()
     val browseLabel = stringResource("settings.background.image.browse")
 
     val painter = remember(current) {
@@ -649,13 +638,9 @@ private fun backgroundImageCustomOption(
 
     Card(
         onClick = {
-            val dialog = FileDialog(null as Frame?, browseLabel, FileDialog.LOAD)
-            dialog.file = "*.jpg;*.jpeg;*.png;*.webp;*.bmp"
-            dialog.isVisible = true
-            val file = dialog.file
-            val dir = dialog.directory
-            if (file != null && dir != null) {
-                onFilePicked(File(dir, file).absolutePath)
+            scope.launch {
+                val path = FileDialogUtils.pickImagePath(browseLabel)
+                if (path != null) onFilePicked(path)
             }
         },
         modifier = modifier
