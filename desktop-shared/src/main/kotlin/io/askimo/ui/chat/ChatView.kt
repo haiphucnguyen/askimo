@@ -51,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,16 +92,16 @@ import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.TooltipPlacement
 import io.askimo.ui.common.ui.themedTooltip
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.service.AvatarService
 import io.askimo.ui.session.manageDirectivesDialog
 import io.askimo.ui.session.newDirectiveDialog
 import io.askimo.ui.session.sessionActionsMenu
 import io.askimo.ui.session.sessionMemoryDialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
 import java.time.LocalDateTime
 
@@ -147,6 +148,7 @@ fun chatView(
     val project = state.project
 
     // Internal state management for ChatView
+    val scope = rememberCoroutineScope()
     var inputText by remember(initialInputText) { mutableStateOf(initialInputText) }
     var attachments by remember(initialAttachments) { mutableStateOf(initialAttachments) }
     var editingMessage by remember(initialEditingMessage) { mutableStateOf(initialEditingMessage) }
@@ -700,6 +702,13 @@ fun chatView(
                                     manageDirectivesDialog(
                                         directives = availableDirectives,
                                         onDismiss = { showManageDirectivesDialog = false },
+                                        onAdd = { name, content, applyToCurrent ->
+                                            val newDirective = directiveService.createDirective(name, content)
+                                            availableDirectives = directiveService.listAllDirectives()
+                                            if (applyToCurrent) {
+                                                actions.setDirective(newDirective.id)
+                                            }
+                                        },
                                         onUpdate = { id, newName, newContent ->
                                             directiveService.updateDirective(id, newName, newContent)
                                             availableDirectives = directiveService.listAllDirectives()
@@ -832,14 +841,14 @@ fun chatView(
             // Download attachment handler
             val saveDialogTitle = stringResource("attachment.save.file")
             val downloadAttachment: (FileAttachmentDTO) -> Unit = { attachment ->
-                val fileChooser = FileDialog(null as Frame?, saveDialogTitle, FileDialog.SAVE)
-                fileChooser.file = attachment.fileName
-                fileChooser.isVisible = true
-                val selectedFile = fileChooser.file
-                val selectedDir = fileChooser.directory
-                if (selectedFile != null && selectedDir != null) {
-                    val targetFile = File(selectedDir, selectedFile)
-                    // Copy the attachment file to the selected location
+                scope.launch {
+                    val nameWithoutExt = attachment.fileName.substringBeforeLast('.', attachment.fileName)
+                    val ext = attachment.fileName.substringAfterLast('.', "")
+                    val targetFile = FileDialogUtils.pickSavePath(
+                        suggestedName = nameWithoutExt,
+                        extension = ext,
+                        title = saveDialogTitle,
+                    ) ?: return@launch
                     attachment.filePath?.let { filePath ->
                         val sourceFile = File(filePath)
                         if (sourceFile.exists()) {

@@ -43,6 +43,8 @@ dependencies {
     implementation(libs.openpdf)
     // Word export
     implementation(libs.poi.ooxml)
+    // FileKit — consistent native file/folder picker on all platforms
+    implementation(libs.filekit.compose)
     testImplementation(kotlin("test"))
 }
 

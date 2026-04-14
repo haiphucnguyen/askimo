@@ -66,18 +66,18 @@ import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.tools.chart.MermaidChartData
 import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.service.MermaidCliNotAvailableException
 import io.askimo.ui.service.MermaidSvgService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 import org.jetbrains.skia.Image as SkiaImage
 
 private val log = currentFileLogger()
@@ -500,19 +500,13 @@ private fun mermaidSetupInstructions(
  * Shows a file chooser dialog and saves the image data as PNG.
  */
 private fun downloadDiagramAsPng(imageData: ByteArray, log: Logger) {
-    val fileChooser = JFileChooser()
-    fileChooser.dialogTitle = "Save Diagram"
-    fileChooser.fileFilter = FileNameExtensionFilter("PNG Image", "png")
-    fileChooser.selectedFile = File("mermaid-diagram.png")
-
-    val result = fileChooser.showSaveDialog(null)
-    if (result == JFileChooser.APPROVE_OPTION) {
+    runBlocking {
+        val file = FileDialogUtils.pickSavePath(
+            suggestedName = "mermaid-diagram",
+            extension = "png",
+            title = "Save Diagram",
+        ) ?: return@runBlocking
         try {
-            var file = fileChooser.selectedFile
-            // Ensure .png extension
-            if (!file.name.endsWith(".png", ignoreCase = true)) {
-                file = File(file.absolutePath + ".png")
-            }
             file.writeBytes(imageData)
             log.debug("Diagram saved to: {}", file.absolutePath)
         } catch (e: Exception) {

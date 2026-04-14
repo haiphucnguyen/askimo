@@ -83,6 +83,7 @@ import io.askimo.core.util.JsonUtils.json
 import io.askimo.tools.chart.MermaidChartData
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -110,13 +111,10 @@ import org.commonmark.node.SoftLineBreak
 import org.commonmark.node.StrongEmphasis
 import org.commonmark.parser.Parser
 import java.io.ByteArrayInputStream
-import java.io.File
 import java.net.URI
 import java.util.Base64
 import javax.imageio.ImageIO
-import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
-import javax.swing.filechooser.FileNameExtensionFilter
 import org.commonmark.node.Text as MarkdownText
 
 private val log = currentFileLogger()
@@ -1671,30 +1669,25 @@ private fun downloadImage(
     defaultFileName: String = "image.png",
 ) {
     SwingUtilities.invokeLater {
-        try {
-            // Determine file extension and default name
-            val (extension, fileName) = when {
-                imageUrl != null -> {
-                    val urlFileName = imageUrl.substringAfterLast('/').substringBefore('?').ifEmpty { defaultFileName }
-                    val ext = urlFileName.substringAfterLast('.', "png")
-                    ext to urlFileName
+        kotlinx.coroutines.runBlocking {
+            try {
+                val (extension, fileName) = when {
+                    imageUrl != null -> {
+                        val urlFileName = imageUrl.substringAfterLast('/').substringBefore('?').ifEmpty { defaultFileName }
+                        val ext = urlFileName.substringAfterLast('.', "png")
+                        ext to urlFileName
+                    }
+
+                    else -> "png" to defaultFileName
                 }
 
-                else -> "png" to defaultFileName
-            }
-
-            val fileChooser = JFileChooser()
-            fileChooser.dialogTitle = "Save Image"
-            val filterDescription = "${extension.uppercase()} Image"
-            fileChooser.fileFilter = FileNameExtensionFilter(filterDescription, extension)
-            fileChooser.selectedFile = File(fileName)
-
-            val result = fileChooser.showSaveDialog(null)
-            if (result == JFileChooser.APPROVE_OPTION) {
-                var file = fileChooser.selectedFile
-                // Ensure proper extension
-                if (!file.name.endsWith(".$extension", ignoreCase = true)) {
-                    file = File(file.absolutePath + ".$extension")
+                val file = FileDialogUtils.pickSavePath(
+                    suggestedName = fileName.substringBeforeLast('.', fileName),
+                    extension = extension,
+                    title = "Save Image",
+                ) ?: run {
+                    log.debug("Save image dialog cancelled")
+                    return@runBlocking
                 }
 
                 // Save the image based on source type
@@ -1718,11 +1711,9 @@ private fun downloadImage(
                         log.error("No image data or URL provided")
                     }
                 }
-            } else {
-                log.debug("Save image dialog cancelled")
+            } catch (e: Exception) {
+                log.error("Failed to save image", e)
             }
-        } catch (e: Exception) {
-            log.error("Failed to save image", e)
         }
     }
 }

@@ -62,13 +62,11 @@ import io.askimo.ui.common.components.rememberDialogState
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 import java.util.concurrent.TimeoutException
 
 @Composable
@@ -453,19 +451,14 @@ private suspend fun exportToolsToJson(
     dialogTitle: String,
 ): Result<String> = withContext(Dispatchers.IO) {
     runCatching {
-        val fileDialog = FileDialog(null as Frame?, dialogTitle, FileDialog.SAVE).apply {
-            file = "${instanceName.replace(" ", "_")}_tools.json"
-        }
-        fileDialog.isVisible = true
-
-        val fileName = fileDialog.file ?: return@runCatching Result.failure<String>(
+        val suggestedName = "${instanceName.replace(" ", "_")}_tools"
+        val targetFile = FileDialogUtils.pickSavePath(
+            suggestedName = suggestedName,
+            extension = "json",
+            title = dialogTitle,
+        ) ?: return@runCatching Result.failure<String>(
             IllegalStateException("Export cancelled"),
         ).getOrThrow()
-        val directory = fileDialog.directory ?: return@runCatching Result.failure<String>(
-            IllegalStateException("Export cancelled"),
-        ).getOrThrow()
-
-        val targetFile = File(directory, fileName)
 
         val json = buildString {
             appendLine("[")

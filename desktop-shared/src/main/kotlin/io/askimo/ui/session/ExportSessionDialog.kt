@@ -56,8 +56,8 @@ import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.export.ExportFormat
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import java.io.File
-import javax.swing.JFileChooser
 
 /**
  * Combined export session dialog that allows users to select export format and file location.
@@ -98,23 +98,17 @@ fun exportSessionDialog(
         }
     }
 
-    // Native file chooser
+    // Native file chooser via FileKit
     if (showFileBrowser) {
         LaunchedEffect(Unit) {
-            val fileChooser = JFileChooser().apply {
-                dialogTitle = fileChooserTitle
-                selectedFile = File(filePath)
-                fileSelectionMode = JFileChooser.FILES_ONLY
-            }
-
-            val result = fileChooser.showSaveDialog(null)
-            if (result == JFileChooser.APPROVE_OPTION) {
-                var selectedPath = fileChooser.selectedFile.absolutePath
-                // Ensure correct extension
-                if (!selectedPath.endsWith(".${selectedFormat.extension}")) {
-                    selectedPath = "${selectedPath.substringBeforeLast('.')}.${selectedFormat.extension}"
-                }
-                filePath = selectedPath
+            val baseName = File(filePath).nameWithoutExtension
+            val target = FileDialogUtils.pickSavePath(
+                suggestedName = baseName,
+                extension = selectedFormat.extension,
+                title = fileChooserTitle,
+            )
+            if (target != null) {
+                filePath = target.absolutePath
             }
             showFileBrowser = false
         }

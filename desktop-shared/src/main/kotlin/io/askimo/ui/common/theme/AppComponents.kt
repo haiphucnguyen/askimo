@@ -7,11 +7,13 @@ package io.askimo.ui.common.theme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -200,18 +202,10 @@ object AppComponents {
     fun secondaryIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
     @Composable
-    fun disabledIconColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-
-    @Composable
     fun tertiaryIconColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
     @Composable
     fun secondaryTextColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-
-    @Composable
-    fun tertiaryTextColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-
-    // ── Themed Composable Wrappers ────────────────────────────────────────────
 
     @Composable
     fun dropdownMenu(
@@ -226,7 +220,7 @@ object AppComponents {
                 surfaceContainer = MaterialTheme.colorScheme.surface,
             ),
         ) {
-            androidx.compose.material3.DropdownMenu(
+            DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
                 offset = offset,
@@ -262,7 +256,7 @@ object AppComponents {
                 surfaceContainerHigh = MaterialTheme.colorScheme.surface,
             ),
         ) {
-            androidx.compose.material3.AlertDialog(
+            AlertDialog(
                 onDismissRequest = onDismissRequest,
                 confirmButton = confirmButton,
                 modifier = modifier,

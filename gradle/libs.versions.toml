@@ -33,6 +33,7 @@ pty4j = "0.13.12"
 jediterm = "3.64"
 openpdf = "2.2.2"
 poi = "5.4.0"
+filekit = "0.13.0"
 
 [libraries]
 # JLine
@@ -92,6 +93,9 @@ openpdf = { module = "com.github.librepdf:openpdf", version.ref = "openpdf" }
 
 # Word Export (Apache POI)
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
+
+# FileKit — native file/folder picker
+filekit-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 
 # Logging
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
@@ -207,6 +211,10 @@ jediterm = [
     "pty4j",
     "jediterm-ui",
     "jediterm-core"
+]
+
+filekit = [
+    "filekit-compose"
 ]
 
 [plugins]
