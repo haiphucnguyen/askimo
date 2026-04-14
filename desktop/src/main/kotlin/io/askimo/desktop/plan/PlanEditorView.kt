@@ -16,9 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,21 +37,37 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.plan.PlansViewModel
+import java.awt.Desktop
+import java.net.URI
 
 /**
  * YAML editor view for creating and editing plans.
+ *
+ * New-plan mode includes an AI generation panel: the user describes the plan in
+ * plain English and the active chat model generates the YAML, which lands directly
+ * in the editor for review and editing before saving.
  */
 @Composable
 fun planEditorView(
@@ -62,6 +83,7 @@ fun planEditorView(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
+        // ── Header bar ────────────────────────────────────────────────────────
         Surface(
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 2.dp,
@@ -134,6 +156,7 @@ fun planEditorView(
             }
         }
 
+        // ── Validation banner ─────────────────────────────────────────────────
         val validationError = viewModel.editorValidationError
         val saveError = viewModel.saveError
 
@@ -143,12 +166,14 @@ fun planEditorView(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    Text(
-                        text = saveError,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = Spacing.small),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = saveError,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = Spacing.small),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
                 }
             }
 
@@ -157,12 +182,14 @@ fun planEditorView(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    Text(
-                        text = "❌ $validationError",
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = Spacing.small),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = "❌ $validationError",
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = Spacing.small),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
                 }
             }
 
@@ -194,14 +221,21 @@ fun planEditorView(
 
         HorizontalDivider()
 
+        // ── Body: editor + hint side-by-side ──────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp, vertical = Spacing.large),
             horizontalArrangement = Arrangement.spacedBy(Spacing.large),
         ) {
-            // YAML text area
+            // ── Left: AI generation panel (new plans only) + YAML editor ──────
             Column(modifier = Modifier.weight(1f).fillMaxSize()) {
+                // AI generation panel — only shown when creating a new plan
+                if (isNewPlan) {
+                    aiGenerationPanel(viewModel = viewModel)
+                    Spacer(modifier = Modifier.height(Spacing.large))
+                }
+
                 Text(
                     text = stringResource("plans.editor.label"),
                     style = MaterialTheme.typography.labelMedium,
@@ -211,7 +245,7 @@ fun planEditorView(
                 OutlinedTextField(
                     value = viewModel.editorYaml,
                     onValueChange = { viewModel.updateEditorYaml(it) },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp,
@@ -219,30 +253,49 @@ fun planEditorView(
                     ),
                     placeholder = {
                         Text(
-                            text = stringResource("plans.editor.placeholder"),
+                            text = if (isNewPlan) YAML_HINT else stringResource("plans.editor.placeholder"),
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         )
                     },
-                    isError = validationError != null,
+                    isError = viewModel.editorValidationError != null,
                     colors = AppComponents.outlinedTextFieldColors(),
                     shape = MaterialTheme.shapes.small,
                 )
             }
 
+            // ── Right: hint panel + docs link ─────────────────────────────────
             Column(
                 modifier = Modifier
                     .widthIn(max = 320.dp)
                     .fillMaxSize()
                     .verticalScroll(scrollState),
             ) {
-                Text(
-                    text = stringResource("plans.editor.hint.title"),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = Spacing.small),
-                )
+                // Header row: "Reference" label + docs link
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.small),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource("plans.editor.hint.title"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    linkButton(
+                        onClick = {
+                            runCatching {
+                                Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/plans/"))
+                            }
+                        },
+                    ) {
+                        Text(
+                            text = stringResource("plans.editor.docs.link"),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.small,
@@ -271,11 +324,132 @@ fun planEditorView(
     }
 }
 
+/**
+ * AI-assisted YAML generation panel.
+ *
+ * The user describes their plan in plain English; pressing Generate (or ⌘/Ctrl+Enter)
+ * calls the active chat model and drops the result directly into the YAML editor.
+ */
+@Composable
+private fun aiGenerationPanel(
+    viewModel: PlansViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val isGenerating = viewModel.isGeneratingYaml
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(Spacing.large)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = Spacing.small),
+            ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource("plans.editor.ai.label"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown &&
+                            keyEvent.key == Key.Enter &&
+                            (keyEvent.isMetaPressed || keyEvent.isCtrlPressed) &&
+                            !isGenerating &&
+                            viewModel.aiPromptText.isNotBlank()
+                        ) {
+                            viewModel.generateYamlFromPrompt()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = viewModel.aiPromptText,
+                    onValueChange = { viewModel.updateAiPrompt(it) },
+                    placeholder = { Text(stringResource("plans.editor.ai.placeholder")) },
+                    modifier = Modifier.weight(1f),
+                    minLines = 1,
+                    maxLines = 4,
+                    enabled = !isGenerating,
+                    isError = viewModel.aiGenerateError != null,
+                    supportingText = viewModel.aiGenerateError?.let { err -> { Text(err) } },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Send,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (!isGenerating && viewModel.aiPromptText.isNotBlank()) {
+                                viewModel.generateYamlFromPrompt()
+                            }
+                        },
+                    ),
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                val hasPrompt = viewModel.aiPromptText.isNotBlank()
+                IconButton(
+                    onClick = { viewModel.generateYamlFromPrompt() },
+                    enabled = !isGenerating && hasPrompt,
+                    colors = AppComponents.primaryIconButtonColors(),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    if (isGenerating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        )
+                    } else {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = stringResource("plans.editor.ai.generate"),
+                            tint = if (hasPrompt) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            },
+                        )
+                    }
+                }
+            }
+
+            if (!isGenerating && viewModel.aiGenerateError == null) {
+                Text(
+                    text = stringResource("plans.editor.ai.hint"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = Spacing.extraSmall),
+                )
+            }
+        }
+    }
+}
+
 private val YAML_HINT = """
 id: my-plan
 name: My Plan
 description: Optional description
-icon: "📊"
+icon: "📊"  # must be an emoji, e.g. 💡 ✍️ 🔍 📋
 
 inputs:
   - key: topic

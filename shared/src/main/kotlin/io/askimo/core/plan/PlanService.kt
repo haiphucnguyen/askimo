@@ -199,6 +199,111 @@ class PlanService(
             },
         )
     }
+
+    /**
+     * Generates Askimo plan YAML from a plain-English [description] using the active chat model.
+     *
+     * The model is instructed to output only valid YAML — no markdown fences, no explanation.
+     * The result is stripped of any accidental code fences before being returned so it can be
+     * fed directly into [PlanYamlParser.validate] and the editor.
+     *
+     * @param description A plain-English description of what the plan should do.
+     * @return The generated YAML string, ready for the editor.
+     * @throws Exception if the model call fails or returns blank output.
+     */
+    fun generateYamlFromPrompt(description: String): String {
+        val chatModel = runCatching { appContext.createPlanChatModel() }.getOrElse { e ->
+            throw IllegalStateException("Failed to create chat model: ${e.message}", e)
+        }
+
+        val systemPrompt = """
+            You are an Askimo plan YAML generator.
+            Given a plain-English description of a workflow, output ONLY valid Askimo plan YAML.
+            Rules:
+            - Output raw YAML only. No markdown fences, no explanation, no extra text.
+            - Use kebab-case for the plan id derived from the name.
+            - Every step id must be unique and referenced correctly in the workflow.
+            - The workflow is optional; omit it for simple sequential plans (steps run top-to-bottom automatically).
+            - Use {{stepId}} to reference a prior step's output in a subsequent step's message.
+            - Use {{inputKey}} to reference an input value — e.g. {{topic}}, {{preferences}}. NEVER use {{inputs.topic}} or any prefix.
+            - Supported input types: text, multiline, toggle, number.
+            - Supported workflow node types: sequence, parallel, conditional, step.
+            - ALWAYS wrap message and system values in double quotes. Escape any double quotes inside with \".
+            - Use 'key' (not 'id') for input fields. ALWAYS include 'label' for every input — it is shown as the field caption in the UI.
+            - Use 'hint' (not 'placeholder') for input hint text — it appears as grey placeholder text inside the field.
+            - Every input should also have 'required: true' unless it is genuinely optional.
+            - The 'icon' field MUST be a single emoji character (e.g. 💡 📊 ✍️ 🔍). Never use a text name like "lightbulb".
+            Schema fields: id, name, description, icon, inputs[], steps{id,system?,message}, workflow?
+        """.trimIndent()
+
+        val response = chatModel.chat(
+            SystemMessage.from(systemPrompt),
+            UserMessage.from(description),
+        )
+
+        val raw = response.aiMessage().text().trim()
+        if (raw.isBlank()) throw IllegalStateException("Model returned empty response")
+
+        // Strip accidental markdown code fences (```yaml ... ``` or ``` ... ```)
+        val cleaned = raw
+            .removePrefix("```yaml").removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+        // Replace text icon names with their emoji equivalents in case the model ignored the rule
+        return replaceTextIconWithEmoji(cleaned)
+    }
+
+    /**
+     * Replaces common text icon names produced by AI (e.g. `icon: "lightbulb"`) with their
+     * emoji equivalents. Unrecognised names are replaced with a generic 📋 fallback.
+     */
+    private fun replaceTextIconWithEmoji(yaml: String): String {
+        val iconNames = mapOf(
+            "lightbulb" to "💡", "bulb" to "💡",
+            "chart" to "📊", "bar_chart" to "📊", "graph" to "📊",
+            "pencil" to "✍️", "edit" to "✍️", "write" to "✍️", "writing" to "✍️",
+            "search" to "🔍", "magnify" to "🔍", "magnifying_glass" to "🔍",
+            "clipboard" to "📋", "checklist" to "📋", "notepad" to "📋",
+            "rocket" to "🚀", "launch" to "🚀",
+            "star" to "⭐", "flag" to "🚩",
+            "gear" to "⚙️", "settings" to "⚙️", "cog" to "⚙️",
+            "book" to "📚", "books" to "📚", "document" to "📄", "file" to "📄",
+            "email" to "📧", "mail" to "📧", "envelope" to "📧",
+            "calendar" to "📅", "clock" to "🕐", "time" to "🕐",
+            "trophy" to "🏆", "award" to "🏆",
+            "brain" to "🧠", "idea" to "💡",
+            "person" to "👤", "people" to "👥", "team" to "👥",
+            "money" to "💰", "dollar" to "💰", "finance" to "💰",
+            "computer" to "💻", "code" to "💻", "laptop" to "💻",
+            "phone" to "📱", "mobile" to "📱",
+            "camera" to "📷", "image" to "🖼️", "photo" to "📷",
+            "map" to "🗺️", "location" to "📍", "pin" to "📍",
+            "lock" to "🔒", "key" to "🔑", "security" to "🔒",
+            "heart" to "❤️", "love" to "❤️",
+            "fire" to "🔥", "lightning" to "⚡", "thunder" to "⚡",
+            "cloud" to "☁️", "sun" to "☀️", "moon" to "🌙",
+            "recycle" to "♻️", "refresh" to "🔄", "loop" to "🔄",
+            "warning" to "⚠️", "alert" to "⚠️", "danger" to "⚠️",
+            "check" to "✅", "checkmark" to "✅", "done" to "✅",
+            "cross" to "❌", "x" to "❌", "no" to "❌",
+            "info" to "ℹ️", "information" to "ℹ️",
+            "question" to "❓", "help" to "❓",
+            "chat" to "💬", "message" to "💬", "comment" to "💬",
+            "link" to "🔗", "chain" to "🔗",
+            "download" to "⬇️", "upload" to "⬆️",
+            "play" to "▶️", "pause" to "⏸️", "stop" to "⏹️",
+        )
+        // Match: icon: "some-text-name" or icon: some-text-name (no emoji unicode ranges)
+        return yaml.replace(Regex("""(?m)^(\s*icon\s*:\s*)"?([A-Za-z_\-]+)"?\s*$""")) { match ->
+            val indent = match.groupValues[1]
+            val name = match.groupValues[2].lowercase().replace("-", "_")
+            val emoji = iconNames[name] ?: iconNames.entries
+                .firstOrNull { name.contains(it.key) }?.value
+                ?: "📋"
+            "${indent}\"$emoji\""
+        }
+    }
 }
 
 /**

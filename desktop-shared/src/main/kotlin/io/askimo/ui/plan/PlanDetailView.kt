@@ -102,6 +102,12 @@ import java.awt.Frame
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
+// Characters revealed per tick during the simulated-streaming animation.
+private const val STREAM_CHUNK_SIZE = 12
+
+// Delay between ticks — lower = faster reveal.
+private val STREAM_TICK = 16.milliseconds
+
 @Composable
 fun planDetailView(
     viewModel: PlansViewModel,
@@ -950,6 +956,28 @@ private fun resultPanel(
     showExport: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Simulate streaming: reveal the output gradually after it arrives.
+    var displayedLength by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(output) {
+        // When a new (non-empty) output arrives start from zero and animate forward.
+        // Pinned/comparison panels skip animation (isPinned) to avoid jarring re-plays.
+        if (output.isNotBlank() && !isPinned) {
+            displayedLength = 0
+            coroutineScope.launch {
+                while (displayedLength < output.length) {
+                    delay(STREAM_TICK)
+                    displayedLength = minOf(displayedLength + STREAM_CHUNK_SIZE, output.length)
+                }
+            }
+        } else {
+            displayedLength = output.length
+        }
+    }
+
+    val displayedOutput = if (displayedLength >= output.length) output else output.take(displayedLength)
+    val isStreaming = displayedLength < output.length
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
@@ -961,7 +989,6 @@ private fun resultPanel(
             var exportMenuExpanded by remember { mutableStateOf(false) }
             var showCopyFeedback by remember { mutableStateOf(false) }
             val clipboardManager = LocalClipboardManager.current
-            val coroutineScope = rememberCoroutineScope()
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.medium),
@@ -1096,7 +1123,10 @@ private fun resultPanel(
             }
             HorizontalDivider(modifier = Modifier.padding(bottom = Spacing.medium))
             SelectionContainer {
-                markdownText(markdown = output, modifier = Modifier.fillMaxWidth())
+                markdownText(
+                    markdown = if (isStreaming) "$displayedOutput▍" else displayedOutput,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }

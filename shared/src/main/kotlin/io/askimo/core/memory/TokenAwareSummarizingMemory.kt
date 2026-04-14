@@ -495,7 +495,7 @@ class TokenAwareSummarizingMemory(
                 // Deserialize and restore state
                 val state = deserializeMemoryState(savedMemory)
                 importState(state)
-                log.info("Loaded memory from database for session: $sessionId (${messages.size} messages)")
+                log.debug("Loaded memory from database for session: $sessionId (${messages.size} messages)")
             } else {
                 log.debug("No existing memory found in database for session: $sessionId")
             }
