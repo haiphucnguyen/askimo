@@ -154,6 +154,20 @@ class PlansViewModel(
     var saveError by mutableStateOf<String?>(null)
         private set
 
+    // ── AI-assisted plan generation (editor only) ─────────────────────────────
+
+    /** Plain-English description the user types in the "Generate with AI" field. */
+    var aiPromptText by mutableStateOf("")
+        private set
+
+    /** True while the AI is generating YAML from [aiPromptText]. */
+    var isGeneratingYaml by mutableStateOf(false)
+        private set
+
+    /** Error from the most recent AI generation attempt; null on success or idle. */
+    var aiGenerateError by mutableStateOf<String?>(null)
+        private set
+
     /**
      * Snapshot of the mutable run state for a plan that was navigated away from
      * while a run was in progress or had just completed.
@@ -461,8 +475,10 @@ class PlansViewModel(
     /** Opens the editor to create a brand-new plan with a starter template. */
     fun startNewPlan() {
         editingPlanId = null
-        editorYaml = STARTER_TEMPLATE
-        editorValidationError = PlanYamlParser.validate(STARTER_TEMPLATE)
+        editorYaml = ""
+        editorValidationError = null
+        aiPromptText = ""
+        aiGenerateError = null
         saveError = null
     }
 
@@ -501,6 +517,41 @@ class PlansViewModel(
         editorYaml = yaml
         editorValidationError = PlanYamlParser.validate(yaml)
         saveError = null
+    }
+
+    /** Updates the AI generation prompt text. */
+    fun updateAiPrompt(text: String) {
+        aiPromptText = text
+        aiGenerateError = null
+    }
+
+    /**
+     * Calls the active chat model with [aiPromptText] and populates [editorYaml]
+     * with the generated YAML. The existing validation pipeline runs immediately
+     * on the result so the user sees any issues right away.
+     */
+    fun generateYamlFromPrompt() {
+        val prompt = aiPromptText.trim()
+        if (prompt.isBlank()) return
+        scope.launch {
+            isGeneratingYaml = true
+            aiGenerateError = null
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    planService.generateYamlFromPrompt(prompt)
+                }
+            }
+            result.fold(
+                onSuccess = { yaml ->
+                    updateEditorYaml(yaml)
+                },
+                onFailure = {
+                    aiGenerateError = it.message ?: "Generation failed"
+                    log.error("AI YAML generation failed", it)
+                },
+            )
+            isGeneratingYaml = false
+        }
     }
 
     /**
@@ -549,19 +600,5 @@ class PlansViewModel(
         }
     }
 
-    companion object {
-        /** Minimal valid YAML shown when the user creates a new plan. */
-        val STARTER_TEMPLATE = """
-            |id: my-plan
-            |name: My Plan
-            |description: What this plan does
-            |inputs:
-            |  - key: topic
-            |    label: Topic
-            |    required: true
-            |steps:
-            |  - id: analyse
-            |    message: "Analyse {{topic}} and provide a summary."
-        """.trimMargin()
-    }
+    companion object
 }

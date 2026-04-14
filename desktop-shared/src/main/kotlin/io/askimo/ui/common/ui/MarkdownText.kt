@@ -565,20 +565,6 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     // (either unsupported language or executable not found on PATH)
     val runnableLanguage = remember(language) { RunnableLanguage.resolve(language) }
 
-    // Check if this "code block" is actually just prose text
-    // (AI sometimes wraps regular text in code fences by mistake)
-    if (language == null && isProbablyProse(code)) {
-        // Render as a regular paragraph instead
-        Text(
-            text = code.trim(),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-        )
-        return
-    }
-
     // Try to parse as chart data before rendering
     val chartData = remember(code, language) {
         parseChartData(code, language)
@@ -1673,67 +1659,6 @@ private fun parseChartData(code: String, language: String?): MermaidChartData? {
         log.trace("Failed to parse Mermaid diagram data (may be incomplete): ${e.message}")
         null
     }
-}
-
-/**
- * Detect if a code block contains only prose text (not actual code).
- * This helps handle cases where AI mistakenly wraps regular text in code fences.
- *
- * Heuristics:
- * - Contains common prose words and sentence structure
- * - Lacks typical code patterns (braces, semicolons, function calls, etc.)
- * - Has proper capitalization and punctuation
- */
-private fun isProbablyProse(text: String): Boolean {
-    val trimmed = text.trim()
-    if (trimmed.isEmpty()) return false
-
-    // Count code-like patterns
-    val codePatterns = listOf(
-        """\{""", // Braces
-        """\}""",
-        """;""", // Semicolons
-        """=""", // Assignments
-        """\(.*\).*\{""", // Function definitions
-        """^\s*(def|function|class|public|private|protected|const|let|var|import|from|package)\s""", // Keywords
-        """^\s*//""", // Comments
-        """^\s*#""", // Python/shell comments
-        """^\s*<[a-zA-Z]""", // HTML/XML tags
-    )
-
-    val codePatternCount = codePatterns.count { pattern ->
-        trimmed.contains(Regex(pattern, RegexOption.MULTILINE))
-    }
-
-    // Count prose-like patterns
-    val prosePatterns = listOf(
-        """(?i)\b(the|a|an|is|are|was|were|be|been|have|has|had|do|does|did|will|would|should|could|may|might)\b""",
-        """[.!?]\s+[A-Z]""", // Sentence breaks
-        """(?i)\b(you|your|please|feel free|if you|let me know)\b""", // Common conversational phrases
-        """\([^)]{1,50}\)""", // Parenthetical clauses (not function calls)
-    )
-
-    val prosePatternCount = prosePatterns.count { pattern ->
-        trimmed.contains(Regex(pattern))
-    }
-
-    // Check sentence structure
-    val hasSentences = trimmed.contains(Regex("""[.!?]\s+[A-Z]"""))
-    val hasCapitalizedStart = trimmed.firstOrNull()?.isUpperCase() == true
-    val hasProperEnding = trimmed.lastOrNull() in listOf('.', '!', '?')
-
-    // Decision logic:
-    // - If it has 2+ code patterns and few prose patterns, it's likely code
-    // - If it has strong prose indicators and few/no code patterns, it's likely prose
-    // - If it has proper sentence structure, capitalization, and conversational words, it's likely prose
-
-    val proseScore = prosePatternCount +
-        (if (hasSentences) 2 else 0) +
-        (if (hasCapitalizedStart) 1 else 0) +
-        (if (hasProperEnding) 1 else 0)
-
-    // If we have strong prose indicators and minimal code patterns, treat as prose
-    return proseScore >= 3 && codePatternCount <= 1
 }
 
 /**

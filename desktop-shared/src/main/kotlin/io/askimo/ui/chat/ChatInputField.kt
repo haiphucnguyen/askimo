@@ -467,7 +467,7 @@ fun chatInputField(
                                 // Image creation mode badge
                                 if (creationMode is CreationMode.Image) {
                                     Surface(
-                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(16.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         tonalElevation = 2.dp,
                                     ) {

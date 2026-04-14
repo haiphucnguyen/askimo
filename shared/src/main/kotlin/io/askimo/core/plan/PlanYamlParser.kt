@@ -82,28 +82,79 @@ object PlanYamlParser {
         .registerModule(JavaTimeModule())
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
-    fun parse(yaml: String): PlanDef = toModel(mapper.readValue(yaml, PlanYaml::class.java))
+    fun parse(yaml: String): PlanDef = toModel(mapper.readValue(sanitize(yaml), PlanYaml::class.java))
 
-    fun parse(file: File): PlanDef = toModel(mapper.readValue(file, PlanYaml::class.java))
+    fun parse(file: File): PlanDef = parse(file.readText())
 
     fun parse(path: Path): PlanDef = parse(path.toFile())
 
-    fun parse(stream: InputStream): PlanDef = toModel(mapper.readValue(stream, PlanYaml::class.java))
+    fun parse(stream: InputStream): PlanDef = parse(stream.bufferedReader().readText())
 
     /** Validates YAML without fully converting — returns error message or null if valid. */
     fun validate(yaml: String): String? = runCatching {
-        val raw = mapper.readValue(yaml, PlanYaml::class.java)
+        val raw = mapper.readValue(sanitize(yaml), PlanYaml::class.java)
         val errors = mutableListOf<String>()
 
         if (raw.id.isBlank()) errors += "Missing required field: id"
         if (raw.name.isBlank()) errors += "Missing required field: name"
         if (raw.steps.isEmpty()) errors += "Plan must have at least one step"
 
+        // Validate that every input has a resolvable key
+        raw.inputs.forEachIndexed { i, input ->
+            if (input.resolvedKey.isBlank()) errors += "Input #${i + 1} is missing a 'key' (or 'id') field"
+        }
+
         // Validate workflow step references
         raw.workflow?.let { validateWorkflowRefs(it, raw.steps.keys, errors) }
 
         errors.joinToString("; ").takeIf { it.isNotBlank() }
     }.getOrElse { e -> "Invalid YAML: ${e.message}" }
+
+    /**
+     * Pre-processes AI-generated YAML to fix the most common generation mistakes
+     * before handing it to Jackson:
+     *
+     * 1. **Unquoted `message:` / `system:` values containing colons** — YAML interprets
+     *    a bare colon-space as a key-value separator, so `message: Do X: then Y` is
+     *    invalid. We detect lines where these keys have an unquoted value and wrap the
+     *    value in double quotes, escaping any existing double quotes inside.
+     *
+     * 2. **Unquoted `description:` / `name:` values** — same colon problem.
+     *
+     * Values that are already quoted (start with `"` or `'`) or are block scalars
+     * (`|` / `>`) are left untouched.
+     */
+    internal fun sanitize(yaml: String): String {
+        // Keys whose values are free-form text and commonly contain colons
+        val freeTextKeys = setOf("message", "system", "description", "name", "label", "hint", "placeholder")
+        val keyPattern = Regex("""^(\s*)(${freeTextKeys.joinToString("|")})\s*:\s*(.+)$""")
+
+        // Step 1: strip `inputs.` prefix from {{inputs.xxx}} placeholders everywhere in the YAML.
+        // AI models sometimes generate {{inputs.topic}} instead of the correct {{topic}}.
+        val withFixedPlaceholders = yaml.replace(Regex("""\{\{\s*inputs\.(\w[\w\-]*)\s*\}\}"""), "{{$1}}")
+
+        // Step 2: auto-quote unquoted free-text values that contain colons
+        return withFixedPlaceholders.lines().joinToString("\n") { line ->
+            val match = keyPattern.matchEntire(line)
+            if (match != null) {
+                val indent = match.groupValues[1]
+                val key = match.groupValues[2]
+                val value = match.groupValues[3].trim()
+                // Leave already-quoted values and block scalars alone
+                if (value.startsWith("\"") || value.startsWith("'") ||
+                    value.startsWith("|") || value.startsWith(">")
+                ) {
+                    line
+                } else {
+                    // Escape any double quotes already in the value, then wrap in double quotes
+                    val escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
+                    "$indent$key: \"$escaped\""
+                }
+            } else {
+                line
+            }
+        }
+    }
 
     private fun toModel(raw: PlanYaml): PlanDef {
         val steps = raw.steps.mapValues { (id, s) ->
@@ -124,14 +175,21 @@ object PlanYamlParser {
             icon = raw.icon,
             description = raw.description,
             inputs = raw.inputs.map { i ->
+                val resolvedKey = i.resolvedKey
+                // If no label is provided, derive one from the key: "my-topic" → "My Topic"
+                val resolvedLabel = i.label.ifBlank {
+                    resolvedKey.replace(Regex("[-_]"), " ")
+                        .split(" ")
+                        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+                }
                 PlanInput(
-                    key = i.key,
-                    label = i.label,
+                    key = resolvedKey,
+                    label = resolvedLabel,
                     type = i.type,
                     options = i.options,
                     default = i.default,
                     required = i.required,
-                    hint = i.hint,
+                    hint = i.resolvedHint,
                 )
             },
             tools = raw.tools,
@@ -187,14 +245,26 @@ private data class PlanYaml(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class PlanInputYaml(
+    // Accept both `key` (canonical) and `id` (common alias used by AI-generated YAML)
     val key: String = "",
+    @param:JsonProperty("id")
+    private val _id: String = "",
     val label: String = "",
     val type: String = "text",
     val options: List<String> = emptyList(),
     val default: String = "",
     val required: Boolean = false,
+    // Accept both `hint` (canonical) and `placeholder` (common alias)
     val hint: String = "",
-)
+    @param:JsonProperty("placeholder")
+    private val _placeholder: String = "",
+) {
+    /** Resolved key: prefer explicit `key`, fall back to `id`. */
+    val resolvedKey: String get() = key.ifBlank { _id }
+
+    /** Resolved hint: prefer explicit `hint`, fall back to `placeholder`. */
+    val resolvedHint: String get() = hint.ifBlank { _placeholder }
+}
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class PlanStepYaml(

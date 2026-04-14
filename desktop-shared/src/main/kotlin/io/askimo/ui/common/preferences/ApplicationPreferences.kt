@@ -283,12 +283,13 @@ object ApplicationPreferences {
 
     /**
      * Returns the last-used input values for a plan, keyed by input key.
-     * Stored as a single string in the format "key1=value1\u0000key2=value2".
+     * Stored as a single string using U+001F (Unit Separator) between entries
+     * and '=' between key and value — both characters safe for [Preferences.put].
      * Returns an empty map if no values have been saved for this plan.
      */
     fun getPlanInputs(planId: String): Map<String, String> {
         val raw = safeGet("plan.inputs.$planId", null) ?: return emptyMap()
-        return raw.split("\u0000")
+        return raw.split("\u001F")
             .mapNotNull { entry ->
                 val idx = entry.indexOf('=')
                 if (idx > 0) entry.substring(0, idx) to entry.substring(idx + 1) else null
@@ -298,13 +299,14 @@ object ApplicationPreferences {
 
     /**
      * Persists the current input values for a plan so they can be restored on next visit.
-     * Values are serialised as "key1=value1\u0000key2=value2".
-     * Any U+0000 in keys or values is stripped before serialisation.
+     * Values are serialised as "key1=value1\u001Fkey2=value2" (U+001F Unit Separator).
+     * U+0000 is stripped from keys and values because [Preferences.put] rejects it.
      */
     fun setPlanInputs(planId: String, inputs: Map<String, String>) {
-        val raw = inputs.entries.joinToString("\u0000") { (k, v) ->
-            val safeKey = k.replace("\u0000", "")
-            val safeVal = v.replace("\u0000", "")
+        val raw = inputs.entries.joinToString("\u001F") { (k, v) ->
+            // Strip any characters that Preferences.put rejects (null bytes, surrogates)
+            val safeKey = k.filter { it != '\u0000' && !it.isLowSurrogate() && !it.isHighSurrogate() }
+            val safeVal = v.filter { it != '\u0000' && !it.isLowSurrogate() && !it.isHighSurrogate() }
             "$safeKey=$safeVal"
         }
         val truncated = if (raw.length > Preferences.MAX_VALUE_LENGTH) raw.substring(0, Preferences.MAX_VALUE_LENGTH) else raw

@@ -67,6 +67,14 @@ object PlanExportService {
                     orderedSteps[event.stepName] = event
                 }
             }
+
+            // The last completed step's output IS the result — suppress it in the
+            // Steps section to avoid duplicating it in the Result section below.
+            val lastCompletedStepName = orderedSteps.values
+                .filterIsInstance<PlanStepEvent.Completed>()
+                .lastOrNull()
+                ?.stepName
+
             if (orderedSteps.isNotEmpty()) {
                 append("## Steps\n\n")
                 orderedSteps.values.forEach { event ->
@@ -77,8 +85,13 @@ object PlanExportService {
                     }
                     append("### ${event.stepName}  $status\n\n")
                     when (event) {
-                        is PlanStepEvent.Completed -> event.output?.toString()?.trim()
-                            ?.takeIf { it.isNotBlank() }?.let { append("$it\n\n") }
+                        is PlanStepEvent.Completed -> {
+                            // Skip output for the last step — it will appear in the Result section
+                            if (event.stepName != lastCompletedStepName) {
+                                event.output?.toString()?.trim()
+                                    ?.takeIf { it.isNotBlank() }?.let { append("$it\n\n") }
+                            }
+                        }
 
                         is PlanStepEvent.Failed ->
                             append("> Error: ${event.error.message ?: event.error.javaClass.simpleName}\n\n")

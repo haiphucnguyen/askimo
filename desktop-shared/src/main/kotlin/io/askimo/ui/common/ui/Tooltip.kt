@@ -9,6 +9,7 @@ import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,9 +34,22 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Maximum number of characters shown in a tooltip before truncating with "…". */
 const val TOOLTIP_MAX_CHARS = 1200
+
+/** Maximum width of the tooltip popup. */
+private val TOOLTIP_MAX_WIDTH = 640.dp
+
+/** Delay before showing the tooltip after the cursor enters the anchor. */
+private val TOOLTIP_SHOW_DELAY = 400.milliseconds
+
+/**
+ * Delay before hiding the tooltip after the cursor leaves the anchor.
+ * Long enough to survive the brief gap between anchor and popup.
+ */
+private val TOOLTIP_HIDE_DELAY = 150.milliseconds
 
 /** Controls which side the tooltip appears on relative to its anchor. */
 enum class TooltipPlacement {
@@ -82,13 +96,14 @@ fun themedTooltip(
     }
 
     val tooltipState = rememberTooltipState(isPersistent = true)
-    var shouldShowTooltip by remember { mutableStateOf(false) }
+    var isHovered by remember { mutableStateOf(false) }
 
-    LaunchedEffect(shouldShowTooltip) {
-        if (shouldShowTooltip) {
-            delay(300)
+    LaunchedEffect(isHovered) {
+        if (isHovered) {
+            delay(TOOLTIP_SHOW_DELAY)
             tooltipState.show()
         } else {
+            delay(TOOLTIP_HIDE_DELAY)
             tooltipState.dismiss()
         }
     }
@@ -110,9 +125,12 @@ fun themedTooltip(
                 ) {
                     Text(
                         text = displayText,
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier
+                            .widthIn(max = TOOLTIP_MAX_WIDTH)
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        softWrap = true,
                     )
                 }
             },
@@ -125,12 +143,8 @@ fun themedTooltip(
                         interactionSource = remember { MutableInteractionSource() },
                         enabled = true,
                     )
-                    .onPointerEvent(PointerEventType.Enter) {
-                        shouldShowTooltip = true
-                    }
-                    .onPointerEvent(PointerEventType.Exit) {
-                        shouldShowTooltip = false
-                    },
+                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                    .onPointerEvent(PointerEventType.Exit) { isHovered = false },
             ) {
                 content()
             }
