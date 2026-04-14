@@ -346,106 +346,141 @@ fun providerSelectionDialog(
                             )
 
                             viewModel.providerConfigFields.forEach { field ->
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
-                                ) {
-                                    Text(
-                                        text = field.label + if (field.required) " *" else "",
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
-                                    Text(
-                                        text = field.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-
-                                    when (field) {
-                                        is ProviderConfigField.ApiKeyField -> {
-                                            OutlinedTextField(
-                                                value = viewModel.providerFieldValues[field.name] ?: "",
-                                                onValueChange = { viewModel.updateProviderField(field.name, it) },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                singleLine = true,
-                                                visualTransformation = PasswordVisualTransformation(),
-                                                placeholder = {
-                                                    Text(
-                                                        if (field.hasExistingValue) {
-                                                            stringResource("provider.apikey.stored")
-                                                        } else {
-                                                            stringResource("provider.apikey.enter")
-                                                        },
-                                                    )
-                                                },
-                                                trailingIcon = {
-                                                    Row {
-                                                        if (field.hasExistingValue) {
-                                                            Icon(
-                                                                Icons.Default.CheckCircle,
-                                                                contentDescription = stringResource("provider.apikey.already.stored"),
-                                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                            )
-                                                        }
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Icon(Icons.Default.Lock, contentDescription = "Password")
-                                                    }
-                                                },
-                                                colors = AppComponents.outlinedTextFieldColors(),
-                                            )
-
-                                            // Security assurance message
-                                            Card(
+                                when (field) {
+                                    is ProviderConfigField.InfoField -> {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            ),
+                                        ) {
+                                            Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = Spacing.small),
-                                                colors = CardDefaults.cardColors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                ),
+                                                    .padding(Spacing.medium),
+                                                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                                                verticalAlignment = Alignment.Top,
                                             ) {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(Spacing.medium),
-                                                    verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
-                                                ) {
-                                                    Text(
-                                                        text = stringResource("provider.apikey.security.message"),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                    linkButton(
-                                                        onClick = {
-                                                            try {
-                                                                Desktop.getDesktop().browse(
-                                                                    URI("https://askimo.chat/security/"),
-                                                                )
-                                                            } catch (_: Exception) {
-                                                                // Silently fail if browser cannot be opened
-                                                            }
-                                                        },
-                                                        modifier = Modifier.padding(0.dp),
-                                                    ) {
-                                                        Text(
-                                                            text = stringResource("provider.apikey.security.link"),
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                        )
-                                                    }
-                                                }
+                                                Icon(
+                                                    Icons.Default.Info,
+                                                    contentDescription = "Info",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Text(
+                                                    text = field.message,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
                                             }
                                         }
+                                    }
 
-                                        is ProviderConfigField.BaseUrlField -> {
-                                            OutlinedTextField(
-                                                value = viewModel.providerFieldValues[field.name] ?: "",
-                                                onValueChange = { viewModel.updateProviderField(field.name, it) },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                singleLine = true,
-                                                placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
-                                                colors = AppComponents.outlinedTextFieldColors(),
+                                    else -> {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+                                        ) {
+                                            Text(
+                                                text = field.label + if (field.required) " *" else "",
+                                                style = MaterialTheme.typography.labelLarge,
                                             )
+                                            Text(
+                                                text = field.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+
+                                            when (field) {
+                                                is ProviderConfigField.ApiKeyField -> {
+                                                    OutlinedTextField(
+                                                        value = viewModel.providerFieldValues[field.name] ?: "",
+                                                        onValueChange = { viewModel.updateProviderField(field.name, it) },
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        singleLine = true,
+                                                        visualTransformation = PasswordVisualTransformation(),
+                                                        placeholder = {
+                                                            Text(
+                                                                if (field.hasExistingValue) {
+                                                                    stringResource("provider.apikey.stored")
+                                                                } else {
+                                                                    stringResource("provider.apikey.enter")
+                                                                },
+                                                            )
+                                                        },
+                                                        trailingIcon = {
+                                                            Row {
+                                                                if (field.hasExistingValue) {
+                                                                    Icon(
+                                                                        Icons.Default.CheckCircle,
+                                                                        contentDescription = stringResource("provider.apikey.already.stored"),
+                                                                        tint = MaterialTheme.colorScheme.onSurface,
+                                                                    )
+                                                                }
+                                                                Spacer(modifier = Modifier.width(8.dp))
+                                                                Icon(Icons.Default.Lock, contentDescription = "Password")
+                                                            }
+                                                        },
+                                                        colors = AppComponents.outlinedTextFieldColors(),
+                                                    )
+
+                                                    // Security assurance message
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(top = Spacing.small),
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                        ),
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(Spacing.medium),
+                                                            verticalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
+                                                        ) {
+                                                            Text(
+                                                                text = stringResource("provider.apikey.security.message"),
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            )
+                                                            linkButton(
+                                                                onClick = {
+                                                                    try {
+                                                                        Desktop.getDesktop().browse(
+                                                                            URI("https://askimo.chat/security/"),
+                                                                        )
+                                                                    } catch (_: Exception) {
+                                                                        // Silently fail if browser cannot be opened
+                                                                    }
+                                                                },
+                                                                modifier = Modifier.padding(0.dp),
+                                                            ) {
+                                                                Text(
+                                                                    text = stringResource("provider.apikey.security.link"),
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                is ProviderConfigField.BaseUrlField -> {
+                                                    OutlinedTextField(
+                                                        value = viewModel.providerFieldValues[field.name] ?: "",
+                                                        onValueChange = { viewModel.updateProviderField(field.name, it) },
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        singleLine = true,
+                                                        placeholder = { Text(stringResource("settings.placeholder.baseurl")) },
+                                                        colors = AppComponents.outlinedTextFieldColors(),
+                                                    )
+                                                }
+
+                                                else -> {}
+                                            }
                                         }
                                     }
-                                }
+                                } // when (field)
                             }
 
                             // Connection error display

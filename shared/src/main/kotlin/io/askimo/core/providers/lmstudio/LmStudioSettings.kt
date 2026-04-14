@@ -38,6 +38,10 @@ data class LmStudioSettings(
     override fun getSetupHelpText(messageResolver: (String) -> String): String = messageResolver("provider.lmstudio.setup.help")
 
     override fun getConfigFields(messageResolver: (String) -> String): List<ProviderConfigField> = listOf(
+        ProviderConfigField.InfoField(
+            name = "openai_compat_info",
+            message = messageResolver("provider.lmstudio.openai.compat.info"),
+        ),
         ProviderConfigField.BaseUrlField(
             description = messageResolver("provider.lmstudio.baseurl.description"),
             value = baseUrl,
