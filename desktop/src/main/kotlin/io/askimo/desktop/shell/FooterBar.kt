@@ -508,7 +508,7 @@ fun footerBar(
                     TextButton(
                         onClick = {
                             runCatching {
-                                Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo/issues"))
+                                Desktop.getDesktop().browse(URI("https://askimo.chat/contact/"))
                             }
                         },
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

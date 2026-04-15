@@ -5,6 +5,7 @@
 package io.askimo.ui.shell
 
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,16 +17,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -102,28 +101,31 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                 .size(32.dp)
                 .pointerHoverIcon(PointerIcon.Hand),
         ) {
-            BadgedBox(
-                badge = {
-                    if (unreadCount > 0) {
-                        Badge(
-                            modifier = Modifier
-                                .widthIn(min = 20.dp)
-                                .padding(horizontal = 4.dp),
-                        ) {
-                            Text(
-                                text = unreadCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 10.sp,
-                            )
-                        }
-                    }
-                },
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = "Events",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        if (unreadCount > 0) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .background(
+                        color = MaterialTheme.colorScheme.error,
+                        shape = RoundedCornerShape(50),
+                    )
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = "Events",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp),
+                Text(
+                    text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    color = MaterialTheme.colorScheme.onError,
+                    maxLines = 1,
                 )
             }
         }
@@ -334,9 +336,24 @@ fun notificationEventCard(
         else -> event::class.simpleName ?: "Unknown"
     }
 
+    val cardColors = if (isShellError) {
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    } else {
+        AppComponents.surfaceVariantCardColors()
+    }
+
+    val contentColor = if (isShellError) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = AppComponents.surfaceVariantCardColors(),
+        colors = cardColors,
     ) {
         Column(
             modifier = Modifier
@@ -353,10 +370,7 @@ fun notificationEventCard(
                     text = eventName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = when {
-                        isShellError -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
+                    color = contentColor,
                 )
 
                 TextButton(
@@ -367,7 +381,7 @@ fun notificationEventCard(
                     Text(
                         text = stringResource("event.notification.clear"),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = contentColor,
                     )
                 }
             }
@@ -375,24 +389,19 @@ fun notificationEventCard(
             Text(
                 text = formatInstantDisplay(event.timestamp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = contentColor.copy(alpha = 0.7f),
             )
 
             SelectionContainer {
                 Text(
                     text = event.getDetails(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isShellError) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    color = contentColor,
                 )
             }
 
             // Expandable technical details for ShellErrorEvent — lets users copy & report
             if (isShellError) {
-                val shellError = event as ShellErrorEvent
                 var showCause by remember { mutableStateOf(false) }
 
                 TextButton(
@@ -407,16 +416,16 @@ fun notificationEventCard(
                             stringResource("event.shell.error.cause.show")
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = contentColor,
                     )
                 }
 
                 if (showCause) {
                     SelectionContainer {
                         Text(
-                            text = shellError.cause.stackTraceToString(),
+                            text = event.cause.stackTraceToString(),
                             style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            color = contentColor.copy(alpha = 0.85f),
                         )
                     }
                 }
