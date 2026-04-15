@@ -98,6 +98,7 @@ fun projectSidePanel(
     ragIndexingPercentage: Int?,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    onAddToChat: ((List<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableStateOf(PanelTab.RAG_SOURCES) }
@@ -304,6 +305,7 @@ fun projectSidePanel(
                                             )
                                         }
                                     },
+                                    onAddToChat = onAddToChat,
                                 )
                             }
 
@@ -437,6 +439,7 @@ private fun ragSourcesTabContent(
     ragIndexingPercentage: Int?,
     onAddMaterial: () -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
+    onAddToChat: ((List<String>) -> Unit)? = null,
 ) {
     var selectedNode by remember { mutableStateOf<TreeNode?>(null) }
     var viewerHeightRatio by remember {
@@ -536,6 +539,7 @@ private fun ragSourcesTabContent(
                             }
                             onRemove(source)
                         },
+                        onAddToChat = onAddToChat,
                     )
                 }
             }

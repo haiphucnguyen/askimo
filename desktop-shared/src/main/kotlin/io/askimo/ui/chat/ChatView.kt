@@ -104,6 +104,7 @@ import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import java.io.File
 import java.time.LocalDateTime
+import java.util.UUID.randomUUID
 
 private val log = currentFileLogger()
 
@@ -149,10 +150,16 @@ fun chatView(
 
     // Internal state management for ChatView
     val scope = rememberCoroutineScope()
-    var inputText by remember(initialInputText) { mutableStateOf(initialInputText) }
-    var attachments by remember(initialAttachments) { mutableStateOf(initialAttachments) }
-    var editingMessage by remember(initialEditingMessage) { mutableStateOf(initialEditingMessage) }
-    var editingAIMessage by remember { mutableStateOf<ChatMessageDTO?>(null) }
+    var inputText by remember(sessionId, initialInputText) { mutableStateOf(initialInputText) }
+    var attachments by remember(sessionId, initialAttachments) { mutableStateOf(initialAttachments) }
+    var editingMessage by remember(sessionId, initialEditingMessage) { mutableStateOf(initialEditingMessage) }
+    var editingAIMessage by remember(sessionId) { mutableStateOf<ChatMessageDTO?>(null) }
+
+    // When there is no project (e.g. user clicked "New Chat"), drop any pending
+    // attachments that were added from the project side panel.
+    LaunchedEffect(project) {
+        if (project == null) attachments = emptyList()
+    }
 
     // Notify parent of state changes
     LaunchedEffect(inputText, attachments, editingMessage) {
@@ -1086,6 +1093,28 @@ fun chatView(
                 ragIndexingPercentage = ragIndexingPercentage,
                 isExpanded = sidePanelExpanded,
                 onExpandedChange = { sidePanelExpanded = it },
+                onAddToChat = { filePaths ->
+                    val newAttachments = filePaths.map { path ->
+                        val file = File(path)
+                        FileAttachmentDTO(
+                            id = randomUUID().toString(),
+                            messageId = "",
+                            sessionId = sessionId ?: "",
+                            fileName = file.name,
+                            mimeType = file.extension,
+                            size = file.length(),
+                            createdAt = LocalDateTime.now(),
+                            content = null,
+                            filePath = file.absolutePath,
+                        )
+                    }
+                    // Merge, avoiding duplicates by path
+                    val existingPaths = attachments.mapNotNull { it.filePath }.toSet()
+                    val toAdd = newAttachments.filter { it.filePath !in existingPaths }
+                    if (toAdd.isNotEmpty()) {
+                        attachments = attachments + toAdd
+                    }
+                },
                 modifier = Modifier.fillMaxHeight(),
             )
         }

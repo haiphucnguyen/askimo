@@ -23,10 +23,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -161,7 +161,7 @@ fun fileViewerPane(
                         modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.OpenInNew,
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = stringResource("file.viewer.open.external"),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(15.dp),
@@ -252,7 +252,7 @@ fun fileViewerPane(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(32.dp),
                     )
                 },
@@ -322,10 +322,15 @@ private fun viewerPlaceholder(
                 Icon(
                     imageVector = Icons.Default.FolderOpen,
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(15.dp),
                 )
                 Spacer(Modifier.size(6.dp))
-                Text(text = actionLabel, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }

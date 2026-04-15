@@ -25,20 +25,28 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -67,11 +76,16 @@ import java.net.URI
  * Tree view component for displaying RAG knowledge sources.
  * Shows files and folders with expandable/collapsible functionality.
  *
+ * When [onAddToChat] is provided, each file/folder row gains a "+" quick-add button,
+ * a context-menu "Add to chat" option, and a sticky bottom bar for multi-file selection.
+ *
  * @param sources          Knowledge source configs to display.
  * @param modifier         Optional modifier.
  * @param selectedNode     Currently selected node (hoisted to allow viewer integration).
  * @param onNodeSelected   Called when a node is selected; passes `null` to deselect.
  * @param onRemove         Called when the user removes a knowledge source.
+ * @param onAddToChat      Called with a list of file paths to attach to the current chat message.
+ *                         Pass `null` to disable the feature.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -81,7 +95,11 @@ fun ragSourcesTree(
     selectedNode: TreeNode? = null,
     onNodeSelected: (TreeNode?) -> Unit = {},
     onRemove: (KnowledgeSourceConfig) -> Unit = {},
+    onAddToChat: ((List<String>) -> Unit)? = null,
 ) {
+    // Paths currently checked for bulk "Add to chat"
+    val chatSelection = remember { mutableStateSetOf<String>() }
+
     // Convert sources to tree nodes
     val treeNodes = remember(sources) {
         sources.map { source ->
@@ -112,39 +130,107 @@ fun ragSourcesTree(
 
     val listState = rememberLazyListState()
 
-    Box(modifier = modifier) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 22.dp), // left padding matches header; right leaves room for scrollbar
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            items(treeNodes) { node ->
-                treeNodeItem(
-                    node = node,
-                    level = 0,
-                    selectedNode = selectedNode,
-                    onNodeSelected = onNodeSelected,
-                    onRemove = onRemove,
-                )
+    Column(modifier = modifier) {
+        Box(modifier = Modifier.weight(1f)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(treeNodes) { node ->
+                    treeNodeItem(
+                        node = node,
+                        level = 0,
+                        selectedNode = selectedNode,
+                        onNodeSelected = onNodeSelected,
+                        onRemove = onRemove,
+                        chatSelection = chatSelection,
+                        onAddToChat = onAddToChat,
+                    )
+                }
             }
+
+            VerticalScrollbar(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight(),
+                adapter = rememberScrollbarAdapter(listState),
+                style = ScrollbarStyle(
+                    minimalHeight = 16.dp,
+                    thickness = 6.dp,
+                    shape = MaterialTheme.shapes.small,
+                    hoverDurationMillis = 300,
+                    unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                ),
+            )
         }
 
-        VerticalScrollbar(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight(),
-            adapter = rememberScrollbarAdapter(listState),
-            style = ScrollbarStyle(
-                minimalHeight = 16.dp,
-                thickness = 6.dp,
-                shape = MaterialTheme.shapes.small,
-                hoverDurationMillis = 300,
-                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            ),
-        )
+        // Sticky bottom action bar — only shown when files are selected for chat
+        if (onAddToChat != null && chatSelection.isNotEmpty()) {
+            HorizontalDivider()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AttachFile,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource("rag.tree.chat.selected", chatSelection.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = { chatSelection.clear() },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text(
+                            text = stringResource("rag.tree.chat.clear"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            onAddToChat(chatSelection.toList())
+                            chatSelection.clear()
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = stringResource("rag.tree.chat.add"),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -192,11 +278,13 @@ private fun treeNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
+    chatSelection: androidx.compose.runtime.snapshots.SnapshotStateSet<String> = remember { mutableStateSetOf() },
+    onAddToChat: ((List<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     when (node) {
-        is FolderTreeNode -> folderNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
-        is FileTreeNode -> fileNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
+        is FolderTreeNode -> folderNodeItem(node, level, selectedNode, onNodeSelected, onRemove, chatSelection, onAddToChat, modifier)
+        is FileTreeNode -> fileNodeItem(node, level, selectedNode, onNodeSelected, onRemove, chatSelection, onAddToChat, modifier)
         is UrlTreeNode -> urlNodeItem(node, level, selectedNode, onNodeSelected, onRemove, modifier)
     }
 }
@@ -212,6 +300,8 @@ private fun folderNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
+    chatSelection: androidx.compose.runtime.snapshots.SnapshotStateSet<String> = remember { mutableStateSetOf() },
+    onAddToChat: ((List<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -235,7 +325,9 @@ private fun folderNodeItem(
     Column(modifier = modifier) {
         // Folder row
         themedTooltip(text = node.fullPath) {
-            Box {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -274,11 +366,7 @@ private fun folderNodeItem(
 
                     // Folder icon
                     Icon(
-                        imageVector = if (isExpanded) {
-                            Icons.Default.FolderOpen
-                        } else {
-                            Icons.Default.Folder
-                        },
+                        imageVector = if (isExpanded) Icons.Default.FolderOpen else Icons.Default.Folder,
                         contentDescription = null,
                         tint = AppComponents.secondaryIconColor(),
                         modifier = Modifier.size(18.dp),
@@ -293,9 +381,10 @@ private fun folderNodeItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // No "Add to chat" button for folders — only individual files can be attached
                 }
 
-                // Context menu
+                // Context menu — no "Add to chat" option for folders
                 DropdownMenu(
                     expanded = showContextMenu,
                     onDismissRequest = { showContextMenu = false },
@@ -345,6 +434,8 @@ private fun folderNodeItem(
                         selectedNode = selectedNode,
                         onNodeSelected = onNodeSelected,
                         onRemove = onRemove,
+                        chatSelection = chatSelection,
+                        onAddToChat = onAddToChat,
                     )
                 }
             }
@@ -363,14 +454,17 @@ private fun fileNodeItem(
     selectedNode: TreeNode?,
     onNodeSelected: (TreeNode) -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
+    chatSelection: androidx.compose.runtime.snapshots.SnapshotStateSet<String> = remember { mutableStateSetOf() },
+    onAddToChat: ((List<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val isSelected = selectedNode == node
-    val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-    } else {
-        Color.Transparent
+    val isInChatSelection = node.path in chatSelection
+    val backgroundColor = when {
+        isInChatSelection -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        else -> Color.Transparent
     }
 
     themedTooltip(text = node.fullPath) {
@@ -412,6 +506,35 @@ private fun fileNodeItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+
+                // "Add to chat" quick button
+                if (onAddToChat != null) {
+                    if (isInChatSelection) {
+                        IconButton(
+                            onClick = { chatSelection.remove(node.path) },
+                            modifier = Modifier.size(20.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = stringResource("rag.tree.chat.deselect"),
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { chatSelection.add(node.path) },
+                            modifier = Modifier.size(20.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddCircleOutline,
+                                contentDescription = stringResource("rag.tree.chat.select"),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
             }
 
             // Context menu
@@ -420,6 +543,32 @@ private fun fileNodeItem(
                 onDismissRequest = { showContextMenu = false },
                 offset = DpOffset(x = 0.dp, y = 0.dp),
             ) {
+                if (onAddToChat != null) {
+                    if (isInChatSelection) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource("rag.tree.chat.deselect")) },
+                            onClick = {
+                                chatSelection.remove(node.path)
+                                showContextMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            },
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource("rag.tree.chat.select")) },
+                            onClick = {
+                                chatSelection.add(node.path)
+                                showContextMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.AddCircleOutline, contentDescription = null)
+                            },
+                        )
+                    }
+                    HorizontalDivider()
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource("rag.tree.file.preview")) },
                     onClick = {

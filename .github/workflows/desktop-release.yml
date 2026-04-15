@@ -474,3 +474,71 @@ jobs:
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+  contributors:
+    name: Append contributors to release notes
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ release ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (full history for git log)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build contributors section and append to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+
+          # Find the previous tag (the one before this one)
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${TAG}"
+            echo "Contributors from $RANGE"
+          else
+            RANGE="${TAG}"
+            echo "No previous tag found — listing all contributors up to $TAG"
+          fi
+
+          # Collect unique authors: "Login (Name)" sorted, bots excluded
+          mapfile -t AUTHORS < <(
+            git log "$RANGE" --format='%aN|%aE' \
+              | sort -u \
+              | grep -viE '\[bot\]|noreply\.github\.com' \
+              | awk -F'|' '{print $1}' \
+              | sort -u
+          )
+
+          if [ ${#AUTHORS[@]} -eq 0 ]; then
+            echo "No human contributors found — skipping append."
+            exit 0
+          fi
+
+          echo "Found ${#AUTHORS[@]} contributor(s): ${AUTHORS[*]}"
+
+          # Build markdown section
+          SECTION=$'\n\n## Contributors\n\nThank you to everyone who contributed to this release! 🎉\n\n'
+          for AUTHOR in "${AUTHORS[@]}"; do
+            SECTION+="- ${AUTHOR}"$'\n'
+          done
+
+          # Fetch current release body
+          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
+
+          # Remove any previously appended Contributors section (idempotent re-runs)
+          STRIPPED=$(echo "$CURRENT_BODY" | sed '/^## Contributors/,$ d')
+
+          NEW_BODY="${STRIPPED}${SECTION}"
+
+          gh release edit "$TAG" --notes "$NEW_BODY"
+          echo "✅ Contributors section appended to release $TAG"
+

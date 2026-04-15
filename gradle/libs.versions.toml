@@ -21,6 +21,8 @@ sqlite = "3.51.3.0"
 hikaricp = "7.0.2"
 exposed = "1.2.0"
 compose = "1.10.3"
+compose-material3 = "1.9.0"
+compose-material-icons = "1.7.8"
 coil = "3.4.0"
 koin = "4.2.0"
 jlatexmath = "1.0.7"
@@ -70,6 +72,10 @@ jediterm-core = { module = "org.jetbrains.jediterm:jediterm-core", version.ref =
 # Image Loading (Coil)
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+
+# Compose Material
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-material-icons" }
 
 # Jackson
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
