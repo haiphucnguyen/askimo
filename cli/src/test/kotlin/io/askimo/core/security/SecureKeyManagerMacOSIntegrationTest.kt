@@ -69,7 +69,7 @@ class SecureKeyManagerMacOSIntegrationTest {
         println("Retrieved key is null: ${retrievedKey == null}")
         assertNotNull(retrievedKey, "Retrieved API key should not be null")
 
-        val retrieved = retrievedKey!!
+        val retrieved = retrievedKey
         println("Retrieved length: ${retrieved.length}")
         println("Retrieved prefix: ${retrieved.take(20)}...")
         println("Retrieved suffix: ...${retrieved.takeLast(20)}")

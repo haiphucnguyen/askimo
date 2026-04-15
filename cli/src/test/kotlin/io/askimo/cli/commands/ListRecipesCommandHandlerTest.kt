@@ -267,7 +267,7 @@ class ListRecipesCommandHandlerTest : CommandHandlerTestBase() {
         val recipeLine = lines.find { it.contains("my-recipe") }
 
         assertTrue(recipeLine != null)
-        assertTrue(recipeLine!!.contains("my-recipe"))
+        assertTrue(recipeLine.contains("my-recipe"))
         assertTrue(!recipeLine.endsWith(".yml"))
     }
 

@@ -4974,7 +4974,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$LyMoAAaM",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$Xm2yYCXe",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -7373,7 +7373,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$dZdAwrXL",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$BQiCsOjI",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

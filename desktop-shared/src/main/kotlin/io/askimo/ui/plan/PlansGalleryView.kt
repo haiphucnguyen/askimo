@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -62,6 +63,9 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.themedTooltip
+import java.awt.Desktop
+import java.net.URI
 
 @Composable
 fun plansGalleryView(
@@ -106,6 +110,22 @@ fun plansGalleryView(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.extraSmall),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        themedTooltip(text = stringResource("plans.docs.tooltip")) {
+                            IconButton(
+                                onClick = {
+                                    runCatching {
+                                        Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/plans/"))
+                                    }
+                                },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = stringResource("plans.docs.tooltip"),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        }
                         IconButton(
                             onClick = onNewPlan,
                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

@@ -425,14 +425,15 @@ fun footerBar(
         // Top border
         HorizontalDivider()
 
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .widthIn(max = 220.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -452,7 +453,6 @@ fun footerBar(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -471,10 +471,13 @@ fun footerBar(
                 }
             }
 
-            aiConfigInfo(onConfigureAiProvider = onConfigureAiProvider)
+            Box(modifier = Modifier.align(Alignment.Center)) {
+                aiConfigInfo(onConfigureAiProvider = onConfigureAiProvider)
+            }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.align(Alignment.CenterEnd),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 themedTooltip(
@@ -486,9 +489,7 @@ fun footerBar(
                 ) {
                     IconButton(
                         onClick = { telemetryExpanded = !telemetryExpanded },
-                        modifier = Modifier
-                            .size(28.dp)
-                            .pointerHoverIcon(PointerIcon.Hand),
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ShowChart,
@@ -503,21 +504,21 @@ fun footerBar(
                     }
                 }
 
-                TextButton(
-                    onClick = {
-                        try {
-                            Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo/issues"))
-                        } catch (e: Exception) {
-                            // Silently fail if unable to open browser
-                        }
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Text(
-                        text = stringResource("system.share.feedback"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                themedTooltip(text = stringResource("system.share.feedback")) {
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo/issues"))
+                            }
+                        },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text(
+                            text = stringResource("system.share.feedback"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
 
                 notificationIcon(onShowUpdateDetails = onShowUpdateDetails)
