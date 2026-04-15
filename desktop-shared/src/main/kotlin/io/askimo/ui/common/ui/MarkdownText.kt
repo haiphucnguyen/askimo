@@ -115,6 +115,7 @@ import java.net.URI
 import java.util.Base64
 import javax.imageio.ImageIO
 import javax.swing.SwingUtilities
+import kotlin.time.Duration.Companion.milliseconds
 import org.commonmark.node.Text as MarkdownText
 
 private val log = currentFileLogger()
@@ -804,7 +805,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                                 clipboardManager.setText(AnnotatedString(codeBlock.literal.trimEnd('\n', '\r')))
                                 showCopyFeedback = true
                                 coroutineScope.launch {
-                                    delay(2000)
+                                    delay(2000.milliseconds)
                                     showCopyFeedback = false
                                 }
                             },

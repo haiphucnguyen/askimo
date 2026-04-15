@@ -76,7 +76,7 @@ class SessionMemoryRepositoryIT {
 
         val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
-        assertEquals(session.id, retrieved!!.sessionId)
+        assertEquals(session.id, retrieved.sessionId)
         assertEquals(memory.memorySummary, retrieved.memorySummary)
         assertEquals(memory.memoryMessages, retrieved.memoryMessages)
     }
@@ -131,7 +131,7 @@ class SessionMemoryRepositoryIT {
 
         val retrieved = memoryRepository.getBySessionId(session.id)
         assertNotNull(retrieved)
-        assertEquals(memory2.memorySummary, retrieved!!.memorySummary)
+        assertEquals(memory2.memorySummary, retrieved.memorySummary)
         assertEquals(memory2.memoryMessages, retrieved.memoryMessages)
     }
 

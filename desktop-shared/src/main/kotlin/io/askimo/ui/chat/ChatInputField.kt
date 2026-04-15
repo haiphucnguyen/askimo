@@ -367,44 +367,44 @@ fun chatInputField(
 
             Column {
                 // Main input row with text field and send button
+                // Resize handle sits above the row so it doesn't affect button alignment.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .pointerHoverIcon(
+                            PointerIcon(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR)),
+                        )
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { change, dragAmount ->
+                                change.consume()
+                                val newHeight = textFieldHeight - dragAmount.toDp()
+                                textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
+                                manuallyResized = true
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Visual grip indicator
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                RoundedCornerShape(2.dp),
+                            ),
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
                     ) {
-                        // Resize handle
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .pointerHoverIcon(
-                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR)),
-                                )
-                                .pointerInput(Unit) {
-                                    detectVerticalDragGestures { change, dragAmount ->
-                                        change.consume()
-                                        val newHeight = textFieldHeight - dragAmount.toDp()
-                                        textFieldHeight = newHeight.coerceIn(defaultTextFieldHeight, maxTextFieldHeight)
-                                        manuallyResized = true
-                                    }
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            // Visual indicator
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(4.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        RoundedCornerShape(2.dp),
-                                    ),
-                            )
-                        }
-
                         // Text field
                         OutlinedTextField(
                             value = inputText,
@@ -506,11 +506,7 @@ fun chatInputField(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Send/Stop button
-                    Box(
-                        modifier = Modifier.height(textFieldHeight),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    Box(contentAlignment = Alignment.Center) {
                         if (isLoading || isThinking) {
                             IconButton(
                                 onClick = onStopResponse,

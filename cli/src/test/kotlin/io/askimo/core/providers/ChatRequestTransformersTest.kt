@@ -167,11 +167,11 @@ class ChatRequestTransformersTest {
             }
 
             assertTrue(
-                resultTexts.any { it?.contains("Recent user question") == true },
+                resultTexts.any { it.contains("Recent user question") },
                 "Should keep most recent user message",
             )
             assertTrue(
-                resultTexts.any { it?.contains("Recent AI answer") == true },
+                resultTexts.any { it.contains("Recent AI answer") },
                 "Should keep most recent AI message",
             )
         }

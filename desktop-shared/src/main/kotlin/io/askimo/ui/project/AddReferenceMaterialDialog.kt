@@ -58,12 +58,18 @@ fun addReferenceMaterialDialog(
 
     val browseFolderTitle = stringResource("project.new.dialog.folder.browse")
     val browseFileTitle = stringResource("project.new.dialog.file.browse")
+    val folderApproveButtonText = stringResource("file.chooser.folder.select")
+    val folderNavigationHint = stringResource("file.chooser.folder.hint")
+    val fileApproveButtonText = stringResource("file.chooser.file.select")
 
     // Shared knowledge source browser helper
-    val sourceBrowser = remember(browseFolderTitle, browseFileTitle) {
+    val sourceBrowser = remember(browseFolderTitle, browseFileTitle, folderApproveButtonText, folderNavigationHint, fileApproveButtonText) {
         KnowledgeSourceBrowser(
             browseFolderTitle = browseFolderTitle,
             browseFileTitle = browseFileTitle,
+            folderApproveButtonText = folderApproveButtonText,
+            folderNavigationHint = folderNavigationHint,
+            fileApproveButtonText = fileApproveButtonText,
         )
     }
 

@@ -80,8 +80,8 @@ class KeychainManagerMacOSIntegrationTest {
         val retrievedKey = KeychainManager.retrieveSecretKey(provider)
         assertNotNull(retrievedKey, "Retrieved API key should not be null")
 
-        println("Retrieved length: ${retrievedKey?.length ?: 0}")
-        println("Retrieved prefix: ${retrievedKey?.take(20) ?: "null"}...")
+        println("Retrieved length: ${retrievedKey.length}")
+        println("Retrieved prefix: ${retrievedKey.take(20)}...")
 
         assertEquals(LONG_API_KEY.length, retrievedKey?.length, "Retrieved API key length should match original")
         assertEquals(LONG_API_KEY, retrievedKey, "Retrieved API key should match stored key exactly")
@@ -191,7 +191,7 @@ class KeychainManagerMacOSIntegrationTest {
 
         val retrievedKey = KeychainManager.retrieveSecretKey(provider)
         assertNotNull(retrievedKey, "Very long API key should be retrievable")
-        assertEquals(veryLongKey.length, retrievedKey?.length, "Very long API key length should match")
+        assertEquals(veryLongKey.length, retrievedKey.length, "Very long API key length should match")
         assertEquals(veryLongKey, retrievedKey, "Very long API key should match exactly")
     }
 

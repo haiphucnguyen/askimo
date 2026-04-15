@@ -221,104 +221,112 @@ fun planEditorView(
 
         HorizontalDivider()
 
-        // ── Body: editor + hint side-by-side ──────────────────────────────────
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = Spacing.large),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.large),
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // ── Left: AI generation panel (new plans only) + YAML editor ──────
-            Column(modifier = Modifier.weight(1f).fillMaxSize()) {
-                // AI generation panel — only shown when creating a new plan
-                if (isNewPlan) {
-                    aiGenerationPanel(viewModel = viewModel)
-                    Spacer(modifier = Modifier.height(Spacing.large))
+            Row(
+                modifier = Modifier
+                    .widthIn(max = 1400.dp)
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 24.dp, vertical = Spacing.large),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.large),
+            ) {
+                // ── Left: AI generation panel (new plans only) + YAML editor ──────
+                Column(modifier = Modifier.weight(1f).fillMaxSize()) {
+                    // AI generation panel — only shown when creating a new plan
+                    if (isNewPlan) {
+                        aiGenerationPanel(viewModel = viewModel)
+                        Spacer(modifier = Modifier.height(Spacing.large))
+                    }
+
+                    Text(
+                        text = stringResource("plans.editor.label"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = Spacing.small),
+                    )
+                    OutlinedTextField(
+                        value = viewModel.editorYaml,
+                        onValueChange = { viewModel.updateEditorYaml(it) },
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                        ),
+                        placeholder = {
+                            Text(
+                                text = if (isNewPlan) YAML_HINT else stringResource("plans.editor.placeholder"),
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            )
+                        },
+                        isError = viewModel.editorValidationError != null,
+                        colors = AppComponents.outlinedTextFieldColors(),
+                        shape = MaterialTheme.shapes.small,
+                    )
                 }
 
-                Text(
-                    text = stringResource("plans.editor.label"),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = Spacing.small),
-                )
-                OutlinedTextField(
-                    value = viewModel.editorYaml,
-                    onValueChange = { viewModel.updateEditorYaml(it) },
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        lineHeight = 20.sp,
-                    ),
-                    placeholder = {
-                        Text(
-                            text = if (isNewPlan) YAML_HINT else stringResource("plans.editor.placeholder"),
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        )
-                    },
-                    isError = viewModel.editorValidationError != null,
-                    colors = AppComponents.outlinedTextFieldColors(),
-                    shape = MaterialTheme.shapes.small,
-                )
-            }
-
-            // ── Right: hint panel + docs link ─────────────────────────────────
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 320.dp)
-                    .fillMaxSize()
-                    .verticalScroll(scrollState),
-            ) {
-                // Header row: "Reference" label + docs link
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.small),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                // ── Right: hint panel + docs link ─────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 320.dp)
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
                 ) {
-                    Text(
-                        text = stringResource("plans.editor.hint.title"),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    linkButton(
-                        onClick = {
-                            runCatching {
-                                Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/plans/"))
-                            }
-                        },
+                    // Header row: "Reference" label + docs link
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.small),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource("plans.editor.docs.link"),
-                            style = MaterialTheme.typography.labelSmall,
+                            text = stringResource("plans.editor.hint.title"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        linkButton(
+                            onClick = {
+                                runCatching {
+                                    Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/plans/"))
+                                }
+                            },
+                        ) {
+                            Text(
+                                text = stringResource("plans.editor.docs.link"),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = YAML_HINT,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                lineHeight = 18.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(Spacing.medium),
                         )
                     }
-                }
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                    Spacer(modifier = Modifier.height(Spacing.medium))
                     Text(
-                        text = YAML_HINT,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            lineHeight = 18.sp,
-                        ),
+                        text = stringResource("plans.editor.hint.fields"),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(Spacing.medium),
+                        lineHeight = 20.sp,
                     )
                 }
-                Spacer(modifier = Modifier.height(Spacing.medium))
-                Text(
-                    text = stringResource("plans.editor.hint.fields"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp,
-                )
             }
         }
     }
