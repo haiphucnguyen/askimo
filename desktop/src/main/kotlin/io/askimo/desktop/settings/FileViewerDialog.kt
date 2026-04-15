@@ -103,7 +103,7 @@ fun fileViewerDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource("file.viewer.close"),
+                            contentDescription = stringResource("file.viewer.dialog.close"),
                         )
                     }
                 }
@@ -184,7 +184,7 @@ fun fileViewerDialog(
                         onClick = onDismiss,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Text(stringResource("file.viewer.close"))
+                        Text(stringResource("file.viewer.dialog.close"))
                     }
                 }
             }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -141,11 +142,10 @@ fun projectSidePanel(
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     val newWidth = panelWidth - dragAmount.x.toDp()
-                                    // Constrain width between 250dp and 600dp
+
                                     panelWidth = newWidth.coerceIn(250.dp, 600.dp)
                                 },
                                 onDragEnd = {
-                                    // Save to preferences when drag ends
                                     ApplicationPreferences.setProjectSidePanelWidth(panelWidth.value.toInt())
                                 },
                             )
@@ -156,14 +156,16 @@ fun projectSidePanel(
             if (isExpanded) {
                 Column(
                     modifier = Modifier
-                        .weight(1f) // Take remaining space after resize handle and icon bar
-                        .fillMaxHeight()
-                        .padding(16.dp),
+                        .weight(1f)
+                        .fillMaxHeight(),
                 ) {
                     var showContextMenu by remember { mutableStateOf(false) }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 0.dp)
+                            .padding(top = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -257,10 +259,11 @@ fun projectSidePanel(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    // Tab content
+                    // Tab content — fills remaining height, no extra horizontal padding
+                    // (each tab composable manages its own internal padding)
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -427,9 +430,6 @@ private fun tabIcon(
     }
 }
 
-/**
- * RAG Sources tab content
- */
 @Composable
 private fun ragSourcesTabContent(
     project: Project?,
@@ -438,86 +438,189 @@ private fun ragSourcesTabContent(
     onAddMaterial: () -> Unit,
     onRemove: (KnowledgeSourceConfig) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        // RAG Status indicator (only show if sources exist)
-        if (project != null && project.knowledgeSources.isNotEmpty()) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp),
+    var selectedNode by remember { mutableStateOf<TreeNode?>(null) }
+    var viewerHeightRatio by remember {
+        mutableStateOf(ApplicationPreferences.getFileViewerHeightRatio())
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val totalHeightPx = constraints.maxHeight.toFloat()
+        val handleHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { 6.dp.toPx() }
+        val treeHeightPx = ((1f - viewerHeightRatio) * (totalHeightPx - handleHeightPx))
+            .coerceAtLeast(60f)
+        val viewerHeightPx = (totalHeightPx - treeHeightPx - handleHeightPx)
+            .coerceAtLeast(60f)
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .height(
+                        with(androidx.compose.ui.platform.LocalDensity.current) { treeHeightPx.toDp() },
+                    )
+                    .fillMaxWidth(),
             ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = stringResource("rag.status.icon"),
-                    tint = when (ragIndexingStatus) {
-                        "completed" -> MaterialTheme.colorScheme.onSurface
-                        "failed" -> MaterialTheme.colorScheme.error
-                        "inprogress" -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                    modifier = Modifier.size(20.dp),
-                )
+                if (project != null && project.knowledgeSources.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = stringResource("rag.status.icon"),
+                            tint = when (ragIndexingStatus) {
+                                "completed" -> MaterialTheme.colorScheme.onSurface
+                                "failed" -> MaterialTheme.colorScheme.error
+                                "inprogress" -> MaterialTheme.colorScheme.tertiary
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = when (ragIndexingStatus) {
+                                "started" -> stringResource("rag.status.started")
 
-                Text(
-                    text = when (ragIndexingStatus) {
-                        "started" -> stringResource("rag.status.started")
+                                "inprogress" -> ragIndexingPercentage?.let {
+                                    stringResource("rag.status.inprogress", it)
+                                } ?: stringResource("rag.status.inprogress.unknown")
 
-                        "inprogress" -> ragIndexingPercentage?.let {
-                            stringResource("rag.status.inprogress", it)
-                        } ?: stringResource("rag.status.inprogress.unknown")
+                                "completed" -> stringResource("rag.status.ready")
 
-                        "completed" -> stringResource("rag.status.ready")
+                                "failed" -> stringResource("rag.status.failed")
 
-                        "failed" -> stringResource("rag.status.failed")
+                                else -> stringResource("rag.status.not.indexed")
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = when (ragIndexingStatus) {
+                                "failed" -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                        )
+                        if (ragIndexingStatus == "inprogress") {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp),
+                    )
+                }
 
-                        else -> stringResource("rag.status.not.indexed")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when (ragIndexingStatus) {
-                        "completed" -> MaterialTheme.colorScheme.onSurface
-                        "failed" -> MaterialTheme.colorScheme.error
-                        "inprogress" -> MaterialTheme.colorScheme.onSurface
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                )
-
-                if (ragIndexingStatus == "inprogress") {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onSurface,
+                if (project == null || project.knowledgeSources.isEmpty()) {
+                    ragSourcesEmptyState(
+                        project = project,
+                        onAddMaterial = onAddMaterial,
+                    )
+                } else {
+                    ragSourcesTree(
+                        sources = project.knowledgeSources,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        selectedNode = selectedNode,
+                        onNodeSelected = { node ->
+                            selectedNode = if (node == selectedNode) null else node
+                        },
+                        onRemove = { source ->
+                            if (selectedNode is FileTreeNode &&
+                                (selectedNode as FileTreeNode).path == source.resourceIdentifier
+                            ) {
+                                selectedNode = null
+                            }
+                            onRemove(source)
+                        },
                     )
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        }
-
-        // Content area
-        if (project == null || project.knowledgeSources.isEmpty()) {
-            // Empty state
-            ragSourcesEmptyState(
-                project = project,
-                onAddMaterial = onAddMaterial,
-            )
-        } else {
-            // RAG sources tree
-            ragSourcesTree(
-                sources = project.knowledgeSources,
+            // ── Drag handle ────────────────────────────────────────────────────
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                onRemove = onRemove,
-            )
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR)))
+                    .pointerInput(totalHeightPx) {
+                        detectDragGestures(
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val delta = dragAmount.y / totalHeightPx
+                                viewerHeightRatio = (viewerHeightRatio - delta).coerceIn(0.20f, 0.80f)
+                            },
+                            onDragEnd = {
+                                ApplicationPreferences.setFileViewerHeightRatio(viewerHeightRatio)
+                            },
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .size(3.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    androidx.compose.foundation.shape.CircleShape,
+                                ),
+                        )
+                    }
+                }
+            }
+
+            // ── Viewer section — full width, no horizontal padding ─────────────
+            val viewedFile = selectedNode as? FileTreeNode
+            if (viewedFile != null) {
+                fileViewerPane(
+                    node = viewedFile,
+                    onClose = { selectedNode = null },
+                    modifier = Modifier
+                        .height(
+                            with(androidx.compose.ui.platform.LocalDensity.current) { viewerHeightPx.toDp() },
+                        )
+                        .fillMaxWidth(),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .height(
+                            with(androidx.compose.ui.platform.LocalDensity.current) { viewerHeightPx.toDp() },
+                        )
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = AppComponents.tertiaryIconColor(),
+                        )
+                        Text(
+                            text = stringResource("file.viewer.select.prompt"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-/**
- * Empty state for RAG sources
- */
 @Composable
 private fun ragSourcesEmptyState(
     project: Project?,

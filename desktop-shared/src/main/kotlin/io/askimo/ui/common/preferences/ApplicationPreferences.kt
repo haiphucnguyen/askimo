@@ -212,6 +212,8 @@ object ApplicationPreferences {
     private const val DEFAULT_PROJECT_SIDE_PANEL_WIDTH = 400
     private const val PROJECT_SIDE_PANEL_EXPANDED_KEY = "ui.project_side_panel_expanded"
     private const val DEFAULT_PROJECT_SIDE_PANEL_EXPANDED = true
+    private const val FILE_VIEWER_HEIGHT_RATIO_KEY = "ui.file_viewer_height_ratio"
+    private const val DEFAULT_FILE_VIEWER_HEIGHT_RATIO = 50 // stored as integer percent (50 = 50%)
     private const val PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY = "ui.plan_history_side_panel_width"
     private const val DEFAULT_PLAN_HISTORY_SIDE_PANEL_WIDTH = 320
     private const val PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY = "ui.plan_history_side_panel_expanded"
@@ -251,6 +253,20 @@ object ApplicationPreferences {
      */
     fun setProjectSidePanelExpanded(expanded: Boolean) {
         safePutBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, expanded)
+    }
+
+    /**
+     * Get the file viewer height as a fraction of the RAG sources tab height (0.0–1.0).
+     * Stored as an integer percentage to avoid floating-point serialisation issues.
+     * Defaults to 0.5 (50 % of the tab height).
+     */
+    fun getFileViewerHeightRatio(): Float = safeGetInt(FILE_VIEWER_HEIGHT_RATIO_KEY, DEFAULT_FILE_VIEWER_HEIGHT_RATIO) / 100f
+
+    /**
+     * Persist the file viewer height ratio (0.0–1.0).
+     */
+    fun setFileViewerHeightRatio(ratio: Float) {
+        safePutInt(FILE_VIEWER_HEIGHT_RATIO_KEY, (ratio * 100).toInt().coerceIn(20, 80))
     }
 
     /**
