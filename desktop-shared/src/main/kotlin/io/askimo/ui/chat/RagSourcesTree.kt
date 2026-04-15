@@ -6,17 +6,22 @@ package io.askimo.ui.chat
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.PointerMatcher
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.onClick
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -61,17 +66,22 @@ import java.net.URI
 /**
  * Tree view component for displaying RAG knowledge sources.
  * Shows files and folders with expandable/collapsible functionality.
+ *
+ * @param sources          Knowledge source configs to display.
+ * @param modifier         Optional modifier.
+ * @param selectedNode     Currently selected node (hoisted to allow viewer integration).
+ * @param onNodeSelected   Called when a node is selected; passes `null` to deselect.
+ * @param onRemove         Called when the user removes a knowledge source.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ragSourcesTree(
     sources: List<KnowledgeSourceConfig>,
     modifier: Modifier = Modifier,
+    selectedNode: TreeNode? = null,
+    onNodeSelected: (TreeNode?) -> Unit = {},
     onRemove: (KnowledgeSourceConfig) -> Unit = {},
 ) {
-    // Selection state
-    var selectedNode by remember { mutableStateOf<TreeNode?>(null) }
-
     // Convert sources to tree nodes
     val treeNodes = remember(sources) {
         sources.map { source ->
@@ -100,19 +110,41 @@ fun ragSourcesTree(
         }
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        items(treeNodes) { node ->
-            treeNodeItem(
-                node = node,
-                level = 0,
-                selectedNode = selectedNode,
-                onNodeSelected = { selectedNode = it },
-                onRemove = onRemove,
-            )
+    val listState = rememberLazyListState()
+
+    Box(modifier = modifier) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 22.dp), // left padding matches header; right leaves room for scrollbar
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(treeNodes) { node ->
+                treeNodeItem(
+                    node = node,
+                    level = 0,
+                    selectedNode = selectedNode,
+                    onNodeSelected = onNodeSelected,
+                    onRemove = onRemove,
+                )
+            }
         }
+
+        VerticalScrollbar(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            adapter = rememberScrollbarAdapter(listState),
+            style = ScrollbarStyle(
+                minimalHeight = 16.dp,
+                thickness = 6.dp,
+                shape = MaterialTheme.shapes.small,
+                hoverDurationMillis = 300,
+                unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            ),
+        )
     }
 }
 
@@ -388,6 +420,16 @@ private fun fileNodeItem(
                 onDismissRequest = { showContextMenu = false },
                 offset = DpOffset(x = 0.dp, y = 0.dp),
             ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource("rag.tree.file.preview")) },
+                    onClick = {
+                        onNodeSelected(node)
+                        showContextMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
+                    },
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource("rag.tree.file.open")) },
                     onClick = {
