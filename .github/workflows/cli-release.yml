@@ -273,7 +273,7 @@ jobs:
         with:
           files: ${{ steps.pkg.outputs.files }}
           generate_release_notes: true
-          draft: false
+          draft: true
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

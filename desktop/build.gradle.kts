@@ -49,8 +49,8 @@ val distPackageVersion = project.version.toString().substringBefore("-")
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     implementation(project(":shared"))
     implementation(project(":desktop-shared"))
 

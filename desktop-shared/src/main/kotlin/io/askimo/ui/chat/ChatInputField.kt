@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -75,6 +77,7 @@ import androidx.compose.ui.window.Popup
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.AppErrorEvent
@@ -1104,53 +1107,159 @@ private fun fileAttachmentItem(
     attachment: FileAttachmentDTO,
     onRemove: () -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    var previewContent by remember { mutableStateOf<String?>(null) }
+    var isLoadingPreview by remember { mutableStateOf(false) }
+
+    // Determine if the file is previewable as text — delegate to FileContentExtractor
+    val isTextFile = FileContentExtractor.isTextFile(attachment.fileName)
+
+    LaunchedEffect(expanded) {
+        if (expanded && isTextFile && previewContent == null && !isLoadingPreview) {
+            isLoadingPreview = true
+            previewContent = withContext(Dispatchers.IO) {
+                try {
+                    val file = attachment.filePath?.let { java.io.File(it) }
+                    if (file != null && file.exists() && file.length() < 512 * 1024) {
+                        // Read up to 200 lines for preview
+                        file.bufferedReader().use { reader ->
+                            val lines = reader.readLines()
+                            val preview = lines.take(200).joinToString("\n")
+                            if (lines.size > 200) {
+                                "$preview\n… (${LocalizationManager.getString("chat.attachment.preview.more.lines", lines.size - 200)})"
+                            } else {
+                                preview
+                            }
+                        }
+                    } else if (file != null && !file.exists()) {
+                        LocalizationManager.getString("chat.attachment.preview.file.not.found")
+                    } else {
+                        LocalizationManager.getString("chat.attachment.preview.too.large")
+                    }
+                } catch (e: Exception) {
+                    LocalizationManager.getString("chat.attachment.preview.cannot.read", e.message ?: "")
+                }
+            }
+            isLoadingPreview = false
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = AppComponents.surfaceVariantCardColors(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header row
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isTextFile) {
+                            Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { expanded = !expanded },
+                            ).pointerHoverIcon(PointerIcon.Hand)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-                Column {
-                    Text(
-                        text = attachment.fileName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AttachFile,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
-                    Text(
-                        text = formatFileSize(attachment.size),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column {
+                        Text(
+                            text = attachment.fileName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = formatFileSize(attachment.size),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isTextFile) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (expanded) "Collapse preview" else "Expand preview",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(
+                        onClick = onRemove,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource("chat.attachment.remove"),
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier
-                    .size(24.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource("chat.attachment.remove"),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+
+            // Inline preview panel
+            if (expanded && isTextFile) {
+                HorizontalDivider()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 240.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    when {
+                        isLoadingPreview -> {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Text(
+                                    text = stringResource("chat.attachment.preview.loading"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        previewContent != null -> {
+                            val scrollState = rememberScrollState()
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(
+                                    text = previewContent!!,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.verticalScroll(scrollState),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

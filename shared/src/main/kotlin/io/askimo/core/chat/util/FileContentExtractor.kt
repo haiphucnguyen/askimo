@@ -161,6 +161,21 @@ object FileContentExtractor {
     }
 
     /**
+     * Check if a file name (without needing the file on disk) refers to a plain-text file.
+     * Uses extension and known config-file names — no MIME detection.
+     * Suitable for UI decisions (e.g. whether to show an inline preview) where the file
+     * may not yet be read.
+     *
+     * @param fileName The file name (basename, with or without path)
+     * @return true if the extension or filename maps to a text/code file
+     */
+    fun isTextFile(fileName: String): Boolean {
+        val ext = FileTypeSupport.getExtension(fileName).lowercase()
+        return ext in (FileTypeSupport.TEXT_EXTENSIONS + FileTypeSupport.CODE_EXTENSIONS) ||
+            fileName.lowercase() in FileTypeSupport.CONFIG_EXTENSIONS
+    }
+
+    /**
      * Check if a file is a text-based file where line numbers are meaningful.
      * Returns false for binary formats like PDF, DOCX, etc.
      *
