@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Badge
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -171,9 +173,9 @@ fun notificationPopup(
     onRemoveEvent: (NotificationEventItem) -> Unit,
     onClearAll: () -> Unit,
 ) {
-    val estimatedItemHeight = 128.dp
-    val maxHeight = 500.dp
-    val minHeight = 100.dp
+    val estimatedItemHeight = 160.dp
+    val maxHeight = 800.dp
+    val minHeight = 120.dp
 
     val dynamicHeight = remember(events.size) {
         val contentHeight = 60.dp + (estimatedItemHeight * events.size.toFloat())
@@ -186,7 +188,7 @@ fun notificationPopup(
 
     Column(
         modifier = Modifier
-            .width(400.dp)
+            .width(560.dp)
             .padding(8.dp),
     ) {
         Row(
@@ -230,6 +232,11 @@ fun notificationPopup(
         } else {
             val listState = rememberLazyListState()
 
+            // Pinned system notifications (updates, etc.) always on top
+            val pinnedEvents = events.filter { it.event is UpdateAvailableEvent }
+            // Background/error events below
+            val otherEvents = events.filter { it.event !is UpdateAvailableEvent }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -240,16 +247,55 @@ fun notificationPopup(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(
-                        items = events,
-                        key = { it.id },
-                    ) { item ->
-                        notificationEventCard(
-                            event = item.event,
-                            onShowUpdateDetails = onShowUpdateDetails,
-                            onDismissPopup = onDismissPopup,
-                            onRemoveEvent = { onRemoveEvent(item) },
-                        )
+                    // Pinned group
+                    if (pinnedEvents.isNotEmpty()) {
+                        items(
+                            items = pinnedEvents,
+                            key = { it.id },
+                        ) { item ->
+                            notificationEventCard(
+                                event = item.event,
+                                onShowUpdateDetails = onShowUpdateDetails,
+                                onDismissPopup = onDismissPopup,
+                                onRemoveEvent = { onRemoveEvent(item) },
+                            )
+                        }
+                    }
+
+                    // Divider between groups when both have content
+                    if (pinnedEvents.isNotEmpty() && otherEvents.isNotEmpty()) {
+                        item(key = "group-divider") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                HorizontalDivider(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = stringResource("event.notification.group.errors"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                )
+                                HorizontalDivider(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    // Other events group
+                    if (otherEvents.isNotEmpty()) {
+                        items(
+                            items = otherEvents,
+                            key = { it.id },
+                        ) { item ->
+                            notificationEventCard(
+                                event = item.event,
+                                onShowUpdateDetails = onShowUpdateDetails,
+                                onDismissPopup = onDismissPopup,
+                                onRemoveEvent = { onRemoveEvent(item) },
+                            )
+                        }
                     }
                 }
 
@@ -332,15 +378,49 @@ fun notificationEventCard(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            Text(
-                text = event.getDetails(),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isShellError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            )
+            SelectionContainer {
+                Text(
+                    text = event.getDetails(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isShellError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+            }
+
+            // Expandable technical details for ShellErrorEvent — lets users copy & report
+            if (isShellError) {
+                val shellError = event as ShellErrorEvent
+                var showCause by remember { mutableStateOf(false) }
+
+                TextButton(
+                    onClick = { showCause = !showCause },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = if (showCause) {
+                            stringResource("event.shell.error.cause.hide")
+                        } else {
+                            stringResource("event.shell.error.cause.show")
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                if (showCause) {
+                    SelectionContainer {
+                        Text(
+                            text = shellError.cause.stackTraceToString(),
+                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        )
+                    }
+                }
+            }
 
             if (isUpdateEvent) {
                 Row(

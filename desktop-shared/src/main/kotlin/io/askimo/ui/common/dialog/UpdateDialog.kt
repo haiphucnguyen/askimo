@@ -122,7 +122,7 @@ private fun newVersionDialog(
                             Text(
                                 text = releaseInfo.latestVersion,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.Bold,
                             )
                         }

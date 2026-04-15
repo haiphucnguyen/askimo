@@ -10,6 +10,8 @@ import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.system.ShellErrorEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.rag.LuceneIndexer
 import kotlinx.coroutines.Dispatchers
@@ -126,6 +128,18 @@ class HybridIndexer(
                 e,
             )
 
+            val fileNames = filePaths.map { it.fileName.toString() }.toSet()
+            val displayNames = if (fileNames.size <= 3) {
+                fileNames.joinToString()
+            } else {
+                "${fileNames.take(3).joinToString()} and ${fileNames.size - 3} more"
+            }
+            EventBus.emit(
+                ShellErrorEvent(
+                    cause = e,
+                    errorMessage = "Failed to index files [$displayNames]: ${e.message}",
+                ),
+            )
             false
         }
     }

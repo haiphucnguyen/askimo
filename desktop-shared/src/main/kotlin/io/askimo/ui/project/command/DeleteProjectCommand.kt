@@ -37,8 +37,7 @@ class DeleteProjectCommand(
                 log.error("Failed to delete session from project", e)
                 EventBus.post(
                     ShellErrorEvent(
-                        sourceEvent = ProjectDeletedEvent::class,
-                        originalMessage = e.message,
+                        cause = e,
                     ),
                 )
             }

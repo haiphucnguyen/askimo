@@ -9,7 +9,6 @@ import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,7 +33,6 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +49,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.mcp.GlobalMcpInstanceService
@@ -90,7 +87,6 @@ fun mcpServerTemplatesSection() {
     var showAddGlobalDialog by remember { mutableStateOf(false) }
     var editingGlobalInstance by remember { mutableStateOf<McpInstance?>(null) }
     var deletingGlobalInstance by remember { mutableStateOf<McpInstance?>(null) }
-    var showAddDropdown by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val scrollState = rememberScrollState()
@@ -145,104 +141,36 @@ fun mcpServerTemplatesSection() {
                         }
                     }
 
-                    // Action buttons row — split "Add" dropdown
+                    // Action buttons row — two explicit buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
-                        Box {
+                        themedTooltip(text = stringResource("mcp.servers.add.template.tooltip")) {
                             primaryButton(
-                                onClick = { showAddDropdown = true },
+                                onClick = { showAddDialog = true },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(Modifier.width(Spacing.small))
-                                Text(stringResource("mcp.servers.add"))
-                            }
-
-                            AppComponents.dropdownMenu(
-                                expanded = showAddDropdown,
-                                onDismissRequest = { showAddDropdown = false },
-                            ) {
-                                DropdownMenuItem(
-                                    modifier = Modifier
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .layout { measurable, constraints ->
-                                            val placeable = measurable.measure(constraints)
-                                            // Shift item up by 8dp to cancel menu's top inset
-                                            val offset = 8.dp.roundToPx()
-                                            layout(placeable.width, placeable.height + offset) {
-                                                placeable.placeRelative(0, -offset)
-                                            }
-                                        },
-                                    contentPadding = PaddingValues(
-                                        horizontal = 16.dp,
-                                        vertical = Spacing.medium,
-                                    ),
-                                    text = {
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                                        ) {
-                                            Text(
-                                                text = stringResource("mcp.servers.add.template"),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium,
-                                            )
-                                            Text(
-                                                text = stringResource("mcp.servers.add.template.desc"),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showAddDropdown = false
-                                        showAddDialog = true
-                                    },
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    modifier = Modifier
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .layout { measurable, constraints ->
-                                            val placeable = measurable.measure(constraints)
-                                            // Extend item down by 8dp to cancel menu's bottom inset
-                                            val offset = 8.dp.roundToPx()
-                                            layout(placeable.width, placeable.height + offset) {
-                                                placeable.placeRelative(0, 0)
-                                            }
-                                        },
-                                    contentPadding = PaddingValues(
-                                        horizontal = 16.dp,
-                                        vertical = Spacing.medium,
-                                    ),
-                                    text = {
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                                        ) {
-                                            Text(
-                                                text = stringResource("mcp.global.instance.add"),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium,
-                                            )
-                                            Text(
-                                                text = stringResource("mcp.global.instance.add.desc"),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        showAddDropdown = false
-                                        showAddGlobalDialog = true
-                                    },
-                                )
+                                Text(stringResource("mcp.servers.add.template"))
                             }
                         }
 
-                        secondaryButton(onClick = { showResetConfirm = true }) {
-                            Icon(Icons.Default.RestartAlt, contentDescription = null)
-                            Spacer(Modifier.width(Spacing.small))
-                            Text(stringResource("mcp.servers.reset"))
+                        themedTooltip(text = stringResource("mcp.global.instance.add.tooltip")) {
+                            secondaryButton(
+                                onClick = { showAddGlobalDialog = true },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(Modifier.width(Spacing.small))
+                                Text(stringResource("mcp.global.instance.add"))
+                            }
+                        }
+
+                        themedTooltip(text = stringResource("mcp.servers.reset.tooltip")) {
+                            secondaryButton(onClick = { showResetConfirm = true }) {
+                                Icon(Icons.Default.RestartAlt, contentDescription = null)
+                                Spacer(Modifier.width(Spacing.small))
+                                Text(stringResource("mcp.servers.reset"))
+                            }
                         }
                     }
 
