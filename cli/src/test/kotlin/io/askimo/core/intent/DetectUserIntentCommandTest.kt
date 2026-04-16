@@ -563,10 +563,9 @@ class DetectUserIntentCommandTest {
                 tools,
             )
 
-            // Should include first match from INTENT_BASED and BOTH (find returns first match)
-            // Only the first tool of category VISUALIZE is added
-            assertEquals(1, result.tools.size)
+            assertEquals(2, result.tools.size)
             assertTrue(result.tools.any { it.specification.name() == "chart1" })
+            assertTrue(result.tools.any { it.specification.name() == "chart3" })
             assertTrue(result.tools.none { it.specification.name() == "chart2" })
         }
 
