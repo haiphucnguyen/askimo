@@ -13,6 +13,7 @@ import io.askimo.core.analytics.AnalyticsEvents
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.context.AppContext
+import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.AppErrorEvent
 import io.askimo.core.event.internal.ProjectDeletedEvent
@@ -89,14 +90,16 @@ class ProjectIndexer(
     }
 
     /**
-     * Remove coordinator and cleanup resources
+     * Remove coordinator and cleanup resources.
      * @param projectId The project ID
+     * @param deleteProjectFolder When true the entire project folder is deleted (project was deleted).
+     *                            When false only index data is cleaned up (re-index scenario).
      */
     private fun removeCoordinator(projectId: String, deleteProjectFolder: Boolean) {
         coordinators.remove(projectId)?.forEach {
             it.clearAll()
             it.close()
-        } // Close all coordinators for this project
+        }
 
         if (deleteProjectFolder) {
             try {
@@ -105,18 +108,44 @@ class ProjectIndexer(
                     projectDir.toFile().deleteRecursively()
                 }
             } catch (e: Exception) {
-                log.error("Failed to delete index files for project $projectId", e)
+                log.error("Failed to delete project folder for project $projectId", e)
             }
         } else {
-            LuceneIndexer.removeInstance(projectId)
-            try {
-                val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)
-                if (indexDir.toFile().exists()) {
-                    indexDir.toFile().deleteRecursively()
-                }
-            } catch (e: Exception) {
-                log.error("Failed to delete index files for project $projectId", e)
+            cleanupIndexData(projectId)
+        }
+    }
+
+    /**
+     * Clean up all index data for a project without deleting the project folder itself.
+     * Covers:
+     *  - Lucene keyword index (in-memory instance + disk files)
+     *  - JVector embedding store (disk files inside the index dir)
+     *  - Database segment mappings
+     *  - index.meta dimension marker
+     *
+     * Used by both re-index and embedding-dimension-mismatch flows.
+     */
+    private fun cleanupIndexData(projectId: String) {
+        // 1. Remove in-memory Lucene instance
+        LuceneIndexer.removeInstance(projectId)
+
+        // 2. Delete index files on disk (jvector + lucene + index.meta)
+        try {
+            val indexDir = RagUtils.getProjectIndexDir(projectId, createIfNotExists = false)
+            if (indexDir.toFile().exists()) {
+                indexDir.toFile().deleteRecursively()
             }
+        } catch (e: Exception) {
+            log.error("Failed to delete index files for project $projectId", e)
+        }
+
+        // 3. Remove segment mappings from the database
+        try {
+            DatabaseManager.getInstance()
+                .getResourceSegmentRepository()
+                .removeAllSegmentMappingsForProject(projectId)
+        } catch (e: Exception) {
+            log.error("Failed to remove segment mappings from database for project $projectId", e)
         }
     }
 
@@ -132,6 +161,9 @@ class ProjectIndexer(
         watchForChanges: Boolean,
     ) {
         val indexingStartMs = System.currentTimeMillis()
+
+        RagUtils.saveEmbeddingDimension(projectId, RagUtils.getDimensionForModel(embeddingModel))
+
         // Create one coordinator per knowledge source using factory
         val projectCoordinators = try {
             knowledgeSources.map { source ->
@@ -192,7 +224,7 @@ class ProjectIndexer(
                 }
             }
 
-            // Sum up total files indexed across all coordinators
+            // Sum up total files indexed across all coordinators (removed saveEmbeddingDimension from here)
             val totalFilesIndexed = projectCoordinators.sumOf { it.progress.value.processedFiles }
 
             val indexDurationMs = System.currentTimeMillis() - indexingStartMs
@@ -239,36 +271,35 @@ class ProjectIndexer(
     }
 
     /**
-     * Handle re-index request event
+     * Handle re-index request event.
+     * Re-index always takes priority — if the project is currently being indexed,
+     * the in-progress indexing is stopped and a fresh re-index is started.
      */
     private suspend fun handleReIndexRequest(event: ProjectReIndexEvent) {
         try {
             val projectId = event.projectId
 
             val existingCoordinators = coordinators[projectId]
-
-            if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
-                log.debug("Project $projectId already indexed, removing and re-indexing")
-                removeCoordinator(projectId, false)
+            if (existingCoordinators != null &&
+                existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }
+            ) {
+                log.info(
+                    "Project $projectId is currently indexing — stopping it, re-index takes priority. Reason: ${event.reason}",
+                )
             }
 
-            if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
-                log.debug("Project $projectId is currently being indexed, skipping duplicate re-index request")
-                return
-            }
-
+            // Always stop and clean up regardless of current status — re-index takes priority
             removeCoordinator(projectId, false)
-            log.info("Removed existing coordinators and deleted index files for project $projectId")
+            log.info("Cleaned up existing index data for project $projectId, starting re-index")
 
             val project = try {
                 projectRepository.getProject(projectId)
             } catch (e: Exception) {
-                log.error("Failed to get project $projectId for indexing", e)
+                log.error("Failed to get project $projectId for re-indexing", e)
                 return
             }
 
             if (project != null) {
-                // Create new embedding components for re-indexing
                 val embeddingModel = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(embeddingModel)
 
@@ -339,34 +370,58 @@ class ProjectIndexer(
      * This method receives embedding components from the requester (e.g., ChatSessionService)
      * and uses them directly to create the indexer instance, avoiding duplicate initialization.
      * Uses the same duplicate prevention logic as handleReIndexRequest to prevent race conditions.
+     *
+     * Also detects embedding dimension mismatches (model was changed since last index) and
+     * silently cleans up stale index data before re-indexing with the new model.
      */
     private suspend fun handleIndexingRequest(event: ProjectIndexingRequestedEvent) {
         try {
             val projectId = event.projectId
 
-            // Check for duplicate/in-progress indexing (same as handleReIndexRequest)
-            val existingCoordinators = coordinators[projectId]
-
-            if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
-                log.debug("Project $projectId already indexed, skipping duplicate request")
-                return
-            }
-
-            if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
-                log.debug("Project $projectId is currently being indexed, skipping duplicate request")
-                return
-            }
-
-            // Create embedding model and store if not provided
+            // Create embedding model early so we can check the dimension before anything else
             val embeddingModel = event.embeddingModel ?: run {
                 val model = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(model)
                 model
             }
 
-            val embeddingStore = event.embeddingStore ?: run {
-                RagUtils.getEmbeddingStore(projectId, embeddingModel)
+            // ── Dimension mismatch check ──────────────────────────────────────
+            // If the project was previously indexed with a different embedding model
+            // (detected via stored dimension in index.meta), wipe all stale index data
+            // and let indexing proceed from scratch with the current model.
+            val currentDimension = RagUtils.getDimensionForModel(embeddingModel)
+            val storedDimension = RagUtils.getStoredEmbeddingDimension(projectId)
+            if (storedDimension != null && storedDimension != currentDimension) {
+                log.warn(
+                    "Embedding dimension mismatch for project {} (stored={}, current={}). " +
+                        "Clearing stale index data and re-indexing with the new model.",
+                    projectId,
+                    storedDimension,
+                    currentDimension,
+                )
+                // Close any existing coordinators and wipe everything (Lucene, JVector, DB)
+                coordinators.remove(projectId)?.forEach {
+                    it.clearAll()
+                    it.close()
+                }
+                cleanupIndexData(projectId)
+                // Fall through — indexing will now run with a clean slate
+            } else {
+                // ── Normal duplicate / in-progress guard ─────────────────────
+                val existingCoordinators = coordinators[projectId]
+
+                if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
+                    log.debug("Project $projectId already indexed, skipping duplicate request")
+                    return
+                }
+
+                if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
+                    log.debug("Project $projectId is currently being indexed, skipping duplicate request")
+                    return
+                }
             }
+
+            val embeddingStore = event.embeddingStore ?: RagUtils.getEmbeddingStore(projectId, embeddingModel)
 
             val project = try {
                 projectRepository.getProject(projectId)

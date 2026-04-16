@@ -46,13 +46,9 @@ object DetectUserIntentCommand {
 
         // ── Layer 1: keyword classifier ───────────────────────────────────
         val keywordCategories = detectionChain.detectAll(userMessage)
-        val keywordTools = keywordCategories.mapNotNull { category ->
-            if (category == ToolCategory.EXECUTE) {
-                allTools.filter { it.category == category }
-            } else {
-                listOfNotNull(allTools.find { it.category == category })
-            }
-        }.flatten()
+        val keywordTools = keywordCategories.flatMap { category ->
+            allTools.filter { it.category == category }
+        }
 
         // ── Layer 2: vector similarity ────────────────────────────────────
         val keywordToolNames = keywordTools.map { it.specification.name() }.toSet()
@@ -64,7 +60,19 @@ object DetectUserIntentCommand {
             }
             .map { (tool, _) -> tool }
 
-        val allMatched = (keywordTools + vectorOnlyTools)
+        // ── Layer 3: MCP fallback ─────────────────────────────────────────
+        // If neither keyword nor vector detection produced any matches, but MCP tools are
+        // available, include all of them as candidates and let the LLM decide which (if any)
+        // to invoke. This mirrors how ChatGPT/Claude behave: they always send the full tool
+        // list to the model and rely on the model's function-calling logic.
+        val fallbackMcpTools = if (keywordTools.isEmpty() && vectorOnlyTools.isEmpty() && mcpTools.isNotEmpty()) {
+            log.debug("No intent signal detected — falling back to all {} MCP tools", mcpTools.size)
+            mcpTools.filter { (it.strategy and ToolStrategy.INTENT_BASED) != 0 }
+        } else {
+            emptyList()
+        }
+
+        val allMatched = (keywordTools + vectorOnlyTools + fallbackMcpTools)
             .distinctBy { it.specification.name() }
 
         // ── Confidence ────────────────────────────────────────────────────
@@ -84,12 +92,16 @@ object DetectUserIntentCommand {
             vectorOnlyTools.isNotEmpty() -> 55
 
             // weak-to-moderate semantic signal
+            fallbackMcpTools.isNotEmpty() -> 30
+
             else -> 0
         }
 
         val reasoning = buildString {
             if (allMatched.isEmpty()) {
                 append("No specific tool intent detected")
+            } else if (fallbackMcpTools.isNotEmpty() && keywordTools.isEmpty() && vectorOnlyTools.isEmpty()) {
+                append("No intent signal detected — including all ${fallbackMcpTools.size} MCP tool(s) as fallback candidates")
             } else {
                 append("Detected intent from user keywords: ")
                 append(allMatched.joinToString { it.category.name })
@@ -100,9 +112,10 @@ object DetectUserIntentCommand {
         }
 
         log.debug(
-            "Intent detection: keyword={}, vector={}, total={}, confidence={}",
+            "Intent detection: keyword={}, vector={}, fallback={}, total={}, confidence={}",
             keywordTools.size,
             vectorOnlyTools.size,
+            fallbackMcpTools.size,
             allMatched.size,
             confidence,
         )

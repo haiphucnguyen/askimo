@@ -116,4 +116,14 @@ class ResourceSegmentRepository(
         projectId: String,
         filePath: Path,
     ): Int = removeSegmentMappingsForResource(projectId, filePath.toString())
+
+    /**
+     * Remove ALL segment mappings for an entire project.
+     * Used when the project index is fully cleared (e.g. re-index or embedding model change).
+     */
+    fun removeAllSegmentMappingsForProject(projectId: String): Int = transaction(database) {
+        ResourceSegmentsTable.deleteWhere {
+            ResourceSegmentsTable.projectId eq projectId
+        }
+    }
 }

@@ -130,16 +130,7 @@ fun ChatMessage.getTextContent(): String = when (this) {
 fun ChatMessage.stripImages(): ChatMessage = when (this) {
     is AiMessage -> {
         val strippedText = text()?.let { MemoryMessage.stripBase64Images(it) }
-        // Preserve tool execution requests — they must not be lost when stripping images
-        if (hasToolExecutionRequests()) {
-            if (strippedText != null) {
-                AiMessage.from(strippedText, toolExecutionRequests())
-            } else {
-                AiMessage.from(toolExecutionRequests())
-            }
-        } else {
-            AiMessage.from(strippedText ?: "")
-        }
+        toBuilder().text(strippedText).build()
     }
 
     is UserMessage -> {
@@ -158,11 +149,7 @@ fun ChatMessage.stripImages(): ChatMessage = when (this) {
                 content
             }
         }
-        if (name() != null) {
-            UserMessage.from(name(), sanitisedContents)
-        } else {
-            UserMessage.from(sanitisedContents)
-        }
+        toBuilder().contents(sanitisedContents).build()
     }
 
     is SystemMessage -> SystemMessage.from(MemoryMessage.stripBase64Images(text()))

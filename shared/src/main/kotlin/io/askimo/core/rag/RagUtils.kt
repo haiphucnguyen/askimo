@@ -15,6 +15,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.providers.ChatClient
 import io.askimo.core.util.AskimoHome
 import java.nio.file.Path
+import java.util.Properties
 
 /**
  * Utility functions for RAG (Retrieval-Augmented Generation) module.
@@ -67,6 +68,39 @@ object RagUtils {
             .dimension(getDimensionForModel(embeddingModel))
             .persistencePath(jVectorIndexDir.toString())
             .build()
+    }
+
+    /**
+     * Read the stored embedding dimension from index.meta for the given project.
+     * Returns null if the file does not exist or cannot be read.
+     */
+    fun getStoredEmbeddingDimension(projectId: String): Int? {
+        val metaFile = getProjectIndexDir(projectId, createIfNotExists = false)
+            .resolve("index.meta").toFile()
+        if (!metaFile.exists()) return null
+        return try {
+            val props = Properties()
+            metaFile.inputStream().use { props.load(it) }
+            props.getProperty("embeddingDimension")?.toIntOrNull()
+        } catch (e: Exception) {
+            log.warn("Failed to read index.meta for project {}", projectId, e)
+            null
+        }
+    }
+
+    /**
+     * Persist the current embedding dimension to index.meta for the given project.
+     */
+    fun saveEmbeddingDimension(projectId: String, dimension: Int) {
+        val metaFile = getProjectIndexDir(projectId, createIfNotExists = true)
+            .resolve("index.meta").toFile()
+        try {
+            val props = Properties()
+            props.setProperty("embeddingDimension", dimension.toString())
+            metaFile.outputStream().use { props.store(it, "Askimo RAG index metadata") }
+        } catch (e: Exception) {
+            log.warn("Failed to write index.meta for project {}", projectId, e)
+        }
     }
 
     fun enrichContentRetrieverWithLucene(
