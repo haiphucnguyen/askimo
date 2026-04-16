@@ -65,6 +65,9 @@ class LocalFoldersIndexingCoordinator(
     // File watcher is owned by this coordinator
     private var fileWatcher: FileWatcher? = null
 
+    // Cancellation flag — set to true by close() to stop in-progress indexing
+    @Volatile private var cancelled = false
+
     /**
      * Check if a path should be excluded from indexing using the filter chain.
      * Uses the appropriate project root for context.
@@ -103,6 +106,7 @@ class LocalFoldersIndexingCoordinator(
     suspend fun indexPathsWithProgress(
         paths: List<Path>,
     ): Boolean {
+        cancelled = false
         updateProgress { IndexProgress(status = IndexStatus.INDEXING) }
 
         // Store project roots for filtering context
@@ -183,6 +187,10 @@ class LocalFoldersIndexingCoordinator(
         fileHashes: ConcurrentHashMap<String, String>,
         previousHashes: Map<String, String>,
     ): Boolean {
+        if (cancelled) {
+            log.trace("Indexing cancelled, skipping file: {}", filePath.pathString)
+            return true
+        }
         val startTime = System.currentTimeMillis()
 
         try {
@@ -286,9 +294,13 @@ class LocalFoldersIndexingCoordinator(
 
     /**
      * Close coordinator and cleanup resources.
+     * Setting [cancelled] to true signals any in-progress indexing to stop at the
+     * next file boundary, preventing stale-dimension segments from being written
+     * into a store that is about to be wiped by a re-index.
      */
     override fun close() {
+        cancelled = true
         stopWatching()
-        log.debug("Closed LocalFoldersIndexingCoordinator for project $projectId")
+        log.debug("Closed LocalFoldersIndexingCoordinator for project $projectId (cancelled in-progress indexing)")
     }
 }

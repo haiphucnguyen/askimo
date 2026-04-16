@@ -99,7 +99,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
-            .logResponses(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase())))
             .build()
     }
@@ -132,7 +132,7 @@ class OllamaModelFactory : ChatModelFactory<OllamaSettings> {
             .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
-            .logResponses(log.isDebugEnabled)
+            .logResponses(log.isTraceEnabled)
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.OLLAMA.name.lowercase())))
             .build()
     }
