@@ -4,7 +4,7 @@
  */
 package io.askimo.core.mcp
 
-import io.askimo.core.mcp.config.GlobalMcpInstancesConfig
+import io.askimo.core.mcp.config.McpInstancesConfig
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.test.extensions.AskimoTestHome
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,11 +17,11 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @AskimoTestHome
-class GlobalMcpInstanceServiceTest {
+class McpInstanceServiceTest {
 
     @Test
     fun `deleteInstance removes both instance and associated server definition`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Create a global server definition (simulating what AddGlobalMcpInstanceDialog does)
         val serverId = "global-test-delete-server-123"
@@ -56,7 +56,7 @@ class GlobalMcpInstanceServiceTest {
 
         // Verify instance exists in mcp-instances.yml
         assertNotNull(
-            GlobalMcpInstancesConfig.get(instance.id),
+            McpInstancesConfig.get(instance.id),
             "Instance should exist in mcp-instances.yml before deletion",
         )
 
@@ -67,7 +67,7 @@ class GlobalMcpInstanceServiceTest {
 
         // Verify instance is removed from mcp-instances.yml
         assertNull(
-            GlobalMcpInstancesConfig.get(instance.id),
+            McpInstancesConfig.get(instance.id),
             "Instance should be removed from mcp-instances.yml after deletion",
         )
 
@@ -80,7 +80,7 @@ class GlobalMcpInstanceServiceTest {
 
     @Test
     fun `deleteInstance does not remove server definitions without global tag`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Create a regular server definition (NOT tagged as global)
         val serverId = "regular-server-not-global"
@@ -116,7 +116,7 @@ class GlobalMcpInstanceServiceTest {
         assertTrue(deleteResult.isSuccess, "Instance deletion should succeed")
 
         // Verify instance is removed
-        assertNull(GlobalMcpInstancesConfig.get(instance.id))
+        assertNull(McpInstancesConfig.get(instance.id))
 
         // Verify server definition is NOT removed (it's a template, not a global instance)
         assertNotNull(
@@ -130,7 +130,7 @@ class GlobalMcpInstanceServiceTest {
 
     @Test
     fun `deleteInstance handles non-existent instance gracefully`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Try to delete non-existent instance
         val result = service.deleteInstance("non-existent-instance-id")
@@ -140,7 +140,7 @@ class GlobalMcpInstanceServiceTest {
 
     @Test
     fun `createInstance successfully creates both server definition and instance`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Create a global server definition first
         val serverId = "global-test-create-123"
@@ -170,10 +170,9 @@ class GlobalMcpInstanceServiceTest {
         val instance = result.getOrNull()!!
 
         // Verify instance exists
-        assertNotNull(GlobalMcpInstancesConfig.get(instance.id))
+        assertNotNull(McpInstancesConfig.get(instance.id))
         assertEquals("Test Instance", instance.name)
         assertEquals(serverId, instance.serverId)
-        assertEquals(GLOBAL_MCP_SCOPE_ID, instance.projectId)
 
         // Cleanup
         service.deleteInstance(instance.id)
@@ -181,7 +180,7 @@ class GlobalMcpInstanceServiceTest {
 
     @Test
     fun `getInstances returns all global instances`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Create multiple instances
         val serverId = "global-test-list-123"
@@ -216,7 +215,7 @@ class GlobalMcpInstanceServiceTest {
 
     @Test
     fun `updateInstance modifies instance properties`() {
-        val service = GlobalMcpInstanceService()
+        val service = McpInstanceService()
 
         // Create server and instance
         val serverId = "global-test-update-123"

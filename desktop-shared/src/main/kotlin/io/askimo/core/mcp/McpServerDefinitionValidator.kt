@@ -21,28 +21,28 @@ private object ValidationMessages {
     }
 
     val idEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.id")
+        get() = bundle.getString("mcp.instance.validation.error.empty.id")
 
     val idPattern: String
-        get() = bundle.getString("mcp.template.validation.error.invalid.id.pattern")
+        get() = bundle.getString("mcp.instance.validation.error.invalid.id.pattern")
 
     val nameEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.name")
+        get() = bundle.getString("mcp.instance.validation.error.empty.name")
 
     val commandEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.command")
+        get() = bundle.getString("mcp.instance.validation.error.empty.command")
 
     val paramKeyEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.parameter.key")
+        get() = bundle.getString("mcp.instance.validation.error.empty.parameter.key")
 
     val paramLabelEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.parameter.label")
+        get() = bundle.getString("mcp.instance.validation.error.empty.parameter.label")
 
     val urlEmpty: String
-        get() = bundle.getString("mcp.template.validation.error.empty.url")
+        get() = bundle.getString("mcp.instance.validation.error.empty.url")
 
     val urlInvalid: String
-        get() = bundle.getString("mcp.template.validation.error.invalid.url")
+        get() = bundle.getString("mcp.instance.validation.error.invalid.url")
 }
 
 /**

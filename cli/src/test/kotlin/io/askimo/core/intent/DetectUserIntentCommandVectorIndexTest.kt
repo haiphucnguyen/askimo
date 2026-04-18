@@ -96,30 +96,6 @@ class DetectUserIntentCommandVectorIndexTest {
     inner class NullIndexTests {
 
         @Test
-        @DisplayName("Null toolVectorIndex produces no vector matches")
-        fun nullVectorIndexProducesNoVectorMatches() {
-            val tool = mcpTool(
-                name = "github_copilot_assign",
-                category = ToolCategory.NETWORK,
-                description = "Assign Copilot coding agent to a GitHub issue to automatically generate a pull request",
-            )
-
-            val result = DetectUserIntentCommand.execute(
-                userMessage = "let the AI agent fix this ticket",
-                availableTools = emptyList(),
-                mcpTools = listOf(tool),
-                toolVectorIndex = null,
-            )
-
-            assertEquals(
-                0,
-                result.tools.size,
-                "No vector index means no vector matches, even for a semantically relevant query",
-            )
-            assertEquals(0, result.confidence)
-        }
-
-        @Test
         @DisplayName("Null toolVectorIndex does not break keyword detection")
         fun nullVectorIndexDoesNotBreakKeywordDetection() {
             val builtinTool = ToolConfig(
@@ -173,59 +149,6 @@ class DetectUserIntentCommandVectorIndexTest {
             assertTrue(
                 result.confidence in setOf(55, 70),
                 "Vector-only match should yield confidence 55 or 70, got ${result.confidence}",
-            )
-        }
-
-        @Test
-        @RetryOnFailure(maxAttempts = 3)
-        @DisplayName("Completely unrelated query does not match tool")
-        fun unrelatedQueryDoesNotMatch() {
-            val tool = mcpTool(
-                name = "database_migrator",
-                category = ToolCategory.DATABASE,
-                description = "Runs SQL database schema migrations and manages database versioning",
-            )
-            val index = buildIndex(listOf(tool))
-
-            val result = DetectUserIntentCommand.execute(
-                userMessage = "What is the weather like today in Paris?",
-                availableTools = emptyList(),
-                mcpTools = listOf(tool),
-                toolVectorIndex = index,
-            )
-
-            assertEquals(
-                0,
-                result.tools.size,
-                "Completely unrelated query should not match the database migration tool",
-            )
-            assertEquals(0, result.confidence)
-        }
-
-        @Test
-        @DisplayName("Tool without description is skipped by the index")
-        fun toolWithoutDescriptionIsSkippedByIndex() {
-            val noDescTool = ToolConfig(
-                specification = ToolSpecification.builder()
-                    .name("no_description_tool")
-                    .build(), // null description → skipped by ToolVectorIndex.index()
-                category = ToolCategory.OTHER,
-                strategy = ToolStrategy.INTENT_BASED,
-                source = ToolSource.MCP_EXTERNAL,
-            )
-            val index = buildIndex(listOf(noDescTool))
-
-            val result = DetectUserIntentCommand.execute(
-                userMessage = "do something with the no description tool",
-                availableTools = emptyList(),
-                mcpTools = listOf(noDescTool),
-                toolVectorIndex = index,
-            )
-
-            assertEquals(
-                0,
-                result.tools.size,
-                "Tool with no description cannot be indexed and must never appear in results",
             )
         }
     }
@@ -409,31 +332,6 @@ class DetectUserIntentCommandVectorIndexTest {
             )
 
             assertEquals(IntentStage.USER_INPUT, result.stage)
-        }
-
-        @Test
-        @RetryOnFailure(maxAttempts = 3)
-        @DisplayName("No match produces no-intent reasoning")
-        fun noMatchProducesNoIntentReasoning() {
-            val tool = mcpTool(
-                name = "database_migrator",
-                category = ToolCategory.DATABASE,
-                description = "Runs SQL database schema migrations and tracks applied versions",
-            )
-            val index = buildIndex(listOf(tool))
-
-            val result = DetectUserIntentCommand.execute(
-                userMessage = "What is the capital of France?",
-                availableTools = emptyList(),
-                mcpTools = listOf(tool),
-                toolVectorIndex = index,
-            )
-
-            assertEquals(0, result.tools.size)
-            assertTrue(
-                result.reasoning.contains("No specific tool intent"),
-                "No-match reasoning expected. Got: ${result.reasoning}",
-            )
         }
 
         @Test

@@ -19,10 +19,6 @@ private val log = logger<McpClientFactory>()
  * Low-level factory responsible for creating [DefaultMcpClient] instances and
  * listing/classifying tools from a [McpInstance].
  *
- * This class is intentionally scope-agnostic — it has no concept of projects
- * or global instances. Both [ProjectMcpInstanceService] and [GlobalMcpInstanceService]
- * delegate here so the connection and classification logic is never duplicated.
- *
  * Registered as a Koin singleton so both services share the same instance.
  */
 class McpClientFactory(
@@ -89,6 +85,47 @@ class McpClientFactory(
                     "Failed to create MCP client for '${instance.name}': ${e.message}",
                     e,
                 ),
+            )
+        }
+    }
+
+    /**
+     * Connects using a fully-resolved [definition] (no local config lookup).
+     * Intended for org-managed / remote servers whose definition is not stored in [McpServersConfig].
+     *
+     * Returns [Result.failure] with the root cause so callers can surface a meaningful message.
+     */
+    suspend fun listTools(name: String, definition: McpServerDefinition): Result<List<ToolConfig>> {
+        val clientKey = "list_${definition.id}_${System.currentTimeMillis()}"
+        return try {
+            val connector = McpInstance(
+                id = definition.id,
+                serverId = definition.id,
+                name = name,
+                parameterValues = emptyMap(),
+                enabled = true,
+                createdAt = java.time.LocalDateTime.now(),
+                updatedAt = java.time.LocalDateTime.now(),
+            ).toConnector(definition)
+
+            val transport = connector.createTransport()
+            val client = DefaultMcpClient.builder()
+                .key(clientKey)
+                .transport(transport)
+                .build()
+
+            val tools = client.listTools().map { toolSpec ->
+                ToolConfig(
+                    specification = toolSpec,
+                    category = inferToolCategory(toolSpec),
+                    strategy = inferToolStrategy(toolSpec),
+                    source = ToolSource.MCP_EXTERNAL,
+                )
+            }
+            Result.success(tools)
+        } catch (e: Exception) {
+            Result.failure(
+                IllegalStateException("Failed to list tools from '$name': ${e.message}", e),
             )
         }
     }

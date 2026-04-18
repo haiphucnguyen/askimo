@@ -76,7 +76,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
-import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.chat.util.FileContentExtractor
 import io.askimo.core.config.AppConfig
 import io.askimo.core.event.EventBus
@@ -85,8 +84,7 @@ import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.currentFileLogger
-import io.askimo.core.mcp.GlobalMcpInstanceService
-import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.McpInstanceService
 import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.formatFileSize
 import io.askimo.ui.common.i18n.stringResource
@@ -654,45 +652,16 @@ private fun toolsIndicatorButton(
     // Get services
     val globalMcpService = remember {
         try {
-            KoinJavaComponent.get<GlobalMcpInstanceService>(
-                GlobalMcpInstanceService::class.java,
+            KoinJavaComponent.get<McpInstanceService>(
+                McpInstanceService::class.java,
             )
         } catch (_: Exception) {
             null
         }
     }
-    val projectMcpService = remember {
-        try {
-            KoinJavaComponent.get<ProjectMcpInstanceService>(
-                ProjectMcpInstanceService::class.java,
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    // Determine if this session belongs to a project
-    var projectId by remember(sessionId) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(sessionId) {
-        if (sessionId != null) {
-            projectId = withContext(Dispatchers.IO) {
-                try {
-                    val sessionService = KoinJavaComponent.get<ChatSessionService>(
-                        ChatSessionService::class.java,
-                    )
-                    sessionService.getSessionById(sessionId)?.projectId
-                } catch (_: Exception) {
-                    null
-                }
-            }
-        }
-    }
-
-    // Load MCP servers eagerly once projectId is resolved, and cache for the lifetime
+    // Load MCP servers eagerly once the composable is attached, and cache for the lifetime
     // of this composable. Re-opening the popup is instant — no loading spinner shown again.
-    // Re-fetches only when projectId changes (session switch to a different project).
-    LaunchedEffect(projectId) {
+    LaunchedEffect(Unit) {
         // Skip if already loaded for this projectId
         if (mcpServers.isNotEmpty()) return@LaunchedEffect
 
@@ -732,28 +701,6 @@ private fun toolsIndicatorButton(
                         emptyList()
                     }
                 servers.add(McpServerInfo(instance.name, instance.id, isGlobal = true, tools = tools))
-            }
-
-            // Load project MCP servers with their tools if in project context
-            if (projectId != null) {
-                projectMcpService?.getInstances(projectId!!)?.filter { it.enabled }?.forEach { instance ->
-                    val tools = projectMcpService.listTools(projectId!!, instance.id)
-                        .getOrElse { e ->
-                            log.error("Error loading tools for project server ${instance.name}", e)
-                            EventBus.emit(
-                                AppErrorEvent(
-                                    title = LocalizationManager.getString("error.app.title"),
-                                    message = LocalizationManager.getString(
-                                        "error.app.message",
-                                        e.message ?: instance.name,
-                                    ),
-                                    cause = e,
-                                ),
-                            )
-                            emptyList()
-                        }
-                    servers.add(McpServerInfo(instance.name, instance.id, isGlobal = false, tools = tools))
-                }
             }
 
             servers
@@ -868,11 +815,7 @@ private fun toolsIndicatorButton(
 
                             mcpServers.isEmpty() -> {
                                 Text(
-                                    text = if (projectId != null) {
-                                        stringResource("chat.tools.popup.no.servers.project")
-                                    } else {
-                                        stringResource("chat.tools.popup.no.servers.global")
-                                    },
+                                    text = stringResource("chat.tools.popup.no.servers.global"),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

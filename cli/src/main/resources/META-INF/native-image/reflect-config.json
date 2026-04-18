@@ -78,9 +78,6 @@
     "name": "[Lio.askimo.core.config.ProjectType;"
   },
   {
-    "name": "[Lio.askimo.core.mcp.McpServerDefinition;"
-  },
-  {
     "name": "[Ljava.lang.Object;"
   },
   {
@@ -267,6 +264,10 @@
   {
     "name": "com.github.benmanes.caffeine.cache.SSMSA",
     "fields": [{ "name": "FACTORY" }, { "name": "expiresAfterAccessNanos" }]
+  },
+  {
+    "name": "com.github.benmanes.caffeine.cache.SSMSW",
+    "fields": [{ "name": "FACTORY" }, { "name": "expiresAfterWriteNanos" }]
   },
   {
     "name": "com.github.benmanes.caffeine.cache.StripedBuffer",
@@ -4007,8 +4008,7 @@
       {
         "name": "nullVectorIndexDoesNotBreakKeywordDetection",
         "parameterTypes": []
-      },
-      { "name": "nullVectorIndexProducesNoVectorMatches", "parameterTypes": [] }
+      }
     ]
   },
   {
@@ -4046,7 +4046,6 @@
         "name": "distinctByNamePreventsResultDuplication",
         "parameterTypes": []
       },
-      { "name": "noMatchProducesNoIntentReasoning", "parameterTypes": [] },
       { "name": "reasoningMentionsVectorSearch", "parameterTypes": [] },
       { "name": "stageIsAlwaysUserInput", "parameterTypes": [] }
     ]
@@ -4086,47 +4085,7 @@
           "io.askimo.core.intent.DetectUserIntentCommandVectorIndexTest"
         ]
       },
-      { "name": "semanticQueryMatchesToolViaVector", "parameterTypes": [] },
-      {
-        "name": "toolWithoutDescriptionIsSkippedByIndex",
-        "parameterTypes": []
-      },
-      { "name": "unrelatedQueryDoesNotMatch", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.mcp.GlobalMcpInstanceServiceTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      {
-        "name": "createInstance successfully creates both server definition and instance",
-        "parameterTypes": []
-      },
-      {
-        "name": "deleteInstance does not remove server definitions without global tag",
-        "parameterTypes": []
-      },
-      {
-        "name": "deleteInstance handles non-existent instance gracefully",
-        "parameterTypes": []
-      },
-      {
-        "name": "deleteInstance removes both instance and associated server definition",
-        "parameterTypes": []
-      },
-      {
-        "name": "getInstances returns all global instances",
-        "parameterTypes": []
-      },
-      {
-        "name": "updateInstance modifies instance properties",
-        "parameterTypes": []
-      }
+      { "name": "semanticQueryMatchesToolViaVector", "parameterTypes": [] }
     ]
   },
   {
@@ -4161,27 +4120,6 @@
     "name": "io.askimo.core.mcp.HttpConfig$Companion"
   },
   {
-    "name": "io.askimo.core.mcp.McpFilesystemConnectorTest",
-    "allDeclaredFields": true,
-    "allDeclaredClasses": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllPublicMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] },
-      { "name": "cleanup", "parameterTypes": [] },
-      { "name": "setup", "parameterTypes": [] },
-      { "name": "testConnectionTest", "parameterTypes": [] },
-      { "name": "testCreateFilesystemInstance", "parameterTypes": [] },
-      { "name": "testCreateInstanceWithInvalidPath", "parameterTypes": [] },
-      { "name": "testDeleteInstance", "parameterTypes": [] },
-      { "name": "testDirectTransportCreation", "parameterTypes": [] },
-      { "name": "testNpxAvailability", "parameterTypes": [] },
-      { "name": "testUpdateInstanceParameters", "parameterTypes": [] },
-      { "name": "testValidateConnector", "parameterTypes": [] }
-    ]
-  },
-  {
     "name": "io.askimo.core.mcp.McpInstance"
   },
   {
@@ -4194,7 +4132,6 @@
         "name": "<init>",
         "parameterTypes": [
           "int",
-          "java.lang.String",
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
@@ -4212,7 +4149,6 @@
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
-          "java.lang.String",
           "java.util.Map",
           "java.util.Set",
           "boolean",
@@ -4223,7 +4159,6 @@
       {
         "name": "<init>",
         "parameterTypes": [
-          "java.lang.String",
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
@@ -4241,7 +4176,6 @@
       { "name": "getId", "parameterTypes": [] },
       { "name": "getName", "parameterTypes": [] },
       { "name": "getParameterValues", "parameterTypes": [] },
-      { "name": "getProjectId", "parameterTypes": [] },
       { "name": "getSecretParameterKeys", "parameterTypes": [] },
       { "name": "getServerId", "parameterTypes": [] },
       { "name": "getUpdatedAt", "parameterTypes": [] }
@@ -4252,6 +4186,41 @@
   },
   {
     "name": "io.askimo.core.mcp.McpInstanceData$Companion"
+  },
+  {
+    "name": "io.askimo.core.mcp.McpInstanceServiceTest",
+    "allDeclaredFields": true,
+    "allDeclaredClasses": true,
+    "queryAllDeclaredMethods": true,
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] },
+      {
+        "name": "createInstance successfully creates both server definition and instance",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance does not remove server definitions without global tag",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance handles non-existent instance gracefully",
+        "parameterTypes": []
+      },
+      {
+        "name": "deleteInstance removes both instance and associated server definition",
+        "parameterTypes": []
+      },
+      {
+        "name": "getInstances returns all global instances",
+        "parameterTypes": []
+      },
+      {
+        "name": "updateInstance modifies instance properties",
+        "parameterTypes": []
+      }
+    ]
   },
   {
     "name": "io.askimo.core.mcp.McpServerDefinition",
@@ -4310,76 +4279,7 @@
     "name": "io.askimo.core.mcp.McpServerDefinition$Companion"
   },
   {
-    "name": "io.askimo.core.mcp.Parameter",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true,
-    "queryAllDeclaredConstructors": true,
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "int",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterType",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterLocation",
-          "boolean",
-          "kotlinx.serialization.internal.SerializationConstructorMarker"
-        ]
-      },
-      {
-        "name": "<init>",
-        "parameterTypes": [
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterType",
-          "boolean",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "java.lang.String",
-          "io.askimo.core.mcp.ParameterLocation",
-          "boolean"
-        ]
-      },
-      { "name": "getAllowMultiple", "parameterTypes": [] },
-      { "name": "getDefaultValue", "parameterTypes": [] },
-      { "name": "getDescription", "parameterTypes": [] },
-      { "name": "getKey", "parameterTypes": [] },
-      { "name": "getLabel", "parameterTypes": [] },
-      { "name": "getLocation", "parameterTypes": [] },
-      { "name": "getPlaceholder", "parameterTypes": [] },
-      { "name": "getRequired", "parameterTypes": [] },
-      { "name": "getType", "parameterTypes": [] },
-      { "name": "getValidationPattern", "parameterTypes": [] }
-    ]
-  },
-  {
-    "name": "io.askimo.core.mcp.Parameter$$serializer"
-  },
-  {
-    "name": "io.askimo.core.mcp.Parameter$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterLocation",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterLocation$Companion"
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterType",
-    "allDeclaredFields": true,
-    "queryAllDeclaredMethods": true
-  },
-  {
-    "name": "io.askimo.core.mcp.ParameterType$Companion"
+    "name": "io.askimo.core.mcp.Parameter"
   },
   {
     "name": "io.askimo.core.mcp.ServerDefinitionSecretManagerTest",
@@ -4974,7 +4874,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$Xm2yYCXe",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$Afizg7CY",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6147,8 +6047,7 @@
   },
   {
     "name": "java.lang.Thread",
-    "fields": [{ "name": "threadLocalRandomProbe" }],
-    "methods": [{ "name": "isVirtual", "parameterTypes": [] }]
+    "fields": [{ "name": "threadLocalRandomProbe" }]
   },
   {
     "name": "java.lang.Throwable",
@@ -6605,12 +6504,6 @@
   },
   {
     "name": "java.util.concurrent.ArrayBlockingQueue"
-  },
-  {
-    "name": "java.util.concurrent.Executors",
-    "methods": [
-      { "name": "newVirtualThreadPerTaskExecutor", "parameterTypes": [] }
-    ]
   },
   {
     "name": "java.util.concurrent.ForkJoinTask",
@@ -7373,7 +7266,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$BQiCsOjI",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$SUJqE0RO",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

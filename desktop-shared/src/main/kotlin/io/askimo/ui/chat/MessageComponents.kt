@@ -76,6 +76,7 @@ import io.askimo.ui.common.ui.util.highlightSearchText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -565,7 +566,7 @@ fun messageBubble(
                                             clipboardManager.setText(AnnotatedString(message.content))
                                             showCopyFeedback = true
                                             coroutineScope.launch {
-                                                delay(2000)
+                                                delay(2000.milliseconds)
                                                 showCopyFeedback = false
                                             }
                                         },

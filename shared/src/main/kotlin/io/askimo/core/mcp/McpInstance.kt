@@ -12,21 +12,14 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 
 /**
- * A project-specific instance of an MCP server.
- * Contains actual values for the server's parameters.
+ * An instance of an MCP server with actual values for the server's parameters.
  *
  * Example:
- * - Project "Analytics Dashboard":
  *   - Instance: serverId="mongodb-mcp-server", name="Production MongoDB"
  *               parameterValues={mongoUri: "mongodb://prod/analytics", readOnly: "true"}
- *
- * - Project "Dev Environment":
- *   - Instance: serverId="mongodb-mcp-server", name="Local MongoDB"
- *               parameterValues={mongoUri: "mongodb://localhost/dev", readOnly: "false"}
  */
 data class McpInstance(
     val id: String,
-    val projectId: String? = null, // null = not project-scoped
     val serverId: String, // References McpServerDefinition.id
     val name: String,
     val parameterValues: Map<String, String>, // User-provided values
@@ -115,7 +108,6 @@ data class McpInstance(
 @Serializable
 data class McpInstanceData(
     val id: String,
-    val projectId: String?,
     val serverId: String,
     val name: String,
     /** Non-secret parameter values only — safe to persist in plain YAML. */
@@ -138,7 +130,6 @@ data class McpInstanceData(
         }
         return McpInstance(
             id = id,
-            projectId = projectId,
             serverId = serverId,
             name = name,
             parameterValues = parameterValues + resolvedSecrets,
@@ -175,7 +166,6 @@ data class McpInstanceData(
 
             return McpInstanceData(
                 id = instance.id,
-                projectId = instance.projectId,
                 serverId = instance.serverId,
                 name = instance.name,
                 parameterValues = plain,

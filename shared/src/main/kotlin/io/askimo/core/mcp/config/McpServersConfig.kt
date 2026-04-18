@@ -7,13 +7,8 @@ package io.askimo.core.mcp.config
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
-import io.askimo.core.mcp.HttpConfig
 import io.askimo.core.mcp.McpServerDefinition
-import io.askimo.core.mcp.Parameter
-import io.askimo.core.mcp.ParameterLocation
-import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.ServerDefinitionSecretManager
-import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TemplateResolver
 import io.askimo.core.mcp.TransportType
 import io.askimo.core.mcp.ValidationResult
@@ -40,7 +35,7 @@ object McpServersConfig {
     /**
      * Get all registered MCP server definitions
      */
-    fun getAll(): List<McpServerDefinition> = cached ?: loadOrCreateDefaults()
+    fun getAll(): List<McpServerDefinition> = cached ?: loadFromDisk()
 
     /**
      * Get a specific MCP server definition by ID
@@ -90,17 +85,6 @@ object McpServersConfig {
      */
     fun update(definition: McpServerDefinition) {
         add(definition)
-    }
-
-    /**
-     * Reset to built-in defaults
-     */
-    fun resetToDefaults() {
-        synchronized(this) {
-            val defaults = getBuiltInDefaults()
-            cached = defaults
-            persist(defaults)
-        }
     }
 
     /**
@@ -185,7 +169,7 @@ object McpServersConfig {
      */
     fun count(): Int = getAll().size
 
-    private fun loadOrCreateDefaults(): List<McpServerDefinition> {
+    private fun loadFromDisk(): List<McpServerDefinition> {
         synchronized(this) {
             val path = resolveConfigPath()
 
@@ -197,19 +181,14 @@ object McpServersConfig {
                     log.debug("Loaded {} MCP server definitions from {}", wrapper.servers.size, path)
                     wrapper.servers
                 } catch (e: Exception) {
-                    log.displayError("Failed to load MCP servers config, using defaults", e)
-                    val defaults = getBuiltInDefaults()
-                    cached = defaults
-                    defaults
+                    log.displayError("Failed to load MCP servers config, returning empty list", e)
+                    cached = emptyList()
+                    emptyList()
                 }
             } else {
-                // First run: create config with defaults
-                val defaults = getBuiltInDefaults()
-                path.parent?.createDirectories()
-                persist(defaults)
-                log.debug("Created default MCP servers config at {}", path)
-                cached = defaults
-                defaults
+                log.debug("No MCP servers config found at {}", path)
+                cached = emptyList()
+                emptyList()
             }
         }
     }
@@ -229,57 +208,6 @@ object McpServersConfig {
     }
 
     private fun resolveConfigPath(): Path = AskimoHome.base().resolve(MCP_CONFIG_FILE)
-
-    /**
-     * Built-in default MCP server definitions
-     */
-    private fun getBuiltInDefaults(): List<McpServerDefinition> = listOf(
-        // Filesystem MCP Server
-        McpServerDefinition(
-            id = "filesystem-mcp-server",
-            name = "Filesystem MCP Server",
-            description = "Access and search local files and directories using the official Anthropic MCP server",
-            transportType = TransportType.STDIO,
-            stdioConfig = StdioConfig(
-                commandTemplate = listOf(
-                    "npx",
-                    "-y",
-                    "@modelcontextprotocol/server-filesystem",
-                    "{{rootPath}}",
-                ),
-            ),
-            tags = listOf("filesystem", "local", "files", "official", "anthropic"),
-        ),
-
-        // GitHub MCP Server (remote HTTP)
-        McpServerDefinition(
-            id = "github-mcp-server",
-            name = "GitHub MCP Server",
-            description = "Access GitHub repositories, issues, pull requests, code search, and more using the official GitHub remote MCP server",
-            transportType = TransportType.HTTP,
-            httpConfig = HttpConfig(
-                urlTemplate = "https://api.githubcopilot.com/mcp/",
-                headersTemplate = mapOf(
-                    "Authorization" to "Bearer {{githubToken}}",
-                ),
-                timeoutMs = 60_000,
-            ),
-            parameters = listOf(
-                Parameter(
-                    key = "githubToken",
-                    label = "GitHub Personal Access Token",
-                    type = ParameterType.SECRET,
-                    required = true,
-                    description = "A GitHub PAT with the permissions needed for the operations you want to perform. Create one at https://github.com/settings/personal-access-tokens/new",
-                    placeholder = "github_pat_...",
-                    location = ParameterLocation.HTTP_HEADER,
-                ),
-            ),
-            version = "1.0.0",
-            author = "GitHub",
-            tags = listOf("github", "code", "repositories", "issues", "pull-requests", "official"),
-        ),
-    )
 }
 
 /**

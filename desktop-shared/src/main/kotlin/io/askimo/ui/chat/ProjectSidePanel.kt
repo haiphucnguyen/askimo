@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -80,10 +79,9 @@ import java.awt.Cursor
  */
 enum class PanelTab(
     val icon: ImageVector,
-    val labelKey: String, // Localization key instead of label
+    val labelKey: String,
 ) {
     RAG_SOURCES(Icons.Default.AutoAwesome, "panel.tab.rag.sources"),
-    MCP(Icons.Default.Extension, "panel.tab.mcp"),
 }
 
 /**
@@ -308,10 +306,6 @@ fun projectSidePanel(
                                     onAddToChat = onAddToChat,
                                 )
                             }
-
-                            PanelTab.MCP -> {
-                                mcpTabContent(project = project)
-                            }
                         }
                     }
                 }
@@ -400,7 +394,6 @@ private fun tabIcon(
 ) {
     val tooltipText = when (tab) {
         PanelTab.RAG_SOURCES -> stringResource("panel.tab.rag.sources")
-        PanelTab.MCP -> stringResource("panel.tab.mcp")
     }
 
     themedTooltip(text = tooltipText) {

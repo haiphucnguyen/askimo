@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.ui.project
+package io.askimo.ui.mcp
 
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
@@ -258,9 +258,9 @@ fun mcpToolsDialog(
                                                         },
                                                         contentDescription = stringResource(
                                                             if (showSecret) {
-                                                                "mcp.integrations.password.hide"
+                                                                "mcp.instance.password.hide"
                                                             } else {
-                                                                "mcp.integrations.password.show"
+                                                                "mcp.instance.password.show"
                                                             },
                                                         ),
                                                         modifier = Modifier.size(14.dp),
@@ -521,25 +521,25 @@ private fun toolCategoryChip(category: ToolCategory) {
 private fun toolStrategyChip(strategy: Int) {
     val (label, bg, fg) = when (strategy) {
         ToolStrategy.INTENT_BASED -> Triple(
-            stringResource("mcp.integrations.tool.strategy.intent"),
+            stringResource("mcp.instance.tool.strategy.intent"),
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
         )
 
         ToolStrategy.FOLLOW_UP_BASED -> Triple(
-            stringResource("mcp.integrations.tool.strategy.followup"),
+            stringResource("mcp.instance.tool.strategy.followup"),
             MaterialTheme.colorScheme.secondaryContainer,
             MaterialTheme.colorScheme.onSecondaryContainer,
         )
 
         ToolStrategy.BOTH -> Triple(
-            stringResource("mcp.integrations.tool.strategy.both"),
+            stringResource("mcp.instance.tool.strategy.both"),
             MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.onTertiaryContainer,
         )
 
         else -> Triple(
-            stringResource("mcp.integrations.tool.strategy.unknown"),
+            stringResource("mcp.instance.tool.strategy.unknown"),
             MaterialTheme.colorScheme.surfaceVariant,
             MaterialTheme.colorScheme.onSurfaceVariant,
         )

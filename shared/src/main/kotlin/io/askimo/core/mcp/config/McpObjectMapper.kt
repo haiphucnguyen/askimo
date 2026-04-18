@@ -18,7 +18,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
  * - [DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES] disabled so that
  *   older config files remain readable when new fields are added
  *
- * Used by [ProjectMcpInstancesConfig], [GlobalMcpInstancesConfig], and
+ * Used by [McpInstancesConfig], and
  * [McpServersConfig] to avoid duplicating mapper construction.
  */
 internal val mcpObjectMapper: ObjectMapper =
