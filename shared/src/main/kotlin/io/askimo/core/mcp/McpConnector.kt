@@ -39,7 +39,6 @@ data class ValidationResult(
  * Result of connection test
  */
 sealed class TestResult {
-    object Success : TestResult()
     data class Invalid(val errors: List<String>) : TestResult()
     data class Failed(val message: String) : TestResult()
 }

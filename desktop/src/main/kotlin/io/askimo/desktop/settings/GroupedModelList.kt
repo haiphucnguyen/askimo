@@ -4,17 +4,13 @@
  */
 package io.askimo.desktop.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,8 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.providers.ModelDTO
@@ -94,59 +88,6 @@ fun groupedModelListAsCards(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun groupedModelListAsMenuItems(
-    models: List<ModelDTO>,
-    selectedModelId: String?,
-    onModelClick: (String) -> Unit,
-    showHeaders: Boolean? = null,
-) {
-    val groupedModels = remember(models) { groupModelsByProvider(models) }
-    val shouldShowHeaders = showHeaders ?: (groupedModels.size > 1)
-
-    groupedModels.forEach { (provider, providerModels) ->
-        if (shouldShowHeaders && providerModels.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = provider.name,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-
-        providerModels.forEach { dto ->
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = dto.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                },
-                onClick = { onModelClick(dto.modelId) },
-                leadingIcon = if (dto.modelId == selectedModelId) {
-                    {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Current model",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                } else {
-                    null
-                },
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-            )
         }
     }
 }

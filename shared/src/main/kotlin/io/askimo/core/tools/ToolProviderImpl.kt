@@ -16,12 +16,11 @@ import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.intent.ToolSource
 import io.askimo.core.logging.logger
-import io.askimo.core.mcp.GlobalMcpInstanceService
-import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.McpInstanceService
 import kotlinx.coroutines.runBlocking
 
 /**
- * Implementation of ToolProvider that dynamically provides tools based on project context.
+ * Implementation of ToolProvider that dynamically provides tools based on context.
  * Uses ThreadLocal to access the current project ID and retrieve MCP tools.
  *
  * Tool detection runs two layers in sequence:
@@ -29,8 +28,7 @@ import kotlinx.coroutines.runBlocking
  *  2. Vector similarity   (ToolVectorIndex / JVector)  — semantic, catches misses
  */
 class ToolProviderImpl(
-    private val projectMcpInstanceService: ProjectMcpInstanceService,
-    private val globalMcpInstanceService: GlobalMcpInstanceService,
+    private val mcpInstanceService: McpInstanceService,
 ) : ToolProvider {
 
     private val log = logger<ToolProviderImpl>()
@@ -40,37 +38,14 @@ class ToolProviderImpl(
 
         log.debug("Providing tools for request: {}", request)
 
-        val projectId = ChatContext.getProjectId()
-
-        // Project-scoped tools — only when inside a project
-        val projectTools: List<ToolConfig> = if (projectId != null) {
-            runBlocking { projectMcpInstanceService.getProjectTools(projectId) }
-                .getOrElse { e ->
-                    log.warn("Failed to load project MCP tools for project {}: {}", projectId, e.message)
-                    emptyList()
-                }
-        } else {
-            emptyList()
-        }
-
         // Global tools — always available in every chat
-        val globalTools: List<ToolConfig> = runBlocking { globalMcpInstanceService.getGlobalTools() }
+        val mcpTools: List<ToolConfig> = runBlocking { mcpInstanceService.getGlobalTools() }
             .getOrElse { e ->
                 log.warn("Failed to load global MCP tools: {}", e.message)
                 emptyList()
             }
 
-        // Merge: project tools take precedence over global tools with same name
-        val projectToolNames = projectTools.map { it.specification.name() }.toSet()
-        val mcpTools = projectTools + globalTools.filter { it.specification.name() !in projectToolNames }
-
-        // Prefer project vector index when in project context, fall back to global
-        val toolVectorIndex = if (projectId != null) {
-            projectMcpInstanceService.getToolVectorIndex(projectId)
-                ?: globalMcpInstanceService.getToolVectorIndex()
-        } else {
-            globalMcpInstanceService.getToolVectorIndex()
-        }
+        val toolVectorIndex = mcpInstanceService.getToolVectorIndex()
 
         val userIntent = DetectUserIntentCommand.execute(
             userMessage = request.userMessage().singleText() ?: "",
@@ -125,22 +100,13 @@ class ToolProviderImpl(
                         )
                     }
                 } else {
-                    val toolName = tool.specification.name()
-                    // Try project client first, fall back to global
-                    val mcpClient = if (projectId != null) {
-                        projectMcpInstanceService.getMcpClientForTool(projectId, toolName)
-                            ?: globalMcpInstanceService.getMcpClientForTool(toolName)
-                    } else {
-                        globalMcpInstanceService.getMcpClientForTool(toolName)
-                    }
-
+                    val mcpClient = mcpInstanceService.getMcpClientForTool(tool.specification.name())
                     if (mcpClient != null) {
                         builder.add(tool.specification, McpToolExecutor(mcpClient), ReturnBehavior.TO_LLM)
                     } else {
                         log.error(
-                            "Could not find MCP client for tool '{}' (projectId={}, global fallback attempted)",
-                            toolName,
-                            projectId,
+                            "Could not find MCP client for tool '{}'",
+                            tool.specification.name(),
                         )
                     }
                 }

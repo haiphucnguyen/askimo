@@ -11,7 +11,7 @@ import io.askimo.core.mcp.McpInstanceData
  *
  * Jackson requires a top-level object when reading/writing a list, so all
  * [McpInstanceData] entries are nested under the `instances` key in the file.
- * Shared by [ProjectMcpInstancesConfig] and [GlobalMcpInstancesConfig].
+ * Shared by [McpInstancesConfig].
  */
 internal data class InstancesWrapper(
     val instances: List<McpInstanceData>,

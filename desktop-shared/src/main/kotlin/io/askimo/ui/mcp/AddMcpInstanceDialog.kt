@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.desktop.settings
+package io.askimo.ui.mcp
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.langchain4j.agent.tool.ToolSpecification
-import io.askimo.core.mcp.GLOBAL_MCP_SCOPE_ID
 import io.askimo.core.mcp.HttpConfig
 import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.McpInstance
@@ -63,11 +62,11 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 /**
- * Simplified one-step dialog for creating/editing global MCP instances directly.
+ * Simplified one-step dialog for creating/editing MCP instances directly.
  * No template selection - user enters configuration directly.
  */
 @Composable
-fun addGlobalMcpInstanceDialog(
+fun addMcpInstanceDialog(
     existingInstance: McpInstance? = null,
     onDismiss: () -> Unit,
     onSave: (serverId: String, name: String, parameters: Map<String, String>) -> Unit,
@@ -251,7 +250,6 @@ fun addGlobalMcpInstanceDialog(
                     val now = LocalDateTime.now()
                     val instance = McpInstance(
                         id = serverId,
-                        projectId = GLOBAL_MCP_SCOPE_ID,
                         serverId = serverId,
                         name = instanceName,
                         parameterValues = emptyMap(),
@@ -312,9 +310,9 @@ fun addGlobalMcpInstanceDialog(
                         Text(
                             text = stringResource(
                                 if (existingInstance != null) {
-                                    "mcp.global.instance.edit.dialog.title"
+                                    "mcp.instance.edit.dialog.title"
                                 } else {
-                                    "mcp.global.instance.add.dialog.title"
+                                    "mcp.instance.add.dialog.title"
                                 },
                             ),
                             style = MaterialTheme.typography.headlineSmall,
@@ -324,9 +322,9 @@ fun addGlobalMcpInstanceDialog(
                         Text(
                             text = stringResource(
                                 if (existingInstance != null) {
-                                    "mcp.global.instance.edit.dialog.description"
+                                    "mcp.instance.edit.dialog.description"
                                 } else {
-                                    "mcp.global.instance.add.dialog.description"
+                                    "mcp.instance.add.dialog.description"
                                 },
                             ),
                             style = MaterialTheme.typography.bodyMedium,
@@ -339,8 +337,8 @@ fun addGlobalMcpInstanceDialog(
                         OutlinedTextField(
                             value = instanceName,
                             onValueChange = { instanceName = it },
-                            label = { Text(stringResource("mcp.integrations.instance.name")) },
-                            placeholder = { Text(stringResource("mcp.integrations.instance.name.placeholder")) },
+                            label = { Text(stringResource("mcp.instance.name")) },
+                            placeholder = { Text(stringResource("mcp.instance.name.placeholder")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             colors = AppComponents.outlinedTextFieldColors(),
@@ -350,8 +348,8 @@ fun addGlobalMcpInstanceDialog(
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
-                            label = { Text(stringResource("mcp.template.field.description")) },
-                            placeholder = { Text(stringResource("mcp.template.field.description.placeholder")) },
+                            label = { Text(stringResource("mcp.instance.field.description")) },
+                            placeholder = { Text(stringResource("mcp.instance.field.description.placeholder")) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 3,
@@ -362,7 +360,7 @@ fun addGlobalMcpInstanceDialog(
 
                         // Transport Type Selector
                         Text(
-                            text = stringResource("mcp.template.field.transport"),
+                            text = stringResource("mcp.instance.field.transport"),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -379,7 +377,7 @@ fun addGlobalMcpInstanceDialog(
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 text = {
                                     Text(
-                                        text = stringResource("mcp.template.transport.stdio"),
+                                        text = stringResource("mcp.instance.transport.stdio"),
                                         color = if (selectedTab == 0) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
@@ -394,7 +392,7 @@ fun addGlobalMcpInstanceDialog(
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                 text = {
                                     Text(
-                                        text = stringResource("mcp.template.transport.http"),
+                                        text = stringResource("mcp.instance.transport.http"),
                                         color = if (selectedTab == 1) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
@@ -411,9 +409,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = command,
                                     onValueChange = { command = it },
-                                    label = { Text(stringResource("mcp.template.field.command")) },
-                                    placeholder = { Text(stringResource("mcp.template.field.command.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.template.field.command.hint")) },
+                                    label = { Text(stringResource("mcp.instance.field.command")) },
+                                    placeholder = { Text(stringResource("mcp.instance.field.command.placeholder")) },
+                                    supportingText = { Text(stringResource("mcp.instance.field.command.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     colors = AppComponents.outlinedTextFieldColors(),
@@ -422,9 +420,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = args,
                                     onValueChange = { args = it },
-                                    label = { Text(stringResource("mcp.global.instance.field.args")) },
-                                    placeholder = { Text(stringResource("mcp.global.instance.field.args.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.global.instance.field.args.hint")) },
+                                    label = { Text(stringResource("mcp.instance.field.args")) },
+                                    placeholder = { Text(stringResource("mcp.instance.field.args.placeholder")) },
+                                    supportingText = { Text(stringResource("mcp.instance.field.args.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     colors = AppComponents.outlinedTextFieldColors(),
@@ -433,9 +431,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = workingDir,
                                     onValueChange = { workingDir = it },
-                                    label = { Text(stringResource("mcp.global.instance.field.workingdir")) },
+                                    label = { Text(stringResource("mcp.instance.field.workingdir")) },
                                     placeholder = { Text(System.getProperty("user.home")) },
-                                    supportingText = { Text(stringResource("mcp.global.instance.field.workingdir.hint")) },
+                                    supportingText = { Text(stringResource("mcp.instance.field.workingdir.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     colors = AppComponents.outlinedTextFieldColors(),
@@ -444,9 +442,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = envVars,
                                     onValueChange = { envVars = it },
-                                    label = { Text(stringResource("mcp.template.env.label")) },
-                                    placeholder = { Text(stringResource("mcp.template.env.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.template.env.hint")) },
+                                    label = { Text(stringResource("mcp.instance.env.label")) },
+                                    placeholder = { Text(stringResource("mcp.instance.env.placeholder")) },
+                                    supportingText = { Text(stringResource("mcp.instance.env.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 3,
                                     maxLines = 5,
@@ -461,9 +459,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = url,
                                     onValueChange = { url = it },
-                                    label = { Text(stringResource("mcp.template.http.url.label")) },
-                                    placeholder = { Text(stringResource("mcp.template.http.url.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.template.http.url.hint")) },
+                                    label = { Text(stringResource("mcp.instance.http.url.label")) },
+                                    placeholder = { Text(stringResource("mcp.instance.http.url.placeholder")) },
+                                    supportingText = { Text(stringResource("mcp.instance.http.url.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     colors = AppComponents.outlinedTextFieldColors(),
@@ -472,9 +470,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = headers,
                                     onValueChange = { headers = it },
-                                    label = { Text(stringResource("mcp.template.http.headers.label")) },
-                                    placeholder = { Text(stringResource("mcp.template.http.headers.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.template.http.headers.hint")) },
+                                    label = { Text(stringResource("mcp.instance.http.headers.label")) },
+                                    placeholder = { Text(stringResource("mcp.instance.http.headers.placeholder")) },
+                                    supportingText = { Text(stringResource("mcp.instance.http.headers.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     minLines = 3,
                                     maxLines = 5,
@@ -484,9 +482,9 @@ fun addGlobalMcpInstanceDialog(
                                 OutlinedTextField(
                                     value = timeoutMs,
                                     onValueChange = { timeoutMs = it },
-                                    label = { Text(stringResource("mcp.template.http.timeout.label")) },
+                                    label = { Text(stringResource("mcp.instance.http.timeout.label")) },
                                     placeholder = { Text("60000") },
-                                    supportingText = { Text(stringResource("mcp.template.http.timeout.hint")) },
+                                    supportingText = { Text(stringResource("mcp.instance.http.timeout.hint")) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     colors = AppComponents.outlinedTextFieldColors(),
@@ -498,14 +496,14 @@ fun addGlobalMcpInstanceDialog(
 
                         // Connection Status Section
                         Text(
-                            text = stringResource("mcp.integrations.connection.status"),
+                            text = stringResource("mcp.instance.connection.status"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
 
                         Text(
-                            text = stringResource("mcp.integrations.connection.info"),
+                            text = stringResource("mcp.instance.connection.info"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -524,9 +522,9 @@ fun addGlobalMcpInstanceDialog(
                                 Text(
                                     text = stringResource(
                                         if (success) {
-                                            "mcp.integrations.test.success"
+                                            "mcp.instance.test.success"
                                         } else {
-                                            "mcp.integrations.test.failed"
+                                            "mcp.instance.test.failed"
                                         },
                                     ),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -545,14 +543,14 @@ fun addGlobalMcpInstanceDialog(
                             HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.medium))
 
                             Text(
-                                text = stringResource("mcp.integrations.tools.title"),
+                                text = stringResource("mcp.instance.tools.title"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
 
                             Text(
-                                text = stringResource("mcp.integrations.tools.count", availableTools.size.toString()),
+                                text = stringResource("mcp.instance.tools.count", availableTools.size.toString()),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = Spacing.small),
@@ -647,7 +645,7 @@ fun addGlobalMcpInstanceDialog(
                             }
                         },
                     ) {
-                        Text(stringResource("mcp.integrations.test.connection"))
+                        Text(stringResource("mcp.instance.test.connection"))
                     }
                     Spacer(Modifier.width(Spacing.small))
                     primaryButton(

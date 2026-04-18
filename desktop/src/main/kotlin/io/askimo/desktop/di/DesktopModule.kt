@@ -8,9 +8,8 @@ import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
-import io.askimo.core.mcp.GlobalMcpInstanceService
 import io.askimo.core.mcp.McpClientFactory
-import io.askimo.core.mcp.ProjectMcpInstanceService
+import io.askimo.core.mcp.McpInstanceService
 import io.askimo.core.plan.PlanService
 import io.askimo.core.plan.repository.PlanDefRepository
 import io.askimo.core.tools.ToolProviderImpl
@@ -71,10 +70,9 @@ val desktopModule = module {
     single { ChatDirectiveService(repository = get()) }
 
     single { McpClientFactory() }
-    single { ProjectMcpInstanceService(mcpClientFactory = get()) }
-    single { GlobalMcpInstanceService(mcpClientFactory = get()) }
+    single { McpInstanceService(mcpClientFactory = get()) }
 
-    single { ToolProviderImpl(projectMcpInstanceService = get(), globalMcpInstanceService = get()) }
+    single { ToolProviderImpl(mcpInstanceService = get()) }
 
     single { SystemResourceMonitor() }
 
