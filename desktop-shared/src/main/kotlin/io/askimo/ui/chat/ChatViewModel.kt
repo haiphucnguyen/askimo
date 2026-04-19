@@ -340,10 +340,18 @@ class ChatViewModel(
                         if (savedMessage != null) {
                             // Replace temporary message with the saved one (has ID, isFailed, timestamp)
                             messages = if (retryInsertPosition != null) {
-                                messages.toMutableList().apply {
-                                    val tempMessageIndex = indexOfLast { !it.isUser && it.id == null }
-                                    if (tempMessageIndex >= 0) {
-                                        this[tempMessageIndex] = savedMessage.toDTO()
+                                val list = messages.toMutableList()
+                                val tempMessageIndex = list.indexOfLast { !it.isUser && it.id == null }
+                                if (tempMessageIndex >= 0) {
+                                    list[tempMessageIndex] = savedMessage.toDTO()
+                                    list
+                                } else {
+                                    val lastAiIndex = list.indexOfLast { !it.isUser }
+                                    if (lastAiIndex >= 0) {
+                                        list[lastAiIndex] = savedMessage.toDTO()
+                                        list
+                                    } else {
+                                        list + savedMessage.toDTO()
                                     }
                                 }
                             } else {
@@ -354,7 +362,12 @@ class ChatViewModel(
                                     messages + savedMessage.toDTO()
                                 }
                             }
-                            log.debug("Updated AI message from StreamingThread - isFailed: ${savedMessage.isFailed}, id: ${savedMessage.id}, position: ${retryInsertPosition ?: "end"}")
+                            log.debug(
+                                "Updated AI message from StreamingThread - isFailed: {}, id: {}, position: {}",
+                                savedMessage.isFailed,
+                                savedMessage.id,
+                                retryInsertPosition ?: "end",
+                            )
                         } else {
                             log.warn("Saved message not available in StreamingThread for session $sessionId")
                         }

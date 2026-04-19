@@ -138,17 +138,17 @@ object McpServersConfig {
                 errors.add("HTTP transport requires httpConfig")
             } else {
                 if (definition.httpConfig.urlTemplate.isBlank()) {
-                    errors.add("HTTP urlTemplate cannot be blank")
+                    errors.add("HTTP url cannot be blank")
                 } else {
                     val result = TemplateResolver.validate(definition.httpConfig.urlTemplate)
                     if (!result.isValid) {
-                        errors.addAll(result.errors.map { "URL template error: $it" })
+                        errors.addAll(result.errors.map { "URL error: $it" })
                     }
                 }
                 definition.httpConfig.headersTemplate.forEach { (key, valueTemplate) ->
                     val result = TemplateResolver.validate(valueTemplate)
                     if (!result.isValid) {
-                        errors.addAll(result.errors.map { "Header '$key' template error: $it" })
+                        errors.addAll(result.errors.map { "Header '$key' error: $it" })
                     }
                 }
                 if (definition.httpConfig.timeoutMs <= 0) {

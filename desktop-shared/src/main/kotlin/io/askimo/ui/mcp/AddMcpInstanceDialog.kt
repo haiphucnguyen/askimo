@@ -295,6 +295,39 @@ fun addMcpInstanceDialog(
             tonalElevation = 8.dp,
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 32.dp, top = 24.dp, bottom = 0.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.small),
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (existingInstance != null) {
+                                "mcp.instance.edit.dialog.title"
+                            } else {
+                                "mcp.instance.add.dialog.title"
+                            },
+                        ),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = stringResource(
+                            if (existingInstance != null) {
+                                "mcp.instance.edit.dialog.description"
+                            } else {
+                                "mcp.instance.add.dialog.description"
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.medium))
+
                 // Scrollable content
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     val scrollState = rememberScrollState()
@@ -302,37 +335,10 @@ fun addMcpInstanceDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 24.dp, end = 32.dp, top = 24.dp, bottom = 16.dp)
+                            .padding(start = 24.dp, end = 32.dp, top = 0.dp, bottom = 16.dp)
                             .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(Spacing.large),
                     ) {
-                        // Title
-                        Text(
-                            text = stringResource(
-                                if (existingInstance != null) {
-                                    "mcp.instance.edit.dialog.title"
-                                } else {
-                                    "mcp.instance.add.dialog.title"
-                                },
-                            ),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = stringResource(
-                                if (existingInstance != null) {
-                                    "mcp.instance.edit.dialog.description"
-                                } else {
-                                    "mcp.instance.add.dialog.description"
-                                },
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
-
                         // Instance Name
                         OutlinedTextField(
                             value = instanceName,

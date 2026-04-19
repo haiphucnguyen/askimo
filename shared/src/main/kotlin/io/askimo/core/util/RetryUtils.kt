@@ -4,6 +4,7 @@
  */
 package io.askimo.core.util
 
+import dev.langchain4j.service.IllegalConfigurationException
 import io.askimo.core.logging.logger
 import kotlin.reflect.KClass
 
@@ -79,6 +80,8 @@ object RetryPresets {
             delayIncrement = 1000,
             retryCondition = { exception ->
                 when {
+                    exception is IllegalConfigurationException -> false
+
                     exception is IllegalArgumentException &&
                         exception.message?.contains("Model returned empty output") == true -> true
 
@@ -115,8 +118,12 @@ object RetryPresets {
             initialDelayMs = 1000,
             delayIncrement = 500,
             retryCondition = { exception ->
-                exception.javaClass.name.contains("streaming", ignoreCase = true) ||
-                    exception.javaClass.name.startsWith("dev.langchain4j")
+                if (exception is IllegalConfigurationException) {
+                    false
+                } else {
+                    exception.javaClass.name.contains("streaming", ignoreCase = true) ||
+                        exception.javaClass.name.startsWith("dev.langchain4j")
+                }
             },
             onRetry = { attempt, maxAttempts, exception, delayMs ->
                 log.debug("⚠️ Streaming error: ${exception.message} (attempt $attempt/$maxAttempts). Retrying in ${delayMs}ms...")

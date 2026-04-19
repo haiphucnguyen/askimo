@@ -90,24 +90,25 @@ fun mcpServerTemplatesSection() {
                     .padding(start = 24.dp, top = 24.dp, bottom = 24.dp, end = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(Spacing.large),
             ) {
+                // Page title — consistent with all other settings sections
+                Text(
+                    text = stringResource("mcp.instances.title"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = Spacing.small),
+                )
+
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column {
-                            Text(
-                                text = stringResource("mcp.instances.title"),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-                            Text(
-                                text = stringResource("mcp.instances.description"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            )
-                        }
+                        Text(
+                            text = stringResource("mcp.instances.description"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        )
                         linkButton(
                             onClick = {
                                 try {
@@ -312,7 +313,7 @@ private fun mcpInstanceCard(
                 Text(
                     text = stringResource("mcp.instance.server.label", instance.serverId),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
                 )
             }
 

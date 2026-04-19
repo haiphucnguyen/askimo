@@ -16,6 +16,7 @@ import io.askimo.core.config.RetryConfig
 import io.askimo.core.config.ThrottleConfig
 import io.askimo.core.context.AppContextParams
 import io.askimo.core.context.ParamKey
+import io.askimo.core.providers.AskimoPromptTemplateFactory
 import io.askimo.core.providers.HasApiKey
 import io.askimo.core.providers.HasBaseUrl
 import io.askimo.core.providers.NoopProviderSettings
@@ -44,6 +45,13 @@ class AskimoFeature : Feature {
     override fun beforeAnalysis(access: Feature.BeforeAnalysisAccess) {
         // Register Askimo tool classes invoked via reflection by your ToolRegistry
         registerAllDeclared(LocalFsTools::class.java, GitTools::class.java)
+
+        // Register AskimoPromptTemplateFactory for ServiceLoader + reflection
+        registerAllDeclared(
+            AskimoPromptTemplateFactory::class.java,
+            AskimoPromptTemplateFactory.AskimoTemplate::class.java,
+        )
+        RuntimeReflection.registerForReflectiveInstantiation(AskimoPromptTemplateFactory::class.java)
 
         // Register configuration classes for reflection
         registerAllDeclared(
