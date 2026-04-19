@@ -103,7 +103,7 @@ internal object PlanPdfExporter {
         document.close()
 
         val bytes = bos.toByteArray()
-        if (bytes.isEmpty()) throw IllegalStateException("PDF rendering produced 0 bytes")
+        if (bytes.isEmpty()) error("PDF rendering produced 0 bytes")
         FileOutputStream(targetFile).use { it.write(bytes) }
         log.debug("PDF written: {} bytes -> {}", bytes.size, targetFile.absolutePath)
     }

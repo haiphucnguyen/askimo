@@ -74,7 +74,7 @@ fun aboutDialog(
                             onClick = {
                                 try {
                                     Desktop.getDesktop().browse(URI("https://askimo.chat"))
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     // Silently fail if browser cannot be opened
                                 }
                             },

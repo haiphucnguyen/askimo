@@ -4,6 +4,7 @@ include("cli")
 include("shared")
 include("desktop")
 include("desktop-shared")
+include("detekt-rules")
 
 dependencyResolutionManagement {
     repositories {

@@ -475,8 +475,6 @@ fun providerSelectionDialog(
                                                         colors = AppComponents.outlinedTextFieldColors(),
                                                     )
                                                 }
-
-                                                else -> {}
                                             }
                                         }
                                     }

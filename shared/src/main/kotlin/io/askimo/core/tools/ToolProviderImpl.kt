@@ -71,7 +71,7 @@ class ToolProviderImpl(
                             val clazz = Class.forName(className as String)
                             val kotlinClass = clazz.kotlin
                             val objectInstance = kotlinClass.objectInstance
-                                ?: throw IllegalStateException("Class '$className' is not a Kotlin object")
+                                ?: error("Class '$className' is not a Kotlin object")
                             val toolMethod = clazz.methods.find { it.name == methodName }
                                 ?: throw NoSuchMethodException("Method '$methodName' not found in class '$className'")
 

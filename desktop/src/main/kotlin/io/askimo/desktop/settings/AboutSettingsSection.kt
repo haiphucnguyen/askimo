@@ -326,7 +326,7 @@ private fun openUrl(url: String) {
         if (Desktop.isDesktopSupported()) {
             Desktop.getDesktop().browse(URI(url))
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         // Silently fail if browser cannot be opened
     }
 }

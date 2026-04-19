@@ -192,7 +192,7 @@ class GitignoreParser(private val rootPath: Path) {
     fun shouldIgnore(path: Path, isDirectory: Boolean): Boolean {
         val absoluteRelativePath = try {
             rootPath.relativize(path).toString().replace('\\', '/')
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
 
@@ -204,7 +204,7 @@ class GitignoreParser(private val rootPath: Path) {
             // Get the directory where this .gitignore is located (relative to root)
             val patternDir = try {
                 rootPath.relativize(pattern.gitignorePath).toString().replace('\\', '/')
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 ""
             }
 

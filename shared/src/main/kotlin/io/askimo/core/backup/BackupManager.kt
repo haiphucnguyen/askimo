@@ -79,9 +79,7 @@ object BackupManager {
      * @throws Exception if restore fails
      */
     fun importBackup(backupFile: Path, createSafetyBackup: Boolean = true) {
-        if (!Files.exists(backupFile)) {
-            throw IllegalArgumentException("Backup file not found: $backupFile")
-        }
+        require(Files.exists(backupFile)) { "Backup file not found: $backupFile" }
 
         if (createSafetyBackup) {
             log.info("Creating safety backup before import...")

@@ -39,7 +39,7 @@ fun splashScreen(isConnecting: Boolean = false) {
     val bitmap = remember {
         Image.makeFromEncoded(
             object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
-                ?: throw IllegalStateException("askimo_512.png not found"),
+                ?: error("askimo_512.png not found"),
         ).toComposeImageBitmap()
     }
 

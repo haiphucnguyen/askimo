@@ -88,6 +88,7 @@ import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
@@ -115,7 +116,6 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.util.Base64
 import javax.imageio.ImageIO
-import javax.swing.SwingUtilities
 import kotlin.time.Duration.Companion.milliseconds
 import org.commonmark.node.Text as MarkdownText
 
@@ -278,7 +278,7 @@ private fun renderParagraph(paragraph: Paragraph) {
                     if (content.isNotBlank() && isMathContent) {
                         // Check for overlap with existing matches
                         val overlaps = latexMatches.any { (existingStart, existingEnd, _) ->
-                            start in existingStart until existingEnd || existingStart in start until (j + 2)
+                            start in existingStart until existingEnd || existingStart in start until j + 2
                         }
 
                         if (!overlaps) {
@@ -868,16 +868,16 @@ private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null
 /**
  * Reusable download button overlay for images.
  * Styled to match the copy button from code blocks.
+ * [onClick] is a plain lambda — the caller is responsible for launching any coroutine work.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun imageDownloadButton(
     isVisible: Boolean,
-    onDownload: suspend () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (isVisible) {
-        val coroutineScope = rememberCoroutineScope()
         Box(
             modifier = modifier
                 .background(
@@ -885,9 +885,7 @@ private fun imageDownloadButton(
                     shape = MaterialTheme.shapes.small,
                 )
                 .pointerHoverIcon(PointerIcon.Hand)
-                .clickable {
-                    coroutineScope.launch(Dispatchers.IO) { onDownload() }
-                }
+                .clickable { onClick() }
                 .padding(6.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -907,6 +905,8 @@ private fun renderImage(image: Image) {
     val context = LocalPlatformContext.current
     val destination = image.destination
     var isHovered by remember { mutableStateOf(false) }
+    // Scope lives as long as this composable, so downloads survive the hover button disappearing
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -953,7 +953,7 @@ private fun renderImage(image: Image) {
 
                         imageDownloadButton(
                             isVisible = isHovered,
-                            onDownload = { downloadImage(imageData = imageBytes) },
+                            onClick = { coroutineScope.launch { downloadImage(imageData = imageBytes) } },
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(start = 6.dp, bottom = 6.dp),
@@ -988,7 +988,7 @@ private fun renderImage(image: Image) {
 
                 imageDownloadButton(
                     isVisible = isHovered,
-                    onDownload = { downloadImage(imageUrl = destination) },
+                    onClick = { coroutineScope.launch { downloadImage(imageUrl = destination) } },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 6.dp, bottom = 6.dp),
@@ -1251,8 +1251,8 @@ private fun buildInlineContent(
                                 if (content.contains(Regex("[a-zA-Z\\\\^_{}=+\\-*/()]"))) {
                                     // Check for overlap
                                     val overlaps = mathRanges.any { (range, _, _) ->
-                                        start in range || (j + 1) in range ||
-                                            range.first in start..(j + 1) || range.last in start..(j + 1)
+                                        start in range || j + 1 in range ||
+                                            range.first in start..j + 1 || range.last in start..j + 1
                                     }
 
                                     if (!overlaps) {
@@ -1635,113 +1635,99 @@ private fun extractVideoUrl(paragraph: Paragraph): String? {
  * Parse chart data from JSON code block or Mermaid diagram.
  * Returns MermaidChartData if the JSON/Mermaid is a valid diagram specification, null otherwise.
  */
-private fun parseChartData(code: String, language: String?): MermaidChartData? {
-    // Handle Mermaid diagrams
-    if (language?.lowercase() == "mermaid") {
+private fun parseChartData(code: String, language: String?): MermaidChartData? = when (language?.lowercase()) {
+    "mermaid" -> {
         val cleanedCode = code.trim()
         if (cleanedCode.isEmpty()) {
-            return null
+            null
+        } else {
+            val title = when {
+                cleanedCode.contains("sequenceDiagram") -> "Sequence Diagram"
+                cleanedCode.contains("classDiagram") -> "Class Diagram"
+                cleanedCode.contains("stateDiagram") -> "State Diagram"
+                cleanedCode.contains("erDiagram") -> "ER Diagram"
+                cleanedCode.contains("gantt") -> "Gantt Chart"
+                cleanedCode.contains("pie") -> "Pie Chart"
+                cleanedCode.contains("journey") -> "User Journey"
+                cleanedCode.startsWith("graph") || cleanedCode.startsWith("flowchart") -> "Flowchart"
+                else -> "Mermaid Diagram"
+            }
+            MermaidChartData(title = title, diagram = cleanedCode, theme = "default")
         }
+    }
 
-        // Extract title from the diagram if possible, or use a default
-        val title = when {
-            cleanedCode.contains("sequenceDiagram") -> "Sequence Diagram"
-            cleanedCode.contains("classDiagram") -> "Class Diagram"
-            cleanedCode.contains("stateDiagram") -> "State Diagram"
-            cleanedCode.contains("erDiagram") -> "ER Diagram"
-            cleanedCode.contains("gantt") -> "Gantt Chart"
-            cleanedCode.contains("pie") -> "Pie Chart"
-            cleanedCode.contains("journey") -> "User Journey"
-            cleanedCode.startsWith("graph") || cleanedCode.startsWith("flowchart") -> "Flowchart"
-            else -> "Mermaid Diagram"
+    "json" -> {
+        val cleanedCode = code.trim()
+            .replace("```json", "")
+            .replace("```", "")
+            .trim()
+        if (cleanedCode.isEmpty() || cleanedCode.length < 20) {
+            null
+        } else {
+            try {
+                json.decodeFromString<MermaidChartData>(cleanedCode)
+            } catch (e: Exception) {
+                log.trace("Failed to parse Mermaid diagram data (may be incomplete): ${e.message}")
+                null
+            }
         }
-
-        return MermaidChartData(
-            title = title,
-            diagram = cleanedCode,
-            theme = "default",
-        )
     }
 
-    // Handle JSON charts
-    if (language != "json") return null
-
-    // Clean and normalize the JSON
-    val cleanedCode = code.trim()
-        .replace("```json", "")
-        .replace("```", "")
-        .trim()
-
-    // Skip if the JSON looks obviously incomplete
-    if (cleanedCode.isEmpty() || cleanedCode.length < 20) {
-        return null
-    }
-
-    // Simply try to parse the JSON - if it's valid and complete, it will parse successfully
-    return try {
-        json.decodeFromString<MermaidChartData>(cleanedCode)
-    } catch (e: Exception) {
-        // JSON is either incomplete (still streaming) or invalid
-        log.trace("Failed to parse Mermaid diagram data (may be incomplete): ${e.message}")
-        null
-    }
+    else -> null
 }
 
 /**
  * Downloads an image using a file chooser dialog.
  * Supports both byte arrays (base64 images) and URLs.
  */
-private fun downloadImage(
+private suspend fun downloadImage(
     imageData: ByteArray? = null,
     imageUrl: String? = null,
     defaultFileName: String = "image.png",
 ) {
-    SwingUtilities.invokeLater {
-        kotlinx.coroutines.runBlocking {
-            try {
-                val (extension, fileName) = when {
-                    imageUrl != null -> {
-                        val urlFileName = imageUrl.substringAfterLast('/').substringBefore('?').ifEmpty { defaultFileName }
-                        val ext = urlFileName.substringAfterLast('.', "png")
-                        ext to urlFileName
-                    }
+    try {
+        val (extension, fileName) = if (imageUrl != null) {
+            val urlFileName = imageUrl.substringAfterLast('/').substringBefore('?').ifEmpty { defaultFileName }
+            val ext = urlFileName.substringAfterLast('.', "png")
+            ext to urlFileName
+        } else {
+            "png" to defaultFileName
+        }
 
-                    else -> "png" to defaultFileName
+        // FileKit.openFileSaver handles its own thread dispatch internally
+        val file = FileDialogUtils.pickSavePath(
+            suggestedName = fileName.substringBeforeLast('.', fileName),
+            extension = extension,
+            title = "Save Image",
+        ) ?: run {
+            log.debug("Save image dialog cancelled")
+            return
+        }
+
+        // Write the file on an IO thread so we never block the EDT
+        withContext(Dispatchers.IO) {
+            when {
+                imageData != null -> {
+                    file.writeBytes(imageData)
+                    log.info("Image saved to: {}", file.absolutePath)
                 }
 
-                val file = FileDialogUtils.pickSavePath(
-                    suggestedName = fileName.substringBeforeLast('.', fileName),
-                    extension = extension,
-                    title = "Save Image",
-                ) ?: run {
-                    log.debug("Save image dialog cancelled")
-                    return@runBlocking
-                }
-
-                // Save the image based on source type
-                when {
-                    imageData != null -> {
-                        file.writeBytes(imageData)
-                        log.info("Image saved to: {}", file.absolutePath)
-                    }
-
-                    imageUrl != null -> {
-                        val url = URI(imageUrl).toURL()
-                        url.openStream().use { input ->
-                            file.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
+                imageUrl != null -> {
+                    val url = URI(imageUrl).toURL()
+                    url.openStream().use { input ->
+                        file.outputStream().use { output ->
+                            input.copyTo(output)
                         }
-                        log.info("Image downloaded and saved to: {}", file.absolutePath)
                     }
-
-                    else -> {
-                        log.error("No image data or URL provided")
-                    }
+                    log.info("Image downloaded and saved to: {}", file.absolutePath)
                 }
-            } catch (e: Exception) {
-                log.error("Failed to save image", e)
+
+                else -> {
+                    log.error("No image data or URL provided")
+                }
             }
         }
+    } catch (e: Exception) {
+        log.error("Failed to save image", e)
     }
 }

@@ -464,7 +464,6 @@ private fun sessionCard(
                         onDismissRequest = { showMenu = false },
                     ) {
                         SessionActionMenu.projectViewMenu(
-                            sessionId = session.id,
                             currentProjectId = currentProject.id,
                             currentProjectName = currentProject.name,
                             availableProjects = allProjects,

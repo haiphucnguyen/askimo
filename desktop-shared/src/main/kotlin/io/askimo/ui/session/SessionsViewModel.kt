@@ -42,6 +42,8 @@ class SessionsViewModel(
     private val log = logger<SessionsViewModel>()
     companion object {
         const val MAX_SIDEBAR_SESSIONS = 50
+
+        const val MAX_FILENAME_LENGTH = 255
     }
 
     var pagedSessions by mutableStateOf<Pageable<ChatSession>?>(null)
@@ -473,7 +475,7 @@ class SessionsViewModel(
                 val file = File(fullPath)
                 val filename = file.name
 
-                if (filename.length > 255) {
+                if (filename.length > MAX_FILENAME_LENGTH) {
                     errorMessage = LocalizationManager.getString("file.name.too.long")
                     return@launch
                 }

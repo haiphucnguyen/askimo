@@ -162,7 +162,7 @@ object LocalizationManager {
                 // (which adds thousand separators like "2,025" instead of "2025")
                 val stringArgs = args.map { it.toString() }.toTypedArray()
                 MessageFormat(message, currentLocale).format(stringArgs)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 message
             }
         }
@@ -233,7 +233,7 @@ object LocalizationManager {
                     properties.load(reader)
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently ignore missing files — not all layers are required
         }
     }

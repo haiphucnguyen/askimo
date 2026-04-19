@@ -168,12 +168,12 @@ class LocalFsToolsTest {
         assertEquals(3L, rPage1["count"])
         val page1 = rPage1["files"] as List<*>
         assertEquals(2, page1.size)
-        val cursor = rPage1["nextCursor"] as String?
+        val cursor = rPage1["nextCursor"] as? String
         assertNotNull(cursor)
         val rPage2 = parseToolResponse(LocalFsTools.filesByType(tmp.toString(), category = "image", recursive = true, limit = 2, cursor = cursor))
         val page2 = rPage2["files"] as List<*>
         assertEquals(1, page2.size)
-        val nextCursor2 = rPage2["nextCursor"] as String?
+        val nextCursor2 = rPage2["nextCursor"] as? String
         assertTrue(nextCursor2 == null || nextCursor2 == "", "No next cursor after final page")
     }
 

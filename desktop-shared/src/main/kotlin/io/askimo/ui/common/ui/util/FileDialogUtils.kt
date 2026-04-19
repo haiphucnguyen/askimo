@@ -201,12 +201,11 @@ object FileDialogUtils {
      *
      * @param suggestedName Default file name shown in the dialog (without extension).
      * @param extension     File extension without dot, e.g. `"pdf"`.
-     * @param title         Dialog title (kept for call-site compatibility; not passed to FileKit 0.13+).
      */
     suspend fun pickSavePath(
         suggestedName: String,
         extension: String,
-        title: String,
+        title: String = "",
     ): File? = FileKit.openFileSaver(
         suggestedName = suggestedName,
         extension = extension,

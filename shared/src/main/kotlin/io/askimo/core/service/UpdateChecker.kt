@@ -101,7 +101,7 @@ class UpdateChecker(
 
     private fun formatReleaseDate(isoDate: String): String = try {
         isoDate.substringBefore('T')
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         isoDate
     }
 

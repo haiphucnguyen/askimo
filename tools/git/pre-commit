@@ -16,10 +16,22 @@ fi
 git add -u
 
 echo "✅ Spotless formatting applied."
+
+echo "🔍 Running detekt static analysis..."
+./gradlew detekt
+
+# Check if detekt failed (errors found)
+if [ $? -ne 0 ]; then
+    echo "❌ Detekt found errors! Please fix them before committing."
+    echo "💡 Open the HTML report for details (path shown above)."
+    exit 1
+fi
+
+echo "✅ Detekt passed."
 EOF
 
 # Make the hook executable
 chmod +x .git/hooks/pre-commit
 
 echo "✅ Pre-commit hook installed successfully!"
-echo "📝 The hook will run './gradlew spotlessApply' before each commit."
+echo "📝 The hook will run './gradlew spotlessApply' and './gradlew detekt' before each commit."

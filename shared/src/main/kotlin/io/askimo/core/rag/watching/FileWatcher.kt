@@ -147,7 +147,7 @@ class FileWatcher(
                 } catch (e: InterruptedException) {
                     log.debug("File watcher interrupted for project $projectId")
                     break
-                } catch (e: ClosedWatchServiceException) {
+                } catch (_: ClosedWatchServiceException) {
                     // WatchService was closed (project deleted or stopped watching)
                     log.debug("File watcher closed for project $projectId")
                     break
