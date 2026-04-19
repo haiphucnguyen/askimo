@@ -113,6 +113,7 @@ fun projectView(
     // Local UI state
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var attachments by remember { mutableStateOf<List<FileAttachmentDTO>>(emptyList()) }
+    var currentDisabledServerIds by remember { mutableStateOf(emptySet<String>()) }
     var showProjectMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddReferenceMaterialDialog by remember { mutableStateOf(false) }
@@ -295,13 +296,14 @@ fun projectView(
                         onInputTextChange = { inputText = it },
                         attachments = attachments,
                         onAttachmentsChange = { attachments = it },
-                        onSendMessage = { mode, disabledServerIds ->
+                        onSendMessage = { mode ->
                             if (inputText.text.isNotBlank()) {
-                                onStartChat(currentProject.id, mode, inputText.text, attachments, disabledServerIds)
+                                onStartChat(currentProject.id, mode, inputText.text, attachments, currentDisabledServerIds)
                                 inputText = TextFieldValue("")
                                 attachments = emptyList()
                             }
                         },
+                        onDisabledServerIdsChange = { currentDisabledServerIds = it },
                         sessionId = currentProject.id,
                         placeholder = stringResource("project.new.chat.placeholder", currentProject.name),
                         modifier = Modifier.padding(top = 16.dp),

@@ -391,14 +391,14 @@ class ChatViewModel(
      * Send or edit a chat message.
      * This method handles both normal message sending and edit mode.
      *
-     * @param mode The creation mode (Chat, Image, etc.)
+     * @param creationMode The creation mode (Chat, Image, etc.)
      * @param message The message text
      * @param attachments Optional list of file attachments
      * @param editingMessage The message being edited (null for normal send)
      * @return The session ID after sending (or null if no session)
      */
     override fun sendOrEditMessage(
-        mode: CreationMode,
+        creationMode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO>,
         editingMessage: ChatMessageDTO?,
@@ -413,10 +413,10 @@ class ChatViewModel(
 
             scope.launch {
                 editMessage(originalMessageId, message, attachments)
-                sendMessage(projectId = project?.id, mode, message, attachments, disabledServerIds)
+                sendMessage(projectId = project?.id, creationMode, message, attachments, disabledServerIds)
             }
         } else {
-            sendMessage(projectId = project?.id, mode, message, attachments, disabledServerIds)
+            sendMessage(projectId = project?.id, creationMode, message, attachments, disabledServerIds)
         }
 
         return currentSessionId
@@ -428,7 +428,7 @@ class ChatViewModel(
      *
      * @param messageId The AI message ID to retry
      */
-    override fun retryMessage(messageId: String) {
+    override fun retryMessage(messageId: String, disabledServerIds: Set<String>) {
         scope.launch {
             try {
                 // 1. Find the AI message to retry
@@ -495,10 +495,12 @@ class ChatViewModel(
                     try {
                         val threadId = sessionManager.sendMessage(
                             projectId = project?.id,
-                            mode = CreationMode.Chat, // Retry should always be in Chat mode
+                            mode = CreationMode.Chat,
                             sessionId = sessionId,
                             userMessage = userMessage,
                             willSaveUserMessage = false,
+                            disabledServerIds = disabledServerIds,
+                            directiveId = selectedDirective,
                         )
 
                         if (threadId == null) {

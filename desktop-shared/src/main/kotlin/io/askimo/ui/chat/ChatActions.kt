@@ -23,5 +23,5 @@ interface ChatActions {
     fun previousSearchResult()
     fun setDirective(directiveId: String?)
     fun updateAIMessage(messageId: String, newContent: String)
-    fun retryMessage(messageId: String)
+    fun retryMessage(messageId: String, disabledServerIds: Set<String> = emptySet())
 }

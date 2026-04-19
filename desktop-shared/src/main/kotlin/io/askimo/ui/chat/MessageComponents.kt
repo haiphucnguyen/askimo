@@ -130,6 +130,8 @@ fun messageList(
             when (group) {
                 is MessageGroup.ActiveMessage -> {
                     val isActiveResult = searchQuery.isNotBlank() && messageIndex == currentSearchResultIndex
+                    // A message is streaming when it's the last AI message still without a persisted ID
+                    val isStreamingMessage = !group.message.isUser && group.message.id == null
                     messageBubble(
                         message = group.message,
                         searchQuery = searchQuery,
@@ -147,6 +149,7 @@ fun messageList(
                             retryMessageId = messageId
                             showRetryConfirmDialog = true
                         },
+                        isStreaming = isStreamingMessage,
                     )
                     isFirstMessage = false
                     messageIndex++
@@ -239,6 +242,7 @@ fun messageBubble(
     allMessages: List<ChatMessageDTO> = emptyList(),
     onShowRetryConfirmDialog: ((String) -> Unit)? = null,
     isOutdatedMessage: Boolean = false,
+    isStreaming: Boolean = false,
 ) {
     Box(
         modifier = Modifier
@@ -270,6 +274,7 @@ fun messageBubble(
                 allMessages = allMessages,
                 onShowRetryConfirmDialog = onShowRetryConfirmDialog,
                 isOutdatedMessage = isOutdatedMessage,
+                isStreaming = isStreaming,
             )
         }
     }
@@ -320,7 +325,7 @@ private fun userMessageBubble(
                         .then(
                             if (isClickable) {
                                 Modifier
-                                    .clickable { onMessageClick!!.invoke(message.id!!, message.timestamp!!) }
+                                    .clickable { onMessageClick.invoke(message.id!!, message.timestamp!!) }
                                     .pointerHoverIcon(PointerIcon.Hand)
                             } else {
                                 Modifier
@@ -511,6 +516,7 @@ private fun aiMessageBubble(
     allMessages: List<ChatMessageDTO> = emptyList(),
     onShowRetryConfirmDialog: ((String) -> Unit)? = null,
     isOutdatedMessage: Boolean = false,
+    isStreaming: Boolean = false,
 ) {
     val clipboardManager = LocalClipboardManager.current
     var showCopyFeedback by remember { mutableStateOf(false) }
@@ -560,7 +566,7 @@ private fun aiMessageBubble(
                             .then(
                                 if (isClickable) {
                                     Modifier
-                                        .clickable { onMessageClick!!.invoke(message.id!!, message.timestamp!!) }
+                                        .clickable { onMessageClick.invoke(message.id!!, message.timestamp!!) }
                                         .pointerHoverIcon(PointerIcon.Hand)
                                 } else {
                                     Modifier
@@ -597,6 +603,7 @@ private fun aiMessageBubble(
                                         markdown = message.content,
                                         modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
                                         viewportTopY = viewportTopY,
+                                        isStreaming = isStreaming,
                                         onRunRequest = { cmd, lang -> pendingRunRequest = Pair(cmd, lang) },
                                     )
                                 }

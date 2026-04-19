@@ -131,7 +131,7 @@ fun chatInputField(
     onInputTextChange: (TextFieldValue) -> Unit,
     attachments: List<FileAttachmentDTO>,
     onAttachmentsChange: (List<FileAttachmentDTO>) -> Unit,
-    onSendMessage: (CreationMode, Set<String>) -> Unit,
+    onSendMessage: (CreationMode) -> Unit,
     isLoading: Boolean = false,
     isThinking: Boolean = false,
     onStopResponse: () -> Unit = {},
@@ -140,6 +140,7 @@ fun chatInputField(
     onCancelEdit: () -> Unit = {},
     sessionId: String? = null,
     placeholder: String = stringResource("chat.input.placeholder"),
+    onDisabledServerIdsChange: ((Set<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val inputFocusRequester = remember { FocusRequester() }
@@ -151,6 +152,12 @@ fun chatInputField(
     // Session-scoped set of server IDs disabled by the user via the tools popup.
     // Defaults to built-in tools disabled. Passed directly to sendMessage at send time.
     var disabledServerIds by remember(sessionId) { mutableStateOf(setOf(ToolRegistry.BUILTIN_SERVER_ID)) }
+
+    // Notify caller whenever the user changes the disabled server selection,
+    // so ChatView always has the live value available for sending message.
+    LaunchedEffect(disabledServerIds) {
+        onDisabledServerIdsChange?.invoke(disabledServerIds)
+    }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
     val defaultTextFieldHeight = 60.dp
@@ -438,7 +445,7 @@ fun chatInputField(
 
                                         KeyMapManager.AppShortcut.SEND_MESSAGE -> {
                                             if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                                onSendMessage(creationMode, disabledServerIds)
+                                                onSendMessage(creationMode)
                                             }
                                             true
                                         }
@@ -528,7 +535,7 @@ fun chatInputField(
                                 },
                             ) {
                                 IconButton(
-                                    onClick = { onSendMessage(creationMode, disabledServerIds) },
+                                    onClick = { onSendMessage(creationMode) },
                                     enabled = inputText.text.isNotBlank(),
                                     colors = AppComponents.primaryIconButtonColors(),
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
