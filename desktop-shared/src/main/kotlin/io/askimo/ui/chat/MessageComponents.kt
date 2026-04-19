@@ -240,311 +240,203 @@ fun messageBubble(
     onShowRetryConfirmDialog: ((String) -> Unit)? = null,
     isOutdatedMessage: Boolean = false,
 ) {
-    val clipboardManager = LocalClipboardManager.current
-    var isHovered by remember { mutableStateOf(false) }
-    // Holds a pending run request from a code block — dialog shown outside SelectionContainer
-    var pendingRunRequest by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (addTopPadding) {
-                    Modifier.padding(top = 20.dp)
-                } else {
-                    Modifier
-                },
-            ),
+            .then(if (addTopPadding) Modifier.padding(top = 20.dp) else Modifier),
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
-                .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+        if (message.isUser) {
+            userMessageBubble(
+                message = message,
+                searchQuery = searchQuery,
+                isActiveSearchResult = isActiveSearchResult,
+                onMessageClick = onMessageClick,
+                onEditMessage = onEditMessage,
+                onDownloadAttachment = onDownloadAttachment,
+                userAvatarPainter = userAvatarPainter,
+                isOutdatedMessage = isOutdatedMessage,
+            )
+        } else {
+            aiMessageBubble(
+                message = message,
+                searchQuery = searchQuery,
+                isActiveSearchResult = isActiveSearchResult,
+                onMessageClick = onMessageClick,
+                onEditMessage = onEditMessage,
+                onDownloadAttachment = onDownloadAttachment,
+                aiAvatarPainter = aiAvatarPainter,
+                onRetryMessage = onRetryMessage,
+                viewportTopY = viewportTopY,
+                allMessages = allMessages,
+                onShowRetryConfirmDialog = onShowRetryConfirmDialog,
+                isOutdatedMessage = isOutdatedMessage,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun userMessageBubble(
+    message: ChatMessageDTO,
+    searchQuery: String = "",
+    isActiveSearchResult: Boolean = false,
+    onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
+    onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
+    onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
+    userAvatarPainter: BitmapPainter? = null,
+    isOutdatedMessage: Boolean = false,
+) {
+    val clipboardManager = LocalClipboardManager.current
+    var isHovered by remember { mutableStateOf(false) }
+    var showCopyFeedback by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+    ) {
+        val maxUserBubbleWidth = when {
+            maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
+            maxWidth < 1200.dp -> (maxWidth * 0.70f).coerceAtMost(700.dp)
+            else -> (maxWidth * 0.55f).coerceAtMost(850.dp)
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.End,
         ) {
-            // Only applies to user message bubbles — AI messages use full width
-            val maxUserBubbleWidth = when {
-                maxWidth < 600.dp -> (maxWidth * 0.9f).coerceAtLeast(200.dp)
-                maxWidth < 1200.dp -> (maxWidth * 0.70f).coerceAtMost(700.dp)
-                else -> (maxWidth * 0.55f).coerceAtMost(850.dp)
-            }
-
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start,
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Top,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    if (!message.isUser) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape,
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                    shape = CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (aiAvatarPainter != null) {
-                                Icon(
-                                    painter = aiAvatarPainter,
-                                    contentDescription = "AI",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
-                    Box {
-                        if (message.isUser) {
-                            Card(
-                                modifier = Modifier
-                                    .widthIn(max = maxUserBubbleWidth)
-                                    .then(
-                                        if (isClickable) {
-                                            Modifier
-                                                .clickable {
-                                                    onMessageClick.invoke(message.id!!, message.timestamp!!)
-                                                }
-                                                .pointerHoverIcon(PointerIcon.Hand)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isOutdatedMessage) {
-                                        AppComponents.userMessageBackground().copy(alpha = 0.5f)
-                                    } else {
-                                        AppComponents.userMessageBackground()
-                                    },
-                                    contentColor = if (isOutdatedMessage) {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                    } else {
-                                        AppComponents.userMessageContentColor()
-                                    },
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            ) {
-                                Column {
-                                    if (message.attachments.isNotEmpty()) {
-                                        Column(
-                                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                                        ) {
-                                            message.attachments.forEach { attachment ->
-                                                fileAttachmentChip(
-                                                    attachment = attachment,
-                                                    onDownload = onDownloadAttachment,
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    SelectionContainer {
-                                        if (searchQuery.isNotBlank()) {
-                                            Text(
-                                                text = highlightSearchText(
-                                                    text = message.content,
-                                                    query = searchQuery,
-                                                    highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                                                    isActiveResult = isActiveSearchResult,
-                                                    activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
-                                                ),
-                                                modifier = Modifier.padding(12.dp),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        } else {
-                                            Text(
-                                                text = message.content,
-                                                modifier = Modifier.padding(12.dp),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        }
-                                    }
-
-                                    if (isOutdatedMessage) {
-                                        Text(
-                                            text = stringResource("outdated.label"),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            fontStyle = FontStyle.Italic,
-                                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
-                                        )
-                                    }
-                                }
-                            }
+                Card(
+                    modifier = Modifier
+                        .widthIn(max = maxUserBubbleWidth)
+                        .then(
+                            if (isClickable) {
+                                Modifier
+                                    .clickable { onMessageClick!!.invoke(message.id!!, message.timestamp!!) }
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                            } else {
+                                Modifier
+                            },
+                        ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isOutdatedMessage) {
+                            AppComponents.userMessageBackground().copy(alpha = 0.5f)
                         } else {
-                            val aiContentColor = if (isOutdatedMessage) {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                            CompositionLocalProvider(LocalContentColor provides aiContentColor) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .then(
-                                            if (isClickable) {
-                                                Modifier
-                                                    .clickable {
-                                                        onMessageClick.invoke(message.id!!, message.timestamp!!)
-                                                    }
-                                                    .pointerHoverIcon(PointerIcon.Hand)
-                                            } else {
-                                                Modifier
-                                            },
-                                        ),
-                                ) {
-                                    Column {
-                                        if (message.attachments.isNotEmpty()) {
-                                            Column(
-                                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                                            ) {
-                                                message.attachments.forEach { attachment ->
-                                                    fileAttachmentChip(
-                                                        attachment = attachment,
-                                                        onDownload = onDownloadAttachment,
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        SelectionContainer {
-                                            if (searchQuery.isNotBlank()) {
-                                                Text(
-                                                    text = highlightSearchText(
-                                                        text = message.content,
-                                                        query = searchQuery,
-                                                        highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                                                        isActiveResult = isActiveSearchResult,
-                                                        activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
-                                                    ),
-                                                    modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                )
-                                            } else {
-                                                markdownText(
-                                                    markdown = message.content,
-                                                    modifier = Modifier.padding(
-                                                        start = 12.dp,
-                                                        end = 48.dp,
-                                                        top = 12.dp,
-                                                        bottom = 12.dp,
-                                                    ),
-                                                    viewportTopY = viewportTopY,
-                                                    onRunRequest = { cmd, lang ->
-                                                        pendingRunRequest = Pair(cmd, lang)
-                                                    },
-                                                )
-                                            }
-                                        }
-
-                                        if (isOutdatedMessage) {
-                                            Text(
-                                                text = stringResource("outdated.label"),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                fontStyle = FontStyle.Italic,
-                                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Show retry icon for failed AI messages at bottom-right corner
-                        if (message.isFailed && !message.isUser && message.id != null && onRetryMessage != null) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(bottom = 4.dp, end = 4.dp),
+                            AppComponents.userMessageBackground()
+                        },
+                        contentColor = if (isOutdatedMessage) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        } else {
+                            AppComponents.userMessageContentColor()
+                        },
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                ) {
+                    Column {
+                        if (message.attachments.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                themedTooltip(
-                                    text = stringResource("action.retry"),
-                                ) {
-                                    IconButton(
-                                        onClick = { onRetryMessage(message.id!!) },
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .pointerHoverIcon(PointerIcon.Hand),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = stringResource("action.retry"),
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
+                                message.attachments.forEach { attachment ->
+                                    fileAttachmentChip(attachment = attachment, onDownload = onDownloadAttachment)
                                 }
                             }
                         }
-                    }
 
-                    if (message.isUser) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape,
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                    shape = CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (userAvatarPainter != null) {
-                                Image(
-                                    painter = userAvatarPainter,
-                                    contentDescription = "User",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape),
+                        SelectionContainer {
+                            if (searchQuery.isNotBlank()) {
+                                Text(
+                                    text = highlightSearchText(
+                                        text = message.content,
+                                        query = searchQuery,
+                                        highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                                        isActiveResult = isActiveSearchResult,
+                                        activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                                    ),
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             } else {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "User",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(20.dp),
+                                Text(
+                                    text = message.content,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
+                        }
+
+                        if (isOutdatedMessage) {
+                            Text(
+                                text = stringResource("outdated.label"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                fontStyle = FontStyle.Italic,
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
+                            )
                         }
                     }
                 }
 
-                // AI message action controls - positioned in the gap below the message
-                // Always show for AI messages (at minimum, copy button is always available)
-                if (!message.isUser) {
-                    var showCopyFeedback by remember { mutableStateOf(false) }
-                    val coroutineScope = rememberCoroutineScope()
+                Spacer(modifier = Modifier.width(8.dp))
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Add padding to align with AI message bubble (icon 32dp + spacer 8dp)
-                        Spacer(modifier = Modifier.width(40.dp))
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                        .border(width = 2.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), shape = CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (userAvatarPainter != null) {
+                        Image(
+                            painter = userAvatarPainter,
+                            contentDescription = "User",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(32.dp).clip(CircleShape),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "User",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
 
+            // Action controls — reserve space, show on hover
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (showCopyFeedback) {
+                    Text(
+                        text = stringResource("mermaid.feedback.copied"),
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                Box(
+                    modifier = Modifier.height(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isHovered) {
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = Color.Transparent,
@@ -557,16 +449,13 @@ fun messageBubble(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Copy button - always show for AI messages (including outdated)
-                                themedTooltip(
-                                    text = stringResource("message.copy"),
-                                ) {
+                                themedTooltip(text = stringResource("message.copy")) {
                                     IconButton(
                                         onClick = {
                                             clipboardManager.setText(AnnotatedString(message.content))
                                             showCopyFeedback = true
                                             coroutineScope.launch {
-                                                delay(2000.milliseconds)
+                                                delay(2000)
                                                 showCopyFeedback = false
                                             }
                                         },
@@ -575,55 +464,22 @@ fun messageBubble(
                                         Icon(
                                             imageVector = Icons.Default.ContentCopy,
                                             contentDescription = stringResource("message.copy.description"),
-                                            modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                            modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
 
-                                // Edit button for AI messages - only show if callback is provided
                                 if (onEditMessage != null) {
-                                    themedTooltip(
-                                        text = stringResource("message.ai.edit"),
-                                    ) {
+                                    themedTooltip(text = stringResource("message.edit")) {
                                         IconButton(
-                                            onClick = {
-                                                onEditMessage.invoke(message)
-                                            },
+                                            onClick = { onEditMessage.invoke(message) },
                                             modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
-                                                contentDescription = stringResource("message.ai.edit.description"),
-                                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Try again button for AI messages - only show if callback is provided
-                                if (onRetryMessage != null) {
-                                    themedTooltip(
-                                        text = stringResource("message.ai.try.again"),
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                message.id?.let { messageId ->
-                                                    val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
-                                                    if (isLatestMessage) {
-                                                        onRetryMessage.invoke(messageId)
-                                                    } else {
-                                                        onShowRetryConfirmDialog?.invoke(messageId)
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Refresh,
-                                                contentDescription = stringResource("message.ai.try.again.description"),
-                                                modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
+                                                contentDescription = stringResource("message.edit.description"),
+                                                modifier = Modifier.size(16.dp),
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
@@ -631,183 +487,313 @@ fun messageBubble(
                                 }
                             }
                         }
-
-                        // Copy feedback - to the right of action buttons
-                        if (showCopyFeedback) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource("mermaid.feedback.copied"),
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        shape = MaterialTheme.shapes.small,
-                                    )
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
                     }
                 }
 
-                // User message action controls - reserve space, show controls on hover
-                // Always show for user messages (at minimum, copy button is always available)
-                if (message.isUser) {
-                    var showCopyFeedback by remember { mutableStateOf(false) }
-                    val coroutineScope = rememberCoroutineScope()
+                Spacer(modifier = Modifier.width(40.dp))
+            }
+        }
+    }
+}
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun aiMessageBubble(
+    message: ChatMessageDTO,
+    searchQuery: String = "",
+    isActiveSearchResult: Boolean = false,
+    onMessageClick: ((String, LocalDateTime) -> Unit)? = null,
+    onEditMessage: ((ChatMessageDTO) -> Unit)? = null,
+    onDownloadAttachment: ((FileAttachmentDTO) -> Unit)? = null,
+    aiAvatarPainter: BitmapPainter? = null,
+    onRetryMessage: ((String) -> Unit)? = null,
+    viewportTopY: Float? = null,
+    allMessages: List<ChatMessageDTO> = emptyList(),
+    onShowRetryConfirmDialog: ((String) -> Unit)? = null,
+    isOutdatedMessage: Boolean = false,
+) {
+    val clipboardManager = LocalClipboardManager.current
+    var showCopyFeedback by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var pendingRunRequest by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
+    val aiContentColor = if (isOutdatedMessage) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.Top,
+        ) {
+            // AI avatar
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape)
+                    .border(width = 2.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), shape = CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (aiAvatarPainter != null) {
+                    Icon(
+                        painter = aiAvatarPainter,
+                        contentDescription = "AI",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // AI message content
+            Box {
+                CompositionLocalProvider(LocalContentColor provides aiContentColor) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier
+                                        .clickable { onMessageClick!!.invoke(message.id!!, message.timestamp!!) }
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
-                        // Copy feedback - to the left of action buttons
-                        if (showCopyFeedback) {
-                            Text(
-                                text = stringResource("mermaid.feedback.copied"),
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        shape = MaterialTheme.shapes.small,
-                                    )
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-
-                        Box(
-                            modifier = Modifier.height(40.dp), // Always reserve this space
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isHovered) {
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = Color.Transparent,
-                                        contentColor = MaterialTheme.colorScheme.onSurface,
-                                    ),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        Column {
+                            if (message.attachments.isNotEmpty()) {
+                                Column(
+                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        // Copy button - always show for user messages (including outdated)
-                                        themedTooltip(
-                                            text = stringResource("message.copy"),
-                                        ) {
-                                            IconButton(
-                                                onClick = {
-                                                    clipboardManager.setText(AnnotatedString(message.content))
-                                                    showCopyFeedback = true
-                                                    coroutineScope.launch {
-                                                        delay(2000)
-                                                        showCopyFeedback = false
-                                                    }
-                                                },
-                                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ContentCopy,
-                                                    contentDescription = stringResource("message.copy.description"),
-                                                    modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        }
-
-                                        // Edit button - only show if callback is provided
-                                        if (onEditMessage != null) {
-                                            themedTooltip(
-                                                text = stringResource("message.edit"),
-                                            ) {
-                                                IconButton(
-                                                    onClick = {
-                                                        onEditMessage.invoke(message)
-                                                    },
-                                                    modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Edit,
-                                                        contentDescription = stringResource("message.edit.description"),
-                                                        modifier = Modifier.size(16.dp).pointerHoverIcon(PointerIcon.Hand),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                            }
-                                        }
+                                    message.attachments.forEach { attachment ->
+                                        fileAttachmentChip(attachment = attachment, onDownload = onDownloadAttachment)
                                     }
                                 }
                             }
-                        }
-                        // Add padding to align with user message bubble (avatar 32dp + spacer 8dp)
-                        Spacer(modifier = Modifier.width(40.dp))
-                    }
-                }
 
-                // Show edited indicator if message has been edited
-                if (message.isEdited && !message.isUser) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                    ) {
-                        Text(
-                            text = stringResource("message.edited.indicator"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 12.dp, top = 2.dp),
-                        )
-                    }
-                }
-            } // Close Column
-        } // Close BoxWithConstraints
-
-        val runRequest = pendingRunRequest
-        if (runRequest != null) {
-            Dialog(onDismissRequest = { pendingRunRequest = null }) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    tonalElevation = 8.dp,
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp).width(360.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Text(
-                            text = stringResource("code.run.dialog.title"),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = stringResource("code.run.dialog.message"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                        ) {
-                            secondaryButton(onClick = {
-                                pendingRunRequest = null
-                                EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = false))
-                            }) {
-                                Text(stringResource("code.run.dialog.paste"))
+                            SelectionContainer {
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = highlightSearchText(
+                                            text = message.content,
+                                            query = searchQuery,
+                                            highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                                            isActiveResult = isActiveSearchResult,
+                                            activeHighlightColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                                        ),
+                                        modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                } else {
+                                    markdownText(
+                                        markdown = message.content,
+                                        modifier = Modifier.padding(start = 12.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                                        viewportTopY = viewportTopY,
+                                        onRunRequest = { cmd, lang -> pendingRunRequest = Pair(cmd, lang) },
+                                    )
+                                }
                             }
-                            primaryButton(onClick = {
-                                pendingRunRequest = null
-                                EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = true))
-                            }) {
-                                Text(stringResource("code.run.dialog.execute"))
+
+                            if (isOutdatedMessage) {
+                                Text(
+                                    text = stringResource("outdated.label"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    fontStyle = FontStyle.Italic,
+                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp, top = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Failed retry icon at bottom-right corner
+                if (message.isFailed && message.id != null && onRetryMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 4.dp, end = 4.dp),
+                    ) {
+                        themedTooltip(text = stringResource("action.retry")) {
+                            IconButton(
+                                onClick = { onRetryMessage(message.id!!) },
+                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource("action.retry"),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
                 }
             }
         }
-    } // Close outer hover-tracking Box
+
+        // Action controls bar
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Spacer(modifier = Modifier.width(40.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    themedTooltip(text = stringResource("message.copy")) {
+                        IconButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(message.content))
+                                showCopyFeedback = true
+                                coroutineScope.launch {
+                                    delay(2000.milliseconds)
+                                    showCopyFeedback = false
+                                }
+                            },
+                            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = stringResource("message.copy.description"),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    if (onEditMessage != null) {
+                        themedTooltip(text = stringResource("message.ai.edit")) {
+                            IconButton(
+                                onClick = { onEditMessage.invoke(message) },
+                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = stringResource("message.ai.edit.description"),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    if (onRetryMessage != null) {
+                        themedTooltip(text = stringResource("message.ai.try.again")) {
+                            IconButton(
+                                onClick = {
+                                    message.id?.let { messageId ->
+                                        val isLatestMessage = allMessages.lastOrNull { !it.isUser }?.id == messageId
+                                        if (isLatestMessage) {
+                                            onRetryMessage.invoke(messageId)
+                                        } else {
+                                            onShowRetryConfirmDialog?.invoke(messageId)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource("message.ai.try.again.description"),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showCopyFeedback) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource("mermaid.feedback.copied"),
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        // Edited indicator
+        if (message.isEdited) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+            ) {
+                Text(
+                    text = stringResource("message.edited.indicator"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp),
+                )
+            }
+        }
+    }
+
+    // Run code dialog — outside SelectionContainer
+    val runRequest = pendingRunRequest
+    if (runRequest != null) {
+        Dialog(onDismissRequest = { pendingRunRequest = null }) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface,
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp).width(360.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(text = stringResource("code.run.dialog.title"), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = stringResource("code.run.dialog.message"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    ) {
+                        secondaryButton(onClick = {
+                            pendingRunRequest = null
+                            EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = false))
+                        }) {
+                            Text(stringResource("code.run.dialog.paste"))
+                        }
+                        primaryButton(onClick = {
+                            pendingRunRequest = null
+                            EventBus.post(RunCodeEvent(code = runRequest.first, language = runRequest.second, couldExecute = true))
+                        }) {
+                            Text(stringResource("code.run.dialog.execute"))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
