@@ -83,7 +83,11 @@ It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), per
 
 ## Plans - Multi-Step AI Workflows
 
-Plans let you run a sequence of AI steps from a single form. Each step receives the outputs of previous steps as context, so the AI builds up a complete, coherent result incrementally rather than in one large prompt.
+A single AI prompt cannot reason properly across multiple stages. When you ask one prompt to research, analyse, and conclude all at once, the AI skips the dependencies between those stages and produces output that sounds thorough but could apply to almost anything.
+
+Plans mirror how experts actually think. Each step has one focused job and one persona - researcher, analyst, strategist, writer. The output of each step feeds automatically into the next as grounded context. No copy-pasting. No re-prompting. The chain runs end-to-end and the final result reflects genuine staged reasoning: specific, traceable, and defensible.
+
+Fill in a form. Askimo handles the rest.
 
 **Built-in plans:**
 
@@ -98,9 +102,9 @@ Plans let you run a sequence of AI steps from a single form. Each step receives 
 
 **Key capabilities:**
 - Live step-by-step progress with per-step timing
-- Run history with one-click input restore or re-run
 - Export any result as **PDF** or **Word (.docx)**
-- Write your own plans in YAML and run them alongside built-ins
+- **Create your own plans with AI** - describe your workflow in plain English and the AI generates valid plan YAML instantly; no manual YAML writing required
+- Fine-tune generated plans in the built-in YAML editor, or duplicate any built-in plan as a starting point
 
 ---
 
