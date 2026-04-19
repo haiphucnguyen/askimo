@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -132,6 +133,7 @@ fun markdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     viewportTopY: Float? = null,
+    isStreaming: Boolean = false,
     onRunRequest: ((code: String, language: String) -> Unit)? = null,
 ) {
     val parser = Parser.builder()
@@ -140,12 +142,12 @@ fun markdownText(
     val document = parser.parse(markdown)
 
     Column(modifier = modifier) {
-        renderNode(document, viewportTopY, onRunRequest)
+        renderNode(document, viewportTopY, isStreaming, onRunRequest)
     }
 }
 
 @Composable
-private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((String, String) -> Unit)? = null) {
+private fun renderNode(node: Node, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null) {
     var child = node.firstChild
     while (child != null) {
         when (child) {
@@ -167,6 +169,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((
             is FencedCodeBlock -> renderCodeBlock(
                 child,
                 viewportTopY,
+                isStreaming,
                 onRunRequest,
             )
 
@@ -187,7 +190,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, onRunRequest: ((
                 }
             }
 
-            else -> renderNode(child, viewportTopY, onRunRequest)
+            else -> renderNode(child, viewportTopY, isStreaming, onRunRequest)
         }
         child = child.next
     }
@@ -557,7 +560,7 @@ private fun renderListItem(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, onRunRequest: ((String, String) -> Unit)? = null) {
+private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null) {
     val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
     val code = codeBlock.literal
     // Resolved once per code block; null means the Run button should not be shown
@@ -570,7 +573,31 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     }
 
     // If we successfully parsed chart data, render it as a chart
+    // Skip rendering while streaming to avoid passing incomplete diagram definitions to Mermaid CLI
     if (chartData != null) {
+        if (isStreaming) {
+            // Show a lightweight placeholder while the response is still being generated
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Rendering diagram...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            return
+        }
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -834,7 +861,7 @@ private fun renderBlockQuote(blockQuote: BlockQuote, viewportTopY: Float? = null
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .padding(8.dp),
     ) {
-        renderNode(blockQuote, viewportTopY, onRunRequest)
+        renderNode(blockQuote, viewportTopY, false, onRunRequest)
     }
 }
 

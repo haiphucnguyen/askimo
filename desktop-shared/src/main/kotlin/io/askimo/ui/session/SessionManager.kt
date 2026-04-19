@@ -115,7 +115,7 @@ class SessionManager(
     data class StreamingThread(
         val threadId: String,
         val sessionId: String,
-        val job: Job,
+        var job: Job,
         private val _chunks: MutableStateFlow<List<String>>,
         private val _isComplete: MutableStateFlow<Boolean>,
         private val _hasFailed: MutableStateFlow<Boolean>,
@@ -223,8 +223,7 @@ class SessionManager(
         val promptWithContext = chatSessionService.prepareContextAndGetPromptForChat(sessionId, userMessage, willSaveUserMessage)
         log.debug("Saved prompt for session $sessionId, starting streaming")
 
-        // Start streaming in background
-        streamingScope.launch(thread.job) {
+        thread.job = streamingScope.launch {
             try {
                 if (mode is CreationMode.Chat) {
                     val fullResponse = chatSessionService
