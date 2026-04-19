@@ -130,7 +130,7 @@ object LocalFsTools {
                                 }
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Skip directories we can't read
                     }
                 }
@@ -403,11 +403,11 @@ object LocalFsTools {
             patterns.forEachIndexed { index, pattern ->
                 val matcher = try {
                     dir.fileSystem.getPathMatcher("glob:$pattern")
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // If pattern is invalid as glob, treat as literal filename
                     try {
                         dir.fileSystem.getPathMatcher("glob:*$pattern*")
-                    } catch (e2: Exception) {
+                    } catch (_: Exception) {
                         // Skip this pattern if it can't be processed
                         return@forEachIndexed
                     }
@@ -445,7 +445,7 @@ object LocalFsTools {
                                         allFiles[rel.toString()] = relevanceScore
                                     }
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 // Skip this file if there's an error processing it
                             }
                         }
@@ -582,7 +582,7 @@ object LocalFsTools {
             // Explicitly close output stream to prevent Windows file handle leaks
             try {
                 process.outputStream.close()
-            } catch (e: Exception) { /* ignore */ }
+            } catch (_: Exception) { /* ignore */ }
 
             val success = exitCode == 0
             if (success) {
@@ -673,26 +673,26 @@ object LocalFsTools {
 
                 val output = try {
                     process.inputStream.bufferedReader().use { it.readText() }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     ""
                 }
 
                 val error = try {
                     process.errorStream.bufferedReader().use { it.readText() }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     ""
                 }
 
                 val exitCode = try {
                     process.waitFor()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     -1 // Default exit code if we can't get the real one
                 }
 
                 // Explicitly close output stream to release file handles
                 try {
                     process.outputStream.close()
-                } catch (e: Exception) { /* ignore */ }
+                } catch (_: Exception) { /* ignore */ }
 
                 ToolResponseBuilder.successWithData(
                     output = "Process finished with exit code $exitCode",
@@ -862,7 +862,7 @@ object LocalFsTools {
                                     matches += matchInfo
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Skip files that can't be read (permissions, etc.)
                             return@fileLoop
                         }
@@ -1008,7 +1008,7 @@ object LocalFsTools {
                             stream.read(buffer)
                         }
                     }
-                } catch (e: Exception) { /* ignore */ }
+                } catch (_: Exception) { /* ignore */ }
 
                 try {
                     process.errorStream.use { stream ->
@@ -1017,17 +1017,17 @@ object LocalFsTools {
                             stream.read(buffer)
                         }
                     }
-                } catch (e: Exception) { /* ignore */ }
+                } catch (_: Exception) { /* ignore */ }
 
                 try {
                     process.outputStream.close()
-                } catch (e: Exception) { /* ignore */ }
+                } catch (_: Exception) { /* ignore */ }
 
                 // Give Windows a moment to release file handles
                 if (System.getProperty("os.name").lowercase().contains("windows")) {
                     Thread.sleep(100)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore cleanup errors
             }
         }

@@ -193,7 +193,6 @@ object SessionActionMenu {
      */
     @Composable
     fun projectViewMenu(
-        sessionId: String,
         currentProjectId: String,
         currentProjectName: String,
         availableProjects: List<Project>,

@@ -186,7 +186,7 @@ class DatabaseManager private constructor(
                 stmt.executeUpdate(
                     "ALTER TABLE projects ADD COLUMN synced_at TEXT",
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
         }
@@ -231,7 +231,7 @@ class DatabaseManager private constructor(
                 stmt.executeUpdate(
                     "ALTER TABLE chat_sessions ADD COLUMN synced_at TEXT",
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
         }
@@ -264,7 +264,7 @@ class DatabaseManager private constructor(
                     ALTER TABLE chat_messages ADD COLUMN is_edited INTEGER DEFAULT 0
                     """,
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists, ignore the error
             }
 
@@ -275,7 +275,7 @@ class DatabaseManager private constructor(
                     ALTER TABLE chat_messages ADD COLUMN is_failed INTEGER DEFAULT 0
                     """,
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists, ignore the error
             }
 
@@ -287,7 +287,7 @@ class DatabaseManager private constructor(
                 stmt.executeUpdate(
                     "ALTER TABLE chat_messages ADD COLUMN synced_at TEXT",
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
 
@@ -382,21 +382,21 @@ class DatabaseManager private constructor(
             // Migration: Drop unique index on name if it exists (for existing databases)
             try {
                 stmt.executeUpdate("DROP INDEX IF EXISTS chat_directives_name")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore - index might not exist
             }
 
             // Migration: Add updated_at column if it doesn't exist (for existing databases)
             try {
                 stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
 
             // Migration: Add deleted_at column if it doesn't exist (for existing databases)
             try {
                 stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN deleted_at TEXT")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
 
@@ -405,7 +405,7 @@ class DatabaseManager private constructor(
             // Non-null = ISO-8601 timestamp of the last successful push for this row.
             try {
                 stmt.executeUpdate("ALTER TABLE chat_directives ADD COLUMN synced_at TEXT")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
         }

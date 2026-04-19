@@ -238,7 +238,7 @@ fun chatView(
                         is IndexingInProgressEvent -> {
                             ragIndexingStatus = "inprogress"
                             ragIndexingPercentage = if (event.totalFiles > 0) {
-                                (event.filesIndexed * 100 / event.totalFiles)
+                                event.filesIndexed * 100 / event.totalFiles
                             } else {
                                 0
                             }

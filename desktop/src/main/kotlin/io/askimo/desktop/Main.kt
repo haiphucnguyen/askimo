@@ -210,7 +210,7 @@ fun main() {
         val icon = BitmapPainter(
             Image.makeFromEncoded(
                 object {}.javaClass.getResourceAsStream("/images/askimo_512.png")?.readBytes()
-                    ?: throw IllegalStateException("Icon not found"),
+                    ?: error("Icon not found"),
             ).toComposeImageBitmap(),
         )
 

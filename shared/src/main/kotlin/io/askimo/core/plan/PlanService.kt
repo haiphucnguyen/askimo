@@ -242,7 +242,7 @@ class PlanService(
         )
 
         val raw = response.aiMessage().text().trim()
-        if (raw.isBlank()) throw IllegalStateException("Model returned empty response")
+        check(raw.isNotBlank()) { "Model returned empty response" }
 
         // Strip accidental markdown code fences (```yaml ... ``` or ``` ... ```)
         val cleaned = raw

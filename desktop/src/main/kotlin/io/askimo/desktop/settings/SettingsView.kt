@@ -105,7 +105,7 @@ fun settingsViewWithSidebar(
                         BitmapPainter(
                             Image.makeFromEncoded(
                                 object {}.javaClass.getResourceAsStream("/images/askimo_logo_64.png")?.readBytes()
-                                    ?: throw IllegalStateException("Icon not found"),
+                                    ?: error("Icon not found"),
                             ).toComposeImageBitmap(),
                         )
                     },

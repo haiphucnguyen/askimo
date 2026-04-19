@@ -54,13 +54,13 @@ class SQLiteLocalDateTimeColumnType :
     private fun parseDateTime(value: String): LocalDateTime = try {
         // Try SQLite's ISO-8601 format first (most common)
         LocalDateTime.parse(value, SQLITE_DATETIME_FORMATTER)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         try {
             // Fallback to Exposed's space-separated format
             val fractionLength = value.substringAfterLast('.', "").length
             val formatter = exposedDateTimeFormatter(fractionLength)
             LocalDateTime.parse(value, formatter)
-        } catch (e2: Exception) {
+        } catch (_: Exception) {
             // Last resort: try ISO_LOCAL_DATE_TIME
             LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         }

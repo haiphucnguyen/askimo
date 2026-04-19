@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.askimo.core.chat.domain.SessionMemory
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.util.JsonUtils
 import io.askimo.core.util.JsonUtils.prettyJson
 import io.askimo.ui.common.components.secondaryButton
@@ -49,6 +50,8 @@ import io.askimo.ui.common.theme.AppComponents
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
+
+private val log = currentFileLogger()
 
 /**
  * Dialog to display session memory information including memory messages and summary.
@@ -353,7 +356,8 @@ private fun memoryMessageItem(messageJson: String) {
             val type = jsonElement.jsonObject["type"]?.toString()?.trim('"') ?: "unknown"
             val createdAt = jsonElement.jsonObject["createdAt"]?.toString()?.trim('"') ?: ""
             Triple(content, type, createdAt)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.debug("Failed to parse memory message JSON: {}", messageJson, e)
             null
         }
     }
@@ -426,6 +430,7 @@ private fun parseMemoryMessages(memoryMessages: String): List<String> {
             emptyList()
         }
     } catch (e: Exception) {
+        log.debug("Failed to parse memory messages JSON: {}", memoryMessages, e)
         emptyList()
     }
 }
@@ -441,7 +446,7 @@ private fun formatJson(text: String): String {
         val jsonElement = JsonUtils.json.parseToJsonElement(text)
         prettyJson.encodeToString(JsonElement.serializer(), jsonElement)
     } catch (e: Exception) {
-        // If it's not valid JSON, return as-is
+        log.debug("Text is not valid JSON, returning as-is", e)
         text
     }
 }

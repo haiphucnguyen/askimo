@@ -180,7 +180,7 @@ fun notificationPopup(
     val minHeight = 120.dp
 
     val dynamicHeight = remember(events.size) {
-        val contentHeight = 60.dp + (estimatedItemHeight * events.size.toFloat())
+        val contentHeight = 60.dp + estimatedItemHeight * events.size.toFloat()
         when {
             contentHeight < minHeight -> minHeight
             contentHeight > maxHeight -> maxHeight
@@ -301,7 +301,7 @@ fun notificationPopup(
                     }
                 }
 
-                if ((estimatedItemHeight * events.size.toFloat()) > maxHeight) {
+                if (estimatedItemHeight * events.size.toFloat() > maxHeight) {
                     VerticalScrollbar(
                         adapter = rememberScrollbarAdapter(listState),
                         modifier = Modifier

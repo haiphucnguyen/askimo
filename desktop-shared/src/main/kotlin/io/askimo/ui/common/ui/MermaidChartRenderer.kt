@@ -686,13 +686,13 @@ private fun diagramImage(
         }
     }
 
+    val verticalScrollState = rememberScrollState()
+    val horizontalScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
     if (imageBitmap != null) {
         val scaledWidth = (imageBitmap.width * zoomLevel).dp
         val scaledHeight = (imageBitmap.height * zoomLevel).dp
-
-        val verticalScrollState = rememberScrollState()
-        val horizontalScrollState = rememberScrollState()
-        val coroutineScope = rememberCoroutineScope()
 
         Box(modifier = modifier) {
             Box(

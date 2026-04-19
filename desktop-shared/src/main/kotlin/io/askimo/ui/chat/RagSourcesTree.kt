@@ -63,6 +63,7 @@ import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
 import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.themedTooltip
@@ -71,6 +72,8 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
 import java.net.URI
+
+private val log = currentFileLogger()
 
 /**
  * Tree view component for displaying RAG knowledge sources.
@@ -780,13 +783,11 @@ private fun loadFolderChildren(folderPath: String): List<TreeNode> {
 private fun openInFileBrowser(path: String) {
     try {
         val file = File(path)
-        if (file.exists()) {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(file)
-            }
+        if (file.exists() && Desktop.isDesktopSupported()) {
+            Desktop.getDesktop().open(file)
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to open file in browser: {}", path, e)
     }
 }
 
@@ -797,13 +798,11 @@ private fun openContainingFolder(filePath: String) {
     try {
         val file = File(filePath)
         val parentFolder = file.parentFile
-        if (parentFolder?.exists() == true) {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(parentFolder)
-            }
+        if (parentFolder?.exists() == true && Desktop.isDesktopSupported()) {
+            Desktop.getDesktop().open(parentFolder)
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to open containing folder: {}", filePath, e)
     }
 }
 
@@ -816,7 +815,7 @@ private fun openInBrowser(url: String) {
             Desktop.getDesktop().browse(URI(url))
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to open URL in browser: {}", url, e)
     }
 }
 
@@ -829,6 +828,6 @@ private fun copyToClipboard(text: String) {
         val stringSelection = StringSelection(text)
         clipboard.setContents(stringSelection, null)
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to copy to clipboard", e)
     }
 }

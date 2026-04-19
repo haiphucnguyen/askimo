@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.LogLevel
 import io.askimo.core.logging.LoggingService
+import io.askimo.core.logging.currentFileLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,8 @@ import java.util.Locale
 import java.util.prefs.Preferences
 
 object ThemePreferences {
+    private val log = currentFileLogger()
+
     /**
      * Maximum width for the main content area (chat messages, settings panels, etc.).
      * Keeping this consistent prevents lines from becoming too long on wide displays.
@@ -68,6 +71,7 @@ object ThemePreferences {
         val fontSize = try {
             FontSize.valueOf(fontSizeName)
         } catch (e: IllegalArgumentException) {
+            log.debug("Unknown FontSize '{}', falling back to MEDIUM", fontSizeName, e)
             FontSize.MEDIUM
         }
         return FontSettings(fontFamily, fontSize)
@@ -81,7 +85,8 @@ object ThemePreferences {
             // User has explicitly set a locale, use it
             return try {
                 Locale.forLanguageTag(savedLocaleTag)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                log.debug("Invalid saved locale tag '{}', falling back to English", savedLocaleTag, e)
                 Locale.ENGLISH
             }
         }
@@ -107,7 +112,8 @@ object ThemePreferences {
         val levelName = prefs.get(LOG_LEVEL_KEY, LogLevel.INFO.name)
         val level = try {
             LogLevel.valueOf(levelName)
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            log.debug("Unknown LogLevel '{}', falling back to INFO", levelName, e)
             LogLevel.INFO
         }
 

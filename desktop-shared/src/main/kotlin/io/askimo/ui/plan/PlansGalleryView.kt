@@ -254,8 +254,16 @@ fun plansGalleryView(
                             planCard(
                                 plan = plan,
                                 onSelect = { onSelectPlan(plan) },
-                                onDelete = if (!plan.builtIn) ({ viewModel.deletePlan(plan.id) }) else null,
-                                onEdit = if (!plan.builtIn) ({ onEditPlan(plan.id) }) else null,
+                                onDelete = if (!plan.builtIn) {
+                                    { viewModel.deletePlan(plan.id) }
+                                } else {
+                                    null
+                                },
+                                onEdit = if (!plan.builtIn) {
+                                    { onEditPlan(plan.id) }
+                                } else {
+                                    null
+                                },
                                 onDuplicate = { onDuplicatePlan(plan.id) },
                                 modifier = Modifier.weight(1f),
                             )

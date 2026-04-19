@@ -62,6 +62,9 @@ import kotlin.collections.plus
 private object NewProjectDialog
 private val log = logger<NewProjectDialog>()
 
+/** Number of seconds to wait before auto-dismissing the success screen. */
+private const val SUCCESS_COUNTDOWN_SECONDS = 5
+
 /**
  * Dialog for creating a new project with name, description, and optional knowledge sources.
  */
@@ -78,7 +81,7 @@ fun newProjectDialog(
     var nameError by remember { mutableStateOf<String?>(null) }
     var showSuccess by remember { mutableStateOf(false) }
     var createdProjectName by remember { mutableStateOf("") }
-    var countdown by remember { mutableStateOf(5) }
+    var countdown by remember { mutableStateOf(SUCCESS_COUNTDOWN_SECONDS) }
 
     val scope = rememberCoroutineScope()
     val dialogState = rememberDialogState()

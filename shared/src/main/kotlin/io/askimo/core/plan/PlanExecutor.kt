@@ -82,10 +82,8 @@ class PlanExecutor(private val chatModel: ChatModel) {
             .filter { it.required && inputs[it.key].isNullOrBlank() }
             .map { it.key }
 
-        if (missing.isNotEmpty()) {
-            throw IllegalArgumentException(
-                "Plan '${plan.id}' is missing required inputs: ${missing.joinToString()}",
-            )
+        require(missing.isEmpty()) {
+            "Plan '${plan.id}' is missing required inputs: ${missing.joinToString()}"
         }
     }
 

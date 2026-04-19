@@ -18,7 +18,12 @@ import java.io.FileInputStream
 /**
  * Exception thrown when a file exceeds the maximum allowed size for chat attachments.
  */
-class FileSizeExceededException(val fileSize: Long, val maxAllowedSize: Long) : Exception("File size exceeds the maximum allowed limit of ${formatFileSize(maxAllowedSize)}")
+class FileSizeExceededException(val fileSize: Long, val maxAllowedSize: Long) : RuntimeException("File size exceeds the maximum allowed limit of ${formatFileSize(maxAllowedSize)}")
+
+/**
+ * Exception thrown when a file cannot be parsed (e.g. corrupted PDF or unsupported format variant).
+ */
+class FileParseException(filePath: String, cause: Throwable) : RuntimeException("Failed to parse file: $filePath", cause)
 
 /**
  * Utility for extracting text content from various file types.
@@ -131,7 +136,7 @@ object FileContentExtractor {
             handler.toString().trim()
         }
     } catch (e: TikaException) {
-        throw Exception("Failed to parse file: ${file.path}", e)
+        throw FileParseException(file.path, e)
     }
 
     /**

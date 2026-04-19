@@ -494,7 +494,7 @@ class ProjectIndexer(
                 e.message?.contains("model not found", ignoreCase = true) == true
             ) {
                 log.error("Embedding model not found: ${e.message}")
-                throw ModelNotFoundException("Embedding model not found: ${e.message}")
+                throw ModelNotFoundException("Embedding model not found: ${e.message}", e)
             } else {
                 throw e
             }

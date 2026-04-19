@@ -84,7 +84,7 @@ class FilterChain(filters: List<IndexingFilter>) {
             } else {
                 path.fileName.toString()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             path.fileName.toString()
         }
 

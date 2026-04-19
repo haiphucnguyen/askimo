@@ -21,7 +21,7 @@ class FileSizeFilter(private val maxBytes: Long = AppConfig.indexing.maxFileByte
 
         return try {
             Files.size(path) > maxBytes
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

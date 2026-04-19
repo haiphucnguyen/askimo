@@ -24,9 +24,9 @@ private data class DurationComponents(
 
 private fun decompose(ms: Long): DurationComponents = DurationComponents(
     days = ms / 86400000,
-    hours = (ms % 86400000) / 3600000,
-    minutes = (ms % 3600000) / 60000,
-    seconds = (ms % 60000) / 1000,
+    hours = ms % 86400000 / 3600000,
+    minutes = ms % 3600000 / 60000,
+    seconds = ms % 60000 / 1000,
     millis = ms % 1000,
 )
 

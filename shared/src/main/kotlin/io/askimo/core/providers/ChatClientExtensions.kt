@@ -237,7 +237,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
 
                     if (errorOccurred) {
                         val errorDetails = capturedError?.message ?: "Unknown streaming error"
-                        throw RuntimeException("Streaming error occurred: $errorDetails", capturedError)
+                        throw IllegalStateException("Streaming error occurred: $errorDetails", capturedError)
                     }
 
                     // === STAGE 2: Post-response - Detect follow-up opportunities ===
@@ -272,7 +272,7 @@ fun ChatClient.sendStreamingMessageWithCallback(
         }
 
         // Should never reach here, but for completeness
-        throw IllegalStateException("Failed to send message after ${maxContextRetries + 1} context retries")
+        error("Failed to send message after ${maxContextRetries + 1} context retries")
     } finally {
         // Always clear ThreadLocal to prevent memory leaks
         ChatContext.clear()

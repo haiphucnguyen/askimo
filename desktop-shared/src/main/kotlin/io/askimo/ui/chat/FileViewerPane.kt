@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.askimo.core.logging.currentFileLogger
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.themedTooltip
@@ -57,6 +58,8 @@ import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
+
+private val log = currentFileLogger()
 
 /** Maximum file size (512 KB) the viewer will load into memory. */
 private const val MAX_PREVIEW_BYTES = 512 * 1024L
@@ -344,7 +347,7 @@ private fun openFileExternally(path: String) {
             Desktop.getDesktop().open(file)
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to open file externally: {}", path, e)
     }
 }
 
@@ -354,7 +357,7 @@ private fun copyTextToClipboard(text: String) {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         clipboard.setContents(StringSelection(text), null)
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to copy text to clipboard", e)
     }
 }
 

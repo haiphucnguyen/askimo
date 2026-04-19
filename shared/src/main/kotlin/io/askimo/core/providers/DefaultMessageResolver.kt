@@ -21,7 +21,7 @@ object DefaultMessageResolver {
                         props.load(reader)
                     }
                 }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Properties not found - return empty properties
         }
         props

@@ -11,6 +11,7 @@ import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.sax.BodyContentHandler
 import org.jsoup.Jsoup
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -76,7 +77,7 @@ object UrlContentExtractor {
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
 
         if (response.statusCode() !in 200..299) {
-            throw Exception("Failed to fetch URL: HTTP ${response.statusCode()}")
+            throw IOException("Failed to fetch URL: HTTP ${response.statusCode()}")
         }
 
         val contentType = response.headers().firstValue("Content-Type").orElse("application/octet-stream")
@@ -176,7 +177,7 @@ object UrlContentExtractor {
                 )
             }
         } catch (e: Exception) {
-            throw Exception("Failed to parse content from URL: $url", e)
+            throw IOException("Failed to parse content from URL: $url", e)
         }
     }
 

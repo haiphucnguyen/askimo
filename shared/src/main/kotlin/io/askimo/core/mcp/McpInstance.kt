@@ -47,7 +47,7 @@ data class McpInstance(
         resolver: TemplateResolver,
     ): StdioMcpConnector {
         val stdioConfig = definition.stdioConfig
-            ?: throw IllegalStateException("STDIO config missing for ${definition.id}")
+            ?: error("STDIO config missing for ${definition.id}")
 
         val resolvedCommand = resolver.resolveList(stdioConfig.commandTemplate)
         val resolvedEnv = resolver.resolveMap(stdioConfig.envTemplate)
@@ -76,7 +76,7 @@ data class McpInstance(
         resolver: TemplateResolver,
     ): HttpMcpConnector {
         val httpConfig = definition.httpConfig
-            ?: throw IllegalStateException("HTTP config missing for ${definition.id}")
+            ?: error("HTTP config missing for ${definition.id}")
 
         val resolvedUrl = resolver.resolve(httpConfig.urlTemplate)
         val resolvedHeaders = resolver.resolveMap(httpConfig.headersTemplate)

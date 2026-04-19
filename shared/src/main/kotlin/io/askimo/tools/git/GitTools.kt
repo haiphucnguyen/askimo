@@ -145,7 +145,7 @@ class GitTools {
         val code = p.waitFor()
         val text = out.toString(StandardCharsets.UTF_8)
         if (code != 0) {
-            throw IllegalStateException("Command failed: ${cmd.joinToString(" ")} ($code)\n$text")
+            error("Command failed: ${cmd.joinToString(" ")} ($code)\n$text")
         }
         return text
     }
@@ -200,7 +200,7 @@ class GitTools {
                     }
                 }.trim()
 
-            throw IllegalStateException(msg)
+            error(msg)
         }
 
         return text

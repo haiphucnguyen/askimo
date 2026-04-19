@@ -656,9 +656,10 @@ private fun agenticStepRow(
         }
     }
 
-    val copyableOutput: String? = when (event) {
-        is PlanStepEvent.Completed -> event.output?.toString()?.trim()?.takeIf { it.isNotBlank() }
-        else -> null
+    val copyableOutput: String? = if (event is PlanStepEvent.Completed) {
+        event.output?.toString()?.trim()?.takeIf { it.isNotBlank() }
+    } else {
+        null
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -1198,7 +1199,11 @@ private fun planInputField(
                     value = value,
                     onValueChange = onValueChange,
                     label = { Text(input.label + if (input.required) " *" else "") },
-                    placeholder = if (input.hint.isNotBlank()) ({ Text(input.hint) }) else null,
+                    placeholder = if (input.hint.isNotBlank()) {
+                        { Text(input.hint) }
+                    } else {
+                        null
+                    },
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
                     modifier = Modifier.fillMaxWidth(),
@@ -1213,7 +1218,11 @@ private fun planInputField(
                     value = value,
                     onValueChange = onValueChange,
                     label = { Text(input.label + if (input.required) " *" else "") },
-                    placeholder = if (input.hint.isNotBlank()) ({ Text(input.hint) }) else null,
+                    placeholder = if (input.hint.isNotBlank()) {
+                        { Text(input.hint) }
+                    } else {
+                        null
+                    },
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
                     modifier = Modifier.fillMaxWidth(),
@@ -1228,7 +1237,11 @@ private fun planInputField(
                     value = value,
                     onValueChange = onValueChange,
                     label = { Text(input.label + if (input.required) " *" else "") },
-                    placeholder = if (input.hint.isNotBlank()) ({ Text(input.hint) }) else null,
+                    placeholder = if (input.hint.isNotBlank()) {
+                        { Text(input.hint) }
+                    } else {
+                        null
+                    },
                     isError = error != null,
                     supportingText = error?.let { { Text(it) } },
                     modifier = Modifier.fillMaxWidth(),

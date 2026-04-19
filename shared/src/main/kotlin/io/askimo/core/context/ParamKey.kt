@@ -65,7 +65,7 @@ enum class ParamKey(
         try {
             setValue(params, providerSettings, value)
         } catch (e: Exception) {
-            throw IllegalArgumentException("❌ Failed to set '$key': expected type $type. ${e.message}")
+            throw IllegalArgumentException("❌ Failed to set '$key': expected type $type. ${e.message}", e)
         }
     }
 }
