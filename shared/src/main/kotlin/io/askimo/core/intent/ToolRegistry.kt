@@ -106,4 +106,10 @@ object ToolRegistry {
      * These tools require user confirmation before use.
      */
     fun getFollowUpOnly(): List<ToolConfig> = tools.values.filter { (it.strategy and ToolStrategy.FOLLOW_UP_BASED) != 0 }
+
+    /**
+     * Look up a single tool by its [ToolSpecification] name.
+     * Returns `null` if no tool with that name has been registered.
+     */
+    fun findByName(name: String): ToolConfig? = tools[name]
 }
