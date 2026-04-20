@@ -31,8 +31,13 @@ import java.util.concurrent.Executors
  * 4. The final output is read from scope using the last step's id (or plan id as fallback).
  *
  * ## Tools
- * `PlanStep.tools` is intentionally ignored in this version.
- * Tool support will be added in a future iteration once the tool resolution layer for plans is designed.
+ * Each step receives a [PlanToolProvider] populated with its *effective* tool list:
+ * - If [PlanStep.tools] is non-empty it is used as-is (step-level override).
+ * - Otherwise [PlanDef.tools] is used as the plan-wide default.
+ * - A step with no tools at either level runs without any tools attached.
+ *
+ * Only built-in [ToolRegistry] tools are resolved at this layer.
+ * MCP tools are skipped until a plan-aware MCP wiring layer is added.
  */
 class PlanExecutor(private val chatModel: ChatModel) {
 
@@ -58,7 +63,7 @@ class PlanExecutor(private val chatModel: ChatModel) {
         // Because inheritedBySubagents() = true, every nested step agent automatically
         // inherits the same listener — no per-step wiring needed.
         val listener = PlanExecutionListener(planId = plan.id, executionId = executionId)
-        val rootAgent: UntypedAgent = buildAgent(plan.workflow, plan.steps, listener)
+        val rootAgent: UntypedAgent = buildAgent(plan.workflow, plan.steps, plan, listener)
 
         // rootAgent.invoke() returns the root composite agent's result, which is null
         // for Sequence/Parallel wrappers — they don't expose a top-level output key.
@@ -120,23 +125,27 @@ class PlanExecutor(private val chatModel: ChatModel) {
     private fun buildAgent(
         node: WorkflowNode,
         steps: Map<String, PlanStep>,
+        plan: PlanDef,
         listener: PlanExecutionListener? = null,
     ): UntypedAgent = when (node) {
-        is WorkflowNode.Step -> buildStepAgent(node, steps, listener)
-        is WorkflowNode.Sequence -> buildSequenceAgent(node, steps, listener)
-        is WorkflowNode.Parallel -> buildParallelAgent(node, steps, listener)
-        is WorkflowNode.Conditional -> buildConditionalAgent(node, steps, listener)
+        is WorkflowNode.Step -> buildStepAgent(node, steps, plan, listener)
+        is WorkflowNode.Sequence -> buildSequenceAgent(node, steps, plan, listener)
+        is WorkflowNode.Parallel -> buildParallelAgent(node, steps, plan, listener)
+        is WorkflowNode.Conditional -> buildConditionalAgent(node, steps, plan, listener)
     }
 
     /**
-     *
      * The step's `message` is the user prompt template; `{{variable}}` placeholders
      * are resolved by LangChain4j from the shared `AgenticScope`.
      * The step result is stored in scope under the step's own `id` as `outputKey`.
+     *
+     * Effective tools = [PlanStep.tools] if non-empty, else [PlanDef.tools].
+     * An empty effective list means no tool provider is attached.
      */
     private fun buildStepAgent(
         node: WorkflowNode.Step,
         steps: Map<String, PlanStep>,
+        plan: PlanDef,
         listener: PlanExecutionListener? = null,
     ): UntypedAgent {
         val step = steps[node.stepId]
@@ -152,7 +161,12 @@ class PlanExecutor(private val chatModel: ChatModel) {
 
         listener?.let { builder.listener(it) }
 
-        // TODO: step.tools — wire tools per step once the plan tool resolution layer is ready
+        // Resolve effective tools: step-level overrides plan-level default.
+        val effectiveTools = step.tools.ifEmpty { plan.tools }
+        if (effectiveTools.isNotEmpty()) {
+            log.debug("[{}] step '{}' tools: {}", plan.id, step.id, effectiveTools)
+            builder.toolProvider(PlanToolProvider(effectiveTools))
+        }
 
         return builder.build()
     }
@@ -164,9 +178,10 @@ class PlanExecutor(private val chatModel: ChatModel) {
     private fun buildSequenceAgent(
         node: WorkflowNode.Sequence,
         steps: Map<String, PlanStep>,
+        plan: PlanDef,
         listener: PlanExecutionListener? = null,
     ): UntypedAgent {
-        val subAgents = node.nodes.map { buildAgent(it, steps, listener) }.toTypedArray()
+        val subAgents = node.nodes.map { buildAgent(it, steps, plan, listener) }.toTypedArray()
 
         return AgenticServices.sequenceBuilder()
             .subAgents(*subAgents)
@@ -180,9 +195,10 @@ class PlanExecutor(private val chatModel: ChatModel) {
     private fun buildParallelAgent(
         node: WorkflowNode.Parallel,
         steps: Map<String, PlanStep>,
+        plan: PlanDef,
         listener: PlanExecutionListener? = null,
     ): UntypedAgent {
-        val subAgents = node.nodes.map { buildAgent(it, steps, listener) }.toTypedArray()
+        val subAgents = node.nodes.map { buildAgent(it, steps, plan, listener) }.toTypedArray()
 
         return AgenticServices.parallelBuilder()
             .subAgents(*subAgents)
@@ -198,9 +214,10 @@ class PlanExecutor(private val chatModel: ChatModel) {
     private fun buildConditionalAgent(
         node: WorkflowNode.Conditional,
         steps: Map<String, PlanStep>,
+        plan: PlanDef,
         listener: PlanExecutionListener? = null,
     ): UntypedAgent {
-        val childAgent = buildAgent(node.node, steps, listener)
+        val childAgent = buildAgent(node.node, steps, plan, listener)
         val condition = node.condition
 
         return AgenticServices.conditionalBuilder()
