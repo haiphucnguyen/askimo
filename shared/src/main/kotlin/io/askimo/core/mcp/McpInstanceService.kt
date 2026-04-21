@@ -96,6 +96,32 @@ class McpInstanceService(
 
     private val instancesConfig = McpInstancesConfig
 
+    /**
+     * Ephemeral in-memory instances (e.g. org-managed MCP servers from the team server).
+     * These are never persisted and are merged with disk-loaded instances at runtime.
+     * Replaced atomically on every sync — older entries are dropped automatically.
+     */
+    @Volatile
+    private var ephemeralInstances: List<McpInstance> = emptyList()
+
+    /**
+     * Replaces the current set of ephemeral instances.
+     * Call this after fetching org-managed MCP servers from the team server.
+     * Invalidates the tools cache so the new instances are picked up on the next request.
+     */
+    fun setEphemeralInstances(instances: List<McpInstance>) {
+        ephemeralInstances = instances
+        invalidateCache()
+        log.debug("Registered {} ephemeral MCP instances", instances.size)
+    }
+
+    /** Remove all ephemeral instances (e.g. on logout). */
+    fun clearEphemeralInstances() {
+        ephemeralInstances = emptyList()
+        invalidateCache()
+        log.debug("Cleared ephemeral MCP instances")
+    }
+
     private val globalToolsCache: Cache<String, List<ToolConfig>> = Caffeine.newBuilder()
         .maximumSize(200)
         .expireAfterWrite(30.minutes.toJavaDuration())
@@ -118,9 +144,12 @@ class McpInstanceService(
 
     // ── Instance management ──────────────────────────────────────────────────
 
-    fun getInstances(): List<McpInstance> = instancesConfig.load()
+    fun getInstances(): List<McpInstance> = instancesConfig.load() + ephemeralInstances
 
-    fun getInstance(instanceId: String): McpInstance? = instancesConfig.get(instanceId)
+    fun getInstance(instanceId: String): McpInstance? = instancesConfig.get(instanceId) ?: ephemeralInstances.find { it.id == instanceId }
+
+    /** Returns true if the given instance is org-managed (ephemeral, not user-owned). */
+    fun isEphemeral(instanceId: String): Boolean = ephemeralInstances.any { it.id == instanceId }
 
     fun createInstance(
         serverId: String,
@@ -341,7 +370,7 @@ class McpInstanceService(
             toolVectorIndexCache.put(GLOBAL_MCP_SCOPE_ID, index)
             log.debug("Built and cached global ToolVectorIndex ({} tools)", tools.size)
         } catch (e: Exception) {
-            log.warn("Could not build global ToolVectorIndex (embedding model unavailable?): {}", e.message)
+            log.warn("Could not build global ToolVectorIndex (embedding model unavailable?): {}", e.message, e)
             EventBus.emit(
                 AppErrorEvent(
                     title = "Global MCP Tool Index Unavailable",
