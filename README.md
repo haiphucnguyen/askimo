@@ -6,7 +6,11 @@
 </p>
 
 <p align="center">
-  <b><a href="https://askimo.chat">askimo.chat</a></b> · Local-first AI agent platform: chat, search, run, plan.
+  <b>One app. Every AI model. Your files stay local.</b>
+</p>
+
+<p align="center">
+  Chat · Search your files · Run scripts · Build multi-step AI workflows - all offline-capable, all on your machine.
 </p>
 
 <p align="center">
@@ -30,6 +34,9 @@
 <p align="center">
   <a href="https://github.com/haiphucnguyen/askimo/stargazers">
     <img src="https://img.shields.io/github/stars/haiphucnguyen/askimo?style=social" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/haiphucnguyen/askimo/releases">
+    <img src="https://img.shields.io/github/downloads/haiphucnguyen/askimo/total" alt="Total Downloads">
   </a>
   <img src="https://img.shields.io/github/commit-activity/m/haiphucnguyen/askimo" alt="Commit Activity">
   <img src="https://img.shields.io/github/last-commit/haiphucnguyen/askimo" alt="Last Commit">
@@ -58,96 +65,31 @@
 
 ---
 
-## What is Askimo?
+## Why Askimo?
 
-Askimo is a local-first AI desktop app and CLI. It connects AI models to your local files, tools, and workflows - without routing data through a cloud service.
+Most AI desktop apps lock you into one model and one workflow. Askimo doesn't.
 
-It supports multiple providers (OpenAI, Claude, Gemini, Ollama, and others), persistent chat sessions backed by SQLite, document and code search via hybrid RAG (BM25 + vector), MCP tool integration, a script runner for Python/Bash/JavaScript, and a **Plans engine** that chains multi-step AI workflows into a single click. All state lives on your disk.
-
----
-
-## Features
-
-- **Multi-provider** - Configure and switch between cloud and local AI providers per session. Supported: OpenAI, Anthropic, Google Gemini, xAI Grok, Ollama, LM Studio, LocalAI, Docker AI, and any OpenAI-compatible endpoint
-- **Persistent sessions** - Conversations are stored in a local SQLite database and restored on restart
-- **RAG** - Index local folders, files, and web URLs. Uses hybrid BM25 + vector retrieval with an AI-based classifier that skips retrieval when the query doesn't need it
-- **Plans (agentic workflows)** - Run multi-step AI pipelines from a form-based UI. Each step builds on the previous one; progress is shown live. Export results as PDF or Word. Define your own plans in YAML
-- **Script runner** - Execute Python, Bash, and JavaScript directly from chat. Python scripts run in an auto-managed virtualenv with automatic dependency installation
-- **Vision** - Attach images to conversations; works with any multimodal model
-- **MCP tool integration** - Connect MCP-compatible servers via stdio or HTTP, scoped globally or per project
-- **Recipe automation (CLI)** - Define prompt templates in YAML with variables, file I/O, and post-actions. Run with `askimo -r <recipe> [args]`
-- **Local telemetry** - Tracks token usage, estimated cost, and RAG performance per provider. Nothing is uploaded
-- **i18n** - UI available in English, Chinese (Simplified and Traditional), Japanese, Korean, French, Spanish, German, Portuguese, and Vietnamese
+- **Tired of switching tabs** between ChatGPT, Claude, and Gemini? Askimo runs all of them in one place.
+- **Worried about your files leaving your machine?** RAG runs locally - your documents never touch a cloud server.
+- **Need more than chat?** Run Python/Bash scripts, chain multi-step AI workflows (Plans), and connect MCP tools - all from the same app.
 
 ---
 
-## Plans - Multi-Step AI Workflows
+## See It in Action
 
-A single AI prompt cannot reason properly across multiple stages. When you ask one prompt to research, analyse, and conclude all at once, the AI skips the dependencies between those stages and produces output that sounds thorough but could apply to almost anything.
-
-Plans mirror how experts actually think. Each step has one focused job and one persona - researcher, analyst, strategist, writer. The output of each step feeds automatically into the next as grounded context. No copy-pasting. No re-prompting. The chain runs end-to-end and the final result reflects genuine staged reasoning: specific, traceable, and defensible.
-
-Fill in a form. Askimo handles the rest.
-
-**Built-in plans:**
-
-| Plan | What it does |
-|---|---|
-| 💼 Job Application Writer | Analyses a job description, matches your CV, writes a tailored cover letter, and produces an ATS-optimised resume |
-| ✍️ Blog Post Writer | Generates an outline, writes the full draft, adds SEO metadata, and outputs the polished final post |
-| 🏆 Competitor Analysis | Profiles a competitor, compares against your product, and produces a strategic opportunities report |
-| 📋 Meeting Notes Processor | Structures raw notes, extracts action items with owners, and produces shareable meeting minutes |
-| 📝 Research Report | Researches a topic and writes a structured report with executive summary and key findings |
-| 📧 Email Writer | Drafts and self-refines a professional email from a one-line description |
-
-**Key capabilities:**
-- Live step-by-step progress with per-step timing
-- Export any result as **PDF** or **Word (.docx)**
-- **Create your own plans with AI** - describe your workflow in plain English and the AI generates valid plan YAML instantly; no manual YAML writing required
-- Fine-tune generated plans in the built-in YAML editor, or duplicate any built-in plan as a starting point
-
----
-
-## Supported Providers
-
-**Cloud:** OpenAI · Anthropic Claude · Google Gemini · xAI Grok  
-**Local:** Ollama · LM Studio · LocalAI · Docker AI
-
-Works with any OpenAI-compatible endpoint via custom base URL.
-
----
-
-## Quick Start
-
-**[Download for macOS, Windows, or Linux →](https://askimo.chat/download/)**
-
-After installation, open Askimo, configure a provider (API key for cloud models, or point it at a running Ollama instance), and start a session. [Setup guide →](https://askimo.chat/docs/desktop/ai-providers/)
-
-### System Requirements
-
-| | |
-|---|---|
-| **OS** | macOS 11+, Windows 10+, Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+) |
-| **Memory** | 50–300 MB (AI models require additional memory depending on provider) |
-| **Disk** | 250 MB |
-
----
-
-## Screenshots and Demos
-
-**Plan:**
+**Multi-step AI Plans** - fill in a form, get a finished deliverable:
 
 [![Askimo Plans Demo](public/askimo_plan_1280.gif)](public/askimo_plan_1920.gif)
 
-**RAG:**
+**RAG** - search and chat with your local files:
 
 [![Askimo RAG Demo](public/askimo_rag_1280.gif)](public/askimo_rag_1920.gif)
 
-**Script runner:**
+**Script runner** - execute Python, Bash, and JavaScript from chat:
 
 [![Askimo Run Script Demo](public/askimo_run_script_1280.gif)](public/askimo_run_script_1920.gif)
 
-**MCP tools:**
+**MCP tools** - connect any MCP-compatible server:
 
 [![Askimo MCP Demo](public/askimo_mcp_1280.gif)](public/askimo_mcp_1920.gif)
 
@@ -159,9 +101,71 @@ After installation, open Askimo, configure a provider (API key for cloud models,
 
 ---
 
-## CLI (Optional)
+## Quick Start
 
-Askimo also ships as a native CLI binary built with GraalVM. Useful for scripting, automation, and headless environments.
+**[Download for macOS, Windows, or Linux →](https://askimo.chat/download/)**
+
+1. Install and open Askimo
+2. Add a provider - paste an API key (OpenAI, Claude, Gemini…) or point it at a running Ollama instance
+3. Start chatting
+
+[Full setup guide →](https://askimo.chat/docs/desktop/ai-providers/)
+
+### System Requirements
+
+| | |
+|---|---|
+| **OS** | macOS 11+, Windows 10+, Linux (Ubuntu 20.04+, Debian 11+, Fedora 35+) |
+| **Memory** | 50–300 MB (AI models require additional memory depending on provider) |
+| **Disk** | 250 MB |
+
+---
+
+## Features
+
+- **Multi-provider** - Switch between OpenAI, Claude, Gemini, Grok, Ollama, LM Studio, LocalAI, Docker AI, or any OpenAI-compatible endpoint per session
+- **Local RAG** - Index local folders, files, and web URLs. Hybrid BM25 + vector retrieval with an AI classifier that skips retrieval when the query doesn't need it. Your data never leaves your machine.
+- **Plans (agentic workflows)** - Chain multi-step AI pipelines from a form UI. Each step builds on the previous; progress shown live. Export as PDF or Word. Define your own plans in YAML or generate them by describing your workflow in plain English.
+- **Script runner** - Execute Python, Bash, and JavaScript from chat. Python runs in an auto-managed virtualenv with automatic dependency installation.
+- **MCP tool integration** - Connect MCP-compatible servers via stdio or HTTP, scoped globally or per project
+- **Persistent sessions** - Conversations stored in a local SQLite database, restored on restart
+- **Vision** - Attach images to conversations; works with any multimodal model
+- **CLI** - Native binary (GraalVM). Scriptable, automatable, headless-friendly.
+- **Local telemetry** - Token usage, cost estimates, RAG performance per provider. Nothing uploaded.
+- **i18n** - English, Chinese (Simplified & Traditional), Japanese, Korean, French, Spanish, German, Portuguese, Vietnamese
+
+---
+
+## Plans - Multi-Step AI Workflows
+
+A single prompt cannot reason properly across multiple stages. Ask one prompt to research, analyse, and conclude simultaneously and the AI skips the dependencies between those stages.
+
+Plans mirror how experts actually think: each step has one focused job and one persona - researcher, analyst, strategist, writer. The output of each step feeds into the next as grounded context. No copy-pasting. No re-prompting.
+
+**Built-in plans:**
+
+| Plan | What it does |
+|---|---|
+| 💼 Job Application Writer | Analyses a job description, matches your CV, writes a tailored cover letter and ATS-optimised resume |
+| ✍️ Blog Post Writer | Generates an outline, writes the full draft, adds SEO metadata, outputs the polished post |
+| 🏆 Competitor Analysis | Profiles a competitor, compares against your product, produces a strategic opportunities report |
+| 📋 Meeting Notes Processor | Structures raw notes, extracts action items with owners, produces shareable minutes |
+| 📝 Research Report | Researches a topic and writes a structured report with executive summary and key findings |
+| 📧 Email Writer | Drafts and self-refines a professional email from a one-line description |
+
+**Create your own:** describe your workflow in plain English - the AI generates valid plan YAML instantly. Fine-tune in the built-in editor or duplicate any built-in plan as a starting point.
+
+---
+
+## Supported Providers
+
+**Cloud:** OpenAI · Anthropic Claude · Google Gemini · xAI Grok  
+**Local:** Ollama · LM Studio · LocalAI · Docker AI  
+**Custom:** Any OpenAI-compatible endpoint via custom base URL
+
+---
+
+## CLI (Optional)
 
 ```bash
 # macOS/Linux
@@ -182,8 +186,6 @@ iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/inst
 - JDK 21+
 - Git
 
-### Build
-
 ```bash
 git clone https://github.com/haiphucnguyen/askimo.git
 cd askimo
@@ -200,20 +202,20 @@ cd askimo
 
 ### Project Structure
 
-- **`desktop/`** - Compose Multiplatform desktop application
-- **`desktop-shared/`** - Shared UI components usable across products
-- **`cli/`** - JLine3 REPL and GraalVM native image
-- **`shared/`** - Core logic: providers, RAG, MCP, memory, tools, database, plans engine
+| Module | Description |
+|---|---|
+| `desktop/` | Compose Multiplatform desktop application |
+| `desktop-shared/` | Shared UI components |
+| `cli/` | JLine3 REPL + GraalVM native image |
+| `shared/` | Core: providers, RAG, MCP, memory, tools, database, plans engine |
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, code style, and DCO requirements.
-
-> For full developer documentation, see the [Development Getting Started Guide](https://askimo.chat/docs/development/getting-started/).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines and DCO requirements, or the [Development Getting Started Guide](https://askimo.chat/docs/development/getting-started/).
 
 ---
 
 ## Localization
 
-UI is available in: English, Chinese (Simplified and Traditional), Japanese, Korean, French, Spanish, German, Portuguese, Vietnamese.
+English · 中文 (简体/繁體) · 日本語 · 한국어 · Français · Español · Deutsch · Português · Tiếng Việt
 
 Want to add a language? [Open a discussion](https://github.com/haiphucnguyen/askimo/discussions).
 
@@ -236,3 +238,16 @@ Bug reports, feature requests, and pull requests are welcome. See [CONTRIBUTING.
 ## License
 
 AGPLv3. See [LICENSE](./LICENSE).
+
+---
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=haiphucnguyen%2Faskimo&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&legend=top-left" />
+ </picture>
+</a>
+

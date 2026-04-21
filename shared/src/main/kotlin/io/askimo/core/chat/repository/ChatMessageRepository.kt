@@ -14,6 +14,7 @@ import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.PushDataToServerEvent
+import io.askimo.core.logging.logger
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -84,6 +85,8 @@ class ChatMessageRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
     private val attachmentRepository: ChatMessageAttachmentRepository = ChatMessageAttachmentRepository(databaseManager),
 ) : AbstractSQLiteRepository(databaseManager) {
+
+    private val log = logger<ChatMessageRepository>()
 
     fun addMessage(message: ChatMessage): ChatMessage {
         val messageWithInjectedFields = message.copy(
@@ -408,6 +411,19 @@ class ChatMessageRepository internal constructor(
     }
 
     /**
+     * Permanently delete individual messages by their IDs.
+     *
+     * @param messageIds IDs of the messages to delete.
+     * @return Number of rows deleted.
+     */
+    fun bulkDelete(messageIds: List<String>): Int {
+        if (messageIds.isEmpty()) return 0
+        return transaction(database) {
+            ChatMessagesTable.deleteWhere { ChatMessagesTable.id inList messageIds }
+        }
+    }
+
+    /**
      * Helper method to load attachments for messages using LEFT JOIN.
      * This performs a single database query to efficiently load all attachments.
      *
@@ -440,13 +456,35 @@ class ChatMessageRepository internal constructor(
     }
 
     /**
-     *
      * @param messages Messages received from the server pull response.
      */
     fun bulkUpsert(messages: List<ChatMessage>) {
         if (messages.isEmpty()) return
         transaction(database) {
-            for (message in messages) {
+            // Pre-filter: only upsert messages whose session already exists locally.
+            // Messages referencing an unknown session would violate the FK constraint
+            // (sessionId → chat_sessions.id CASCADE). They will be retried on the
+            // next sync once the session row is present.
+            val requestedSessionIds = messages.map { it.sessionId }.toSet()
+            val knownSessionIds = ChatSessionsTable
+                .selectAll()
+                .where { ChatSessionsTable.id inList requestedSessionIds }
+                .map { it[ChatSessionsTable.id] }
+                .toSet()
+
+            val skipped = requestedSessionIds - knownSessionIds
+            if (skipped.isNotEmpty()) {
+                log.warn(
+                    "bulkUpsert: deferring {} message(s) — sessions not yet local: {}",
+                    messages.count { it.sessionId in skipped },
+                    skipped,
+                )
+            }
+
+            val safeMessages = messages.filter { it.sessionId in knownSessionIds }
+            if (safeMessages.isEmpty()) return@transaction
+
+            for (message in safeMessages) {
                 ChatMessagesTable.upsert {
                     it[id] = message.id
                     it[sessionId] = message.sessionId
@@ -459,19 +497,6 @@ class ChatMessageRepository internal constructor(
                     it[isFailed] = if (message.isFailed) 1 else 0
                     it[syncedAt] = message.createdAt.toString()
                 }
-            }
-        }
-    }
-
-    /**
-     * @param messageIds IDs of the messages to mark as outdated.
-     * @return Number of rows updated.
-     */
-    fun bulkMarkOutdated(messageIds: List<String>): Int {
-        if (messageIds.isEmpty()) return 0
-        return transaction(database) {
-            ChatMessagesTable.update({ ChatMessagesTable.id inList messageIds }) {
-                it[isOutdated] = 1
             }
         }
     }
