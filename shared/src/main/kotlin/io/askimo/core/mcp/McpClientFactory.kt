@@ -80,6 +80,7 @@ class McpClientFactory(
             log.debug("Successfully created MCP client for '${instance.name}'")
             Result.success(client)
         } catch (e: Exception) {
+            log.debug("Failed to create MCP client for '${instance.name}'", e)
             Result.failure(
                 IllegalStateException(
                     "Failed to create MCP client for '${instance.name}': ${e.message}",

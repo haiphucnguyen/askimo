@@ -30,17 +30,44 @@ object McpServersConfig {
     @Volatile
     private var cached: List<McpServerDefinition>? = null
 
+    /** Ephemeral in-memory definitions (e.g. org-managed MCP servers from the team server).
+     *  These are never persisted to disk and take precedence over disk-loaded definitions
+     *  with the same ID. Replaced atomically on every sync. */
+    @Volatile
+    private var ephemeral: Map<String, McpServerDefinition> = emptyMap()
+
     private const val MCP_CONFIG_FILE = "mcp-servers.yml"
+
+    /**
+     * Register a set of ephemeral (in-memory only) server definitions.
+     * Any previously registered ephemeral definition not present in [definitions] is removed.
+     */
+    fun setEphemeral(definitions: List<McpServerDefinition>) {
+        ephemeral = definitions.associateBy { it.id }
+        log.debug("Registered {} ephemeral MCP server definitions", definitions.size)
+    }
+
+    /** Remove all ephemeral server definitions (e.g. on logout). */
+    fun clearEphemeral() {
+        ephemeral = emptyMap()
+        log.debug("Cleared ephemeral MCP server definitions")
+    }
 
     /**
      * Get all registered MCP server definitions
      */
-    fun getAll(): List<McpServerDefinition> = cached ?: loadFromDisk()
+    fun getAll(): List<McpServerDefinition> {
+        val disk = cached ?: loadFromDisk()
+        val ep = ephemeral
+        if (ep.isEmpty()) return disk
+        // Merge: ephemeral wins on ID collision
+        return disk.filter { it.id !in ep } + ep.values
+    }
 
     /**
      * Get a specific MCP server definition by ID
      */
-    fun get(id: String): McpServerDefinition? = getAll().find { it.id == id }
+    fun get(id: String): McpServerDefinition? = ephemeral[id] ?: (cached ?: loadFromDisk()).find { it.id == id }
 
     /**
      * Add a new MCP server definition

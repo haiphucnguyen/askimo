@@ -294,6 +294,26 @@ object ApplicationPreferences {
     }
 
     // ============================================================
+    // PLAN SYNC
+    // ============================================================
+    private const val LAST_PLAN_SYNC_SEQ_KEY = "sync.plan_last_seq"
+
+    /**
+     * The highest plan `seq` value received from the server during the last pull.
+     * Send this as the `since` parameter on the next pull to fetch only the delta.
+     * Defaults to 0 (first pull fetches all history).
+     */
+    fun getLastPlanSyncSeq(): Long = safeGetLong(LAST_PLAN_SYNC_SEQ_KEY, 0L)
+
+    /**
+     * Persists [seq] as the new plan cursor bookmark after a successful pull.
+     * Must only be called when the pull succeeded.
+     */
+    fun saveLastPlanSyncSeq(seq: Long) {
+        safePutLong(LAST_PLAN_SYNC_SEQ_KEY, seq)
+    }
+
+    // ============================================================
     // PLAN INPUT PERSISTENCE
     // ============================================================
 

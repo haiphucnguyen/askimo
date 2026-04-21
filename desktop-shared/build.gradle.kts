@@ -27,9 +27,9 @@ publishing {
 }
 
 dependencies {
-    implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
+    api(compose.desktop.currentOs)
+    api(libs.compose.material3)
+    api(libs.compose.material.icons.extended)
     api(project(":shared"))
     implementation(libs.konform)
     implementation(libs.bundles.commonmark)

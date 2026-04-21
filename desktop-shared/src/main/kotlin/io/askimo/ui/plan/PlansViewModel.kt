@@ -46,6 +46,11 @@ import java.io.File
 class PlansViewModel(
     private val scope: CoroutineScope,
     private val planService: PlanService,
+    /**
+     * Optional callback invoked after a plan is saved or deleted so the team sync
+     * layer can push the change to the server. Pass null in offline / community mode.
+     */
+    private val onPlanChanged: (suspend (planId: String, deleted: Boolean) -> Unit)? = null,
 ) {
 
     private val log = logger<PlansViewModel>()
@@ -426,6 +431,7 @@ class PlansViewModel(
             runCatching {
                 withContext(Dispatchers.IO) { planService.deletePlan(planId) }
             }
+            onPlanChanged?.invoke(planId, true)
             planStateCache.remove(planId)
             loadPlans()
         }
@@ -568,9 +574,10 @@ class PlansViewModel(
             }.fold(
                 onSuccess = { result ->
                     result.fold(
-                        onSuccess = {
+                        onSuccess = { saved ->
                             loadPlans()
                             onSuccess()
+                            onPlanChanged?.let { cb -> scope.launch { cb(saved.id, false) } }
                         },
                         onFailure = { saveError = it.message ?: "Save failed" },
                     )
