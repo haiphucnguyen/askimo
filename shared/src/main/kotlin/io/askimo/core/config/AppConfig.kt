@@ -277,6 +277,7 @@ data class RagConfig(
 
 // TODO: Remove @field:JsonAlias camelCase aliases in v1.2.30 - kept for backward compatibility with pre-snake_case config files
 data class ProviderModelConfig(
+    @field:JsonAlias("defaultModel") val defaultModel: String = "",
     @field:JsonAlias("utilityModel") val utilityModel: String = "",
     @field:JsonAlias("embeddingModel") val embeddingModel: String = "",
     @field:JsonAlias("visionModel") val visionModel: String = "",
@@ -307,6 +308,7 @@ data class ModelsConfig(
     val lmstudio: ProviderModelConfig = ProviderModelConfig(),
     val xai: ProviderModelConfig = ProviderModelConfig(),
     val openai_compatible: ProviderModelConfig = ProviderModelConfig(),
+    val askimo_pro: ProviderModelConfig = ProviderModelConfig(),
 ) {
     operator fun get(provider: ModelProvider): ProviderModelConfig = when (provider) {
         ModelProvider.OPENAI -> openai
@@ -318,7 +320,7 @@ data class ModelsConfig(
         ModelProvider.LOCALAI -> localai
         ModelProvider.LMSTUDIO -> lmstudio
         ModelProvider.OPENAI_COMPATIBLE -> openai_compatible
-        ModelProvider.ASKIMO_PRO -> openai_compatible
+        ModelProvider.ASKIMO_PRO -> askimo_pro
         ModelProvider.UNKNOWN -> ProviderModelConfig()
     }
 
@@ -332,7 +334,7 @@ data class ModelsConfig(
         ModelProvider.LOCALAI -> copy(localai = updated)
         ModelProvider.LMSTUDIO -> copy(lmstudio = updated)
         ModelProvider.OPENAI_COMPATIBLE -> copy(openai_compatible = updated)
-        ModelProvider.ASKIMO_PRO -> this
+        ModelProvider.ASKIMO_PRO -> copy(askimo_pro = updated)
         ModelProvider.UNKNOWN -> this
     }
 }
@@ -1029,13 +1031,27 @@ object AppConfig {
                 }.toMutableMap(),
             )
             val current = cached ?: loadOnce()
-            cached = current.copy(context = sanitized)
+
+            // If ASKIMO_PRO settings carry a defaultModel, persist it into
+            // models.askimo_pro.default_model so the model selection survives restarts.
+            val askimoProSettings = params.providerSettings[ModelProvider.ASKIMO_PRO]
+            val askimoProDefaultModel = askimoProSettings?.defaultModel?.takeIf { it.isNotBlank() }
+            val updatedModels = if (askimoProDefaultModel != null) {
+                current.models.update(
+                    ModelProvider.ASKIMO_PRO,
+                    current.models[ModelProvider.ASKIMO_PRO].copy(defaultModel = askimoProDefaultModel),
+                )
+            } else {
+                current.models
+            }
+
+            cached = current.copy(context = sanitized, models = updatedModels)
 
             val configPath = resolveOrCreateConfigPath()
             if (configPath != null && configPath.exists()) {
                 try {
                     val updatedYaml = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(
-                        current.copy(context = persistable),
+                        current.copy(context = persistable, models = updatedModels),
                     )
                     Files.writeString(configPath, updatedYaml)
                     log.info("Saved context to $configPath")
@@ -1201,6 +1217,8 @@ object AppConfig {
 
         val current = config[provider]
         val updated = when (modelField) {
+            "defaultModel" -> current.copy(defaultModel = stringValue)
+
             "utilityModel" -> current.copy(utilityModel = stringValue)
 
             "embeddingModel" -> current.copy(embeddingModel = stringValue)
