@@ -3393,6 +3393,7 @@
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig"
         ]
       },
@@ -3409,11 +3410,13 @@
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
           "io.askimo.core.config.ProviderModelConfig",
+          "io.askimo.core.config.ProviderModelConfig",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getAnthropic", "parameterTypes": [] },
+      { "name": "getAskimo_pro", "parameterTypes": [] },
       { "name": "getDocker", "parameterTypes": [] },
       { "name": "getGemini", "parameterTypes": [] },
       { "name": "getLmstudio", "parameterTypes": [] },
@@ -3452,6 +3455,7 @@
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "java.lang.String"
         ]
       },
@@ -3462,10 +3466,12 @@
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.String",
           "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
+      { "name": "getDefaultModel", "parameterTypes": [] },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
       { "name": "getImageModel", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
@@ -4874,7 +4880,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$u0MO7H06",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$iqUBbmqA",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6526,6 +6532,10 @@
     "fields": [{ "name": "base" }, { "name": "cellsBusy" }]
   },
   {
+    "name": "java.util.concurrent.atomic.Striped64$Cell",
+    "fields": [{ "name": "value" }]
+  },
+  {
     "name": "java.util.concurrent.locks.AbstractOwnableSynchronizer"
   },
   {
@@ -7266,7 +7276,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$5MdVV6F7",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$PNEHtWO3",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

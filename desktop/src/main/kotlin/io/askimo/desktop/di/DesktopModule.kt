@@ -6,6 +6,7 @@ package io.askimo.desktop.di
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.chat.service.ChatSessionExporterService
 import io.askimo.core.chat.service.ChatSessionService
+import io.askimo.core.chat.service.ProjectService
 import io.askimo.core.context.AppContext
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.mcp.McpClientFactory
@@ -43,6 +44,8 @@ val desktopModule = module {
     single { get<DatabaseManager>().getChatDirectiveRepository() }
     single { get<DatabaseManager>().getProjectRepository() }
     single { get<DatabaseManager>().getPlanExecutionRepository() }
+
+    single { ProjectService(projectRepository = get()) }
 
     // Plan repositories & service
     single { PlanDefRepository() }

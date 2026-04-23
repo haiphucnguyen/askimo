@@ -106,7 +106,7 @@ private class CommaSeparatedSetDeserializer : StdDeserializer<Set<String>>(Set::
 // TODO: Remove @JsonAlias camelCase aliases in v1.2.30 — kept for backward compatibility with pre-snake_case config files
 data class IndexingConfig(
     @field:JsonAlias("maxFileBytes") val maxFileBytes: Long = 5_000_000,
-    @field:JsonAlias("concurrentIndexingThreads") val concurrentIndexingThreads: Int = 10,
+    @field:JsonAlias("concurrentIndexingThreads") val concurrentIndexingThreads: Int = 3,
     val filters: FilterConfig = FilterConfig(),
     val customExcludes: Set<String> = emptySet(),
     @field:JsonDeserialize(using = CommaSeparatedSetDeserializer::class)

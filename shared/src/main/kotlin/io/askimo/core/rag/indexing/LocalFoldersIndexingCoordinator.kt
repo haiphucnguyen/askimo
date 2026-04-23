@@ -50,10 +50,11 @@ class LocalFoldersIndexingCoordinator(
     embeddingModel = embeddingModel,
     appContext = appContext,
     stateManagerScope = "folders",
+    resourceId = knowledgeSourceConfig.resourceIdentifier,
 ) {
     private val log = logger<LocalFoldersIndexingCoordinator>()
 
-    private val filePaths = listOf(Paths.get(knowledgeSourceConfig.resourceIdentifier))
+    private val filePath = Paths.get(knowledgeSourceConfig.resourceIdentifier)
 
     private val filterChain: FilterChain = FilterChain.DEFAULT
 
@@ -62,11 +63,14 @@ class LocalFoldersIndexingCoordinator(
     private val maxConcurrentFiles = AppConfig.indexing.concurrentIndexingThreads
     private val fileSemaphore = Semaphore(maxConcurrentFiles)
 
-    // File watcher is owned by this coordinator
     private var fileWatcher: FileWatcher? = null
 
-    // Cancellation flag — set to true by close() to stop in-progress indexing
     @Volatile private var cancelled = false
+
+    companion object {
+        /** Number of files per chunk. Each chunk loads its own small hash map from DB. */
+        private const val CHUNK_SIZE = 20
+    }
 
     /**
      * Check if a path should be excluded from indexing using the filter chain.
@@ -98,55 +102,77 @@ class LocalFoldersIndexingCoordinator(
     }
 
     /**
-     * Index paths with progress tracking.
-     * Uses parallel processing for better performance.
-     * Uses incremental indexing - only indexes new or modified files.
-     * Detects and removes deleted files from the index.
+     * Index paths with progress tracking using chunked processing.
+     *
+     * Memory model: instead of holding ALL file hashes in two maps simultaneously,
+     * each chunk loads only its own slice of previous hashes from the DB, accumulates
+     * changed hashes in a small ConcurrentHashMap, persists them, then discards the map.
      */
-    suspend fun indexPathsWithProgress(
-        paths: List<Path>,
-    ): Boolean {
+    suspend fun indexPathWithProgress(path: Path): Boolean {
         cancelled = false
         updateProgress { IndexProgress(status = IndexStatus.INDEXING) }
 
-        // Store project roots for filtering context
         projectRoots.clear()
-        projectRoots.addAll(paths.map { it.toAbsolutePath() })
-
-        // Reset counters
+        projectRoots.addAll(path.toAbsolutePath())
         processedFilesCounter.set(0)
         totalFilesCounter.set(0)
 
         try {
-            val previousState = stateManager.loadPersistedState()
-            val previousHashes: Map<String, String> = previousState?.fileHashes ?: emptyMap()
-
-            log.info("Starting parallel indexing for project $projectId with $maxConcurrentFiles concurrent threads")
-
-            val fileHashes = ConcurrentHashMap<String, String>()
-
-            // Collect all files first
+            // Collect file paths only — no hashes yet, much smaller footprint
             val allFiles = mutableListOf<Path>()
-            for (path in paths) {
-                collectIndexableFiles(path, allFiles)
-            }
+            collectIndexableFiles(path, allFiles)
 
             totalFilesCounter.set(allFiles.size)
             updateProgress { copy(totalFiles = allFiles.size) }
+            log.info("Found ${allFiles.size} indexable files for project $projectId, processing in chunks of $CHUNK_SIZE")
 
-            log.info("Found ${allFiles.size} indexable files")
+            // Process one chunk at a time — each chunk's hash maps are discarded after saving
+            for (chunk in allFiles.chunked(CHUNK_SIZE)) {
+                if (cancelled) break
 
-            coroutineScope {
-                allFiles.map { filePath ->
-                    async(Dispatchers.IO) {
-                        fileSemaphore.withPermit {
-                            indexFile(filePath, fileHashes, previousHashes)
+                val chunkAbsolutePaths = chunk.map { it.toAbsolutePath().toString() }
+
+                // One DB round-trip for this chunk's previous hashes (not the whole project)
+                val previousChunkHashes = stateManager.getHashesForFiles(chunkAbsolutePaths)
+
+                // Only holds hashes for files that actually changed in this chunk
+                val changedHashes = ConcurrentHashMap<String, String>(chunk.size)
+
+                coroutineScope {
+                    chunk.map { file ->
+                        async(Dispatchers.IO) {
+                            fileSemaphore.withPermit {
+                                indexFileIncremental(file, previousChunkHashes, changedHashes)
+                            }
                         }
-                    }
-                }.awaitAll()
+                    }.awaitAll()
+                }
+
+                // Persist changed files immediately, then GC the map
+                stateManager.saveFileHashesBatch(changedHashes)
             }
 
-            return finalizeIndexing(previousHashes, fileHashes)
+            if (!cancelled) {
+                // Deleted-file detection: DB paths that are no longer on disk
+                val currentPathSet = allFiles.mapTo(HashSet()) { it.toAbsolutePath().toString() }
+                val storedPaths = stateManager.getStoredPaths()
+                val deletedPaths = storedPaths - currentPathSet
+
+                if (deletedPaths.isNotEmpty()) {
+                    log.info("Detected ${deletedPaths.size} deleted files, removing from index...")
+                    deletedPaths.forEach { hybridIndexer.removeFileFromIndex(Path.of(it)) }
+                    stateManager.removeFilePaths(deletedPaths)
+                }
+            }
+
+            if (!hybridIndexer.flushRemainingSegments()) {
+                updateProgress { copy(status = IndexStatus.FAILED, error = "Failed to flush remaining segments") }
+                return false
+            }
+
+            updateProgress { copy(status = IndexStatus.READY, processedFiles = processedFilesCounter.get()) }
+            log.info("Completed indexing for project $projectName: ${processedFilesCounter.get()} files processed")
+            return true
         } catch (e: Exception) {
             log.error("Indexing failed for project $projectName", e)
             updateProgress { copy(status = IndexStatus.FAILED, error = e.message ?: "Unknown error") }
@@ -179,13 +205,14 @@ class LocalFoldersIndexingCoordinator(
     }
 
     /**
-     * Index a single file (optimized for parallel processing).
-     * Returns true if file was processed successfully (indexed or skipped), false on error.
+     * Index a single file within a chunk.
+     * Writes to [changedHashes] only if the file actually changed — unchanged files
+     * keep their existing DB entry untouched.
      */
-    private suspend fun indexFile(
+    private suspend fun indexFileIncremental(
         filePath: Path,
-        fileHashes: ConcurrentHashMap<String, String>,
-        previousHashes: Map<String, String>,
+        previousChunkHashes: Map<String, String>,
+        changedHashes: ConcurrentHashMap<String, String>,
     ): Boolean {
         if (cancelled) {
             log.trace("Indexing cancelled, skipping file: {}", filePath.pathString)
@@ -194,59 +221,57 @@ class LocalFoldersIndexingCoordinator(
         val startTime = System.currentTimeMillis()
 
         try {
-            val hash = stateManager.calculateFileHash(filePath)
             val absolutePath = filePath.toAbsolutePath().toString()
+            val hash = stateManager.calculateFileHash(filePath)
 
-            // Store hash regardless of whether we index or skip
-            fileHashes[absolutePath] = hash
-
-            // Skip if file hasn't changed (incremental indexing)
-            if (previousHashes[absolutePath] == hash) {
+            // Unchanged — DB entry is still valid, skip without touching anything
+            if (previousChunkHashes[absolutePath] == hash) {
                 log.trace("Skipping unchanged file: {}", filePath.pathString)
                 updateProgressAtomic()
                 return true
             }
 
+            // File changed — remove stale old segments before re-indexing to avoid duplicates
+            if (previousChunkHashes.containsKey(absolutePath)) {
+                log.trace("File changed, removing old segments: {}", filePath.pathString)
+                hybridIndexer.removeFileFromIndex(filePath)
+            }
+
             val segments = resourceContentProcessor.createSegmentsForFile(filePath)
 
-            // Skip files that can't be read, have blank content, or produce no valid chunks
             if (segments == null) {
                 log.warn("Skipping file with no extractable content: {}", filePath.pathString)
+                changedHashes[absolutePath] = hash // still record so we don't re-visit
                 updateProgressAtomic()
                 return true
             }
 
             if (segments.isEmpty()) {
                 log.debug("No valid chunks created for file: {}", filePath.pathString)
+                changedHashes[absolutePath] = hash
                 updateProgressAtomic()
                 return true
             }
 
             log.trace("Start indexing {} ({} chunks)", filePath.pathString, segments.size)
             for (segment in segments) {
-                if (!hybridIndexer.addSegmentToBatch(segment, filePath)) {
-                    return false
-                }
+                if (!hybridIndexer.addSegmentToBatch(segment, filePath)) return false
             }
 
-            val elapsedTime = System.currentTimeMillis() - startTime
-            log.debug("Indexed {} ({} chunks) in {}ms", filePath.pathString, segments.size, elapsedTime)
-
+            changedHashes[absolutePath] = hash
+            log.debug("Indexed {} ({} chunks) in {}ms", filePath.pathString, segments.size, System.currentTimeMillis() - startTime)
             updateProgressAtomic()
             return true
         } catch (e: Exception) {
-            val elapsedTime = System.currentTimeMillis() - startTime
-            log.error("Failed to index file {} after {}ms: {}", filePath.pathString, elapsedTime, e.message, e)
+            log.error("Failed to index file {} after {}ms: {}", filePath.pathString, System.currentTimeMillis() - startTime, e.message, e)
             return false
         }
     }
 
-    // ========== IndexingCoordinator Interface Implementation ==========
-
     /**
      * Start indexing using the paths provided at construction.
      */
-    override suspend fun startIndexing(): Boolean = indexPathsWithProgress(filePaths)
+    override suspend fun startIndexing(): Boolean = indexPathWithProgress(filePath)
 
     /**
      * Start watching for file changes.
@@ -271,7 +296,7 @@ class LocalFoldersIndexingCoordinator(
             },
         )
 
-        fileWatcher?.startWatching(filePaths, scope)
+        fileWatcher?.startWatching(filePath, scope)
         log.info("Started file watching for project $projectId")
     }
 
@@ -281,15 +306,7 @@ class LocalFoldersIndexingCoordinator(
     override fun stopWatching() {
         fileWatcher?.stopWatching()
         fileWatcher = null
-        log.info("Stopped file watching for project $projectId")
-    }
-
-    /**
-     * Clear all indexed data for this project.
-     */
-    override fun clearAll() {
-        stateManager.clearStates()
-        log.info("Cleared all index states for project $projectId (folders)")
+        log.info("Stopped file watching $filePath for project $projectId")
     }
 
     /**

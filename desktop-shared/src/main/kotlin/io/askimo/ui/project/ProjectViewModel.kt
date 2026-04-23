@@ -12,7 +12,6 @@ import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.event.internal.ProjectIndexRemovalEvent
 import io.askimo.core.event.internal.ProjectReIndexEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
@@ -293,34 +292,6 @@ class ProjectViewModel(
                     e,
                     "removing session from project",
                     LocalizationManager.getString("session.error.removing"),
-                )
-            }
-        }
-    }
-
-    /**
-     * Delete the project
-     */
-    fun deleteProject() {
-        scope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    projectRepository.deleteProject(projectId)
-                }
-
-                EventBus.post(
-                    ProjectDeletedEvent(
-                        projectId = projectId,
-                    ),
-                )
-
-                successMessage = LocalizationManager.getString("project.delete.success")
-            } catch (e: Exception) {
-                log.error("Failed to delete project", e)
-                errorMessage = ErrorHandler.getUserFriendlyError(
-                    e,
-                    "deleting project",
-                    LocalizationManager.getString("project.error.deleting"),
                 )
             }
         }

@@ -8,6 +8,7 @@ import io.askimo.core.chat.domain.ResourceSegmentsTable
 import io.askimo.core.db.DatabaseManager
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -124,6 +125,37 @@ class ResourceSegmentRepository(
     fun removeAllSegmentMappingsForProject(projectId: String): Int = transaction(database) {
         ResourceSegmentsTable.deleteWhere {
             ResourceSegmentsTable.projectId eq projectId
+        }
+    }
+
+    /**
+     * Get all segment IDs whose resource path starts with [dirPrefix].
+     * Used to clean up all segments under a deleted directory.
+     */
+    fun getSegmentIdsForDirectory(projectId: String, dirPrefix: String): List<String> {
+        val prefix = if (dirPrefix.endsWith("/")) dirPrefix else "$dirPrefix/"
+        return transaction(database) {
+            ResourceSegmentsTable
+                .selectAll()
+                .where {
+                    (ResourceSegmentsTable.projectId eq projectId) and
+                        (ResourceSegmentsTable.resourceId like "$prefix%")
+                }
+                .map { it[ResourceSegmentsTable.segmentId] }
+        }
+    }
+
+    /**
+     * Remove all segment mappings whose resource path starts with [dirPrefix].
+     * Returns the number of rows deleted.
+     */
+    fun removeSegmentMappingsForDirectory(projectId: String, dirPrefix: String): Int {
+        val prefix = if (dirPrefix.endsWith("/")) dirPrefix else "$dirPrefix/"
+        return transaction(database) {
+            ResourceSegmentsTable.deleteWhere {
+                (ResourceSegmentsTable.projectId eq projectId) and
+                    (ResourceSegmentsTable.resourceId like "$prefix%")
+            }
         }
     }
 }

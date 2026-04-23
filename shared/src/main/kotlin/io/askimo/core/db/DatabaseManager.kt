@@ -488,15 +488,36 @@ class DatabaseManager private constructor(
 
     private fun createIndexFileStateTable(conn: Connection) {
         conn.createStatement().use { stmt ->
+            // Only drop and recreate if the old schema is detected (missing resource_id column).
+            // Checking PRAGMA table_info avoids wiping the index state on every startup.
+            val hasResourceId = conn.createStatement().use { infoStmt ->
+                val rs = infoStmt.executeQuery("PRAGMA table_info(index_file_state)")
+                var found = false
+                while (rs.next()) {
+                    if (rs.getString("name") == "resource_id") {
+                        found = true
+                        break
+                    }
+                }
+                found
+            }
+
+            if (!hasResourceId) {
+                // Old schema or table doesn't exist yet — drop and recreate cleanly.
+                // Index state is rebuilt automatically on the next indexing run.
+                stmt.executeUpdate("DROP TABLE IF EXISTS index_file_state")
+            }
+
             stmt.executeUpdate(
                 """
                 CREATE TABLE IF NOT EXISTS index_file_state (
-                    project_id TEXT NOT NULL,
-                    file_path TEXT NOT NULL,
-                    file_hash TEXT NOT NULL,
+                    project_id  TEXT NOT NULL,
+                    resource_id TEXT NOT NULL,
+                    file_path   TEXT NOT NULL,
+                    file_hash   TEXT NOT NULL,
                     source_type TEXT NOT NULL,
-                    indexed_at TEXT NOT NULL,
-                    PRIMARY KEY (project_id, file_path)
+                    indexed_at  TEXT NOT NULL,
+                    PRIMARY KEY (project_id, resource_id, file_path)
                 )
                 """.trimIndent(),
             )
@@ -509,11 +530,11 @@ class DatabaseManager private constructor(
                 """.trimIndent(),
             )
 
-            // Composite index on project_id and source_type for filtering
+            // Composite index on project_id, resource_id and source_type for coordinator-scoped filtering
             stmt.executeUpdate(
                 """
-                CREATE INDEX IF NOT EXISTS idx_index_file_state_project_source
-                ON index_file_state (project_id, source_type)
+                CREATE INDEX IF NOT EXISTS idx_index_file_state_project_resource_source
+                ON index_file_state (project_id, resource_id, source_type)
                 """.trimIndent(),
             )
         }

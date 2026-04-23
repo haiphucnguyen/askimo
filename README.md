@@ -38,8 +38,6 @@
   <a href="https://github.com/haiphucnguyen/askimo/releases">
     <img src="https://img.shields.io/github/downloads/haiphucnguyen/askimo/total" alt="Total Downloads">
   </a>
-  <img src="https://img.shields.io/github/commit-activity/m/haiphucnguyen/askimo" alt="Commit Activity">
-  <img src="https://img.shields.io/github/last-commit/haiphucnguyen/askimo" alt="Last Commit">
   <img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" alt="macOS">
   <img src="https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" alt="Linux">

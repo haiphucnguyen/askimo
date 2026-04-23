@@ -61,11 +61,13 @@ object RagUtils {
         384
     }
 
-    fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> {
+    fun getEmbeddingStore(projectId: String, embeddingModel: EmbeddingModel): EmbeddingStore<TextSegment> = getEmbeddingStoreWithDimension(projectId, getDimensionForModel(embeddingModel))
+
+    fun getEmbeddingStoreWithDimension(projectId: String, dimension: Int): EmbeddingStore<TextSegment> {
         val jVectorIndexDir = getProjectJVectorIndexDir(projectId)
 
         return JVectorEmbeddingStore.builder()
-            .dimension(getDimensionForModel(embeddingModel))
+            .dimension(dimension)
             .persistencePath(jVectorIndexDir.toString())
             .build()
     }

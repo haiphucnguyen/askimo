@@ -4,6 +4,7 @@
  */
 package io.askimo.ui.chat
 
+import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -44,13 +44,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.ui.codeViewerBlock
 import io.askimo.ui.common.ui.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -219,25 +219,47 @@ fun fileViewerPane(
             }
 
             is ViewerState.Content -> {
-                val scrollState = rememberScrollState()
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    SelectionContainer {
-                        Text(
-                            text = state.text,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(scrollState)
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
-                                .padding(end = 10.dp), // room for scrollbar
+                val language = File(node.path).extension.lowercase().takeIf { it.isNotEmpty() }
+                val vScrollState = rememberScrollState()
+                val hScrollState = rememberScrollState()
+                // Outer Box: stacks scrollable content + fixed scrollbar overlays
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(vScrollState)
+                            .padding(end = 8.dp, bottom = 10.dp), // room for scrollbars
+                    ) {
+                        codeViewerBlock(
+                            code = state.text,
+                            language = language,
+                            hScrollState = hScrollState,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    // Vertical scrollbar — always visible on the right
                     VerticalScrollbar(
-                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                        adapter = rememberScrollbarAdapter(scrollState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .padding(bottom = 10.dp),
+                        adapter = rememberScrollbarAdapter(vScrollState),
+                        style = ScrollbarStyle(
+                            minimalHeight = 16.dp,
+                            thickness = 6.dp,
+                            shape = MaterialTheme.shapes.small,
+                            hoverDurationMillis = 300,
+                            unhoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            hoverColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        ),
+                    )
+                    // Horizontal scrollbar — always visible at the bottom, never scrolls away
+                    HorizontalScrollbar(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .padding(end = 10.dp), // room for vertical scrollbar
+                        adapter = rememberScrollbarAdapter(hScrollState),
                         style = ScrollbarStyle(
                             minimalHeight = 16.dp,
                             thickness = 6.dp,

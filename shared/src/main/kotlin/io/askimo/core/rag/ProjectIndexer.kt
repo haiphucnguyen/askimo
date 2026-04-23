@@ -51,6 +51,9 @@ class ProjectIndexer(
 
     // Map of projectId -> List of coordinators (one per knowledge source)
     private val coordinators = ConcurrentHashMap<String, List<IndexingCoordinator<*>>>()
+
+    // Map of projectId -> EmbeddingStore, so we can close it when the project is removed
+    private val embeddingStores = ConcurrentHashMap<String, EmbeddingStore<TextSegment>>()
     init {
         scope.launch {
             EventBus.internalEvents
@@ -99,6 +102,15 @@ class ProjectIndexer(
         coordinators.remove(projectId)?.forEach {
             it.clearAll()
             it.close()
+        }
+
+        // Release the JVector embedding store (holds all vectors in-memory)
+        (embeddingStores.remove(projectId) as? java.io.Closeable)?.let {
+            try {
+                it.close()
+            } catch (e: Exception) {
+                log.warn("Failed to close embedding store for project $projectId", e)
+            }
         }
 
         if (deleteProjectFolder) {
@@ -151,6 +163,10 @@ class ProjectIndexer(
 
     /**
      * Common indexing logic used by both initial indexing and re-indexing.
+     *
+     * @param appendCoordinators When true, new coordinators are merged with any existing ones
+     *   (used when adding a new knowledge source to an already-indexed project).
+     *   When false (default), the coordinator list is replaced entirely.
      */
     private suspend fun performIndexing(
         projectId: String,
@@ -159,12 +175,16 @@ class ProjectIndexer(
         embeddingStore: EmbeddingStore<TextSegment>,
         embeddingModel: EmbeddingModel,
         watchForChanges: Boolean,
+        appendCoordinators: Boolean = false,
     ) {
         val indexingStartMs = System.currentTimeMillis()
 
-        RagUtils.saveEmbeddingDimension(projectId, RagUtils.getDimensionForModel(embeddingModel))
+        val dimension = RagUtils.getDimensionForModel(embeddingModel)
+        RagUtils.saveEmbeddingDimension(projectId, dimension)
 
-        // Create one coordinator per knowledge source using factory
+        // Register the store so removeCoordinator can close it and free in-memory vectors
+        embeddingStores[projectId] = embeddingStore
+
         val projectCoordinators = try {
             knowledgeSources.map { source ->
                 IndexingCoordinatorFactory.createCoordinator(
@@ -188,7 +208,11 @@ class ProjectIndexer(
             return
         }
 
-        coordinators[projectId] = projectCoordinators
+        coordinators[projectId] = if (appendCoordinators) {
+            (coordinators[projectId] ?: emptyList()) + projectCoordinators
+        } else {
+            projectCoordinators
+        }
 
         EventBus.emit(
             IndexingStartedEvent(
@@ -197,15 +221,38 @@ class ProjectIndexer(
             ),
         )
 
-        // Index all sources in parallel
+        // Index all sources in parallel, skipping any coordinator that is already
+        // running or has successfully completed (guards against duplicate startIndexing calls
+        // when coordinators are appended to an already-indexed project).
         val results = coroutineScope {
             projectCoordinators.map { coordinator ->
                 async {
-                    try {
-                        coordinator.startIndexing()
-                    } catch (e: Exception) {
-                        log.error("Failed to index knowledge source for project $projectId", e)
-                        false
+                    val status = coordinator.progress.value.status
+                    when {
+                        status == IndexStatus.INDEXING -> {
+                            log.debug(
+                                "Coordinator for {} is already indexing — skipping duplicate startIndexing",
+                                coordinator.knowledgeSourceConfig.resourceIdentifier,
+                            )
+                            true
+                        }
+
+                        coordinator.progress.value.isComplete -> {
+                            log.debug(
+                                "Coordinator for {} is already complete — skipping startIndexing",
+                                coordinator.knowledgeSourceConfig.resourceIdentifier,
+                            )
+                            true
+                        }
+
+                        else -> {
+                            try {
+                                coordinator.startIndexing()
+                            } catch (e: Exception) {
+                                log.error("Failed to index knowledge source for project $projectId", e)
+                                false
+                            }
+                        }
                     }
                 }
             }.awaitAll()
@@ -303,7 +350,8 @@ class ProjectIndexer(
                 val embeddingModel = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(embeddingModel)
 
-                val embeddingStore = RagUtils.getEmbeddingStore(projectId, embeddingModel)
+                val dimension = RagUtils.getDimensionForModel(embeddingModel)
+                val embeddingStore = RagUtils.getEmbeddingStoreWithDimension(projectId, dimension)
 
                 performIndexing(
                     projectId = projectId,
@@ -379,7 +427,7 @@ class ProjectIndexer(
             val projectId = event.projectId
 
             // Create embedding model early so we can check the dimension before anything else
-            val embeddingModel = event.embeddingModel ?: run {
+            val embeddingModel = run {
                 val model = appContext.getEmbeddingModel()
                 checkEmbeddingModelAvailable(model)
                 model
@@ -408,20 +456,25 @@ class ProjectIndexer(
                 // Fall through — indexing will now run with a clean slate
             } else {
                 // ── Normal duplicate / in-progress guard ─────────────────────
-                val existingCoordinators = coordinators[projectId]
+                // Only applies when re-indexing the whole project (event.knowledgeSources == null).
+                // When specific sources are provided (e.g. a newly added reference material),
+                // skip the guard so those sources are always indexed and appended.
+                if (event.knowledgeSources == null) {
+                    val existingCoordinators = coordinators[projectId]
 
-                if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
-                    log.debug("Project $projectId already indexed, skipping duplicate request")
-                    return
-                }
+                    if (existingCoordinators != null && existingCoordinators.all { it.progress.value.isComplete }) {
+                        log.debug("Project $projectId already indexed, skipping duplicate request")
+                        return
+                    }
 
-                if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
-                    log.debug("Project $projectId is currently being indexed, skipping duplicate request")
-                    return
+                    if (existingCoordinators != null && existingCoordinators.any { it.progress.value.status == IndexStatus.INDEXING }) {
+                        log.debug("Project $projectId is currently being indexed, skipping duplicate request")
+                        return
+                    }
                 }
             }
 
-            val embeddingStore = event.embeddingStore ?: RagUtils.getEmbeddingStore(projectId, embeddingModel)
+            val embeddingStore = RagUtils.getEmbeddingStoreWithDimension(projectId, currentDimension)
 
             val project = try {
                 projectRepository.getProject(projectId)
@@ -430,14 +483,34 @@ class ProjectIndexer(
                 return
             }
             if (project != null) {
-                performIndexing(
-                    projectId = projectId,
-                    projectName = project.name,
-                    knowledgeSources = event.knowledgeSources ?: project.knowledgeSources,
-                    embeddingStore = embeddingStore,
-                    embeddingModel = embeddingModel,
-                    watchForChanges = event.watchForChanges,
-                )
+                val newSources = event.knowledgeSources
+                if (newSources != null) {
+                    // Specific sources requested (e.g. newly added reference material) —
+                    // index only those sources and append coordinators to the existing list.
+                    log.info(
+                        "Indexing {} new knowledge source(s) for project $projectId",
+                        newSources.size,
+                    )
+                    performIndexing(
+                        projectId = projectId,
+                        projectName = project.name,
+                        knowledgeSources = newSources,
+                        embeddingStore = embeddingStore,
+                        embeddingModel = embeddingModel,
+                        watchForChanges = event.watchForChanges,
+                        appendCoordinators = true,
+                    )
+                } else {
+                    // Full project index (startup / first-time)
+                    performIndexing(
+                        projectId = projectId,
+                        projectName = project.name,
+                        knowledgeSources = project.knowledgeSources,
+                        embeddingStore = embeddingStore,
+                        embeddingModel = embeddingModel,
+                        watchForChanges = event.watchForChanges,
+                    )
+                }
             }
         } catch (e: Exception) {
             log.error("Failed to handle indexing request for project ${event.projectId}", e)

@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.apache.lucene.store.AlreadyClosedException
 import java.nio.file.Path
 
 /**
@@ -32,15 +33,13 @@ class HybridIndexer(
     private val embeddingStore: EmbeddingStore<TextSegment>,
     private val embeddingModel: EmbeddingModel,
     private val projectId: String,
+    private val segmentRepository: ResourceSegmentRepository = DatabaseManager.getInstance().getResourceSegmentRepository(),
 ) {
     private val log = logger<HybridIndexer>()
     private val luceneIndexer = LuceneIndexer.getInstance(projectId)
-    private val segmentRepository: ResourceSegmentRepository by lazy {
-        DatabaseManager.getInstance().getResourceSegmentRepository()
-    }
 
     companion object {
-        private const val BATCH_SIZE = 100
+        private const val BATCH_SIZE = 50
     }
 
     // Mutex for thread-safe batch operations
@@ -85,7 +84,7 @@ class HybridIndexer(
                 val segmentIds = segments.map { generateSegmentId(it) }
 
                 embeddingStore.addAll(embeddings, segments)
-                (embeddingStore as JVectorEmbeddingStore).save()
+                (embeddingStore as? JVectorEmbeddingStore)?.save()
 
                 luceneIndexer.indexSegments(segments)
 
@@ -106,6 +105,11 @@ class HybridIndexer(
             }
 
             true
+        } catch (_: AlreadyClosedException) {
+            // The LuceneIndexer was closed by a concurrent re-index/delete — this coordinator
+            // was cancelled. Suppress the error and signal the caller to stop.
+            log.debug("Lucene IndexWriter already closed for project {} — indexing was cancelled", projectId)
+            false
         } catch (e: Exception) {
             // Find the largest segment in the batch to help debug token limit errors
             val maxSegmentChars = segments.maxOfOrNull { it.text().length } ?: 0
@@ -203,10 +207,41 @@ class HybridIndexer(
                 val removed = segmentRepository.removeSegmentMappingsForFile(projectId, filePath)
                 log.trace("Removed {} segment mappings from database for file {}", removed, filePath.fileName)
             } else {
-                log.debug("No segments found for file {}", filePath.fileName)
+                log.trace("No segments found for file {}", filePath.fileName)
             }
         } catch (e: Exception) {
             log.error("Failed to remove file from hybrid index: {}", filePath.fileName, e)
+        }
+    }
+
+    /**
+     * Remove all segments for every file under [dirPath] from the embedding store,
+     * keyword index, and tracking database.
+     */
+    fun removeDirectoryFromIndex(dirPath: Path) {
+        try {
+            val dirPrefix = dirPath.toAbsolutePath().toString()
+            val segmentIds = segmentRepository.getSegmentIdsForDirectory(projectId, dirPrefix)
+
+            if (segmentIds.isNotEmpty()) {
+                log.debug("Removing {} segments for directory {} from hybrid index", segmentIds.size, dirPath.fileName)
+
+                // Remove from embedding store
+                embeddingStore.removeAll(segmentIds)
+
+                // Remove from Lucene keyword index — removeFile per stored path
+                // Lucene entries are keyed by file path string, so we need per-file removal.
+                // Re-query to get distinct resource_ids (file paths) under this dir.
+                luceneIndexer.removeDirectory(dirPrefix)
+
+                // Remove all DB mappings under this directory prefix
+                val removed = segmentRepository.removeSegmentMappingsForDirectory(projectId, dirPrefix)
+                log.debug("Removed {} segment mappings from database for directory {}", removed, dirPath.fileName)
+            } else {
+                log.debug("No segments found under directory {}", dirPath.fileName)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to remove directory from hybrid index: {}", dirPath.fileName, e)
         }
     }
 
