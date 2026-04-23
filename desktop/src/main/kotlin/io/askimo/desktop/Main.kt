@@ -1826,13 +1826,13 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
-                            onStartChat = { projId, mode, message, attachments, disabledServerIds ->
+                            onStartChat = { projId, mode, message, attachments, enabledServerIds ->
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,
                                     mode = mode,
                                     message = message,
                                     attachments = attachments,
-                                    disabledServerIds = disabledServerIds,
+                                    enabledServerIds = enabledServerIds,
                                     onComplete = { onNavigateToChat() },
                                 )
                             },

@@ -402,7 +402,7 @@ class ChatViewModel(
         message: String,
         attachments: List<FileAttachmentDTO>,
         editingMessage: ChatMessageDTO?,
-        disabledServerIds: Set<String>,
+        enabledServerIds: Set<String>,
     ): String? {
         if (message.isBlank() || isLoading) return currentSessionId.value
 
@@ -413,10 +413,10 @@ class ChatViewModel(
 
             scope.launch {
                 editMessage(originalMessageId, message, attachments)
-                sendMessage(projectId = project?.id, creationMode, message, attachments, disabledServerIds)
+                sendMessage(projectId = project?.id, creationMode, message, attachments, enabledServerIds)
             }
         } else {
-            sendMessage(projectId = project?.id, creationMode, message, attachments, disabledServerIds)
+            sendMessage(projectId = project?.id, creationMode, message, attachments, enabledServerIds)
         }
 
         return currentSessionId
@@ -428,7 +428,7 @@ class ChatViewModel(
      *
      * @param messageId The AI message ID to retry
      */
-    override fun retryMessage(messageId: String, disabledServerIds: Set<String>) {
+    override fun retryMessage(messageId: String, enabledServerIds: Set<String>) {
         scope.launch {
             try {
                 // 1. Find the AI message to retry
@@ -499,7 +499,7 @@ class ChatViewModel(
                             sessionId = sessionId,
                             userMessage = userMessage,
                             willSaveUserMessage = false,
-                            disabledServerIds = disabledServerIds,
+                            enabledServerIds = enabledServerIds,
                             directiveId = selectedDirective,
                         )
 
@@ -557,7 +557,7 @@ class ChatViewModel(
      * @param message The user's message
      * @param attachments Optional list of file attachments
      */
-    fun sendMessage(projectId: String?, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO> = emptyList(), disabledServerIds: Set<String> = emptySet()) {
+    fun sendMessage(projectId: String?, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO> = emptyList(), enabledServerIds: Set<String> = emptySet()) {
         if (message.isBlank() || isLoading) return
 
         // Session ID must be set by this point (from resumeSession)
@@ -601,7 +601,7 @@ class ChatViewModel(
                     sessionId = sessionId,
                     userMessage = userMessage,
                     willSaveUserMessage = true,
-                    disabledServerIds = disabledServerIds,
+                    enabledServerIds = enabledServerIds,
                     directiveId = selectedDirective,
                 )
 

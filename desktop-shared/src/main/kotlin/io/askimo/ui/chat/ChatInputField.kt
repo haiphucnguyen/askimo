@@ -140,7 +140,7 @@ fun chatInputField(
     onCancelEdit: () -> Unit = {},
     sessionId: String? = null,
     placeholder: String = stringResource("chat.input.placeholder"),
-    onDisabledServerIdsChange: ((Set<String>) -> Unit)? = null,
+    onEnabledServerIdsChange: ((Set<String>) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val inputFocusRequester = remember { FocusRequester() }
@@ -149,14 +149,13 @@ fun chatInputField(
     // Reset to Chat mode when switching to a different session
     var creationMode by remember(sessionId) { mutableStateOf<CreationMode>(CreationMode.Chat) }
 
-    // Session-scoped set of server IDs disabled by the user via the tools popup.
-    // Defaults to built-in tools disabled. Passed directly to sendMessage at send time.
-    var disabledServerIds by remember(sessionId) { mutableStateOf(setOf(ToolRegistry.BUILTIN_SERVER_ID)) }
+    // Session-scoped set of server IDs enabled by the user via the tools popup.
+    // Empty by default — all tools are off until the user opts in.
+    var enabledServerIds by remember(sessionId) { mutableStateOf(emptySet<String>()) }
 
-    // Notify caller whenever the user changes the disabled server selection,
-    // so ChatView always has the live value available for sending message.
-    LaunchedEffect(disabledServerIds) {
-        onDisabledServerIdsChange?.invoke(disabledServerIds)
+    // Notify caller whenever the user changes the enabled server selection.
+    LaunchedEffect(enabledServerIds) {
+        onEnabledServerIdsChange?.invoke(enabledServerIds)
     }
 
     // State for resizable text field (min 60dp, will calculate max based on available space)
@@ -622,9 +621,9 @@ fun chatInputField(
                     toolsIndicatorButton(
                         sessionId = sessionId,
                         isLoading = isLoading,
-                        disabledServerIds = disabledServerIds,
-                        onDisabledServerIdsChange = { updated ->
-                            disabledServerIds = updated
+                        enabledServerIds = enabledServerIds,
+                        onEnabledServerIdsChange = { updated ->
+                            enabledServerIds = updated
                         },
                     )
 
@@ -649,8 +648,8 @@ fun chatInputField(
 private fun toolsIndicatorButton(
     sessionId: String?,
     isLoading: Boolean,
-    disabledServerIds: Set<String>,
-    onDisabledServerIdsChange: (Set<String>) -> Unit,
+    enabledServerIds: Set<String>,
+    onEnabledServerIdsChange: (Set<String>) -> Unit,
 ) {
     var showToolsPopup by remember { mutableStateOf(false) }
     var mcpServers by remember { mutableStateOf<List<McpServerInfo>>(emptyList()) }
@@ -716,8 +715,8 @@ private fun toolsIndicatorButton(
     }
 
     val totalServers = mcpServers.size
-    val enabledServers = mcpServers.count { it.id !in disabledServerIds }
-    val hasDisabled = disabledServerIds.isNotEmpty() && totalServers > 0
+    val enabledServers = mcpServers.count { it.id in enabledServerIds }
+    val hasDisabled = enabledServers < totalServers && totalServers > 0
 
     Box {
         themedTooltip(
@@ -840,13 +839,13 @@ private fun toolsIndicatorButton(
                                     mcpServers.forEach { server ->
                                         mcpServerItem(
                                             server = server,
-                                            isEnabled = server.id !in disabledServerIds,
+                                            isEnabled = server.id in enabledServerIds,
                                             onToggle = {
-                                                onDisabledServerIdsChange(
-                                                    if (server.id in disabledServerIds) {
-                                                        disabledServerIds - server.id
+                                                onEnabledServerIdsChange(
+                                                    if (server.id in enabledServerIds) {
+                                                        enabledServerIds - server.id
                                                     } else {
-                                                        disabledServerIds + server.id
+                                                        enabledServerIds + server.id
                                                     },
                                                 )
                                             },
