@@ -33,12 +33,13 @@ abstract class BaseLocalIndexingCoordinator<T : KnowledgeSourceConfig>(
     protected val embeddingModel: EmbeddingModel,
     protected val appContext: AppContext,
     stateManagerScope: String,
+    resourceId: String, // KnowledgeSourceConfig.resourceIdentifier — isolates state per coordinator
 ) : IndexingCoordinator<T> {
 
     private val log = logger<BaseLocalIndexingCoordinator<*>>()
 
     protected val resourceContentProcessor = ResourceContentProcessor(appContext)
-    protected val stateManager = IndexStateManager(projectId, stateManagerScope)
+    protected val stateManager = IndexStateManager(projectId, stateManagerScope, resourceId)
     protected val hybridIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val _progress = MutableStateFlow(IndexProgress())
@@ -148,5 +149,21 @@ abstract class BaseLocalIndexingCoordinator<T : KnowledgeSourceConfig>(
             log.error("Failed to remove deleted files from index", e)
             throw e
         }
+    }
+
+    /**
+     * Clears all indexed data for this knowledge source:
+     * - Removes all segments from the embedding store and Lucene keyword index
+     *   (via [HybridIndexer.removeDirectoryFromIndex] using the resource path as prefix)
+     * - Clears the DB hash-state records
+     */
+    override fun clearAll() {
+        try {
+            hybridIndexer.removeDirectoryFromIndex(Path.of(stateManager.resourceId))
+        } catch (e: Exception) {
+            log.error("Failed to clear hybrid index for resource ${stateManager.resourceId} in project $projectId", e)
+        }
+        stateManager.clearStates()
+        log.info("Cleared all index states for project $projectId (resource: ${stateManager.resourceId})")
     }
 }

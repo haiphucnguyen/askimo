@@ -9,10 +9,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
+import io.askimo.core.chat.service.ProjectService
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectDeletedEvent
 import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.logging.logger
@@ -22,12 +22,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
 
 /**
  * ViewModel for managing projects in the desktop application.
  */
 class ProjectsViewModel(
     private val scope: CoroutineScope,
+    private val projectService: ProjectService = GlobalContext.get().get(),
 ) {
     private val log = logger<ProjectsViewModel>()
     private val projectRepository = DatabaseManager.getInstance().getProjectRepository()
@@ -165,15 +167,10 @@ class ProjectsViewModel(
         scope.launch {
             try {
                 val deleted = withContext(Dispatchers.IO) {
-                    projectRepository.deleteProject(projectId)
+                    projectService.deleteProject(projectId)
                 }
                 if (deleted) {
                     deleteProjectSuccessfulBannerMessage = LocalizationManager.getString("projects.delete.success")
-                    EventBus.post(
-                        ProjectDeletedEvent(
-                            projectId = projectId,
-                        ),
-                    )
                     refresh()
                 } else {
                     errorMessage = LocalizationManager.getString("projects.error.not.found")

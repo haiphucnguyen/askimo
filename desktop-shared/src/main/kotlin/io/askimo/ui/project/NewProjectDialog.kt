@@ -41,10 +41,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import io.askimo.core.chat.domain.Project
-import io.askimo.core.db.DatabaseManager
-import io.askimo.core.event.EventBus
-import io.askimo.core.event.internal.ProjectIndexingRequestedEvent
+import io.askimo.core.chat.service.ProjectService
 import io.askimo.core.logging.logger
 import io.askimo.ui.common.components.inlineErrorMessage
 import io.askimo.ui.common.components.primaryButton
@@ -55,9 +52,10 @@ import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
+import org.koin.core.context.GlobalContext
 import java.util.UUID
 import kotlin.collections.plus
+import kotlin.time.Duration.Companion.milliseconds
 
 private object NewProjectDialog
 private val log = logger<NewProjectDialog>()
@@ -72,6 +70,7 @@ private const val SUCCESS_COUNTDOWN_SECONDS = 5
 fun newProjectDialog(
     onDismiss: () -> Unit,
     onCreateProject: (name: String, description: String?) -> Unit,
+    projectService: ProjectService = GlobalContext.get().get(),
 ) {
     var projectName by remember { mutableStateOf("") }
     var projectDescription by remember { mutableStateOf("") }
@@ -97,7 +96,7 @@ fun newProjectDialog(
         if (showSuccess) {
             countdown = 5
             while (countdown > 0) {
-                delay(1000)
+                delay(1000.milliseconds)
                 countdown--
             }
             onDismiss()
@@ -150,33 +149,14 @@ fun newProjectDialog(
         // Save project to database
         scope.launch {
             try {
-                val projectRepository = DatabaseManager.getInstance().getProjectRepository()
-
                 // Build knowledge source configurations from UI items
                 val knowledgeSourceConfigs = buildKnowledgeSourceConfigs(knowledgeSources)
 
-                // Create project
-                val project = Project(
-                    id = "",
+                val createdProject = projectService.createProject(
                     name = projectName.trim(),
                     description = projectDescription.takeIf { it.isNotBlank() },
                     knowledgeSources = knowledgeSourceConfigs,
-                    createdAt = LocalDateTime.now(),
-                    updatedAt = LocalDateTime.now(),
                 )
-
-                val createdProject = projectRepository.createProject(project)
-
-                // Emit indexing event if the project has knowledge sources
-                if (createdProject.knowledgeSources.isNotEmpty()) {
-                    EventBus.post(
-                        ProjectIndexingRequestedEvent(
-                            projectId = createdProject.id,
-                            watchForChanges = true,
-                        ),
-                    )
-                    log.debug("Emitted indexing event for project ${createdProject.id}")
-                }
 
                 // Show success message
                 createdProjectName = projectName.trim()
@@ -184,8 +164,8 @@ fun newProjectDialog(
 
                 // Call callback with project info
                 onCreateProject(
-                    projectName.trim(),
-                    projectDescription.takeIf { it.isNotBlank() },
+                    createdProject.name,
+                    createdProject.description,
                 )
             } catch (e: Exception) {
                 log.error("Failed to create project", e)

@@ -13,7 +13,9 @@ import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.index.Term
 import org.apache.lucene.queryparser.classic.QueryParser
+import org.apache.lucene.search.PrefixQuery
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.NIOFSDirectory
 import java.nio.file.Files
@@ -130,6 +132,22 @@ class LuceneIndexer private constructor(
             log.debug("Removed file from keyword index: $filePath")
         } catch (e: Exception) {
             log.debug("Failed to remove file from keyword index: $filePath", e)
+        }
+    }
+
+    /**
+     * Remove all documents whose file_path starts with [dirPrefix].
+     * Used when a directory is deleted, renaming, or moved.
+     */
+    fun removeDirectory(dirPrefix: String) {
+        try {
+            val prefix = if (dirPrefix.endsWith("/")) dirPrefix else "$dirPrefix/"
+            val query = PrefixQuery(Term(FIELD_META_PREFIX + "file_path", prefix))
+            indexWriter.deleteDocuments(query)
+            indexWriter.commit()
+            log.debug("Removed directory from keyword index: $dirPrefix")
+        } catch (e: Exception) {
+            log.debug("Failed to remove directory from keyword index: $dirPrefix", e)
         }
     }
 

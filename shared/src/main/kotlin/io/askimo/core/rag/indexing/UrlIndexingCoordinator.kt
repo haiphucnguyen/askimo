@@ -38,7 +38,7 @@ class UrlIndexingCoordinator(
     private val urls = listOf(knowledgeSourceConfig.resourceIdentifier)
 
     private val resourceContentProcessor = ResourceContentProcessor(appContext)
-    private val stateManager = IndexStateManager(projectId, "urls")
+    private val stateManager = IndexStateManager(projectId, "urls", knowledgeSourceConfig.resourceIdentifier)
     private val hybridIndexer = HybridIndexer(embeddingStore, embeddingModel, projectId)
 
     private val _progress = MutableStateFlow(IndexProgress())
@@ -233,11 +233,22 @@ class UrlIndexingCoordinator(
     }
 
     /**
-     * Clear all indexed data for this project.
+     * Clear all indexed data for this URL source:
+     * - Removes the synthetic path segment from the embedding store and Lucene index
+     * - Clears the DB hash-state records
      */
     override fun clearAll() {
+        try {
+            val syntheticPath = Paths.get(
+                System.getProperty("java.io.tmpdir"),
+                knowledgeSourceConfig.resourceIdentifier.hashCode().toString(),
+            )
+            hybridIndexer.removeFileFromIndex(syntheticPath)
+        } catch (e: Exception) {
+            log.error("Failed to clear hybrid index for URL ${knowledgeSourceConfig.resourceIdentifier} in project $projectId", e)
+        }
         stateManager.clearStates()
-        log.info("Cleared all index states for project $projectId (urls)")
+        log.info("Cleared all index states for project $projectId (url: ${knowledgeSourceConfig.resourceIdentifier})")
     }
 
     override fun close() {

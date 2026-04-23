@@ -111,7 +111,14 @@ object FileDialogUtils {
 
             val result = chooser.showDialog(null, approveButtonText)
             if (result == JFileChooser.APPROVE_OPTION) {
-                selectedPath = chooser.selectedFile?.absolutePath
+                // JFileChooser DIRECTORIES_ONLY quirk: when the user presses Select without
+                // navigating into a subfolder, selectedFile may point to a non-existent path
+                // (e.g. Downloads/temp/temp). Walk up the ancestry until we find a real directory.
+                var selected = chooser.selectedFile
+                while (selected != null && (!selected.exists() || !selected.isDirectory)) {
+                    selected = selected.parentFile
+                }
+                selectedPath = selected?.absolutePath
             }
         }
         selectedPath

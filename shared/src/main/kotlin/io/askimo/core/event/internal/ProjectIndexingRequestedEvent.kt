@@ -4,9 +4,6 @@
  */
 package io.askimo.core.event.internal
 
-import dev.langchain4j.data.segment.TextSegment
-import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.event.Event
 import io.askimo.core.event.EventSource
@@ -23,8 +20,6 @@ import java.time.Instant
  */
 data class ProjectIndexingRequestedEvent(
     val projectId: String,
-    val embeddingStore: EmbeddingStore<TextSegment>? = null,
-    val embeddingModel: EmbeddingModel? = null,
     val watchForChanges: Boolean = true,
     val knowledgeSources: List<KnowledgeSourceConfig>? = null,
     override val timestamp: Instant = Instant.now(),

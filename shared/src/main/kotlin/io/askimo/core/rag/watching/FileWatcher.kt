@@ -77,18 +77,15 @@ class FileWatcher(
     /**
      * Start watching for file changes
      */
-    fun startWatching(paths: List<Path>, scope: CoroutineScope) {
+    fun startWatching(path: Path, scope: CoroutineScope) {
         try {
             watchService = FileSystems.getDefault().newWatchService()
 
-            // Register directories
-            for (path in paths) {
-                if (path.isDirectory()) {
-                    registerDirectoryTree(path)
-                }
+            if (path.isDirectory()) {
+                registerDirectoryTree(path)
             }
 
-            log.info("Started watching ${watchKeys.size} directories for project $projectId")
+            log.info("Started watching path ${path.fileName} directories for project $projectId")
 
             // Launch watch loop in coroutine
             scope.launch(Dispatchers.IO) {

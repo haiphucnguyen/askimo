@@ -16,7 +16,9 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.walk
 
 /**
  * Handles file change events from the file watcher
@@ -43,12 +45,27 @@ class FileChangeHandler(
      */
     suspend fun handleFileChange(filePath: Path, kind: WatchEvent.Kind<*>) {
         if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
-            log.debug("File deleted: {}, removing from index...", filePath.fileName)
+            log.debug("Path deleted: {}, removing from index...", filePath.fileName)
+            batchIndexer.removeDirectoryFromIndex(filePath)
             batchIndexer.removeFileFromIndex(filePath)
             return
         }
 
-        // For CREATE/MODIFY events, check if file exists and is not excluded
+        // New directory created — index all files inside it
+        if (kind == StandardWatchEventKinds.ENTRY_CREATE && filePath.isDirectory()) {
+            log.debug("Directory created: {}, indexing all files inside...", filePath.fileName)
+            try {
+                filePath.walk()
+                    .filter { it.isRegularFile() && !shouldExcludePath(it) }
+                    .forEach { file -> reindexFile(file) }
+                batchIndexer.flushRemainingSegments()
+            } catch (e: Exception) {
+                log.error("Failed to index new directory {}", filePath.fileName, e)
+            }
+            return
+        }
+
+        // For CREATE/MODIFY events on files, check if file exists and is not excluded
         if (!filePath.isRegularFile() || shouldExcludePath(filePath)) {
             return
         }

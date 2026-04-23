@@ -8,19 +8,23 @@ import io.askimo.core.db.sqliteDatetime
 import org.jetbrains.exposed.v1.core.Table
 
 /**
- * Table for storing file indexing state per project.
- * This replaces the JSON-based state file to handle large projects efficiently.
+ *
+ * The composite primary key (projectId, resourceId, filePath) ensures each
+ * knowledge-source coordinator has its own isolated state — multiple
+ * LocalFoldersIndexingCoordinator instances for the same project cannot
+ * overwrite each other's entries.
  */
 object IndexFileStateTable : Table("index_file_state") {
     val projectId = varchar("project_id", 36)
+    val resourceId = text("resource_id") // KnowledgeSourceConfig.resourceIdentifier (folder/file/URL path)
     val filePath = text("file_path") // Absolute file path or URL
-    val fileHash = varchar("file_hash", 64).index() // MD5 hash, indexed for fast lookups
+    val fileHash = varchar("file_hash", 64).index() // change-detection key, indexed for fast lookups
     val sourceType = varchar("source_type", 20) // 'folders', 'files', or 'urls'
     val indexedAt = sqliteDatetime("indexed_at")
 
-    override val primaryKey = PrimaryKey(projectId, filePath)
+    override val primaryKey = PrimaryKey(projectId, resourceId, filePath)
 
     init {
-        index(isUnique = false, projectId, sourceType)
+        index(isUnique = false, projectId, resourceId, sourceType)
     }
 }

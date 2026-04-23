@@ -6,17 +6,18 @@ package io.askimo.core.rag.state
 
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
+import java.nio.file.Files
 import java.nio.file.Path
-import java.security.MessageDigest
-import kotlin.io.path.readBytes
 
 /**
- * Manages the persisted state of an index.
- * Now uses database-backed storage instead of JSON files for better scalability.
+ * Manages the persisted state of an index for a single knowledge-source coordinator.
+ * Scoped to (projectId, sourceType, resourceId) so multiple coordinators on the same
+ * project never share or overwrite each other's state.
  */
 class IndexStateManager(
     private val projectId: String,
     private val sourceType: String, // 'folders', 'files', or 'urls'
+    val resourceId: String, // KnowledgeSourceConfig.resourceIdentifier
 ) {
     private val log = logger<IndexStateManager>()
     private val repository = IndexStateRepository(DatabaseManager.getInstance())
@@ -26,10 +27,10 @@ class IndexStateManager(
      */
     fun loadPersistedState(): IndexPersistedState? {
         return try {
-            val fileHashes = repository.getHashesForSourceType(projectId, sourceType)
+            val fileHashes = repository.getHashesForSourceType(projectId, sourceType, resourceId)
 
             if (fileHashes.isEmpty()) {
-                log.debug("No persisted state found for project $projectId, source type $sourceType")
+                log.debug("No persisted state found for project $projectId, resource $resourceId")
                 return null
             }
 
@@ -39,7 +40,7 @@ class IndexStateManager(
                 fileHashes = fileHashes,
             )
         } catch (e: Exception) {
-            log.error("Failed to load persisted state for project $projectId, source type $sourceType", e)
+            log.error("Failed to load persisted state for project $projectId, resource $resourceId", e)
             null
         }
     }
@@ -52,36 +53,50 @@ class IndexStateManager(
         fileHashes: Map<String, String>,
     ) {
         try {
-            repository.batchSaveFileStates(projectId, fileHashes, sourceType)
-            log.debug("Saved index state for project $projectId, source type $sourceType: $totalFilesIndexed files")
+            repository.batchSaveFileStates(projectId, fileHashes, sourceType, resourceId)
+            log.debug("Saved index state for project $projectId, resource $resourceId: $totalFilesIndexed files")
         } catch (e: Exception) {
-            log.error("Failed to save index state for project $projectId, source type $sourceType", e)
+            log.error("Failed to save index state for project $projectId, resource $resourceId", e)
         }
     }
 
+    // ── Chunked / incremental API (used by LocalFoldersIndexingCoordinator) ──
+
+    /** Batch-query previous hashes for a subset of file paths (one DB round-trip per chunk). */
+    fun getHashesForFiles(filePaths: List<String>): Map<String, String> = repository.getHashesForFiles(projectId, resourceId, filePaths)
+
+    /** Return all stored paths for this coordinator — used for deleted-file detection. */
+    fun getStoredPaths(): Set<String> = repository.getPathsForResource(projectId, resourceId)
+
+    /** Persist hashes for a batch of changed files without touching unchanged entries. */
+    fun saveFileHashesBatch(fileHashes: Map<String, String>) = repository.upsertFileHashesBatch(projectId, resourceId, sourceType, fileHashes)
+
+    /** Remove state entries for files that were deleted from disk. */
+    fun removeFilePaths(filePaths: Set<String>) = repository.removeFilePaths(projectId, resourceId, filePaths)
+
     /**
-     * Calculate MD5 hash of a file
+     * Compute a lightweight change-detection key from file metadata.
+     * Uses lastModified + size — zero I/O, zero allocation, sufficient for
+     * incremental indexing (same approach as git index, Make, Gradle).
      */
     fun calculateFileHash(filePath: Path): String = try {
-        val bytes = filePath.readBytes()
-        val digest = MessageDigest.getInstance("MD5")
-        val hash = digest.digest(bytes)
-        hash.joinToString("") { "%02x".format(it) }
+        val lastModified = Files.getLastModifiedTime(filePath).toMillis()
+        val size = Files.size(filePath)
+        "$lastModified-$size"
     } catch (e: Exception) {
-        log.warn("Failed to calculate hash for ${filePath.fileName}: ${e.message}")
+        log.warn("Failed to read metadata for ${filePath.fileName}: ${e.message}", e)
         ""
     }
 
     /**
-     * Clear all index states for this project.
-     * Deletes all records that have the projectId field equals to this projectId.
+     * Clear all index states for this coordinator's resource.
      */
     fun clearStates() {
         try {
-            repository.clearProjectState(projectId)
-            log.info("Cleared all index states for project $projectId")
+            repository.clearResourceState(projectId, resourceId)
+            log.info("Cleared index states for project $projectId, resource $resourceId")
         } catch (e: Exception) {
-            log.error("Failed to clear index states for project $projectId", e)
+            log.error("Failed to clear index states for project $projectId, resource $resourceId", e)
         }
     }
 }
