@@ -155,7 +155,7 @@ fun chatView(
     var editingMessage by remember(sessionId, initialEditingMessage) { mutableStateOf(initialEditingMessage) }
     var editingAIMessage by remember(sessionId) { mutableStateOf<ChatMessageDTO?>(null) }
     // Always-current disabled server IDs from ChatInputField
-    var currentDisabledServerIds by remember(sessionId) { mutableStateOf(emptySet<String>()) }
+    var currentEnabledServerIds by remember(sessionId) { mutableStateOf(emptySet<String>()) }
 
     // When there is no project (e.g. user clicked "New Chat"), drop any pending
     // attachments that were added from the project side panel.
@@ -988,7 +988,7 @@ fun chatView(
                                     onDownloadAttachment = downloadAttachment,
                                     userAvatarPainter = userAvatarPainter,
                                     aiAvatarPainter = aiAvatarPainter,
-                                    onRetryMessage = { messageId -> actions.retryMessage(messageId, currentDisabledServerIds) },
+                                    onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
                                     viewportTopY = viewportBounds?.top,
                                 )
                             }
@@ -1021,7 +1021,7 @@ fun chatView(
                                     onDownloadAttachment = downloadAttachment,
                                     userAvatarPainter = userAvatarPainter,
                                     aiAvatarPainter = aiAvatarPainter,
-                                    onRetryMessage = { messageId -> actions.retryMessage(messageId, currentDisabledServerIds) },
+                                    onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
                                     viewportTopY = viewportBounds?.top,
                                 )
                             }
@@ -1061,7 +1061,7 @@ fun chatView(
                                 inputText.text,
                                 attachments,
                                 editingMessage,
-                                currentDisabledServerIds,
+                                currentEnabledServerIds,
                             )
                             inputText = TextFieldValue("")
                             attachments = emptyList()
@@ -1079,7 +1079,7 @@ fun chatView(
                         attachments = emptyList()
                     },
                     sessionId = sessionId,
-                    onDisabledServerIdsChange = { currentDisabledServerIds = it },
+                    onEnabledServerIdsChange = { currentEnabledServerIds = it },
                     modifier = Modifier
                         .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                         .fillMaxWidth()

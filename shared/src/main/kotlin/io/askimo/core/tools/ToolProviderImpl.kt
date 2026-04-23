@@ -56,12 +56,12 @@ class ToolProviderImpl(
 
         if (userIntent.tools.isEmpty()) return null
 
-        val disabledServers = ChatContext.getDisabledServers()
+        val enabledServers = ChatContext.getEnabledServers()
 
         val builder = ToolProviderResult.builder()
 
         userIntent.tools
-            .filter { tool -> tool.serverId !in disabledServers }
+            .filter { tool -> tool.serverId in enabledServers }
             .forEach { tool ->
                 if (tool.source == ToolSource.ASKIMO_BUILTIN) {
                     val className = tool.specification.metadata()["className"]

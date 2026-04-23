@@ -95,7 +95,7 @@ import kotlin.let
 @Composable
 fun projectView(
     project: Project,
-    onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>, disabledServerIds: Set<String>) -> Unit,
+    onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>, enabledServerIds: Set<String>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (sessionId: String, projectId: String) -> Unit,
     onRenameSession: (String, String) -> Unit,
@@ -113,7 +113,7 @@ fun projectView(
     // Local UI state
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var attachments by remember { mutableStateOf<List<FileAttachmentDTO>>(emptyList()) }
-    var currentDisabledServerIds by remember { mutableStateOf(emptySet<String>()) }
+    var currentEnabledServerIds by remember { mutableStateOf(emptySet<String>()) }
     var showProjectMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddReferenceMaterialDialog by remember { mutableStateOf(false) }
@@ -298,12 +298,12 @@ fun projectView(
                         onAttachmentsChange = { attachments = it },
                         onSendMessage = { mode ->
                             if (inputText.text.isNotBlank()) {
-                                onStartChat(currentProject.id, mode, inputText.text, attachments, currentDisabledServerIds)
+                                onStartChat(currentProject.id, mode, inputText.text, attachments, currentEnabledServerIds)
                                 inputText = TextFieldValue("")
                                 attachments = emptyList()
                             }
                         },
-                        onDisabledServerIdsChange = { currentDisabledServerIds = it },
+                        onEnabledServerIdsChange = { currentEnabledServerIds = it },
                         sessionId = currentProject.id,
                         placeholder = stringResource("project.new.chat.placeholder", currentProject.name),
                         modifier = Modifier.padding(top = 16.dp),

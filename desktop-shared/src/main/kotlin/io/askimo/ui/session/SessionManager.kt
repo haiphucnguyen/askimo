@@ -164,7 +164,7 @@ class SessionManager(
         sessionId: String,
         userMessage: ChatMessageDTO,
         willSaveUserMessage: Boolean,
-        disabledServerIds: Set<String> = emptySet(),
+        enabledServerIds: Set<String> = emptySet(),
         directiveId: String? = null,
     ): String? {
         // Create session lazily on first message (only once per session)
@@ -231,7 +231,7 @@ class SessionManager(
                         .sendStreamingMessageWithCallback(
                             projectId = projectId,
                             userMessage = promptWithContext,
-                            disabledServerIds = disabledServerIds,
+                            enabledServerIds = enabledServerIds,
                             onToken = { token ->
                                 streamingScope.launch {
                                     thread.appendChunk(token)
@@ -427,7 +427,7 @@ class SessionManager(
         mode: CreationMode,
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
-        disabledServerIds: Set<String> = emptySet(),
+        enabledServerIds: Set<String> = emptySet(),
         onComplete: () -> Unit,
     ) {
         scope.launch {
@@ -453,7 +453,7 @@ class SessionManager(
 
                 // Now send the message - ViewModel is ready
                 val viewModel = getOrCreateChatViewModel(newSession.id)
-                viewModel.sendMessage(projectId, mode, message, attachments, disabledServerIds)
+                viewModel.sendMessage(projectId, mode, message, attachments, enabledServerIds)
             } catch (e: Exception) {
                 log.error("Failed to create project session and send message", e)
             }

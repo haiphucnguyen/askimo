@@ -13,7 +13,7 @@ interface ChatActions {
         message: String,
         attachments: List<FileAttachmentDTO> = emptyList(),
         editingMessage: ChatMessageDTO? = null,
-        disabledServerIds: Set<String> = emptySet(),
+        enabledServerIds: Set<String> = emptySet(),
     ): String?
     fun cancelResponse()
     fun loadPrevious()
@@ -23,5 +23,5 @@ interface ChatActions {
     fun previousSearchResult()
     fun setDirective(directiveId: String?)
     fun updateAIMessage(messageId: String, newContent: String)
-    fun retryMessage(messageId: String, disabledServerIds: Set<String> = emptySet())
+    fun retryMessage(messageId: String, enabledServerIds: Set<String> = emptySet())
 }

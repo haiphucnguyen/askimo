@@ -65,17 +65,17 @@ private fun Throwable.isUnsupportedSamplingError(): Boolean {
 fun ChatClient.sendStreamingMessageWithCallback(
     projectId: String? = null,
     userMessage: UserMessage,
-    disabledServerIds: Set<String> = emptySet(),
+    enabledServerIds: Set<String> = emptySet(),
     onToken: (String) -> Unit = {},
     onFollowUpSuggestion: ((FollowUpSuggestion) -> Unit)? = null,
 ): String {
     val log = logger<ChatClient>()
 
     try {
-        // Set both projectId and disabledServers in ThreadLocal on this thread —
+        // Set both projectId and enabledServers in ThreadLocal on this thread —
         // the same thread LangChain4j uses to call ToolProviderImpl.provideTools().
         ChatContext.setProjectId(projectId)
-        ChatContext.setDisabledServers(disabledServerIds)
+        ChatContext.setEnabledServers(enabledServerIds)
 
         // Get provider and model from AppContext
         val appContext = AppContext.getInstance()
