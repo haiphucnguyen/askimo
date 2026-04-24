@@ -273,6 +273,7 @@ fun mermaidChart(
                                    BAD:  F1[( "AI Provider API: OpenAI" )]
                                    GOOD: F1[(AI Provider API OpenAI)]
                                 6. Do NOT use `style`, `classDef`, or `class` styling directives — remove them entirely
+                                6b. If the diagram uses `requirementDiagram` or any other unsupported type (error says "UnknownDiagramError" or "No diagram type detected"), convert it to a supported equivalent — use `flowchart TD` to represent requirements as nodes and edges
                                 7. Comments MUST use `%%` (double percent) on their OWN line — never after a statement, never single `%`:
                                    BAD:  % Data/Flow Connections  or  A --> B; %% comment
                                    GOOD: %% Data/Flow Connections  (on its own line)

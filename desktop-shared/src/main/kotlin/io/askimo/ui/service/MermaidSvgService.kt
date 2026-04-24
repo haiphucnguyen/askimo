@@ -169,6 +169,8 @@ class MermaidSvgService {
             val isErrorImage = pngText.contains("Parse error") ||
                 pngText.contains("Syntax error") ||
                 pngText.contains("Generating single mermaid chart") ||
+                pngText.contains("UnknownDiagramError") ||
+                pngText.contains("No diagram type detected") ||
                 pngText.contains("Error:")
             if (isErrorImage) {
                 log.error("Mermaid CLI produced an error image ({} bytes) — diagram has silent syntax errors.", pngData.size)

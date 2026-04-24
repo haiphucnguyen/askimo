@@ -51,8 +51,9 @@ ER diagrams→erDiagram | timelines→gantt | architecture→architecture-beta
 system blocks→block-beta | data flow→sankey-beta | quadrant/matrix→quadrantChart
 treemap/hierarchy→treemap | network packets→packet-beta | kanban→kanban
 mind maps→mindmap | git workflows→gitGraph | user journeys→journey
-requirements→requirementDiagram | C4 diagrams→C4Context
+C4 diagrams→C4Context
 NOTE: Radar/spider charts are NOT supported — use xychart-beta bar chart instead.
+NOTE: requirementDiagram is NOT supported by mmdc — use a flowchart or table description instead.
 
 UNIVERSAL SYNTAX RULES (apply to all diagram types):
 1. No colon after diagram keywords: write `graph TD` not `graph TD:`
@@ -72,18 +73,17 @@ UNIVERSAL SYNTAX RULES (apply to all diagram types):
    GOOD: F1[(AI Provider API OpenAI)]
 8. classDiagram stereotypes go INSIDE the class body: `<<interface>>` not on the class declaration line
 9. ER diagram: every attribute needs a type; use valid cardinality (||--o{, }o--||)
-10. requirementDiagram: no `title` keyword; use block syntax `requirement name { }`
-11. Do NOT use `style`, `classDef`, or `class` styling directives — they are not supported and will cause parse errors
-12. Comments MUST use `%%` (double percent) on their OWN line — never after a statement on the same line, and never single `%`:
+10. Do NOT use `style`, `classDef`, or `class` styling directives — they are not supported and will cause parse errors
+11. Comments MUST use `%%` (double percent) on their OWN line — never after a statement on the same line, and never single `%`:
    BAD:  % Data/Flow Connections
    BAD:  A --> B; %% some comment
    GOOD: %% Data/Flow Connections
    GOOD: %% some comment\n    A --> B;
-13. subgraph IDs MUST be unique and MUST NOT match any node ID, AND edges inside a subgraph must NOT use the subgraph's own ID as source or target — all of these cause a cycle error:
+12. subgraph IDs MUST be unique and MUST NOT match any node ID, AND edges inside a subgraph must NOT use the subgraph's own ID as source or target — all of these cause a cycle error:
    BAD:  subgraph D["Core Service Layer"] ... D -->|label| R1   (D is used as both subgraph ID and edge source inside it)
    BAD:  E_Models["label"] ... subgraph E_Models ... E_Models --> F1
    GOOD: subgraph ServiceLayer["Core Service Layer"]\n    SvcNode --> R1   (ServiceLayer ID never appears as a node or edge endpoint)
-14. An edge can only carry ONE label — never chain two label syntaxes on the same edge:
+13. An edge can only carry ONE label — never chain two label syntaxes on the same edge:
    BAD:  A -- "label1" --> |"label2"| B
    GOOD: A -->|"label1"| B   or   A -- "label1" --> B
 
