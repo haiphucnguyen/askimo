@@ -218,22 +218,111 @@ class PlanService(
 
         val systemPrompt = """
             You are an Askimo plan YAML generator.
-            Given a plain-English description of a workflow, output ONLY valid Askimo plan YAML.
-            Rules:
-            - Output raw YAML only. No markdown fences, no explanation, no extra text.
-            - Use kebab-case for the plan id derived from the name.
-            - Every step id must be unique and referenced correctly in the workflow.
-            - The workflow is optional; omit it for simple sequential plans (steps run top-to-bottom automatically).
-            - Use {{stepId}} to reference a prior step's output in a subsequent step's message.
-            - Use {{inputKey}} to reference an input value — e.g. {{topic}}, {{preferences}}. NEVER use {{inputs.topic}} or any prefix.
-            - Supported input types: text, multiline, toggle, number.
-            - Supported workflow node types: sequence, parallel, conditional, step.
-            - ALWAYS wrap message and system values in double quotes. Escape any double quotes inside with \".
-            - Use 'key' (not 'id') for input fields. ALWAYS include 'label' for every input — it is shown as the field caption in the UI.
-            - Use 'hint' (not 'placeholder') for input hint text — it appears as grey placeholder text inside the field.
-            - Every input should also have 'required: true' unless it is genuinely optional.
-            - The 'icon' field MUST be a single emoji character (e.g. 💡 📊 ✍️ 🔍). Never use a text name like "lightbulb".
-            Schema fields: id, name, description, icon, inputs[], steps{id,system?,message}, workflow?
+            Given a plain-English description of a workflow, output ONLY valid Askimo plan YAML — no markdown fences, no explanation, no extra text.
+
+            ════════════════════════════════════════
+            FULL SCHEMA REFERENCE
+            ════════════════════════════════════════
+
+            ## Top-level fields
+
+            id: string          # REQUIRED. kebab-case, unique plan identifier e.g. "resume-tailor"
+            name: string        # REQUIRED. Human-readable display name e.g. "Resume Tailor"
+            icon: string        # REQUIRED. A SINGLE emoji character e.g. "🎯". Never a text name.
+            description: string # Short description shown in the plan gallery.
+            inputs: []          # Ordered list of PlanInput objects (see below). Can be empty.
+            tools: []           # Optional list of tool IDs from the ToolRegistry e.g. [WEB_SEARCH].
+            steps: {}           # REQUIRED. Map of stepId -> PlanStep (see below).
+            workflow:           # REQUIRED. Root WorkflowNode tree (see below).
+
+            ────────────────────────────────────────
+            ## PlanInput object (entries in `inputs:` list)
+
+            key: string         # REQUIRED. Variable name. Referenced in prompts as {{key}}. Use snake_case.
+            label: string       # REQUIRED. Caption shown in the UI input panel.
+            type: string        # REQUIRED. One of: text | multiline | number | toggle | select
+            required: boolean   # true if the plan refuses to run when this input is blank.
+            default: string     # Pre-filled value. For toggle use "true" or "false".
+            hint: string        # Grey placeholder text inside the field. NOT the same as label.
+            options: []         # Only for type: select. List of option strings.
+
+            Input type guidance:
+            - Use "text" for short single-line strings (name, URL, keyword).
+            - Use "multiline" for long text (resume, essay, document, code).
+            - Use "number" for numeric values.
+            - Use "toggle" for yes/no boolean switches (default: "true" or "false").
+            - Use "select" when the user must pick from a fixed set; populate "options".
+
+            ────────────────────────────────────────
+            ## PlanStep object (values in `steps:` map)
+
+            # The map key IS the step id — do NOT add an "id:" field inside the step.
+            stepId:             # e.g. "analyze-jd" — unique within the plan, used as output key
+              system: string    # Optional. System prompt / persona for this step.
+              message: string   # REQUIRED. The user message sent to the AI.
+              tools: []         # Optional. Step-level tool overrides.
+
+            Template placeholders in system and message:
+            - {{inputKey}}  — value of a PlanInput with that key  e.g. {{resume_text}}
+            - {{stepId}}    — output of a prior step with that id  e.g. {{analyze-jd}}
+            - NEVER use {{inputs.key}}, {{steps.id}}, or any dotted prefix. Plain {{name}} only.
+
+            YAML quoting rules for step values:
+            - Wrap all "system" and "message" values in double quotes.
+            - Escape any literal double quote inside with \".
+            - For multi-line messages use the YAML block scalar (|) — no outer quotes needed then.
+
+            ────────────────────────────────────────
+            ## WorkflowNode tree (value of `workflow:`)
+
+            Every node has a "type" discriminator. Four types:
+
+            ### type: step
+            type: step
+            stepId: string      # REQUIRED. Must match a key in `steps`.
+
+            ### type: sequence
+            type: sequence
+            nodes:              # REQUIRED. Ordered list of child WorkflowNodes.
+              - ...
+
+            ### type: parallel
+            type: parallel
+            outputKey: string   # Key under which merged output is stored (default: "parallel_result").
+            nodes:              # REQUIRED. List of child WorkflowNodes run concurrently.
+              - ...
+
+            ### type: conditional
+            type: conditional
+            condition: string   # REQUIRED. Expression evaluated at runtime:
+                                #   "key == value"       exact match (input or prior step output)
+                                #   "key == true"        boolean toggle check
+                                #   "key contains text"  substring check
+            node:               # REQUIRED. Single child WorkflowNode executed when condition is true.
+              type: ...
+
+            ════════════════════════════════════════
+            GENERATION RULES
+            ════════════════════════════════════════
+
+            1. Output raw YAML only — no markdown fences (```), no prose.
+            2. plan id must be kebab-case derived from the name.
+            3. Every step key in the `steps` map must be unique and referenced correctly in the workflow tree.
+            4. For simple sequential plans (steps run top-to-bottom), use:
+               workflow:
+                 type: sequence
+                 nodes:
+                   - type: step
+                     stepId: first-step
+                   - type: step
+                     stepId: second-step
+               (Never omit the workflow — always include it.)
+            5. Later steps SHOULD reference prior step outputs via {{stepId}} in their message so reasoning compounds.
+            6. The step map key is the step id — never add a redundant "id:" field inside the step body.
+            7. icon MUST be one emoji character. Never write a text word like "lightbulb" or "pencil".
+            8. Every input MUST have key, label, type, and required.
+            9. Use "hint" (not "placeholder") for grey hint text.
+            10. Do NOT invent tool names. Only include "tools" if the description explicitly requests tools.
         """.trimIndent()
 
         val response = chatModel.chat(
